@@ -119,25 +119,28 @@ export default function Step1Triage({
             <div
               key={albumName}
               id={`album-${albumName.replace(/\s+/g, '-').toLowerCase()}`}
-              className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-xs scroll-mt-36"
+              className="bg-white border border-slate-300 rounded-3xl overflow-hidden shadow-xs scroll-mt-36"
             >
               {/* ALBUM BANNER */}
-              <div className={`${firstSong.albumColor} p-4 text-white text-center border-b border-slate-100`}>
+              <div className={`${firstSong.albumColor} p-4 text-white text-center border-b border-slate-300`}>
                 <span className="text-[10px] font-black uppercase tracking-widest opacity-80 block">
                   {firstSong.isBSide ? 'Special Collection' : `Album (${firstSong.year})`}
                 </span>
                 <h2 className="text-xl font-black tracking-tight">{albumName}</h2>
               </div>
 
-              {/* SONG ROWS */}
-              <div className="divide-y divide-slate-100">
-                {visibleSongs.map((song) => {
+              {/* SONG ROWS WITH DARKER DIVIDERS (divide-slate-300) */}
+              <div className="divide-y divide-slate-300">
+                {visibleSongs.map((song, index) => {
                   const activeBucket = triageMap[song.id];
+                  const isEven = index % 2 === 0;
 
                   return (
                     <div
                       key={song.id}
-                      className="p-3 sm:p-5 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4 transition-colors bg-white hover:bg-slate-50/50"
+                      className={`p-3 sm:p-5 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4 transition-colors ${
+                        isEven ? 'bg-slate-50/70' : 'bg-white'
+                      } hover:bg-blue-50/50`}
                     >
                       {/* LEFT SIDE: PREVIEW BUTTON & TITLE ON SAME ROW */}
                       <div className="flex items-center gap-3 flex-1 min-w-0 py-0.5">
@@ -147,7 +150,7 @@ export default function Step1Triage({
                         </h3>
                       </div>
 
-                      {/* RIGHT SIDE: BUCKET BUTTONS */}
+                      {/* RIGHT SIDE: BUCKET BUTTONS WITH REVISED LIGHTER BLUE ACTIVE SELECTION */}
                       <div className="grid grid-cols-5 sm:flex sm:flex-col gap-1.5 shrink-0 w-full sm:w-[155px]">
                         {(['banger', 'slaps', 'mid', 'skip', 'trash'] as BucketType[]).map((bucket) => {
                           const isSelected = activeBucket === bucket;
@@ -160,8 +163,8 @@ export default function Step1Triage({
                               onClick={() => handleSetBucket(song.id, bucket)}
                               className={`py-2 px-1.5 sm:px-2.5 rounded-xl text-xs sm:text-sm font-black border transition-all flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-2 cursor-pointer ${
                                 isSelected
-                                  ? 'bg-slate-950 text-white font-black border-slate-900 shadow-md scale-[1.02] z-10'
-                                  : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50 hover:text-slate-800'
+                                  ? 'bg-sky-400 text-slate-950 font-black border-sky-500 shadow-md scale-[1.02] z-10'
+                                  : 'bg-white text-slate-500 border-slate-300 hover:bg-slate-100 hover:text-slate-800'
                               }`}
                               title={displayLabel}
                             >

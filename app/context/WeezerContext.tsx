@@ -40,6 +40,10 @@ interface WeezerContextType {
   setUserProfile: (profile: UserProfile | null) => void;
   handleSignOut: () => Promise<void>;
 
+  // Friend Requests State
+  pendingRequestsCount: number;
+  refreshPendingRequests: () => Promise<void>;
+
   // Ranking State
   triageMap: Record<string, BucketType>;
   setTriageMap: (map: Record<string, BucketType>) => void;
@@ -84,6 +88,9 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   const [userId, setUserId] = useState<string | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
+  // Social & Friend Requests
+  const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
+
   // Navigation State
   const [step, setStepState] = useState<AppStep>('splash');
   const [refineStageIdx, setRefineStageIdx] = useState(0);
@@ -106,19 +113,40 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     initUserAndLoadRankings();
 
-    // Listen for auth changes (magic link logins, sign ins, sign outs)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         initUserAndLoadRankings();
       } else {
         setUserId(null);
         setUserProfile(null);
+        setPendingRequestsCount(0);
       }
     });
 
     return () => subscription.unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const refreshPendingRequests = async () => {
+    if (!userId) return;
+    try {
+      const { count } = await supabase
+        .from('friendships')
+        .select('*', { count: 'exact', head: true })
+        .eq('friend_id', userId)
+        .eq('status', 'pending');
+
+      setPendingRequestsCount(count || 0);
+    } catch (err) {
+      console.error('Error fetching pending friend requests:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (userId) {
+      refreshPendingRequests();
+    }
+  }, [userId]);
 
   async function initUserAndLoadRankings() {
     setLoadingUser(true);
@@ -149,7 +177,6 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
             location: locationStr,
           });
         } else {
-          // Profile row doesn't exist yet, construct baseline
           setUserProfile({
             displayName: session.user.email?.split('@')[0] || 'Fan',
           });
@@ -182,13 +209,13 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
 
           setBucketRanks(getDerivedBucketRanks(loadedTriage, loadedMaster));
 
-          // Smart Entry: If user has rankings, default to Dashboard
+          // Smart Entry: If user has progress, route to Dashboard
           if (Object.keys(loadedTriage).length > 0 || loadedMaster.length > 0) {
             setStepState('dashboard');
           }
         }
       } else {
-        // Guest mode fallback from localStorage if available
+        // Guest mode fallback from localStorage
         const localState = localStorage.getItem('weezer_ranker_state');
         if (localState) {
           try {
@@ -294,6 +321,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     setUserProfile(null);
     setTriageMap({});
     setMasterList([]);
+    setPendingRequestsCount(0);
     setBucketRanks({ banger: [], slaps: [], mid: [], skip: [], trash: [] });
     localStorage.removeItem('weezer_ranker_state');
     setStep('splash');
@@ -304,6 +332,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
       value={{
         step, setStep, refineStageIdx, setRefineStageIdx, autoStartMatchups, setAutoStartMatchups, navigateTo,
         loadingUser, userId, userProfile, setUserProfile, handleSignOut,
+        pendingRequestsCount, refreshPendingRequests,
         triageMap, setTriageMap, bucketRanks, masterList,
         syncRankingsToDatabase, updateAndSyncBucketRanks, moveMasterSong, handleMagicFill,
       }}

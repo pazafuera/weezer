@@ -18,6 +18,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     triageMap,
     masterList,
     syncRankingsToDatabase,
+    pendingRequestsCount,
   } = useWeezer();
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -39,7 +40,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 className="flex items-center gap-2.5 group cursor-pointer text-left focus:outline-none"
                 aria-label="Go to Dashboard or Splash"
               >
-                {/* Translucent Badge with White Flying W */}
                 <div className="w-9 h-9 bg-white/10 group-hover:bg-white/20 border border-white/20 rounded-xl flex items-center justify-center text-white transition-all shrink-0">
                   <FlyingWIcon className="w-6 h-6 text-white drop-shadow-sm" />
                 </div>
@@ -54,11 +54,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 </div>
               </button>
 
-              {/* HAMBURGER MENU BUTTON */}
+              {/* HAMBURGER MENU BUTTON WITH FRIEND REQUEST BADGE */}
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setIsMenuOpen(true)}
-                  className="p-2 -mr-2 text-white hover:text-amber-300 transition-colors cursor-pointer"
+                  className="p-2 -mr-2 text-white hover:text-amber-300 transition-colors cursor-pointer relative"
                   aria-label="Open Menu"
                 >
                   <svg
@@ -74,6 +74,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                       d="M4 6h16M4 12h16M4 18h16"
                     />
                   </svg>
+
+                  {/* Red Notification Badge */}
+                  {pendingRequestsCount > 0 && (
+                    <span className="absolute top-1 right-1 w-3 h-3 bg-rose-500 border-2 border-[#0072CE] rounded-full animate-pulse" />
+                  )}
                 </button>
               </div>
             </div>
@@ -132,15 +137,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 </button>
               </div>
 
-              {/* ACCOUNT CARD AT TOP OF MENU */}
+              {/* ACCOUNT CARD */}
               <div className="p-4 bg-blue-50/70 border-b border-blue-100 flex items-center justify-between">
                 <div className="min-w-0 pr-2">
                   {userId ? (
                     userProfile?.username ? (
                       <>
                         <div className="text-xs font-black text-slate-900 truncate">
-                          {userProfile.displayName ||
-                            `@${userProfile.username}`}
+                          {userProfile.displayName || `@${userProfile.username}`}
                         </div>
                         <div className="text-[10px] font-extrabold text-[#0072CE]">
                           @{userProfile.username}
@@ -152,7 +156,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                           Profile Not Set Up
                         </div>
                         <div className="text-[10px] font-semibold text-slate-500">
-                          Claim your username
+                          Claim your handle
                         </div>
                       </>
                     )
@@ -200,7 +204,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                     triage: 'The Gut Check',
                     rank_buckets: 'Refine Buckets',
                     master: 'Final Rankings',
-                    wrapped: 'Sweater Thread',
+                    wrapped: 'Sweater Thread 🧵',
                     fan_stats: 'Fan Stats 🌐',
                     friends: 'Friends & Matchups 🤝',
                   };
@@ -211,13 +215,20 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                         navigateTo(targetStep as any);
                         setIsMenuOpen(false);
                       }}
-                      className={`w-full text-left px-5 py-3.5 font-extrabold text-sm border-b border-slate-50 transition cursor-pointer ${
+                      className={`w-full text-left px-5 py-3.5 font-extrabold text-sm border-b border-slate-50 transition cursor-pointer flex items-center justify-between ${
                         step === targetStep
                           ? 'bg-blue-50 text-[#0072CE]'
                           : 'text-slate-700 hover:bg-slate-50'
                       }`}
                     >
-                      {labels[targetStep]}
+                      <span>{labels[targetStep]}</span>
+
+                      {/* INCOMING FRIEND REQUEST BADGE */}
+                      {targetStep === 'friends' && pendingRequestsCount > 0 && (
+                        <span className="bg-rose-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-xs">
+                          {pendingRequestsCount} new
+                        </span>
+                      )}
                     </button>
                   );
                 })}
@@ -246,9 +257,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         )}
 
         {/* MAIN CONTENT AREA */}
-        <main
-          className={step === 'splash' ? '' : 'max-w-3xl mx-auto px-4 mt-6'}
-        >
+        <main className={step === 'splash' ? '' : 'max-w-3xl mx-auto px-4 mt-6'}>
           {children}
         </main>
       </div>

@@ -105,7 +105,7 @@ export default function Step1Triage({
                               onClick={() => handleSetBucket(song.id, bucket)}
                               className={`py-2 px-2.5 rounded-xl text-xs sm:text-sm font-black border transition-all flex items-center justify-start gap-2 ${
                                 isSelected
-                                  ? 'bg-slate-200 text-slate-900 border-slate-300 shadow-sm scale-[1.02] z-10'
+                                  ? 'bg-slate-950 text-white font-black border-slate-900 shadow-md scale-[1.02] z-10'
                                   : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50 hover:text-slate-800'
                               }`}
                             >

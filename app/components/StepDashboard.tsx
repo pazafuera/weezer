@@ -25,6 +25,7 @@ export default function StepDashboard() {
   const triageSortedCount = Object.keys(triageMap).length;
   const triagePct = Math.round((triageSortedCount / totalSongs) * 100);
   const isTriageComplete = triageSortedCount >= totalSongs;
+  const hasStartedTriage = triageSortedCount > 0;
 
   // Bucket breakdown counts
   const bucketCounts = (Object.keys(BUCKET_CONFIG) as BucketType[]).reduce(
@@ -37,7 +38,15 @@ export default function StepDashboard() {
 
   const isRefinedMasterComplete = masterList.length > 0 && isTriageComplete;
 
-  // Step Status Determinations
+  // Dynamic Triage CTA Text
+  const getTriageCtaText = () => {
+    if (isTriageComplete) return 'Review ✓';
+    if (triageSortedCount > 160) return 'Finish →';
+    if (hasStartedTriage) return 'Continue →';
+    return 'Start →';
+  };
+
+  // Step Status & Strict Locking (REQUIRES COMPLETE TRIAGE)
   const stepsState = [
     {
       id: 'triage',
@@ -47,6 +56,8 @@ export default function StepDashboard() {
         : `${triageSortedCount}/${totalSongs} sorted`,
       isComplete: isTriageComplete,
       isCurrent: !isTriageComplete,
+      isDisabled: false, // Always accessible
+      ctaText: getTriageCtaText(),
       action: () => navigateTo('triage'),
     },
     {
@@ -55,7 +66,10 @@ export default function StepDashboard() {
       desc: isRefinedMasterComplete ? 'Matchups done' : 'Head-to-head matchups',
       isComplete: isRefinedMasterComplete,
       isCurrent: isTriageComplete && !isRefinedMasterComplete,
+      isDisabled: !isTriageComplete, // LOCKED UNTIL ALL 206 ARE TRIAGED
+      ctaText: isRefinedMasterComplete ? 'View →' : 'Start →',
       action: () => {
+        if (!isTriageComplete) return;
         setAutoStartMatchups(true);
         setRefineStageIdx(0);
         navigateTo('rank_buckets');
@@ -67,7 +81,12 @@ export default function StepDashboard() {
       desc: '1–206 canon ranking',
       isComplete: isRefinedMasterComplete,
       isCurrent: false,
-      action: () => navigateTo('master'),
+      isDisabled: !isTriageComplete, // LOCKED UNTIL ALL 206 ARE TRIAGED
+      ctaText: 'View →',
+      action: () => {
+        if (!isTriageComplete) return;
+        navigateTo('master');
+      },
     },
     {
       id: 'wrapped',
@@ -75,7 +94,12 @@ export default function StepDashboard() {
       desc: 'Taste DNA & Stats',
       isComplete: isRefinedMasterComplete,
       isCurrent: isRefinedMasterComplete,
-      action: () => navigateTo('wrapped'),
+      isDisabled: !isTriageComplete, // LOCKED UNTIL ALL 206 ARE TRIAGED
+      ctaText: 'View →',
+      action: () => {
+        if (!isTriageComplete) return;
+        navigateTo('wrapped');
+      },
     },
   ];
 
@@ -96,11 +120,14 @@ export default function StepDashboard() {
       <div className="pt-2 flex items-center justify-between">
         <div>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight">
-            Welcome back,{' '}
-            {userProfile?.displayName || userProfile?.username || 'Fan'} 👋
+            Your Name Is{' '}
+            <span className="text-[#0072CE]">
+              {userProfile?.displayName || userProfile?.username || 'Guest'}
+            </span>{' '}
+            👋
           </h1>
           <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-0.5">
-            Command Center
+            Welcome! You're Now In Your Garage.
           </p>
         </div>
 
@@ -115,15 +142,15 @@ export default function StepDashboard() {
         )}
       </div>
 
-      {/* PROFILE COMPLETION BANNER (IF NO USERNAME SET) */}
+      {/* PROFILE COMPLETION BANNER (FOR GUESTS / NO USERNAME SET) */}
       {!userProfile?.username && (
         <div className="bg-amber-50 border-2 border-amber-300/80 rounded-3xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
           <div className="space-y-1">
             <h3 className="font-extrabold text-amber-950 text-sm sm:text-base">
-              Claim Your Weezer Handle
+              Claim Your Weezer Song Ranking Username
             </h3>
             <p className="text-xs font-medium text-amber-900/80 leading-relaxed">
-              Set up your username so you can save rankings and compare with
+              Set up your profile so you can save rankings and compare with
               friends.
             </p>
           </div>
@@ -188,20 +215,26 @@ export default function StepDashboard() {
           {stepsState.map((st) => (
             <button
               key={st.id}
-              onClick={st.action}
-              className={`p-5 rounded-3xl text-left transition-all cursor-pointer flex flex-col justify-between min-h-[110px] border-2 group shadow-sm ${
-                st.isCurrent
-                  ? 'bg-[#0072CE] border-[#0072CE] text-white shadow-blue-500/20'
+              type="button"
+              disabled={st.isDisabled}
+              onClick={st.isDisabled ? (e) => e.preventDefault() : st.action}
+              className={`p-5 rounded-3xl text-left transition-all flex flex-col justify-between min-h-[110px] border-2 shadow-sm ${
+                st.isDisabled
+                  ? 'opacity-40 bg-slate-100 border-slate-200 cursor-not-allowed pointer-events-none select-none'
+                  : st.isCurrent
+                  ? 'bg-[#0072CE] border-[#0072CE] text-white shadow-blue-500/20 cursor-pointer group'
                   : st.isComplete
-                  ? 'bg-emerald-50/70 border-emerald-200/80 hover:border-emerald-300 text-slate-950'
-                  : 'bg-slate-50/90 border-slate-200/90 hover:border-slate-300 text-slate-950'
+                  ? 'bg-emerald-50/70 border-emerald-200/80 hover:border-emerald-300 text-slate-950 cursor-pointer group'
+                  : 'bg-slate-50/90 border-slate-200/90 hover:border-slate-300 text-slate-950 cursor-pointer group'
               }`}
             >
               <div>
                 <div className="flex items-center justify-between gap-1 mb-1">
                   <h3
                     className={`font-black text-base sm:text-lg leading-tight transition-colors ${
-                      st.isCurrent
+                      st.isDisabled
+                        ? 'text-slate-400'
+                        : st.isCurrent
                         ? 'text-white'
                         : 'text-slate-950 group-hover:text-[#0072CE]'
                     }`}
@@ -209,7 +242,7 @@ export default function StepDashboard() {
                     {st.title}
                   </h3>
 
-                  {st.isComplete && (
+                  {st.isComplete && !st.isDisabled && (
                     <span className="w-5 h-5 rounded-full bg-emerald-500 text-white font-black text-[10px] flex items-center justify-center shrink-0 shadow-sm">
                       ✓
                     </span>
@@ -218,7 +251,11 @@ export default function StepDashboard() {
 
                 <p
                   className={`text-xs font-semibold ${
-                    st.isCurrent ? 'text-blue-100' : 'text-slate-400'
+                    st.isDisabled
+                      ? 'text-slate-400'
+                      : st.isCurrent
+                      ? 'text-blue-100'
+                      : 'text-slate-400'
                   }`}
                 >
                   {st.desc}
@@ -227,12 +264,14 @@ export default function StepDashboard() {
 
               <span
                 className={`text-xs font-black mt-3 transition-colors ${
-                  st.isCurrent
+                  st.isDisabled
+                    ? 'text-slate-400'
+                    : st.isCurrent
                     ? 'text-blue-100'
                     : 'text-slate-400 group-hover:text-[#0072CE]'
                 }`}
               >
-                {st.isCurrent ? 'Start →' : 'View →'}
+                {st.isDisabled ? 'Locked 🔒' : st.ctaText}
               </span>
             </button>
           ))}
@@ -246,8 +285,9 @@ export default function StepDashboard() {
         </span>
 
         <div className="grid grid-cols-2 gap-3">
-          {/* FAN STATS */}
+          {/* FAN STATS (Always Usable) */}
           <button
+            type="button"
             onClick={() => navigateTo('fan_stats')}
             className="bg-white border border-slate-200/90 hover:border-emerald-300 p-5 rounded-3xl text-left transition-all shadow-sm group cursor-pointer flex flex-col justify-between min-h-[110px]"
           >
@@ -264,21 +304,35 @@ export default function StepDashboard() {
             </span>
           </button>
 
-          {/* FRIENDS */}
+          {/* FRIENDS (Unusable if Guest) */}
           <button
-            onClick={() => navigateTo('friends')}
-            className="bg-white border border-slate-200/90 hover:border-purple-300 p-5 rounded-3xl text-left transition-all shadow-sm group cursor-pointer flex flex-col justify-between min-h-[110px]"
+            type="button"
+            disabled={!userId}
+            onClick={!userId ? (e) => e.preventDefault() : () => navigateTo('friends')}
+            className={`p-5 rounded-3xl text-left transition-all flex flex-col justify-between min-h-[110px] border ${
+              !userId
+                ? 'bg-slate-100 border-slate-200 opacity-40 cursor-not-allowed pointer-events-none select-none'
+                : 'bg-white border-slate-200/90 hover:border-purple-300 shadow-sm group cursor-pointer'
+            }`}
           >
             <div>
-              <h3 className="font-black text-slate-950 text-base sm:text-lg group-hover:text-purple-600 transition-colors leading-tight">
+              <h3
+                className={`font-black text-base sm:text-lg leading-tight transition-colors ${
+                  !userId ? 'text-slate-400' : 'text-slate-950 group-hover:text-purple-600'
+                }`}
+              >
                 Friends
               </h3>
               <p className="text-xs font-medium text-slate-400 mt-0.5">
-                Head-to-head taste
+                {!userId ? 'Sign in to unlock' : 'Head-to-head taste'}
               </p>
             </div>
-            <span className="text-xs font-black text-slate-400 group-hover:text-purple-600 transition-colors mt-2">
-              View →
+            <span
+              className={`text-xs font-black mt-2 transition-colors ${
+                !userId ? 'text-slate-400' : 'text-slate-400 group-hover:text-purple-600'
+              }`}
+            >
+              {!userId ? 'Account Required 🔒' : 'View →'}
             </span>
           </button>
         </div>

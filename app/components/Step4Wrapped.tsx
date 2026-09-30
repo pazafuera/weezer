@@ -1,0 +1,1877 @@
+'use client';
+
+import React, { useMemo, useState, useRef, useEffect } from 'react';
+import { supabase } from '@/utils/supabase';
+import {
+  Song,
+  BucketType,
+  FULL_SONG_POOL,
+  ALBUMS_BY_ID,
+  ALBUM_NAME_TO_ID,
+} from '../data/constants';
+import { FlyingWIcon, AlbumArtwork } from './SharedUI';
+
+// STATISTICAL HELPER: Kendall's Tau (Rank Agreement)
+function calculateKendallTau(
+  userRankMap: Map<string, number>,
+  communityRankMap: Map<string, number>
+): { tau: number; sampleSize: number } {
+  const comparableIds = Array.from(userRankMap.keys()).filter((id) =>
+    communityRankMap.has(id)
+  );
+
+  const n = comparableIds.length;
+  if (n < 2) return { tau: 0, sampleSize: n };
+
+  let concordant = 0;
+  let discordant = 0;
+
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      const userI = userRankMap.get(comparableIds[i])!;
+      const userJ = userRankMap.get(comparableIds[j])!;
+      const communityI = communityRankMap.get(comparableIds[i])!;
+      const communityJ = communityRankMap.get(comparableIds[j])!;
+
+      const userOrder = userI < userJ ? -1 : 1;
+      const communityOrder = communityI < communityJ ? -1 : 1;
+
+      if (userOrder === communityOrder) concordant++;
+      else discordant++;
+    }
+  }
+
+  const totalComparablePairs = concordant + discordant;
+
+  return {
+    tau:
+      totalComparablePairs > 0
+        ? (concordant - discordant) / totalComparablePairs
+        : 0,
+    sampleSize: n,
+  };
+}
+
+export default function Step4Wrapped({
+  masterList,
+  triageMap,
+  setStep,
+  globalConsensus: propGlobalConsensus = [],
+}: {
+  masterList: Song[];
+  triageMap: Record<string, BucketType>;
+  setStep: (
+    s: 'master' | 'triage' | 'rank_buckets' | 'wrapped' | 'fan_stats'
+  ) => void;
+  globalConsensus?: string[];
+}) {
+  const [copySuccess, setCopySuccess] = useState(false);
+  const [activeArchIndex, setActiveArchIndex] = useState(0);
+  const [activeEraIndex, setActiveEraIndex] = useState(0);
+  const [showAllAlbums, setShowAllAlbums] = useState(false);
+  const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
+
+  // Fallback DB fetch if globalConsensus isn't passed from parent
+  const [fetchedConsensus, setFetchedConsensus] = useState<string[]>([]);
+  const [isFetchingDB, setIsFetchingDB] = useState(
+    propGlobalConsensus.length === 0
+  );
+
+  const archScrollRef = useRef<HTMLDivElement>(null);
+  const eraScrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (propGlobalConsensus.length > 0) {
+      setIsFetchingDB(false);
+      return;
+    }
+
+    const fetchCommunityConsensus = async () => {
+      try {
+        const { data } = await supabase
+          .from('weezer_rankings')
+          .select('master_list');
+        if (data && data.length > 0) {
+          const positions: Record<string, number[]> = {};
+          FULL_SONG_POOL.forEach((s) => (positions[s.id] = []));
+
+          data.forEach((row) => {
+            if (row.master_list && row.master_list.length > 0) {
+              row.master_list.forEach((song: Song, idx: number) => {
+                if (positions[song.id]) positions[song.id].push(idx + 1);
+              });
+            }
+          });
+
+          const minRequiredRankings = data.length > 1 ? 1 : 0;
+
+          const ranks = FULL_SONG_POOL.map((s) => {
+            const pos = positions[s.id];
+            if (!pos || pos.length <= minRequiredRankings) return null;
+            const avg = pos.reduce((a, b) => a + b, 0) / pos.length;
+            return { id: s.id, avg };
+          })
+            .filter((r): r is { id: string; avg: number } => r !== null)
+            .sort((a, b) => a.avg - b.avg);
+
+          setFetchedConsensus(ranks.map((r) => r.id));
+        }
+      } catch (err) {
+        console.error('Error fetching global consensus fallback:', err);
+      } finally {
+        setIsFetchingDB(false);
+      }
+    };
+
+    fetchCommunityConsensus();
+  }, [propGlobalConsensus]);
+
+  const activeGlobalConsensus =
+    propGlobalConsensus.length > 0 ? propGlobalConsensus : fetchedConsensus;
+
+  // EXPLICITLY RANKED SONGS
+  const explicitlyRankedSongs = useMemo(() => {
+    return masterList.filter((s) => {
+      const bucket = triageMap[s.id];
+      return bucket === 'banger' || bucket === 'slaps';
+    });
+  }, [masterList, triageMap]);
+
+  const top10 = useMemo(
+    () => explicitlyRankedSongs.slice(0, 10),
+    [explicitlyRankedSongs]
+  );
+
+  // EXPLICIT RANK MAPS
+  const userRankMap = useMemo(() => {
+    const map = new Map<string, number>();
+    explicitlyRankedSongs.forEach((song, index) => {
+      map.set(song.id, index + 1);
+    });
+    return map;
+  }, [explicitlyRankedSongs]);
+
+  const communityRankMap = useMemo(() => {
+    const map = new Map<string, number>();
+    activeGlobalConsensus.forEach((songId, index) => {
+      map.set(songId, index + 1);
+    });
+    return map;
+  }, [activeGlobalConsensus]);
+
+  // USER ↔ COMMUNITY COMPARISON SET
+  const rankedComparisons = useMemo(() => {
+    const userCount = explicitlyRankedSongs.length;
+    const communityCount = activeGlobalConsensus.length;
+
+    if (userCount < 1 || communityCount < 1) return [];
+
+    const comparisons: {
+      song: Song;
+      userRank: number;
+      communityRank: number;
+      userPercentile: number;
+      communityPercentile: number;
+      difference: number;
+      absoluteDifference: number;
+    }[] = [];
+
+    explicitlyRankedSongs.forEach((song) => {
+      const userRank = userRankMap.get(song.id);
+      const communityRank = communityRankMap.get(song.id);
+
+      if (userRank === undefined || communityRank === undefined) return;
+
+      const userPercentile =
+        userCount > 1 ? (userRank - 1) / (userCount - 1) : 0;
+
+      const communityPercentile =
+        communityCount > 1 ? (communityRank - 1) / (communityCount - 1) : 0;
+
+      const difference = userPercentile - communityPercentile;
+
+      comparisons.push({
+        song,
+        userRank,
+        communityRank,
+        userPercentile,
+        communityPercentile,
+        difference,
+        absoluteDifference: Math.abs(difference),
+      });
+    });
+
+    return comparisons;
+  }, [
+    explicitlyRankedSongs,
+    userRankMap,
+    communityRankMap,
+    activeGlobalConsensus.length,
+  ]);
+
+  const stats = useMemo(() => {
+    const points: Record<BucketType, number> = {
+      banger: 5,
+      slaps: 4,
+      mid: 3,
+      skip: 2,
+      trash: 1,
+    };
+
+    let totalTriageScore = 0;
+    let totalValidSongs = 0;
+    let trashCount = 0;
+
+    let classicSum = 0,
+      classicCount = 0;
+    let modernSum = 0,
+      modernCount = 0;
+
+    let centeredReleaseYearSum = 0;
+    let totalCenteredWeight = 0;
+
+    const albumScores: Record<
+      string,
+      {
+        id: string;
+        name: string;
+        total: number;
+        count: number;
+        color: string;
+        scores: number[];
+      }
+    > = {};
+
+    FULL_SONG_POOL.forEach((s) => {
+      const bucket = triageMap[s.id];
+      if (!bucket) return;
+
+      const score = points[bucket];
+      totalTriageScore += score;
+      totalValidSongs++;
+
+      if (bucket === 'trash') trashCount++;
+
+      if (s.year <= 1999) {
+        classicSum += score;
+        classicCount++;
+      }
+
+      if (s.year >= 2014) {
+        modernSum += score;
+        modernCount++;
+      }
+
+      const centeredWeight = Math.max(0, score - 3);
+
+      if (centeredWeight > 0) {
+        centeredReleaseYearSum += s.year * centeredWeight;
+        totalCenteredWeight += centeredWeight;
+      }
+
+      const resolvedId = s.albumId || ALBUM_NAME_TO_ID[s.album] || 'unknown';
+
+      if (!albumScores[resolvedId]) {
+        const albumMeta = ALBUMS_BY_ID[resolvedId];
+
+        albumScores[resolvedId] = {
+          id: resolvedId,
+          name: albumMeta ? albumMeta.name : s.album,
+          total: 0,
+          count: 0,
+          color: s.albumColor || 'bg-slate-500',
+          scores: [],
+        };
+      }
+
+      albumScores[resolvedId].total += score;
+      albumScores[resolvedId].count += 1;
+      albumScores[resolvedId].scores.push(score);
+    });
+
+    const globalPriorMean =
+      totalValidSongs > 0 ? totalTriageScore / totalValidSongs : 3;
+
+    const haterPercent = totalValidSongs > 0 ? trashCount / totalValidSongs : 0;
+
+    const globalPositivity = (globalPriorMean - 1) / 4;
+
+    const classicAverage = classicCount ? classicSum / classicCount : 0;
+
+    const modernAverage = modernCount ? modernSum / modernCount : 0;
+
+    const SHRINKAGE_K = 5;
+
+    const rankedAlbums = Object.entries(albumScores)
+      .map(([albumId, data]) => {
+        const rawMean = data.total / data.count;
+
+        const adjustedScore =
+          (data.count / (data.count + SHRINKAGE_K)) * rawMean +
+          (SHRINKAGE_K / (data.count + SHRINKAGE_K)) * globalPriorMean;
+
+        const variance =
+          data.scores.reduce(
+            (acc, val) => acc + Math.pow(val - rawMean, 2),
+            0
+          ) / data.count;
+
+        return {
+          id: albumId,
+          name: data.name,
+          score: adjustedScore,
+          rawScore: rawMean,
+          color: data.color,
+          count: data.count,
+          stdDev: Math.sqrt(variance),
+        };
+      })
+      .sort((a, b) => b.score - a.score);
+
+    const mostConsistentAlbum =
+      rankedAlbums
+        .filter((a) => a.count >= 8 && a.rawScore >= 3.8)
+        .sort((a, b) => a.stdDev - b.stdDev)[0] || null;
+
+    const currentYear = new Date().getFullYear();
+
+    const sentimentWeightedYear =
+      totalCenteredWeight > 0
+        ? centeredReleaseYearSum / totalCenteredWeight
+        : currentYear;
+
+    const listeningAge = Math.round(14 + (currentYear - sentimentWeightedYear));
+
+    // USER ↔ COMMUNITY CLASHES
+    let biggestBetrayal: {
+      song: Song;
+      uRank: number;
+      cRank: number;
+      difference: number;
+      cPercentile: number;
+    } | null = null;
+
+    let hiddenGem: {
+      song: Song;
+      uRank: number;
+      cRank: number;
+      difference: number;
+      cPercentile: number;
+    } | null = null;
+
+    if (rankedComparisons.length > 0) {
+      // Biggest Betrayal: largest case where user ranks a song WORSE than community.
+      const betrayalCandidates = rankedComparisons
+        .filter((c) => c.difference > 0)
+        .sort((a, b) => b.difference - a.difference);
+
+      if (betrayalCandidates[0]) {
+        const candidate = betrayalCandidates[0];
+
+        biggestBetrayal = {
+          song: candidate.song,
+          uRank: candidate.userRank,
+          cRank: candidate.communityRank,
+          difference: candidate.difference,
+          cPercentile: Math.round(candidate.communityPercentile * 100),
+        };
+      }
+
+      // Hidden Gem: user ranks song BETTER than community.
+      const hiddenGemCandidates = rankedComparisons
+        .filter(
+          (c) =>
+            c.userRank <= 20 &&
+            c.difference < 0 &&
+            !c.song.title.includes('Beverly Hills') &&
+            !c.song.title.includes('Island in the Sun')
+        )
+        .sort((a, b) => a.difference - b.difference);
+
+      if (hiddenGemCandidates[0]) {
+        const candidate = hiddenGemCandidates[0];
+
+        hiddenGem = {
+          song: candidate.song,
+          uRank: candidate.userRank,
+          cRank: candidate.communityRank,
+          difference: candidate.difference,
+          cPercentile: Math.round(candidate.communityPercentile * 100),
+        };
+      }
+    }
+
+    // EXPLICIT RANKING ANALYTICS
+    const allEras = [
+      {
+        id: 'classic',
+        name: 'The Classic Era',
+        subtitle: 'Blue, Pinkerton & B-Sides',
+        min: 1994,
+        max: 1999,
+        mid: 1996,
+        years: '1994–1999',
+        color: 'bg-[#0072CE]',
+        text: 'text-white',
+      },
+      {
+        id: 'reunion',
+        name: 'The Reunion Era',
+        subtitle: 'Green, Maladroit, Make Believe',
+        min: 2000,
+        max: 2007,
+        mid: 2003,
+        years: '2000–2007',
+        color: 'bg-emerald-600',
+        text: 'text-white',
+      },
+      {
+        id: 'wildwest',
+        name: 'The Wild West',
+        subtitle: 'Red, Raditude, Hurley',
+        min: 2008,
+        max: 2013,
+        mid: 2010,
+        years: '2008–2013',
+        color: 'bg-red-600',
+        text: 'text-white',
+      },
+      {
+        id: 'renaissance',
+        name: 'The Renaissance',
+        subtitle: 'EWBAITE, White, Pacific Daydream',
+        min: 2014,
+        max: 2019,
+        mid: 2016,
+        years: '2014–2019',
+        color: 'bg-orange-500',
+        text: 'text-white',
+      },
+      {
+        id: 'modern',
+        name: 'The Modern Era',
+        subtitle: 'OK Human, Van Weezer, SZNZ',
+        min: 2020,
+        max: 2023,
+        mid: 2021,
+        years: '2020–2023',
+        color: 'bg-purple-600',
+        text: 'text-white',
+      },
+      {
+        id: 'gold',
+        name: 'The Gold Era',
+        subtitle: 'The Gold Album & Beyond',
+        min: 2024,
+        max: 2030,
+        mid: 2026,
+        years: '2024–Present',
+        color: 'bg-amber-400',
+        text: 'text-amber-950',
+      },
+    ];
+
+    const eraWeights: Record<string, number> = {
+      classic: 0,
+      reunion: 0,
+      wildwest: 0,
+      renaissance: 0,
+      modern: 0,
+      gold: 0,
+    };
+
+    let totalRankWeight = 0;
+    let rankedDeepCutCount = 0;
+
+    const temporalBins = {
+      '90s': 0,
+      '00s': 0,
+      '10s': 0,
+      '20s': 0,
+    };
+
+    explicitlyRankedSongs.forEach((s, idx) => {
+      const weight = 1 / Math.sqrt(idx + 1);
+
+      totalRankWeight += weight;
+
+      const era = allEras.find((e) => s.year >= e.min && s.year <= e.max);
+
+      if (era) eraWeights[era.id] += weight;
+
+      if (
+        s.isBSide ||
+        (s.year > 1996 &&
+          ![
+            'Hash Pipe',
+            'Beverly Hills',
+            'Island in the Sun',
+            'Pork and Beans',
+          ].includes(s.title))
+      ) {
+        rankedDeepCutCount++;
+      }
+
+      if (s.year <= 1999) temporalBins['90s']++;
+      else if (s.year <= 2009) temporalBins['00s']++;
+      else if (s.year <= 2019) temporalBins['10s']++;
+      else temporalBins['20s']++;
+    });
+
+    const deepCutRatio =
+      explicitlyRankedSongs.length > 0
+        ? rankedDeepCutCount / explicitlyRankedSongs.length
+        : 0;
+
+    const sortedEras = allEras
+      .map((e) => ({
+        ...e,
+        matchScore:
+          totalRankWeight > 0
+            ? Math.round((eraWeights[e.id] / totalRankWeight) * 100)
+            : 0,
+      }))
+      .sort((a, b) => b.matchScore - a.matchScore);
+
+    // KENDALL'S TAU & INDEPENDENCE INDEX
+    const { tau, sampleSize: rankComparisonSampleSize } = calculateKendallTau(
+      userRankMap,
+      communityRankMap
+    );
+
+    const hotTakeScore =
+      rankComparisonSampleSize >= 2 ? Math.round(((1 - tau) / 2) * 100) : 50;
+
+    const averageRankDifference =
+      rankedComparisons.length > 0
+        ? rankedComparisons.reduce((sum, c) => sum + c.absoluteDifference, 0) /
+          rankedComparisons.length
+        : 0;
+
+    const independenceIndex =
+      rankedComparisons.length >= 2
+        ? Math.min(99, Math.max(1, Math.round(1 + averageRankDifference * 98)))
+        : null;
+
+    // THE CORE FOUR
+    const coreFour: {
+      label: string;
+      song: Song;
+      desc: string;
+    }[] = [];
+
+    if (top10[0]) {
+      coreFour.push({
+        label: 'The Anchor',
+        song: top10[0],
+        desc: 'Your undisputed favorite.',
+      });
+    }
+
+    const topDeepCut = explicitlyRankedSongs.find(
+      (s) =>
+        s.isBSide ||
+        (s.year > 1996 &&
+          ![
+            'Hash Pipe',
+            'Beverly Hills',
+            'Island in the Sun',
+            'Pork and Beans',
+          ].includes(s.title))
+    );
+
+    if (topDeepCut && !coreFour.some((c) => c.song.id === topDeepCut.id)) {
+      coreFour.push({
+        label: 'The Deep Cut',
+        song: topDeepCut,
+        desc: 'Your highest-rated rarity.',
+      });
+    }
+
+    if (hiddenGem && !coreFour.some((c) => c.song.id === hiddenGem!.song.id)) {
+      coreFour.push({
+        label: 'The Defender',
+        song: hiddenGem.song,
+        desc: 'Your controversial darling.',
+      });
+    }
+
+    const topEraSong = explicitlyRankedSongs.find(
+      (s) =>
+        !coreFour.some((c) => c.song.id === s.id) &&
+        s.year >= sortedEras[0].min &&
+        s.year <= sortedEras[0].max
+    );
+
+    if (topEraSong) {
+      coreFour.push({
+        label: 'The Era Definer',
+        song: topEraSong,
+        desc: `Peak ${sortedEras[0].name}.`,
+      });
+    }
+
+    explicitlyRankedSongs.forEach((s) => {
+      if (coreFour.length < 4 && !coreFour.some((c) => c.song.id === s.id)) {
+        coreFour.push({
+          label: 'The Essential',
+          song: s,
+          desc: 'A pillar of your catalog.',
+        });
+      }
+    });
+
+    // THE GREAT DEBATE
+    const blueAlbum = rankedAlbums.find((a) => a.id === 'blue');
+    const pinkAlbum = rankedAlbums.find((a) => a.id === 'pinkerton');
+
+    const blueScore = blueAlbum ? blueAlbum.score : 0;
+    const pinkScore = pinkAlbum ? pinkAlbum.score : 0;
+
+    const diff = pinkScore - blueScore;
+
+    const tugOfWarPct = Math.min(100, Math.max(0, 50 + diff * 25));
+
+    let persona = "The '94–'96 Dualist";
+
+    if (diff < -0.15) persona = 'Blue Album Purist';
+    else if (diff > 0.15) persona = 'Pinkerton Cultist';
+
+    let debateDescriptor: React.ReactNode = '';
+
+    if (diff <= -1.5)
+      debateDescriptor = (
+        <>
+          You look <strong>JUST</strong> like Buddy Holly.
+        </>
+      );
+    else if (diff <= -0.8)
+      debateDescriptor = "You're taking your board to work. Peak 1994.";
+    else if (diff <= -0.3)
+      debateDescriptor = 'You definitely have a poster of KISS on your wall.';
+    else if (diff < -0.05)
+      debateDescriptor = 'You look a little bit like Buddy Holly.';
+    else if (diff <= 0.05)
+      debateDescriptor =
+        'You want to destroy your sweater while falling in love all over again.';
+    else if (diff < 0.3)
+      debateDescriptor =
+        "It's been only a day or two since you were out on the floor.";
+    else if (diff < 0.8)
+      debateDescriptor =
+        'You are writing a letter to a fan in Japan right now.';
+    else if (diff < 1.5)
+      debateDescriptor = "You see a lot in little ol' 3-chord me.";
+    else debateDescriptor = "You don't wanna be an old man anymore.";
+
+    // ARCHETYPES
+    const normClassic = Math.max(0, Math.min(1, (classicAverage - 1) / 4));
+
+    const normModern = Math.max(0, Math.min(1, (modernAverage - 1) / 4));
+
+    const normDeepCut = Math.max(0, Math.min(1, deepCutRatio));
+
+    const normPositivity = Math.max(0, Math.min(1, globalPositivity));
+
+    const normChaos = Math.max(0, Math.min(1, hotTakeScore / 100));
+
+    const userVector = {
+      classic: normClassic,
+      modern: normModern,
+      deepCut: normDeepCut,
+      positivity: normPositivity,
+      chaos: normChaos,
+    };
+
+    const centroids = [
+      {
+        id: 'scientist',
+        name: 'Weezer Scientist',
+        emoji: '🧪',
+        desc: 'You have a meticulously balanced, logic-driven appreciation across all eras.',
+        color: 'text-emerald-600',
+        vector: {
+          classic: 0.5,
+          modern: 0.5,
+          deepCut: 0.5,
+          positivity: 0.8,
+          chaos: 0.2,
+        },
+      },
+      {
+        id: '90s',
+        name: '1990s Elitist',
+        emoji: '📼',
+        desc: "If Matt Sharp didn't play bass on it, you barely consider it Weezer.",
+        color: 'text-[#0072CE]',
+        vector: {
+          classic: 0.9,
+          modern: 0.0,
+          deepCut: 0.4,
+          positivity: 0.3,
+          chaos: 0.6,
+        },
+      },
+      {
+        id: 'vault',
+        name: 'Cuomo Vault Scholar',
+        emoji: '🧠',
+        desc: 'You ignore radio hits to excavate unreleased synth demos and emotional B-sides.',
+        color: 'text-[#8C6239]',
+        vector: {
+          classic: 0.6,
+          modern: 0.3,
+          deepCut: 0.9,
+          positivity: 0.6,
+          chaos: 0.8,
+        },
+      },
+      {
+        id: 'critic',
+        name: 'Ruthless Critic',
+        emoji: '💀',
+        desc: 'You love Weezer so fiercely that you hate 75% of everything Rivers Cuomo has ever recorded.',
+        color: 'text-red-600',
+        vector: {
+          classic: 0.4,
+          modern: 0.1,
+          deepCut: 0.3,
+          positivity: 0.0,
+          chaos: 0.9,
+        },
+      },
+      {
+        id: 'revisionist',
+        name: 'Post-Classic Revisionist',
+        emoji: '🚀',
+        desc: 'You boldly recognize that White, OK Human, and SZNZ contain absolute modern masterpieces.',
+        color: 'text-amber-500',
+        vector: {
+          classic: 0.2,
+          modern: 0.9,
+          deepCut: 0.4,
+          positivity: 0.8,
+          chaos: 0.7,
+        },
+      },
+      {
+        id: 'blueblood',
+        name: 'Blue Blood Classicist',
+        emoji: '🔵',
+        desc: 'Infectious hooks, mainstream perfection, and clean 1994 nostalgia drive your rankings.',
+        color: 'text-[#0072CE]',
+        vector: {
+          classic: 0.8,
+          modern: 0.2,
+          deepCut: 0.1,
+          positivity: 0.9,
+          chaos: 0.3,
+        },
+      },
+      {
+        id: 'chaos',
+        name: 'Chaos Agent',
+        emoji: '🎲',
+        desc: 'Your rankings defy all conventional Weezer logic. You operate entirely on your own terms.',
+        color: 'text-purple-600',
+        vector: {
+          classic: 0.5,
+          modern: 0.5,
+          deepCut: 0.5,
+          positivity: 0.5,
+          chaos: 1.0,
+        },
+      },
+    ];
+
+    const scoredArchetypes = centroids
+      .map((arc) => {
+        const dist = Math.sqrt(
+          Math.pow(userVector.classic - arc.vector.classic, 2) +
+            Math.pow(userVector.modern - arc.vector.modern, 2) +
+            Math.pow(userVector.deepCut - arc.vector.deepCut, 2) +
+            Math.pow(userVector.positivity - arc.vector.positivity, 2) +
+            Math.pow(userVector.chaos - arc.vector.chaos, 2)
+        );
+
+        const matchPct = Math.max(0, Math.round(Math.exp(-1.5 * dist) * 100));
+
+        return {
+          ...arc,
+          score: matchPct,
+        };
+      })
+      .sort((a, b) => b.score - a.score);
+
+    // VIBE ENCAPSULATED
+    let finalGif = '';
+
+    const idxBuddy = top10.findIndex((s) => s.title === 'Buddy Holly');
+
+    const idxSIAS = top10.findIndex((s) => s.title === "Say It Ain't So");
+
+    const greenAlb = rankedAlbums.find((a) => a.id === 'green');
+
+    if (haterPercent > 0.4 && modernAverage < 2.5) {
+      finalGif = 'https://i.makeagif.com/media/8-23-2022/NzKMWd.gif';
+    } else if (idxBuddy !== -1 && idxBuddy < 3) {
+      finalGif =
+        'https://64.media.tumblr.com/93fcfb3f9150ba418af5a32d98eac124/tumblr_o8gy54G22d1qk5iduo4_400.gifv';
+    } else if (idxSIAS !== -1 && idxSIAS < 3) {
+      finalGif =
+        'https://y.getyarn.io/9e9476db-0cd6-4464-b0f3-5b244fc3c6e3_text.gif';
+    } else if (listeningAge >= 45) {
+      finalGif =
+        'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSY6ZnxtVWbsD4w6bMgCJrHbtb-UXbtpT7I5_VxGCPTFw&s=10';
+    } else if (
+      top10.some((s) => {
+        const rId = s.albumId || ALBUM_NAME_TO_ID[s.album];
+
+        return rId === 'white';
+      }) ||
+      top10.some((s) => s.title === 'Thank God for Girls')
+    ) {
+      finalGif =
+        'https://64.media.tumblr.com/8a78f15f0bfcba08dee9e6aa6d4e51e9/tumblr_nwulmio6MM1slpeezo6_640.gif';
+    } else if (
+      top10.some((s) => {
+        const rId = s.albumId || ALBUM_NAME_TO_ID[s.album];
+
+        return rId === 'gold';
+      }) ||
+      modernAverage > 4.2
+    ) {
+      finalGif =
+        'https://www.billboard.com/wp-content/uploads/2026/08/rivers-cuomo-tonight-show-2026-1800.jpg?w=904&h=602&crop=1';
+    } else if (
+      top10.some((s) => s.title === 'Island in the Sun') ||
+      (greenAlb && greenAlb.score > 4)
+    ) {
+      finalGif =
+        'https://www.reddit.com/media?url=https%3A%2F%2Fpreview.redd.it%2Fmexican-wedding-island-in-the-sun-music-video-spike-jonze-v0-0yklqc5yc0ld1.jpeg%3Fwidth%3D1551%26format%3Dpjpg%26auto%3Dwebp%26s%3D0fb4bb97281055516fe47e7992ca3f8a83c5f4a3';
+    } else if (sortedEras[0].id === 'reunion') {
+      finalGif =
+        'https://1.bp.blogspot.com/--AnYM0FT8rw/VADIdNUwsUI/AAAAAAAAt6c/vLaTqZNSpeY/s1600/tumblr_lm0diuwDOj1qdfon8.gif';
+    } else if (
+      sortedEras[0].id === 'wildwest' ||
+      sortedEras[0].id === 'renaissance'
+    ) {
+      finalGif =
+        'https://www.reddit.com/media?url=https%3A%2F%2Fexternal-preview.redd.it%2FYDpqOwNiK3nVodUu-PM64pG3mQNeL_BWNtqxmgBzHDU.gif%3Fauto%3Dwebp%26s%3Db687e97a8759d660f449635a319669f0ab5648fe';
+    } else {
+      finalGif =
+        'https://www.ajournalofmusicalthings.com/wp-content/uploads/2018/12/Rivers-Cuomo-gif.gif';
+    }
+
+    // TASTE DNA
+    const timelineVal =
+      classicAverage + modernAverage > 0
+        ? Math.round((modernAverage / (classicAverage + modernAverage)) * 100)
+        : 50;
+
+    const sonicVibeVal = Math.round(
+      (blueScore / (blueScore + pinkScore || 1)) * 100
+    );
+
+    const dnaScores = [
+      {
+        label: 'Timeline',
+        left: "Classic '90s",
+        right: 'Modern',
+        value: timelineVal,
+        color: 'bg-[#0072CE]',
+        desc: 'Relative sentiment toward classic versus modern songs.',
+      },
+      {
+        label: 'Sonic Vibe',
+        left: 'Abrasive / Raw',
+        right: 'Polished Pop',
+        value: sonicVibeVal,
+        color: 'bg-purple-500',
+        desc: 'Your preference between confessional rock and slick radio pop.',
+      },
+      {
+        label: 'Track Depth',
+        left: 'Singles',
+        right: 'Deep Cuts',
+        value: Math.round(deepCutRatio * 100),
+        color: 'bg-amber-500',
+        desc: 'The concentration of B-sides and non-singles in your explicitly ranked tracks.',
+      },
+      {
+        label: 'Fandom Strictness',
+        left: 'Lover',
+        right: 'Critic',
+        value: Math.round(haterPercent * 100),
+        color: 'bg-slate-700',
+        desc: 'The percentage of the total catalog you marked as Trash.',
+      },
+    ];
+
+    return {
+      rankedAlbums,
+      allEras,
+      sortedEras,
+      listeningAge,
+      blueScore,
+      pinkScore,
+      diff,
+      tugOfWarPct,
+      persona,
+      debateDescriptor,
+      hotTakeScore,
+      independenceIndex,
+      biggestBetrayal,
+      hiddenGem,
+      mostConsistentAlbum,
+      scoredArchetypes,
+      dnaScores,
+      finalGif,
+      explicitCount: explicitlyRankedSongs.length,
+      rankComparisonSampleSize,
+      coreFour,
+      temporalBins,
+    };
+  }, [
+    explicitlyRankedSongs,
+    triageMap,
+    top10,
+    userRankMap,
+    communityRankMap,
+    activeGlobalConsensus.length,
+    rankedComparisons,
+  ]);
+
+  const handleShare = async () => {
+    const shareText =
+      `🧵 My Weezer "Sweater Thread" 🧵\n\n` +
+      `🥇 Anthem: ${top10[0]?.title}\n` +
+      `🧑‍🔬 Archetype: ${stats.scoredArchetypes[0].name}\n` +
+      `⚖️ Lean: ${stats.persona}\n\n` +
+      `Top Albums:\n` +
+      `1. ${stats.rankedAlbums[0]?.name}\n` +
+      `2. ${stats.rankedAlbums[1]?.name}\n` +
+      `3. ${stats.rankedAlbums[2]?.name}\n\n` +
+      `Unravel your Weezer taste at famduel.com/weezer`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'My Sweater Thread',
+          text: shareText,
+        });
+      } catch (err) {
+        console.error('Share failed', err);
+      }
+    } else {
+      navigator.clipboard.writeText(shareText);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 3000);
+    }
+  };
+
+  const handleArchScroll = () => {
+    if (!archScrollRef.current) return;
+
+    const firstChild = archScrollRef.current.children[0];
+
+    if (!firstChild) return;
+
+    const index = Math.round(
+      archScrollRef.current.scrollLeft / (firstChild as HTMLElement).clientWidth
+    );
+
+    setActiveArchIndex(
+      Math.max(0, Math.min(stats.scoredArchetypes.length, index))
+    );
+  };
+
+  const handleEraScroll = () => {
+    if (!eraScrollRef.current) return;
+
+    const firstChild = eraScrollRef.current.children[0];
+
+    if (!firstChild) return;
+
+    const index = Math.round(
+      eraScrollRef.current.scrollLeft / (firstChild as HTMLElement).clientWidth
+    );
+
+    setActiveEraIndex(Math.max(0, Math.min(stats.sortedEras.length, index)));
+  };
+
+  const scrollToArch = (index: number) => {
+    if (!archScrollRef.current) return;
+
+    const firstChild = archScrollRef.current.children[0];
+
+    if (!firstChild) return;
+
+    const offset = index * (firstChild as HTMLElement).clientWidth;
+
+    archScrollRef.current.scrollTo({
+      left: offset,
+      behavior: 'smooth',
+    });
+  };
+
+  const scrollToEra = (index: number) => {
+    if (!eraScrollRef.current) return;
+
+    const firstChild = eraScrollRef.current.children[0];
+
+    if (!firstChild) return;
+
+    const offset = index * (firstChild as HTMLElement).clientWidth;
+
+    eraScrollRef.current.scrollTo({
+      left: offset,
+      behavior: 'smooth',
+    });
+  };
+
+  if (isFetchingDB) {
+    return (
+      <div className="py-24 text-center space-y-3">
+        <div className="w-8 h-8 border-4 border-[#0072CE] border-t-transparent rounded-full animate-spin mx-auto" />
+        <p className="text-sm font-bold text-slate-500">
+          Unraveling the Sweater Thread...
+        </p>
+      </div>
+    );
+  }
+
+  const displayedAlbums = showAllAlbums
+    ? stats.rankedAlbums
+    : stats.rankedAlbums.slice(0, 5);
+
+  return (
+    <div className="space-y-16 sm:space-y-20 pb-32 animate-in fade-in slide-in-from-bottom-4 duration-700 max-w-full overflow-hidden">
+      <div className="pt-2 flex items-center justify-between px-2">
+        <button
+          onClick={() => setStep('master')}
+          className="text-xs font-black text-slate-400 hover:text-slate-600 transition-colors flex items-center gap-1 cursor-pointer"
+        >
+          ← Edit Final Rankings
+        </button>
+
+        <button
+          onClick={() => setStep('fan_stats')}
+          className="text-xs font-black text-[#0072CE] hover:text-blue-700 transition-colors flex items-center gap-1 cursor-pointer"
+        >
+          Fan Stats →
+        </button>
+      </div>
+
+      <div className="text-center px-4 pt-2">
+        <h1 className="text-5xl sm:text-6xl font-black text-slate-950 tracking-tighter mb-2">
+          The Sweater <span className="text-[#0072CE]">Thread</span>
+        </h1>
+
+        <p className="text-sm font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap truncate">
+          Your Weezer Taste, Unraveled.
+        </p>
+      </div>
+
+      {/* 1. HERO */}
+      <div>
+        <div className="bg-gradient-to-b from-[#0072CE] via-[#005fA3] to-slate-900 rounded-3xl p-8 sm:p-12 text-center shadow-2xl border border-[#0072CE]/30 relative overflow-hidden mx-4 sm:mx-0">
+          <span className="text-[10px] font-black uppercase tracking-widest text-amber-300 block mb-4">
+            Your Anthem
+          </span>
+
+          <h2 className="text-4xl sm:text-6xl font-black text-white tracking-tighter leading-tight mb-3 drop-shadow-lg">
+            "{top10[0]?.title || 'Undecided'}"
+          </h2>
+
+          {top10[0] && (
+            <p className="text-sm font-bold text-blue-200 uppercase tracking-widest">
+              {ALBUMS_BY_ID[
+                top10[0].albumId || ALBUM_NAME_TO_ID[top10[0].album]
+              ]?.name || top10[0].album}{' '}
+              ({top10[0].year})
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* 2. ARCHETYPES CAROUSEL */}
+      <div>
+        <h3 className="text-2xl sm:text-3xl font-black text-slate-900 text-center mb-6 tracking-tight truncate">
+          Fandom Archetype
+        </h3>
+
+        <div
+          ref={archScrollRef}
+          onScroll={handleArchScroll}
+          className="flex gap-4 overflow-x-auto snap-x snap-mandatory px-4 pb-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] items-stretch"
+        >
+          {stats.scoredArchetypes.map((arch, idx) => (
+            <React.Fragment key={arch.id}>
+              <div
+                className={`w-[90vw] sm:w-[400px] shrink-0 snap-center rounded-3xl p-6 sm:p-8 text-center border-2 transition-all relative overflow-hidden flex flex-col justify-center ${
+                  idx === 0
+                    ? 'bg-white border-[#0072CE]/30 shadow-lg'
+                    : 'bg-slate-50 border-slate-200 opacity-80'
+                }`}
+              >
+                {idx === 0 ? (
+                  <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-amber-400 text-slate-950 text-[10px] font-black uppercase px-4 py-1.5 rounded-full tracking-widest z-10 whitespace-nowrap">
+                    Your Match
+                  </div>
+                ) : (
+                  <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-slate-200 text-slate-600 text-[9px] font-black uppercase px-3 py-1 rounded-full tracking-widest shadow-sm z-10 whitespace-nowrap">
+                    {Math.round(arch.score)}% Similarity
+                  </div>
+                )}
+
+                <div
+                  className={`text-6xl ${
+                    idx === 0 ? 'mb-6 mt-8' : 'mb-4 mt-8'
+                  } drop-shadow-sm`}
+                >
+                  {arch.emoji}
+                </div>
+
+                <h3
+                  className={`text-2xl font-black mb-3 tracking-tight truncate ${arch.color}`}
+                >
+                  {arch.name}
+                </h3>
+
+                <p className="text-sm font-bold text-slate-500 leading-relaxed px-2">
+                  {arch.desc}
+                </p>
+              </div>
+
+              {idx === 0 && (
+                <div
+                  onClick={() => scrollToArch(1)}
+                  className="w-[30vw] sm:w-[140px] shrink-0 snap-center rounded-3xl flex flex-col items-center justify-center border-2 border-slate-700 bg-slate-800 text-slate-300 cursor-pointer hover:bg-slate-700 transition-all shadow-md"
+                >
+                  <span className="text-3xl mb-3">👀</span>
+                  <span className="text-xs font-black uppercase tracking-widest text-center leading-snug">
+                    Explore
+                    <br />
+                    Other
+                    <br />
+                    Matches
+                  </span>
+                </div>
+              )}
+            </React.Fragment>
+          ))}
+        </div>
+
+        <div className="flex items-center justify-center gap-2 mt-2 mb-4">
+          {Array.from({
+            length: stats.scoredArchetypes.length + 1,
+          }).map((_, i) => (
+            <button
+              key={i}
+              onClick={() => scrollToArch(i)}
+              className={`h-2.5 rounded-full transition-all duration-300 cursor-pointer ${
+                activeArchIndex === i
+                  ? 'w-8 bg-[#0072CE]'
+                  : 'w-2.5 bg-slate-300 hover:bg-slate-400'
+              }`}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* VIBE ENCAPSULATED */}
+      <div>
+        <div className="bg-slate-950 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl text-center mx-4 sm:mx-0 overflow-hidden">
+          <h3 className="text-2xl sm:text-3xl font-black text-white mb-6 tracking-tight">
+            Your Vibe, Encapsulated
+          </h3>
+
+          <div className="w-full aspect-video rounded-xl overflow-hidden border-4 border-slate-800 shadow-inner bg-slate-900">
+            <img
+              src={stats.finalGif}
+              alt="Weezer Vibe"
+              className="w-full h-full object-cover"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* THE CORE FOUR */}
+      {stats.coreFour.length === 4 && (
+        <div>
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm mx-4 sm:mx-0">
+            <h3 className="text-2xl sm:text-3xl font-black text-center text-slate-950 mb-3 tracking-tight truncate">
+              The Core Four
+            </h3>
+
+            <p className="text-xs font-bold text-center text-slate-500 mb-8 max-w-sm mx-auto">
+              If your Weezer fandom was a Mount Rushmore, these are the four
+              distinct tracks carving out your identity.
+            </p>
+
+            <div className="grid grid-cols-2 gap-4">
+              {stats.coreFour.map((item, i) => {
+                const resolvedId =
+                  item.song.albumId ||
+                  ALBUM_NAME_TO_ID[item.song.album] ||
+                  'unknown';
+
+                return (
+                  <div key={i} className="flex flex-col text-center">
+                    <div className="w-full aspect-square rounded-xl shadow-md overflow-hidden mb-3 border border-slate-200 relative bg-slate-800">
+                      <AlbumArtwork
+                        albumId={resolvedId}
+                        className="w-full h-full object-cover"
+                      />
+
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 to-transparent" />
+
+                      <div className="absolute bottom-2 left-2 right-2 text-left">
+                        <span className="text-[9px] font-black uppercase text-amber-400 block tracking-wider drop-shadow-md">
+                          {item.label}
+                        </span>
+
+                        <h4 className="text-sm font-black text-white truncate drop-shadow-md">
+                          {item.song.title}
+                        </h4>
+                      </div>
+                    </div>
+
+                    <p className="text-[10px] font-bold text-slate-500 leading-tight px-1">
+                      {item.desc}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 3. TASTE DNA */}
+      <div>
+        <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm mx-4 sm:mx-0">
+          <div className="text-center mb-8">
+            <h3 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight mb-2 truncate">
+              Taste DNA
+            </h3>
+
+            <p className="text-xs font-bold text-slate-500 max-w-xs mx-auto leading-relaxed">
+              The underlying traits and biases driving your rankings. Tap to
+              reveal definitions.
+            </p>
+          </div>
+
+          <div className="space-y-6 max-w-md mx-auto pt-2">
+            {stats.dnaScores.map((score) => (
+              <div key={score.label} className="relative">
+                <div
+                  className="flex flex-col cursor-pointer group"
+                  onClick={() =>
+                    setActiveTooltip(
+                      activeTooltip === score.label ? null : score.label
+                    )
+                  }
+                >
+                  <div className="text-center mb-2">
+                    <span className="text-[11px] font-black text-slate-700 uppercase tracking-widest inline-flex items-center gap-1 group-hover:text-[#0072CE] transition-colors">
+                      {score.label}
+
+                      <svg
+                        className="w-3 h-3 text-slate-400 group-hover:text-[#0072CE]"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2.5}
+                          d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                    </span>
+                  </div>
+
+                  <div className="relative w-full h-1.5 bg-slate-200 rounded-full my-1">
+                    <div
+                      className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full shadow-md border-[3px] border-white transition-all duration-1000 z-10 ${score.color}`}
+                      style={{
+                        left: `calc(${score.value}% - 8px)`,
+                      }}
+                    />
+                  </div>
+
+                  <div className="flex justify-between mt-2">
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                      {score.left}
+                    </span>
+
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                      {score.right}
+                    </span>
+                  </div>
+                </div>
+
+                {activeTooltip === score.label && (
+                  <div className="bg-slate-900 text-white text-[10px] font-bold p-3 rounded-xl mt-3 shadow-lg animate-in fade-in slide-in-from-top-2 relative z-20 text-center">
+                    <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-900 rotate-45" />
+                    {score.desc}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* 4. THE GREAT DEBATE */}
+      <div>
+        <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm relative overflow-hidden mx-4 sm:mx-0">
+          <h3 className="text-2xl sm:text-3xl font-black text-center text-slate-950 mb-3 tracking-tight truncate">
+            The Great Debate
+          </h3>
+
+          <p className="text-xs font-bold text-center text-slate-500 mb-10 max-w-xs mx-auto">
+            The ultimate dividing line. Do you prefer the tight pop hooks of
+            Blue, or the abrasive confessional of Pinkerton?
+          </p>
+
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="text-xs font-black text-[#0072CE] uppercase tracking-widest w-1/4 text-center">
+              Blue
+            </h4>
+
+            <h4 className="text-xs font-black text-[#8C6239] uppercase tracking-widest w-1/4 text-center">
+              Pinkerton
+            </h4>
+          </div>
+
+          <div className="relative h-6 bg-slate-100 rounded-full mb-8 border border-slate-200 flex items-center mt-2 mx-4">
+            <div className="absolute left-1/2 top-[-10px] bottom-[-10px] w-[3px] bg-slate-300 z-0 -translate-x-1/2 rounded-full" />
+
+            <div className="absolute left-0 w-6 h-6 bg-[#0072CE] rounded-full z-10 -translate-x-3 shadow-md border-2 border-white" />
+
+            <div className="absolute right-0 w-6 h-6 bg-[#8C6239] rounded-full z-10 translate-x-3 shadow-md border-2 border-white" />
+
+            {stats.tugOfWarPct < 50 && (
+              <div
+                className="absolute h-full bg-[#0072CE] z-0 transition-all duration-1000"
+                style={{
+                  left: `${stats.tugOfWarPct}%`,
+                  right: '50%',
+                  borderTopLeftRadius: '9999px',
+                  borderBottomLeftRadius: '9999px',
+                }}
+              />
+            )}
+
+            {stats.tugOfWarPct > 50 && (
+              <div
+                className="absolute h-full bg-[#8C6239] z-0 transition-all duration-1000"
+                style={{
+                  left: '50%',
+                  right: `${100 - stats.tugOfWarPct}%`,
+                  borderTopRightRadius: '9999px',
+                  borderBottomRightRadius: '9999px',
+                }}
+              />
+            )}
+
+            <div
+              className="absolute w-6 h-6 bg-white border-[4px] shadow-lg rounded-full transition-all duration-1000 -translate-x-1/2 z-20 flex items-center justify-center"
+              style={{
+                left: `${stats.tugOfWarPct}%`,
+                borderColor: stats.tugOfWarPct < 50 ? '#0072CE' : '#8C6239',
+              }}
+            />
+          </div>
+
+          <div className="text-center text-sm font-black text-slate-700 uppercase tracking-widest bg-slate-50 py-4 px-2 rounded-xl border border-slate-100">
+            {stats.debateDescriptor}
+          </div>
+        </div>
+      </div>
+
+      {/* 5. ERAS CAROUSEL */}
+      <div>
+        <div className="relative">
+          <h3 className="text-2xl sm:text-3xl font-black text-center text-slate-900 mb-3 tracking-tight truncate">
+            Weezer Era
+          </h3>
+
+          <p className="text-xs font-bold text-center text-slate-500 mb-6 max-w-sm mx-auto">
+            Your favorite-song era, based on your ranked tracks.
+          </p>
+
+          <div
+            ref={eraScrollRef}
+            onScroll={handleEraScroll}
+            className="flex gap-4 overflow-x-auto snap-x snap-mandatory px-4 pb-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] items-stretch"
+          >
+            {stats.sortedEras.map((era, idx) => (
+              <React.Fragment key={era.id}>
+                <div
+                  className={`w-[85vw] sm:w-[360px] shrink-0 snap-center rounded-3xl p-6 sm:p-8 transition-all relative overflow-hidden flex flex-col justify-between shadow-lg ${
+                    era.color
+                  } ${idx !== 0 && 'opacity-90'}`}
+                >
+                  {idx === 0 ? (
+                    <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white text-slate-900 text-[10px] font-black uppercase px-4 py-1.5 rounded-full tracking-widest shadow-sm whitespace-nowrap">
+                      Your Era
+                    </div>
+                  ) : (
+                    <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-black/20 text-white text-[9px] font-black uppercase px-3 py-1 rounded-full tracking-widest shadow-sm whitespace-nowrap">
+                      {era.matchScore}% Match
+                    </div>
+                  )}
+
+                  <div className="text-center mt-8 mb-8">
+                    <h3
+                      className={`text-3xl font-black mb-2 tracking-tight truncate ${era.text}`}
+                    >
+                      {era.name}
+                    </h3>
+
+                    <p className={`text-sm font-bold opacity-90 ${era.text}`}>
+                      {era.subtitle}
+                    </p>
+                  </div>
+
+                  <div className="mt-auto">
+                    <span
+                      className={`text-[9px] font-black uppercase tracking-[0.2em] block mb-3 text-center opacity-80 ${era.text}`}
+                    >
+                      {era.years}
+                    </span>
+
+                    <div className="flex h-2 w-full gap-0.5 rounded-full overflow-hidden opacity-90">
+                      {stats.allEras.map((blockEra) => (
+                        <div
+                          key={blockEra.id}
+                          className={`flex-1 h-full ${
+                            blockEra.id === era.id ? 'bg-white' : 'bg-black/20'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {idx === 0 && (
+                  <div
+                    onClick={() => scrollToEra(1)}
+                    className="w-[30vw] sm:w-[140px] shrink-0 snap-center rounded-3xl flex flex-col items-center justify-center border-2 border-slate-700 bg-slate-800 text-slate-300 cursor-pointer hover:bg-slate-700 transition-all shadow-md"
+                  >
+                    <span className="text-3xl mb-3">🎸</span>
+
+                    <span className="text-xs font-black uppercase tracking-widest text-center leading-snug">
+                      Explore
+                      <br />
+                      Other
+                      <br />
+                      Eras
+                    </span>
+                  </div>
+                )}
+              </React.Fragment>
+            ))}
+          </div>
+
+          <div className="flex items-center justify-center gap-2 mt-2 mb-4">
+            {Array.from({
+              length: stats.sortedEras.length + 1,
+            }).map((_, i) => (
+              <button
+                key={i}
+                onClick={() => scrollToEra(i)}
+                className={`h-2.5 rounded-full transition-all duration-300 cursor-pointer ${
+                  activeEraIndex === i
+                    ? 'w-8 bg-[#0072CE]'
+                    : 'w-2.5 bg-slate-300 hover:bg-slate-400'
+                }`}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* TEMPORAL LOYALTY CURVE */}
+      <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm mx-4 sm:mx-0">
+        <div className="text-center mb-6">
+          <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 block mb-1">
+            Temporal Loyalty
+          </span>
+
+          <h3 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight mb-2">
+            Nostalgia vs. Discovery
+          </h3>
+
+          <p className="text-xs font-bold text-slate-500 max-w-xs mx-auto leading-relaxed">
+            The volume of songs in your ranked list by decade.
+          </p>
+        </div>
+
+        <div className="flex items-end justify-between gap-2 h-32 mt-8 mb-2 px-2 border-b-2 border-slate-100 pb-2">
+          {Object.entries(stats.temporalBins).map(([label, count]) => {
+            const maxVal = Math.max(...Object.values(stats.temporalBins), 1);
+
+            const heightPct = (count / maxVal) * 100;
+
+            return (
+              <div
+                key={label}
+                className="flex-1 flex flex-col items-center justify-end gap-2 h-full"
+              >
+                <div className="w-full bg-slate-100 rounded-t-lg relative overflow-hidden transition-all duration-500 flex items-end justify-center flex-1">
+                  <div
+                    className="w-full bg-emerald-500 rounded-t-lg transition-all duration-1000 ease-out"
+                    style={{
+                      height: `${heightPct}%`,
+                    }}
+                  />
+                </div>
+
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest shrink-0">
+                  {label}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 6. LISTENING AGE */}
+      <div>
+        <div className="bg-gradient-to-br from-indigo-900 to-slate-900 border border-indigo-800 rounded-3xl p-8 sm:p-10 shadow-xl relative overflow-hidden mx-4 sm:mx-0 flex flex-col items-center justify-center">
+          <h3 className="text-3xl sm:text-4xl font-black text-white mb-8 tracking-tight text-center">
+            Listening Age
+          </h3>
+
+          <span className="text-[11px] font-black uppercase tracking-widest text-indigo-300 block mb-6 text-center leading-relaxed">
+            You listen to Weezer as if you are
+          </span>
+
+          <div className="inline-flex flex-col items-center justify-center w-32 h-32 bg-white rounded-full shadow-[0_0_40px_rgba(255,255,255,0.2)]">
+            <span className="text-5xl font-black text-slate-900 tracking-tighter -mt-1">
+              {stats.listeningAge}
+            </span>
+
+            <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+              Years Old
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* 7. INDEPENDENCE INDEX */}
+      <div>
+        <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm mx-4 sm:mx-0">
+          <h3 className="text-2xl sm:text-3xl font-black text-center text-slate-900 mb-2 tracking-tight truncate">
+            Independence Index
+          </h3>
+
+          <p className="text-xs font-bold text-center text-slate-500 leading-relaxed mb-8">
+            How differently you order the songs you ranked compared to the
+            community.
+          </p>
+
+          {stats.independenceIndex !== null ? (
+            <>
+              <div className="relative w-full h-1.5 bg-slate-200 rounded-full mb-4 mt-2">
+                <div
+                  className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-[#0072CE] border-[3px] border-white rounded-full shadow-[0_0_10px_rgba(0,114,206,0.3)] transition-all duration-1000 z-10"
+                  style={{
+                    left: `calc(${stats.independenceIndex}% - 8px)`,
+                  }}
+                />
+              </div>
+
+              <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-slate-400 mt-2">
+                <span>Groupie</span>
+                <span>Independent</span>
+              </div>
+
+              {stats.rankComparisonSampleSize > 0 && (
+                <p className="text-[9px] font-bold text-slate-400 text-center mt-4">
+                  Based on {stats.rankComparisonSampleSize} songs you and the
+                  community both explicitly ranked.
+                </p>
+              )}
+            </>
+          ) : (
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 text-center">
+              <p className="text-xs font-bold text-slate-500">
+                Need at least 2 shared ranked songs with the community to
+                compute Independence Index.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 8. RANK CLASHES */}
+      <div>
+        <div className="space-y-6 mx-4 sm:mx-0">
+          {stats.biggestBetrayal ? (
+            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl">
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-2 text-center">
+                The Betrayal
+              </span>
+
+              <h3 className="text-2xl font-black text-center text-white mb-6 tracking-tight">
+                You ranked a community favorite way lower.
+              </h3>
+
+              <div className="bg-slate-800 p-5 rounded-2xl border border-slate-700 shadow-inner flex flex-col items-center text-center">
+                <span className="text-xl font-black text-white mb-4 px-2">
+                  {stats.biggestBetrayal.song.title}
+                </span>
+
+                <div className="flex items-center w-full justify-around">
+                  <div className="flex flex-col items-center w-2/5">
+                    <span className="text-[9px] font-black uppercase text-slate-500 mb-1">
+                      Community Rank
+                    </span>
+
+                    <span className="text-xl sm:text-2xl font-black text-slate-400">
+                      #{stats.biggestBetrayal.cRank}
+                    </span>
+                  </div>
+
+                  <div className="text-slate-600 font-black text-xl">→</div>
+
+                  <div className="flex flex-col items-center w-2/5">
+                    <span className="text-[9px] font-black uppercase text-amber-400 mb-1">
+                      Your Rank
+                    </span>
+
+                    <span className="text-2xl sm:text-3xl font-black text-amber-400">
+                      #{stats.biggestBetrayal.uRank}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl text-center">
+              <p className="text-sm font-bold text-slate-500">
+                {stats.explicitCount === 0
+                  ? 'Rank some songs into Banger or Slaps to reveal your community disagreements!'
+                  : 'No major betrayals found—your explicitly ranked favorites line up well with community favorites.'}
+              </p>
+            </div>
+          )}
+
+          {stats.hiddenGem && (
+            <div className="bg-[#0072CE] border border-blue-500 rounded-3xl p-6 sm:p-8 shadow-xl">
+              <span className="text-[10px] font-black uppercase tracking-widest text-blue-300 block mb-2 text-center">
+                The Hidden Gem
+              </span>
+
+              <h3 className="text-2xl font-black text-center text-white mb-6 tracking-tight">
+                You love what the crowd overlooks.
+              </h3>
+
+              <div className="bg-white p-5 rounded-2xl border border-blue-200 shadow-lg flex flex-col items-center text-center">
+                <span className="text-xl font-black text-slate-900 mb-4 px-2">
+                  {stats.hiddenGem.song.title}
+                </span>
+
+                <div className="flex items-center w-full justify-around">
+                  <div className="flex flex-col items-center w-2/5">
+                    <span className="text-[9px] font-black uppercase text-slate-400 mb-1">
+                      Community Rank
+                    </span>
+
+                    <span className="text-xl sm:text-2xl font-black text-slate-400">
+                      #{stats.hiddenGem.cRank}
+                    </span>
+                  </div>
+
+                  <div className="text-[#0072CE] font-black text-xl">→</div>
+
+                  <div className="flex flex-col items-center w-2/5">
+                    <span className="text-[9px] font-black uppercase text-[#0072CE] mb-1">
+                      Your Rank
+                    </span>
+
+                    <span className="text-3xl sm:text-4xl font-black text-[#0072CE]">
+                      #{stats.hiddenGem.uRank}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 9. TOP 10 SETLIST */}
+      <div>
+        <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm mx-4 sm:mx-0">
+          <div className="mb-6 border-b border-slate-100 pb-4 text-center">
+            <h3 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-950 truncate">
+              Top 10 Tracks
+            </h3>
+          </div>
+
+          <div className="space-y-3">
+            {top10.length === 0 && (
+              <p className="text-center text-sm font-bold text-slate-400">
+                No songs ranked yet.
+              </p>
+            )}
+
+            {top10.map((song, i) => (
+              <div key={song.id} className="flex items-center gap-3">
+                <span className="text-lg font-black text-slate-300 w-5 text-right shrink-0">
+                  {i + 1}.
+                </span>
+
+                <div className="min-w-0 flex-1 border-b border-slate-100 pb-2">
+                  <h4 className="text-sm font-extrabold text-slate-900 truncate">
+                    {song.title}
+                  </h4>
+
+                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest truncate">
+                    {ALBUMS_BY_ID[song.albumId || ALBUM_NAME_TO_ID[song.album]]
+                      ?.name || song.album}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* 10. THE CONSISTENCY INDEX */}
+      {stats.mostConsistentAlbum && (
+        <div className="mx-4 sm:mx-0">
+          <div className="bg-indigo-950 border border-indigo-900 rounded-3xl p-6 sm:p-8 shadow-xl text-center overflow-hidden relative">
+            <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400 block mb-4">
+              The Consistency Index
+            </span>
+
+            <h3 className="text-2xl sm:text-3xl font-black text-white mb-4 tracking-tight">
+              You don't just love the hits.
+              <br />
+              You love the album.
+            </h3>
+
+            <p className="text-sm font-bold text-indigo-300 mb-8 max-w-sm mx-auto">
+              Based on your raw bucket scores, this album had the highest
+              average rating with the lowest variance. You rated almost every
+              track a Banger or Slap.
+            </p>
+
+            <div className="bg-indigo-900 rounded-2xl p-4 flex items-center justify-center gap-4 border border-indigo-800 shadow-inner">
+              <AlbumArtwork
+                albumId={stats.mostConsistentAlbum.id}
+                className="w-16 h-16 rounded-md shadow-md object-cover"
+              />
+
+              <div className="text-left">
+                <h4 className="text-lg font-black text-white">
+                  {stats.mostConsistentAlbum.name}
+                </h4>
+
+                <p className="text-xs font-bold text-indigo-300 uppercase tracking-wider">
+                  {stats.mostConsistentAlbum.count} Tracks Rated
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 11. ALBUM POWER RANKINGS */}
+      <div>
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl mx-4 sm:mx-0">
+          <div className="mb-6 border-b border-slate-800 pb-4 flex flex-col items-center text-center">
+            <h3 className="text-2xl sm:text-3xl font-black tracking-tight text-white mb-2 truncate">
+              Top Albums
+            </h3>
+
+            <p className="text-xs font-bold text-slate-400 truncate mb-4">
+              Album sentiment, adjusted for catalog size.
+            </p>
+
+            <button
+              onClick={() => setShowAllAlbums(!showAllAlbums)}
+              className="text-[10px] font-black uppercase text-[#0072CE] bg-blue-950 hover:bg-blue-900 px-3 py-1.5 rounded-lg transition-colors cursor-pointer shrink-0"
+            >
+              {showAllAlbums ? 'Show Less' : 'Show All'}
+            </button>
+          </div>
+
+          <div className="space-y-5">
+            {displayedAlbums.map((album, i) => (
+              <div key={album.name} className="flex items-center gap-4">
+                <span
+                  className={`text-xl font-black w-5 text-center shrink-0 ${
+                    i === 0 ? 'text-amber-400' : 'text-slate-600'
+                  }`}
+                >
+                  {i + 1}
+                </span>
+
+                <div className="w-12 h-12 bg-slate-800 rounded-md shrink-0 shadow-lg border border-slate-700 overflow-hidden relative flex items-center justify-center">
+                  <AlbumArtwork
+                    albumId={album.id}
+                    className="absolute inset-0 w-full h-full object-cover z-10"
+                  />
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <div className="flex justify-between items-end mb-1">
+                    <h4 className="text-sm font-bold text-white truncate pr-2">
+                      {album.name}
+                    </h4>
+
+                    <span className="text-[10px] font-black text-slate-400 shrink-0">
+                      {album.score.toFixed(2)}
+                    </span>
+                  </div>
+
+                  <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full ${
+                        album.color || 'bg-slate-500'
+                      }`}
+                      style={{
+                        width: `${(album.score / 5) * 100}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {!showAllAlbums && stats.rankedAlbums.length > 5 && (
+            <button
+              onClick={() => setShowAllAlbums(true)}
+              className="w-full mt-6 text-[10px] font-black uppercase text-slate-400 hover:text-white border border-slate-700 hover:border-slate-500 py-2.5 rounded-xl transition-colors cursor-pointer"
+            >
+              Show Full Catalog ↓
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* 12. SHARE ACTION MODULE */}
+      <div className="px-4 sm:px-0 text-center pt-4">
+        <button
+          onClick={handleShare}
+          className="w-full sm:w-auto bg-[#0072CE] hover:bg-blue-600 text-white font-black text-base sm:text-lg py-4 px-8 rounded-2xl shadow-[0_0_20px_rgba(0,114,206,0.3)] transition-transform hover:scale-105 active:scale-95 cursor-pointer"
+        >
+          {copySuccess
+            ? 'Copied to Clipboard! ✓'
+            : 'Share Your Sweater Thread 🔗'}
+        </button>
+      </div>
+    </div>
+  );
+}

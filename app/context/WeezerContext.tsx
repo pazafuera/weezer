@@ -1,12 +1,6 @@
 'use client';
 
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  ReactNode,
-} from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/utils/supabase';
 import { BucketType, Song, FULL_SONG_POOL } from '../data/constants';
@@ -53,10 +47,7 @@ interface WeezerContextType {
   masterList: Song[];
 
   // Actions
-  syncRankingsToDatabase: (
-    map: Record<string, BucketType>,
-    master: Song[]
-  ) => Promise<void>;
+  syncRankingsToDatabase: (map: Record<string, BucketType>, master: Song[]) => Promise<void>;
   updateAndSyncBucketRanks: (
     newBucketRanks: Record<BucketType, Song[]>,
     updatedMap?: Record<string, BucketType>
@@ -101,11 +92,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   // Rankings State
   const [triageMap, setTriageMap] = useState<Record<string, BucketType>>({});
   const [bucketRanks, setBucketRanks] = useState<Record<BucketType, Song[]>>({
-    banger: [],
-    slaps: [],
-    mid: [],
-    skip: [],
-    trash: [],
+    banger: [], slaps: [], mid: [], skip: [], trash: [],
   });
   const [masterList, setMasterList] = useState<Song[]>([]);
 
@@ -118,25 +105,35 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     initUserAndLoadRankings();
+
+    // Listen for auth changes (magic link logins, sign ins, sign outs)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        initUserAndLoadRankings();
+      } else {
+        setUserId(null);
+        setUserProfile(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function initUserAndLoadRankings() {
     setLoadingUser(true);
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      const { data: { session } } = await supabase.auth.getSession();
 
       if (session?.user) {
-        setUserId(session.user.id);
+        const uid = session.user.id;
+        setUserId(uid);
 
+        // Fetch User Profile
         const { data: profileData } = await supabase
           .from('profiles')
-          .select(
-            'username, display_name, birth_year, country_code, state_code'
-          )
-          .eq('id', session.user.id)
+          .select('username, display_name, birth_year, country_code, state_code')
+          .eq('id', uid)
           .maybeSingle();
 
         if (profileData) {
@@ -147,17 +144,23 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
 
           setUserProfile({
             username: profileData.username,
-            displayName: profileData.display_name || profileData.username,
+            displayName: profileData.display_name || profileData.username || session.user.email?.split('@')[0],
             birthYear: profileData.birth_year || undefined,
             location: locationStr,
           });
+        } else {
+          // Profile row doesn't exist yet, construct baseline
+          setUserProfile({
+            displayName: session.user.email?.split('@')[0] || 'Fan',
+          });
         }
 
+        // Fetch Rankings for logged in user
         const validSongIds = new Set(FULL_SONG_POOL.map((s) => s.id));
         const { data: rankData } = await supabase
           .from('weezer_rankings')
           .select('*')
-          .eq('user_id', session.user.id)
+          .eq('user_id', uid)
           .maybeSingle();
 
         if (rankData) {
@@ -166,8 +169,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
 
           if (rankData.triage_map) {
             Object.keys(rankData.triage_map).forEach((id) => {
-              if (validSongIds.has(id))
-                loadedTriage[id] = rankData.triage_map[id];
+              if (validSongIds.has(id)) loadedTriage[id] = rankData.triage_map[id];
             });
             setTriageMap(loadedTriage);
           }
@@ -180,13 +182,27 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
 
           setBucketRanks(getDerivedBucketRanks(loadedTriage, loadedMaster));
 
-          // SMART ENTRY ROUTING: If user has progress, route them directly to Dashboard
+          // Smart Entry: If user has rankings, default to Dashboard
           if (Object.keys(loadedTriage).length > 0 || loadedMaster.length > 0) {
             setStepState('dashboard');
           }
         }
       } else {
-        router.push('/login');
+        // Guest mode fallback from localStorage if available
+        const localState = localStorage.getItem('weezer_ranker_state');
+        if (localState) {
+          try {
+            const parsed = JSON.parse(localState);
+            if (parsed.triageMap) setTriageMap(parsed.triageMap);
+            if (parsed.masterList) setMasterList(parsed.masterList);
+            setBucketRanks(getDerivedBucketRanks(parsed.triageMap || {}, parsed.masterList || []));
+            if (Object.keys(parsed.triageMap || {}).length > 0) {
+              setStepState('dashboard');
+            }
+          } catch (e) {
+            console.error('Error parsing local state:', e);
+          }
+        }
       }
     } catch (err) {
       console.error('Error loading rankings:', err);
@@ -276,32 +292,20 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     await supabase.auth.signOut();
     setUserId(null);
     setUserProfile(null);
-    router.push('/login');
+    setTriageMap({});
+    setMasterList([]);
+    setBucketRanks({ banger: [], slaps: [], mid: [], skip: [], trash: [] });
+    localStorage.removeItem('weezer_ranker_state');
+    setStep('splash');
   };
 
   return (
     <WeezerContext.Provider
       value={{
-        step,
-        setStep,
-        refineStageIdx,
-        setRefineStageIdx,
-        autoStartMatchups,
-        setAutoStartMatchups,
-        navigateTo,
-        loadingUser,
-        userId,
-        userProfile,
-        setUserProfile,
-        handleSignOut,
-        triageMap,
-        setTriageMap,
-        bucketRanks,
-        masterList,
-        syncRankingsToDatabase,
-        updateAndSyncBucketRanks,
-        moveMasterSong,
-        handleMagicFill,
+        step, setStep, refineStageIdx, setRefineStageIdx, autoStartMatchups, setAutoStartMatchups, navigateTo,
+        loadingUser, userId, userProfile, setUserProfile, handleSignOut,
+        triageMap, setTriageMap, bucketRanks, masterList,
+        syncRankingsToDatabase, updateAndSyncBucketRanks, moveMasterSong, handleMagicFill,
       }}
     >
       {children}

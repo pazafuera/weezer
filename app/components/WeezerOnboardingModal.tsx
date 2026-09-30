@@ -121,7 +121,7 @@ export default function WeezerOnboardingModal({
       <div className="bg-white border border-slate-200 w-full max-w-md rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm transition-colors"
+          className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm transition-colors cursor-pointer"
         >
           ✕
         </button>
@@ -134,7 +134,7 @@ export default function WeezerOnboardingModal({
             <div>
               <h2 className="text-2xl font-black text-slate-950 tracking-tight">Save Your Sweater Thread</h2>
               <p className="text-xs font-semibold text-slate-500 mt-1">
-                Claim your custom link (`famduel.app/u/yourname`) and compare stats with friends.
+                Claim your custom handle and compare stats with friends.
               </p>
             </div>
 
@@ -178,16 +178,16 @@ export default function WeezerOnboardingModal({
           <div className="space-y-5">
             <div className="text-center">
               <span className="text-[10px] font-black uppercase tracking-widest text-[#0072CE] block mb-1">Profile Setup</span>
-              <h2 className="text-2xl font-black text-slate-950 tracking-tight">Claim Your Profile</h2>
+              <h2 className="text-2xl font-black text-slate-950 tracking-tight">Claim Your Handle</h2>
               <p className="text-xs font-semibold text-slate-500 mt-1">
-                Customize how your Wrapped and Fan Stats appear to friends.
+                Customize how your rankings appear in friend matchups and global stats.
               </p>
             </div>
 
             <form onSubmit={handleSaveProfile} className="space-y-4">
               <div>
                 <label className="text-[10px] font-black uppercase text-slate-500 tracking-wider block mb-1">
-                  Username *
+                  Unique Username (Handle) *
                 </label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-black text-sm">@</span>
@@ -203,9 +203,14 @@ export default function WeezerOnboardingModal({
               </div>
 
               <div>
-                <label className="text-[10px] font-black uppercase text-slate-500 tracking-wider block mb-1">
-                  Display Name
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[10px] font-black uppercase text-slate-500 tracking-wider">
+                    Display Name
+                  </label>
+                  <span className="text-[9px] font-bold text-slate-400">
+                    First Name + Last Initial
+                  </span>
+                </div>
                 <input
                   type="text"
                   placeholder="Rivers C."
@@ -278,7 +283,7 @@ export default function WeezerOnboardingModal({
                 disabled={saving}
                 className="w-full bg-[#0072CE] hover:bg-blue-600 text-white font-black py-3.5 rounded-xl shadow-md transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer mt-2"
               >
-                {saving ? 'Saving Profile...' : 'Complete & Save Wrapped ✨'}
+                {saving ? 'Saving Profile...' : 'Complete & Save ✨'}
               </button>
             </form>
           </div>

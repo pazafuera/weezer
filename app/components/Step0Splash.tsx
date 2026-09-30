@@ -1,143 +1,141 @@
 'use client';
 
 import React from 'react';
-import { FlyingWIcon, AlbumArtwork } from './SharedUI';
+import { useRouter } from 'next/navigation';
+import { useWeezer } from '../context/WeezerContext';
+import { FlyingWIcon } from './SharedUI';
 
-const FEATURED_ALBUM_IDS = [
-  'blue',
-  'pinkerton',
-  'green',
-  'ok-human',
-  'white',
-  'maladroit',
-];
+export default function Step00Splash() {
+  const router = useRouter();
+  const { navigateTo } = useWeezer();
 
-export default function Step0Splash({ onStart }: { onStart: () => void }) {
   return (
-    <div className="space-y-12 sm:space-y-16 pb-24 animate-in fade-in slide-in-from-bottom-4 duration-700 max-w-2xl mx-auto px-4">
-      {/* HERO HEADER */}
-      <div className="text-center pt-6 sm:pt-8 space-y-4">
-        <div className="flex justify-center mb-2">
-          <div className="relative inline-block">
-            <div className="absolute -inset-2 bg-blue-500/20 blur-xl rounded-full" />
-            <div className="relative w-20 h-20 bg-[#0072CE] text-white rounded-3xl flex items-center justify-center shadow-2xl border-4 border-blue-200/50 transform -rotate-3 hover:rotate-0 transition-transform duration-300">
-              <FlyingWIcon className="w-13 h-13 drop-shadow-md" />
-            </div>
-          </div>
+    <div className="max-w-xl mx-auto text-center py-2 sm:py-6 space-y-5 animate-in fade-in duration-500">
+      
+      {/* HERO SECTION */}
+      <div className="space-y-3">
+        <div className="w-16 h-16 bg-[#0072CE] text-white rounded-2xl flex items-center justify-center mx-auto shadow-lg">
+          <FlyingWIcon className="w-10 h-10 text-white drop-shadow-md" />
         </div>
 
-        <h1 className="text-4xl sm:text-6xl font-black text-slate-950 tracking-tighter leading-[1.05]">
-          All My Favorite <span className="text-[#0072CE]">Songs.</span>
-        </h1>
-
-        <p className="text-xs sm:text-sm font-bold text-slate-500 uppercase tracking-widest max-w-md mx-auto leading-relaxed">
-          The Definitive Weezer Song Ranking Project
-        </p>
-
-        <p className="text-sm sm:text-base font-medium text-slate-600 max-w-lg mx-auto leading-relaxed pt-1">
-          30+ years of record debates. Zero consensus. Help build the community
-          rankings across 206 canonical tracks, b-sides, and rarities.
-        </p>
+        <div>
+          <h1 className="text-3xl sm:text-4xl font-black text-slate-950 tracking-tight leading-tight">
+            30 Years of Debates.
+            <span className="block text-[#0072CE]">One Definitive Canon.</span>
+          </h1>
+          <p className="text-xs font-semibold text-slate-500 max-w-md mx-auto mt-2 leading-relaxed">
+            Weezer fans have spent decades arguing over Pinkerton vs. Blue, late-era gems, and unreleased lore. Settle the debate once and for all.
+          </p>
+        </div>
       </div>
 
-      {/* ALBUM ARTWORK MOSAIC */}
-      <div className="relative">
-        <div className="flex items-center justify-center -space-x-3 sm:-space-x-4 py-2 overflow-hidden px-4">
-          {FEATURED_ALBUM_IDS.map((albumId, idx) => (
-            <div
-              key={albumId}
-              className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden shadow-xl border-2 border-white transform hover:-translate-y-2 hover:z-20 transition-all duration-200 shrink-0 bg-slate-800"
-              style={{
-                transform: `rotate(${
-                  (idx % 2 === 0 ? 1 : -1) * (idx + 1) * 2.5
-                }deg)`,
-              }}
+      {/* STACKED REASONS TO PARTICIPATE WITH CLEAN SVG ICONS */}
+      <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 space-y-3 max-w-md mx-auto text-left">
+        
+        {/* REASON 1: BUILD YOUR CANON (MUSIC / LIST ICON) */}
+        <div className="flex items-center gap-3.5">
+          <div className="w-10 h-10 bg-blue-100 text-[#0072CE] rounded-xl flex items-center justify-center shrink-0">
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              viewBox="0 0 24 24"
             >
-              <AlbumArtwork
-                albumId={albumId}
-                className="w-full h-full object-cover"
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M9 19V6l12-2v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12 0c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-2"
               />
-            </div>
-          ))}
+            </svg>
+          </div>
+          <div>
+            <h3 className="text-xs font-black text-slate-900 leading-tight">Build Your Canon</h3>
+            <p className="text-[11px] font-medium text-slate-500 mt-0.5 leading-snug">
+              Order your personal 1–206 master song list from Blue through SZNZ.
+            </p>
+          </div>
         </div>
+
+        {/* REASON 2: CLASH WITH FRIENDS (SWORDS / MATCHUP ICON) */}
+        <div className="flex items-center gap-3.5 border-t border-slate-200/60 pt-3">
+          <div className="w-10 h-10 bg-purple-100 text-purple-700 rounded-xl flex items-center justify-center shrink-0">
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M13 10V3L4 14h7v7l9-11h-7z"
+              />
+            </svg>
+          </div>
+          <div>
+            <h3 className="text-xs font-black text-slate-900 leading-tight">Clash With Friends</h3>
+            <p className="text-[11px] font-medium text-slate-500 mt-0.5 leading-snug">
+              Compare taste alignment scores and uncover your biggest track wars.
+            </p>
+          </div>
+        </div>
+
+        {/* REASON 3: GLOBAL CONSENSUS (GLOBE ICON) */}
+        <div className="flex items-center gap-3.5 border-t border-slate-200/60 pt-3">
+          <div className="w-10 h-10 bg-emerald-100 text-emerald-700 rounded-xl flex items-center justify-center shrink-0">
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 002 2h1.5a2.5 2.5 0 002.5-2.5V7a2 2 0 00-2-2h-2c-.53 0-1.04-.21-1.414-.586l-.828-.828A2 2 0 0010.828 3H9a2 2 0 00-2 2v1.935z"
+              />
+            </svg>
+          </div>
+          <div>
+            <h3 className="text-xs font-black text-slate-900 leading-tight">Global Consensus</h3>
+            <p className="text-[11px] font-medium text-slate-500 mt-0.5 leading-snug">
+              Contribute to live worldwide fan rankings and demographic stats.
+            </p>
+          </div>
+        </div>
+
       </div>
 
-      {/* GAMEPLAY LOOP CARDS */}
-      <div className="space-y-4">
-        <div className="text-center">
-          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-            How The Project Works
-          </span>
-        </div>
-
-        {/* STEP 1: GUT CHECK */}
-        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm hover:border-blue-300 transition-colors">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-8 h-8 bg-[#0072CE] text-white rounded-xl flex items-center justify-center font-black text-sm shrink-0 shadow-sm">
-              1
-            </div>
-            <h3 className="text-lg font-black text-slate-950 tracking-tight">
-              The Gut Check
-            </h3>
-          </div>
-          <p className="text-xs sm:text-sm font-medium text-slate-500 leading-relaxed">
-            Rapidly sort 206 songs into 5 instant buckets (Banger, Lowkey Slaps,
-            Mid, Skip, Trash) based on pure instinct.
-          </p>
-        </div>
-
-        {/* STEP 2: HEAD-TO-HEAD MATCHUPS */}
-        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm hover:border-amber-300 transition-colors">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-8 h-8 bg-amber-500 text-white rounded-xl flex items-center justify-center font-black text-sm shrink-0 shadow-sm">
-              2
-            </div>
-            <h3 className="text-lg font-black text-slate-950 tracking-tight">
-              Head-to-Head Refinement
-            </h3>
-          </div>
-          <p className="text-xs sm:text-sm font-medium text-slate-500 leading-relaxed">
-            Run quick head-to-head comparisons inside your top buckets to build
-            your precise #1 to #206 master ranking list.
-          </p>
-        </div>
-
-        {/* STEP 3: SWEATER THREAD */}
-        <div className="bg-slate-950 border border-slate-800 text-white rounded-3xl p-6 shadow-xl relative overflow-hidden">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-8 h-8 bg-emerald-500 text-white rounded-xl flex items-center justify-center font-black text-sm shrink-0 shadow-sm">
-              3
-            </div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-lg font-black text-white tracking-tight">
-                The Sweater Thread
-              </h3>
-            </div>
-          </div>
-          <p className="text-xs sm:text-sm font-medium text-slate-300 leading-relaxed">
-            Unlock your Fandom Archetype, Taste DNA, Blue vs. Pinkerton
-            tug-of-war, Listening Age, and compare your rankings against
-            community consensus.
-          </p>
-        </div>
-      </div>
-
-      {/* PRIMARY CTA */}
-      <div className="space-y-2 text-center pt-2">
+      {/* CALL TO ACTION BUTTONS */}
+      <div className="space-y-2.5 max-w-sm mx-auto pt-1">
         <button
-          onClick={onStart}
-          className="w-full bg-[#0072CE] hover:bg-blue-600 active:scale-[0.99] text-white font-black text-base sm:text-lg py-4 rounded-2xl shadow-[0_10px_25px_rgba(0,114,206,0.3)] transition-all cursor-pointer flex items-center justify-center gap-2 group"
+          onClick={() => router.push('/login')}
+          className="w-full bg-[#0072CE] hover:bg-blue-600 text-white font-black py-3.5 px-6 rounded-2xl shadow-md transition-all active:scale-[0.98] cursor-pointer text-sm"
         >
-          <span>Start The Project</span>
-          <span className="transform group-hover:translate-x-1 transition-transform">
-            🤘
-          </span>
+          Create Account & Join Settle The Canon 🚀
         </button>
 
-        <p className="text-[11px] font-bold text-slate-400">
-          Takes ~3 minutes • Unsaved local progress or sign in to sync
+        <button
+          onClick={() => navigateTo('triage')}
+          className="w-full bg-slate-100 hover:bg-slate-200 text-slate-900 font-black py-3 px-6 rounded-2xl transition-all cursor-pointer text-xs"
+        >
+          Start Sorting as Guest 👤
+        </button>
+
+        <p className="text-[11px] font-bold text-slate-400 pt-1">
+          Already have an account?{' '}
+          <button
+            onClick={() => router.push('/login')}
+            className="text-[#0072CE] hover:underline cursor-pointer font-black"
+          >
+            Sign In
+          </button>
         </p>
       </div>
+
     </div>
   );
 }

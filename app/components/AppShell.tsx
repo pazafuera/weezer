@@ -1,12 +1,14 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useWeezer } from '../context/WeezerContext';
 import WeezerAccountDrawer from './WeezerAccountDrawer';
 import WeezerOnboardingModal from './WeezerOnboardingModal';
 import { FlyingWIcon } from './SharedUI';
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
   const {
     step,
     userId,
@@ -25,65 +27,102 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [isAccountDrawerOpen, setIsAccountDrawerOpen] = useState(false);
   const [isOnboardingModalOpen, setIsOnboardingModalOpen] = useState(false);
 
-  const hasProgress = Object.keys(triageMap).length > 0;
+  const hasProgress = Object.keys(triageMap).length > 0 || masterList.length > 0;
+
+  // Define dynamic menu items based on Auth & Progress state
+  const menuItems: { id: string; label: string; show: boolean }[] = [
+    {
+      id: 'dashboard',
+      label: 'Command Center 🏠',
+      show: Boolean(userId || hasProgress),
+    },
+    {
+      id: 'triage',
+      label: 'The Gut Check ⚡',
+      show: true, // Always accessible
+    },
+    {
+      id: 'rank_buckets',
+      label: 'Refine Buckets ⚔️',
+      show: hasProgress,
+    },
+    {
+      id: 'master',
+      label: 'Final Rankings 📋',
+      show: hasProgress,
+    },
+    {
+      id: 'wrapped',
+      label: 'Sweater Thread 🧵',
+      show: hasProgress,
+    },
+    {
+      id: 'fan_stats',
+      label: 'Fan Stats 🌐',
+      show: true, // Always accessible
+    },
+    {
+      id: 'friends',
+      label: 'Friends & Matchups 🤝',
+      show: Boolean(userId), // Requires login
+    },
+  ];
 
   return (
     <div className="min-h-screen flex flex-col justify-between bg-white text-slate-900 font-sans selection:bg-amber-400 selection:text-slate-950">
       <div>
         {/* UNIVERSAL HEADER */}
-        {step !== 'splash' && (
-          <header className="bg-[#0072CE] sticky top-0 z-40 shadow-md">
-            <div className="max-w-3xl mx-auto px-4 py-2.5 flex items-center justify-between">
-              {/* BRANDING + FLYING W ICON BUTTON */}
-              <button
-                onClick={() => navigateTo(hasProgress ? 'dashboard' : 'splash')}
-                className="flex items-center gap-2.5 group cursor-pointer text-left focus:outline-none"
-                aria-label="Go to Dashboard or Splash"
-              >
-                <div className="w-9 h-9 bg-white/10 group-hover:bg-white/20 border border-white/20 rounded-xl flex items-center justify-center text-white transition-all shrink-0">
-                  <FlyingWIcon className="w-6 h-6 text-white drop-shadow-sm" />
-                </div>
-
-                <div className="flex flex-col">
-                  <h1 className="font-black tracking-tight text-white text-lg sm:text-xl leading-none group-hover:text-blue-100 transition-colors">
-                    All My Favorite Songs
-                  </h1>
-                  <span className="text-[9px] sm:text-[10px] font-bold text-blue-200/90 uppercase tracking-widest mt-0.5">
-                    The Weezer Song Ranking Project
-                  </span>
-                </div>
-              </button>
-
-              {/* HAMBURGER MENU BUTTON WITH FRIEND REQUEST BADGE */}
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setIsMenuOpen(true)}
-                  className="p-2 -mr-2 text-white hover:text-amber-300 transition-colors cursor-pointer relative"
-                  aria-label="Open Menu"
-                >
-                  <svg
-                    className="w-7 h-7"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M4 6h16M4 12h16M4 18h16"
-                    />
-                  </svg>
-
-                  {/* Red Notification Badge */}
-                  {pendingRequestsCount > 0 && (
-                    <span className="absolute top-1 right-1 w-3 h-3 bg-rose-500 border-2 border-[#0072CE] rounded-full animate-pulse" />
-                  )}
-                </button>
+        <header className="bg-[#0072CE] sticky top-0 z-40 shadow-md">
+          <div className="max-w-3xl mx-auto px-4 py-2.5 flex items-center justify-between">
+            {/* BRANDING + FLYING W ICON BUTTON */}
+            <button
+              onClick={() => navigateTo(hasProgress ? 'dashboard' : 'splash')}
+              className="flex items-center gap-2.5 group cursor-pointer text-left focus:outline-none"
+              aria-label="Go to Dashboard or Splash"
+            >
+              <div className="w-9 h-9 bg-white/10 group-hover:bg-white/20 border border-white/20 rounded-xl flex items-center justify-center text-white transition-all shrink-0">
+                <FlyingWIcon className="w-6 h-6 text-white drop-shadow-sm" />
               </div>
+
+              <div className="flex flex-col">
+                <h1 className="font-black tracking-tight text-white text-lg sm:text-xl leading-none group-hover:text-blue-100 transition-colors">
+                  All My Favorite Songs
+                </h1>
+                <span className="text-[9px] sm:text-[10px] font-bold text-blue-200/90 uppercase tracking-widest mt-0.5">
+                  The Weezer Song Ranking Project
+                </span>
+              </div>
+            </button>
+
+            {/* HAMBURGER MENU BUTTON WITH FRIEND REQUEST BADGE */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsMenuOpen(true)}
+                className="p-2 -mr-2 text-white hover:text-amber-300 transition-colors cursor-pointer relative"
+                aria-label="Open Menu"
+              >
+                <svg
+                  className="w-7 h-7"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M4 6h16M4 12h16M4 18h16"
+                  />
+                </svg>
+
+                {/* Red Notification Badge for Friends */}
+                {userId && pendingRequestsCount > 0 && (
+                  <span className="absolute top-1 right-1 w-3 h-3 bg-rose-500 border-2 border-[#0072CE] rounded-full animate-pulse" />
+                )}
+              </button>
             </div>
-          </header>
-        )}
+          </div>
+        </header>
 
         {/* ACCOUNT DRAWER & ONBOARDING MODAL */}
         <WeezerAccountDrawer
@@ -175,8 +214,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 <button
                   onClick={() => {
                     setIsMenuOpen(false);
-                    if (userProfile?.username) setIsAccountDrawerOpen(true);
-                    else setIsOnboardingModalOpen(true);
+                    if (userId) {
+                      if (userProfile?.username) setIsAccountDrawerOpen(true);
+                      else setIsOnboardingModalOpen(true);
+                    } else {
+                      router.push('/login');
+                    }
                   }}
                   className="bg-[#0072CE] hover:bg-blue-600 text-white text-[10px] font-black px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer shrink-0"
                 >
@@ -188,53 +231,36 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 </button>
               </div>
 
-              {/* NAVIGATION LINKS */}
+              {/* DYNAMIC NAVIGATION LINKS */}
               <nav className="flex-1 overflow-y-auto py-2">
-                {[
-                  'dashboard',
-                  'triage',
-                  'rank_buckets',
-                  'master',
-                  'wrapped',
-                  'fan_stats',
-                  'friends',
-                ].map((targetStep) => {
-                  const labels: Record<string, string> = {
-                    dashboard: 'Command Center 🏠',
-                    triage: 'The Gut Check',
-                    rank_buckets: 'Refine Buckets',
-                    master: 'Final Rankings',
-                    wrapped: 'Sweater Thread 🧵',
-                    fan_stats: 'Fan Stats 🌐',
-                    friends: 'Friends & Matchups 🤝',
-                  };
-                  return (
+                {menuItems
+                  .filter((item) => item.show)
+                  .map((item) => (
                     <button
-                      key={targetStep}
+                      key={item.id}
                       onClick={() => {
-                        navigateTo(targetStep as any);
+                        navigateTo(item.id as any);
                         setIsMenuOpen(false);
                       }}
                       className={`w-full text-left px-5 py-3.5 font-extrabold text-sm border-b border-slate-50 transition cursor-pointer flex items-center justify-between ${
-                        step === targetStep
+                        step === item.id
                           ? 'bg-blue-50 text-[#0072CE]'
                           : 'text-slate-700 hover:bg-slate-50'
                       }`}
                     >
-                      <span>{labels[targetStep]}</span>
+                      <span>{item.label}</span>
 
                       {/* INCOMING FRIEND REQUEST BADGE */}
-                      {targetStep === 'friends' && pendingRequestsCount > 0 && (
+                      {item.id === 'friends' && pendingRequestsCount > 0 && (
                         <span className="bg-rose-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-xs">
                           {pendingRequestsCount} new
                         </span>
                       )}
                     </button>
-                  );
-                })}
+                  ))}
               </nav>
 
-              {/* DEV TOOLS & SIGN OUT */}
+              {/* DEV TOOLS & CONDITIONAL SIGN OUT */}
               <div className="p-4 border-t border-slate-100 bg-slate-50 space-y-3">
                 <button
                   onClick={() => {
@@ -245,19 +271,22 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 >
                   🧪 Dev: Magic Fill
                 </button>
-                <button
-                  onClick={handleSignOut}
-                  className="w-full text-xs font-black px-4 py-3 rounded-xl text-slate-500 bg-white border border-slate-200 hover:bg-slate-100 transition cursor-pointer text-center"
-                >
-                  Sign Out
-                </button>
+
+                {userId && (
+                  <button
+                    onClick={handleSignOut}
+                    className="w-full text-xs font-black px-4 py-3 rounded-xl text-slate-500 bg-white border border-slate-200 hover:bg-slate-100 transition cursor-pointer text-center"
+                  >
+                    Sign Out
+                  </button>
+                )}
               </div>
             </div>
           </div>
         )}
 
         {/* MAIN CONTENT AREA */}
-        <main className={step === 'splash' ? '' : 'max-w-3xl mx-auto px-4 mt-6'}>
+        <main className="max-w-3xl mx-auto px-4 mt-6">
           {children}
         </main>
       </div>

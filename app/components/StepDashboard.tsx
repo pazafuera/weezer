@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useWeezer } from '../context/WeezerContext';
 import { BUCKET_CONFIG, FULL_SONG_POOL, BucketType } from '../data/constants';
 import WeezerOnboardingModal from './WeezerOnboardingModal';
- 
+
 export default function StepDashboard() {
   const {
     userId,
@@ -180,7 +180,7 @@ export default function StepDashboard() {
       {/* WHAT'S NEXT SECTION */}
       <div className="space-y-3 pt-2">
         <h2 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight">
-          What's Next
+          What&apos;s Next
         </h2>
 
         {/* COMPACT RECTANGULAR CARDS IN A 2x2 GRID */}

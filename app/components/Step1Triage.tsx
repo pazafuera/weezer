@@ -1,74 +1,127 @@
 'use client';
-import React from 'react';
+
+import React, { useState } from 'react';
 import { BucketType, BUCKET_CONFIG, FULL_SONG_POOL } from '../data/constants';
 import { FlyingWIcon, AudioPreviewButton } from './SharedUI';
 
 export default function Step1Triage({
   triageMap,
   handleSetBucket,
-  handleFinishTriage
+  handleFinishTriage,
 }: {
   triageMap: Record<string, BucketType>;
   handleSetBucket: (id: string, bucket: BucketType) => void;
   handleFinishTriage: () => void;
 }) {
-  const albumsGrouped = Array.from(new Set(FULL_SONG_POOL.map(s => s.album)));
-  const triagedCount = Object.keys(triageMap).length;
-  const progressPercent = Math.round((triagedCount / FULL_SONG_POOL.length) * 100);
-  const isTriageComplete = triagedCount === FULL_SONG_POOL.length;
+  const [hideSorted, setHideSorted] = useState(false);
+
+  const albumsGrouped = Array.from(new Set(FULL_SONG_POOL.map((s) => s.album)));
+  const sortedCount = Object.keys(triageMap).length;
+  const progressPercent = Math.round((sortedCount / FULL_SONG_POOL.length) * 100);
+  const isGutCheckComplete = sortedCount === FULL_SONG_POOL.length;
+
+  const scrollToAlbum = (albumName: string) => {
+    const el = document.getElementById(`album-${albumName.replace(/\s+/g, '-').toLowerCase()}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
 
   return (
-    <div className="space-y-6 pb-20">
-      {/* STICKY PROGRESS BAR */}
-      <div className="sticky top-[61px] z-40 bg-slate-50/95 backdrop-blur-md border-b border-slate-200 py-3 px-4 shadow-xs -mx-4 -mt-6 mb-6">
-        <div className="max-w-3xl mx-auto space-y-1.5">
+    <div className="space-y-6 pb-28">
+      {/* STICKY PROGRESS & ALBUM QUICK-JUMP BAR */}
+      <div className="sticky top-[61px] z-40 bg-slate-50/95 backdrop-blur-md border-b border-slate-200 py-3 px-4 shadow-xs -mx-4 -mt-6 mb-6 space-y-3">
+        <div className="max-w-3xl mx-auto space-y-2">
+          {/* PROGRESS METRICS & HIDE SORTED TOGGLE */}
           <div className="flex justify-between items-center text-xs font-black text-slate-700">
             <span className="uppercase tracking-wider">
-              Progress: <strong className="text-[#0072CE] font-mono text-sm">{triagedCount}</strong> / {FULL_SONG_POOL.length}
+              Progress: <strong className="text-[#0072CE] font-mono text-sm">{sortedCount}</strong> / {FULL_SONG_POOL.length}
             </span>
-            <span className="text-[#0072CE] font-mono text-sm font-black">{progressPercent}%</span>
+
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-1.5 cursor-pointer text-[11px] font-extrabold text-slate-600 select-none">
+                <input
+                  type="checkbox"
+                  checked={hideSorted}
+                  onChange={(e) => setHideSorted(e.target.checked)}
+                  className="rounded border-slate-300 text-[#0072CE] focus:ring-[#0072CE] w-3.5 h-3.5 cursor-pointer"
+                />
+                <span>Hide Sorted ({sortedCount})</span>
+              </label>
+              <span className="text-[#0072CE] font-mono text-sm font-black">{progressPercent}%</span>
+            </div>
           </div>
-          
+
           {/* BULLETPROOF PROGRESS BAR LAYERING */}
-          <div className="relative w-full h-3.5 my-3 z-0">
-            {/* Layer 1: The Background Track (z-10) */}
+          <div className="relative w-full h-3.5 my-2 z-0">
             <div className="absolute inset-0 bg-[#E0F2FE] rounded-full border border-blue-200 z-10" />
-            
-            {/* Layer 2: The Colored Fill (z-20) */}
-            <div 
-              className="absolute top-0 left-0 h-full bg-[#7DD3FC] rounded-full transition-all duration-300 z-20" 
-              style={{ width: `${progressPercent}%` }} 
+            <div
+              className="absolute top-0 left-0 h-full bg-[#7DD3FC] rounded-full transition-all duration-300 z-20"
+              style={{ width: `${progressPercent}%` }}
             />
-            
-            {/* Layer 3: The Flying W (z-30) */}
-            <div 
-              className="absolute top-1/2 -translate-y-1/2 transition-all duration-300 z-30 text-[#0072CE] w-8 h-5 ml-[-16px]" 
+            <div
+              className="absolute top-1/2 -translate-y-1/2 transition-all duration-300 z-30 text-[#0072CE] w-8 h-5 ml-[-16px]"
               style={{ left: `${Math.min(98, Math.max(2, progressPercent))}%` }}
             >
               <FlyingWIcon className="w-full h-full drop-shadow-sm" />
             </div>
           </div>
 
+          {/* ALBUM QUICK-JUMP PILLS */}
+          <div className="flex gap-1.5 overflow-x-auto no-scrollbar pt-1 pb-0.5 text-[10px] font-black text-slate-600">
+            {albumsGrouped.map((album) => {
+              const albumSongs = FULL_SONG_POOL.filter((s) => s.album === album);
+              const sortedInAlbum = albumSongs.filter((s) => triageMap[s.id]).length;
+              const isAlbumDone = sortedInAlbum === albumSongs.length;
+
+              return (
+                <button
+                  key={album}
+                  onClick={() => scrollToAlbum(album)}
+                  className={`px-2.5 py-1 rounded-lg border shrink-0 transition-all cursor-pointer ${
+                    isAlbumDone
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                      : sortedInAlbum > 0
+                      ? 'bg-blue-50 border-blue-200 text-[#0072CE]'
+                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  {album} ({sortedInAlbum}/{albumSongs.length})
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
-      {/* SUCCINCT HEADER */}
+      {/* HEADER */}
       <div className="text-center space-y-2 px-4 mb-8">
         <h1 className="text-3xl sm:text-4xl font-black text-slate-950 tracking-tighter">
           The <span className="text-[#0072CE]">Gut Check</span>
         </h1>
         <p className="text-sm font-bold text-slate-500 max-w-sm mx-auto leading-snug">
-          Sort every song into a bucket. Trust your first instinct, don't overthink it.
+          Sort every song into a tier. Trust your first instinct, don&apos;t overthink it.
         </p>
       </div>
 
+      {/* ALBUM GROUPS */}
       <div className="space-y-8">
         {albumsGrouped.map((albumName) => {
-          const songsInAlbum = FULL_SONG_POOL.filter(s => s.album === albumName);
+          const songsInAlbum = FULL_SONG_POOL.filter((s) => s.album === albumName);
+          const visibleSongs = hideSorted
+            ? songsInAlbum.filter((s) => !triageMap[s.id])
+            : songsInAlbum;
           const firstSong = songsInAlbum[0];
 
+          if (visibleSongs.length === 0 && hideSorted) return null;
+
           return (
-            <div key={albumName} className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-xs">
+            <div
+              key={albumName}
+              id={`album-${albumName.replace(/\s+/g, '-').toLowerCase()}`}
+              className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-xs scroll-mt-36"
+            >
+              {/* ALBUM BANNER */}
               <div className={`${firstSong.albumColor} p-4 text-white text-center border-b border-slate-100`}>
                 <span className="text-[10px] font-black uppercase tracking-widest opacity-80 block">
                   {firstSong.isBSide ? 'Special Collection' : `Album (${firstSong.year})`}
@@ -76,41 +129,46 @@ export default function Step1Triage({
                 <h2 className="text-xl font-black tracking-tight">{albumName}</h2>
               </div>
 
+              {/* SONG ROWS */}
               <div className="divide-y divide-slate-100">
-                {songsInAlbum.map((song) => {
+                {visibleSongs.map((song) => {
                   const activeBucket = triageMap[song.id];
 
                   return (
                     <div
                       key={song.id}
-                      className="p-3 sm:p-5 flex items-stretch justify-between gap-4 transition-colors bg-white hover:bg-slate-50/50"
+                      className="p-3 sm:p-5 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4 transition-colors bg-white hover:bg-slate-50/50"
                     >
-                      {/* LEFT SIDE: MASSIVE TITLE & SAMPLE */}
-                      <div className="flex flex-col items-start justify-center flex-1 min-w-0 py-1">
-                        <h3 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tighter leading-none mb-3 break-words whitespace-normal">
+                      {/* LEFT SIDE: PREVIEW BUTTON & TITLE ON SAME ROW */}
+                      <div className="flex items-center gap-3 flex-1 min-w-0 py-0.5">
+                        <AudioPreviewButton title={song.title} />
+                        <h3 className="text-xl sm:text-3xl font-black text-slate-950 tracking-tighter leading-tight sm:leading-none break-words whitespace-normal">
                           {song.title}
                         </h3>
-                        <AudioPreviewButton title={song.title} />
                       </div>
 
-                      {/* RIGHT SIDE: WIDER CONTAINER SO "LOWKEY SLAPS" DOESN'T TRUNCATE */}
-                      <div className="flex flex-col gap-1.5 shrink-0 w-[145px] sm:w-[155px]">
+                      {/* RIGHT SIDE: BUCKET BUTTONS */}
+                      <div className="grid grid-cols-5 sm:flex sm:flex-col gap-1.5 shrink-0 w-full sm:w-[155px]">
                         {(['banger', 'slaps', 'mid', 'skip', 'trash'] as BucketType[]).map((bucket) => {
                           const isSelected = activeBucket === bucket;
                           const cfg = BUCKET_CONFIG[bucket];
+                          const displayLabel = bucket === 'slaps' ? 'Slaps' : cfg.label;
 
                           return (
                             <button
                               key={bucket}
                               onClick={() => handleSetBucket(song.id, bucket)}
-                              className={`py-2 px-2.5 rounded-xl text-xs sm:text-sm font-black border transition-all flex items-center justify-start gap-2 ${
+                              className={`py-2 px-1.5 sm:px-2.5 rounded-xl text-xs sm:text-sm font-black border transition-all flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-2 cursor-pointer ${
                                 isSelected
                                   ? 'bg-slate-950 text-white font-black border-slate-900 shadow-md scale-[1.02] z-10'
                                   : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50 hover:text-slate-800'
                               }`}
+                              title={displayLabel}
                             >
-                              <span className="text-base leading-none">{cfg.emoji}</span>
-                              <span className="truncate">{cfg.label}</span>
+                              <span className="text-sm sm:text-base leading-none">{cfg.emoji}</span>
+                              <span className="truncate text-[10px] sm:text-xs tracking-tight">
+                                {displayLabel}
+                              </span>
                             </button>
                           );
                         })}
@@ -126,14 +184,20 @@ export default function Step1Triage({
 
       {/* FLOATING ACTION BUTTON */}
       <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-auto">
-        {isTriageComplete ? (
-          <button onClick={handleFinishTriage} className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm px-8 py-4 rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.35)] transition transform hover:scale-105 cursor-pointer border-2 border-amber-200 flex items-center gap-2.5 whitespace-nowrap">
+        {isGutCheckComplete ? (
+          <button
+            onClick={handleFinishTriage}
+            className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm px-8 py-4 rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.35)] transition transform hover:scale-105 cursor-pointer border-2 border-amber-200 flex items-center gap-2.5 whitespace-nowrap"
+          >
             <FlyingWIcon className="w-6 h-4 text-slate-950" />
-            <span>Next Step: Refine</span>
+            <span>Next Step: Refine Buckets</span>
           </button>
         ) : (
-          <button disabled className="bg-slate-800/95 text-slate-400 font-extrabold text-xs px-6 py-3.5 rounded-full border border-slate-700 cursor-not-allowed shadow-xl backdrop-blur-md whitespace-nowrap">
-            🔒 Categorize All Songs ({triagedCount}/{FULL_SONG_POOL.length})
+          <button
+            disabled
+            className="bg-slate-800/95 text-slate-400 font-extrabold text-xs px-6 py-3.5 rounded-full border border-slate-700 cursor-not-allowed shadow-xl backdrop-blur-md whitespace-nowrap"
+          >
+            🔒 Categorize All Songs ({sortedCount}/{FULL_SONG_POOL.length})
           </button>
         )}
       </div>

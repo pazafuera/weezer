@@ -27,21 +27,51 @@ export default function WeezerFriends() {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    if (userId) loadFriendsAndRequests();
+    if (!userId) return;
+
+    loadFriendsAndRequests();
+
+    // Auto-refresh every 10 seconds
+    const interval = setInterval(() => {
+      loadFriendsAndRequests();
+    }, 10000);
+
+    // Supabase Real-time Subscription for instant updates
+    const channel = supabase
+      .channel('friendships_changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'friendships' },
+        () => {
+          loadFriendsAndRequests();
+          refreshPendingRequests();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      clearInterval(interval);
+      supabase.removeChannel(channel);
+    };
   }, [userId]);
 
   const loadFriendsAndRequests = async () => {
-    setLoading(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) return;
       const currentId = session.user.id;
 
       // FETCH BOTH DIRECTIONS (Where user is sender OR recipient)
-      const { data: friendships } = await supabase
+      const { data: friendships, error: friendErr } = await supabase
         .from('friendships')
         .select('*')
         .or(`user_id.eq.${currentId},friend_id.eq.${currentId}`);
+
+      if (friendErr) {
+        console.error('Error fetching friendships:', friendErr);
+        setLoading(false);
+        return;
+      }
 
       if (!friendships || friendships.length === 0) {
         setFriends([]);
@@ -99,11 +129,9 @@ export default function WeezerFriends() {
             acceptedList.push(formatted);
           } else if (f.status === 'pending') {
             if (f.friend_id === currentId) {
-              // FRIEND SOUGHT YOU (INCOMING)
               formatted.status = 'pending_incoming';
               incomingList.push(formatted);
             } else {
-              // YOU SOUGHT FRIEND (OUTGOING)
               formatted.status = 'pending_outgoing';
               acceptedList.push(formatted);
             }
@@ -137,13 +165,13 @@ export default function WeezerFriends() {
         .maybeSingle();
 
       if (profileErr || !targetProfile) {
-        setErrorMsg("Couldn&apos;t find a user with that handle.");
+        setErrorMsg("Couldn't find a user with that handle.");
         setAddLoading(false);
         return;
       }
 
       if (targetProfile.id === userId) {
-        setErrorMsg("You can&apos;t send a request to yourself!");
+        setErrorMsg("You can't send a request to yourself!");
         setAddLoading(false);
         return;
       }

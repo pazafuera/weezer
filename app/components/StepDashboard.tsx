@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useWeezer } from '../context/WeezerContext';
 import { BUCKET_CONFIG, FULL_SONG_POOL, BucketType } from '../data/constants';
 import WeezerOnboardingModal from './WeezerOnboardingModal';
-
+ 
 export default function StepDashboard() {
   const {
     userId,

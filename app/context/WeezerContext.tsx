@@ -110,6 +110,17 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // Sync step from URL parameter on initial load or refresh
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const urlStep = params.get('step') as AppStep;
+      if (urlStep) {
+        setStepState(urlStep);
+      }
+    }
+  }, []);
+
   useEffect(() => {
     initUserAndLoadRankings();
 
@@ -209,9 +220,12 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
 
           setBucketRanks(getDerivedBucketRanks(loadedTriage, loadedMaster));
 
-          // Smart Entry: If user has progress, route to Dashboard
-          if (Object.keys(loadedTriage).length > 0 || loadedMaster.length > 0) {
-            setStepState('dashboard');
+          // Smart Entry: If user has progress and no URL step is specified, route to Dashboard
+          if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            if (!params.get('step') && (Object.keys(loadedTriage).length > 0 || loadedMaster.length > 0)) {
+              setStepState('dashboard');
+            }
           }
         }
       } else {
@@ -223,8 +237,12 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
             if (parsed.triageMap) setTriageMap(parsed.triageMap);
             if (parsed.masterList) setMasterList(parsed.masterList);
             setBucketRanks(getDerivedBucketRanks(parsed.triageMap || {}, parsed.masterList || []));
-            if (Object.keys(parsed.triageMap || {}).length > 0) {
-              setStepState('dashboard');
+            
+            if (typeof window !== 'undefined') {
+              const params = new URLSearchParams(window.location.search);
+              if (!params.get('step') && Object.keys(parsed.triageMap || {}).length > 0) {
+                setStepState('dashboard');
+              }
             }
           } catch (e) {
             console.error('Error parsing local state:', e);
@@ -313,6 +331,16 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
       setRefineStageIdx(0);
     }
     setStep(targetStep);
+
+    if (typeof window !== 'undefined') {
+      if (window.location.pathname !== '/') {
+        router.push(`/?step=${targetStep}`);
+      } else {
+        const url = new URL(window.location.href);
+        url.searchParams.set('step', targetStep);
+        window.history.replaceState({}, '', url.toString());
+      }
+    }
   };
 
   const handleSignOut = async () => {
@@ -324,7 +352,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     setPendingRequestsCount(0);
     setBucketRanks({ banger: [], slaps: [], mid: [], skip: [], trash: [] });
     localStorage.removeItem('weezer_ranker_state');
-    setStep('splash');
+    navigateTo('splash');
   };
 
   return (

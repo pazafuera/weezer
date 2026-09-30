@@ -10,7 +10,7 @@ const REFINEMENT_STAGES: { bucket: BucketType; title: string; desc: string; next
   { bucket: 'mid', title: 'Review Your Mid', desc: "These are just okay. Review them to make sure nothing here is actually a hidden gem or total trash.", nextBtn: "Next: Review Skips →" },
   { bucket: 'skip', title: 'Review Your Skips', desc: "You usually skip these. Promote or demote if needed.", nextBtn: "Next: Review Trash →" },
   { bucket: 'trash', title: 'Review Your Trash', desc: "The bottom of the barrel. Make sure you don't actually like any of these before we finalize.", nextBtn: "Generate Final List →" },
-];
+]; 
 
 export default function Step2Refine({
   bucketRanks,

@@ -202,7 +202,7 @@ export default function Login() {
     text: string;
   } | null>(null);
 
-  // If already logged in, redirect to main Command Center
+  // If already logged in, redirect to main application view
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
@@ -271,14 +271,14 @@ export default function Login() {
 
         if (authErr) throw authErr;
 
-        setMessage({
-          type: 'success',
-          text: 'Account created! If email confirmation is required, check your inbox to activate.',
-        });
-
-        // If session exists immediately (e.g., auto-confirm enabled), push to root
-        if (authData.session) {
-          router.push('/');
+        // Route immediately to success onboarding screen upon account creation
+        if (authData.session || authData.user) {
+          router.push('/signup-success');
+        } else {
+          setMessage({
+            type: 'success',
+            text: 'Account created! Please check your email to confirm your account.',
+          });
         }
       }
     } catch (error: any) {

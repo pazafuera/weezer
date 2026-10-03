@@ -14,7 +14,8 @@ export type AppStep =
   | 'master'
   | 'wrapped'
   | 'fan_stats'
-  | 'friends';
+  | 'friends'
+  | 'signup_success';
 
 interface UserProfile {
   username?: string;
@@ -99,7 +100,11 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   // Rankings State
   const [triageMap, setTriageMap] = useState<Record<string, BucketType>>({});
   const [bucketRanks, setBucketRanks] = useState<Record<BucketType, Song[]>>({
-    banger: [], slaps: [], mid: [], skip: [], trash: [],
+    banger: [],
+    slaps: [],
+    mid: [],
+    skip: [],
+    trash: [],
   });
   const [masterList, setMasterList] = useState<Song[]>([]);
 
@@ -124,7 +129,9 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     initUserAndLoadRankings();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         initUserAndLoadRankings();
       } else {
@@ -162,7 +169,9 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   async function initUserAndLoadRankings() {
     setLoadingUser(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
       if (session?.user) {
         const uid = session.user.id;
@@ -183,7 +192,10 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
 
           setUserProfile({
             username: profileData.username,
-            displayName: profileData.display_name || profileData.username || session.user.email?.split('@')[0],
+            displayName:
+              profileData.display_name ||
+              profileData.username ||
+              session.user.email?.split('@')[0],
             birthYear: profileData.birth_year || undefined,
             location: locationStr,
           });
@@ -223,7 +235,10 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
           // Smart Entry: If user has progress and no URL step is specified, route to Dashboard
           if (typeof window !== 'undefined') {
             const params = new URLSearchParams(window.location.search);
-            if (!params.get('step') && (Object.keys(loadedTriage).length > 0 || loadedMaster.length > 0)) {
+            if (
+              !params.get('step') &&
+              (Object.keys(loadedTriage).length > 0 || loadedMaster.length > 0)
+            ) {
               setStepState('dashboard');
             }
           }
@@ -236,11 +251,19 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
             const parsed = JSON.parse(localState);
             if (parsed.triageMap) setTriageMap(parsed.triageMap);
             if (parsed.masterList) setMasterList(parsed.masterList);
-            setBucketRanks(getDerivedBucketRanks(parsed.triageMap || {}, parsed.masterList || []));
-            
+            setBucketRanks(
+              getDerivedBucketRanks(
+                parsed.triageMap || {},
+                parsed.masterList || []
+              )
+            );
+
             if (typeof window !== 'undefined') {
               const params = new URLSearchParams(window.location.search);
-              if (!params.get('step') && Object.keys(parsed.triageMap || {}).length > 0) {
+              if (
+                !params.get('step') &&
+                Object.keys(parsed.triageMap || {}).length > 0
+              ) {
                 setStepState('dashboard');
               }
             }
@@ -358,11 +381,28 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   return (
     <WeezerContext.Provider
       value={{
-        step, setStep, refineStageIdx, setRefineStageIdx, autoStartMatchups, setAutoStartMatchups, navigateTo,
-        loadingUser, userId, userProfile, setUserProfile, handleSignOut,
-        pendingRequestsCount, refreshPendingRequests,
-        triageMap, setTriageMap, bucketRanks, masterList,
-        syncRankingsToDatabase, updateAndSyncBucketRanks, moveMasterSong, handleMagicFill,
+        step,
+        setStep,
+        refineStageIdx,
+        setRefineStageIdx,
+        autoStartMatchups,
+        setAutoStartMatchups,
+        navigateTo,
+        loadingUser,
+        userId,
+        userProfile,
+        setUserProfile,
+        handleSignOut,
+        pendingRequestsCount,
+        refreshPendingRequests,
+        triageMap,
+        setTriageMap,
+        bucketRanks,
+        masterList,
+        syncRankingsToDatabase,
+        updateAndSyncBucketRanks,
+        moveMasterSong,
+        handleMagicFill,
       }}
     >
       {children}

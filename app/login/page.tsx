@@ -1,5 +1,18 @@
 'use client';
 
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { supabase } from '@/utils/supabase';
+import { FlyingWIcon } from '@/app/components/SharedUI';
+
+const US_STATES = [
+  'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
+  'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',
+  'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
+  'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC',
+  'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY',
+];
+
 const COUNTRY_OPTIONS = [
   // Featured / Top Western Markets
   { code: 'US', name: 'United States' },
@@ -168,26 +181,13 @@ const COUNTRY_OPTIONS = [
   { code: 'ZW', name: 'Zimbabwe' },
 ];
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { supabase } from '@/utils/supabase';
-import { FlyingWIcon } from '@/app/components/SharedUI';
-
-const US_STATES = [
-  'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
-  'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',
-  'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
-  'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC',
-  'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY',
-];
-
 export default function Login() {
   const router = useRouter();
 
   // Auth Credentials State
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [authMode, setAuthMode] = useState<'login' | 'signup' | 'magic'>('login');
+  const [authMode, setAuthMode] = useState<'signup' | 'login' | 'magic'>('signup');
 
   // Unified Profile State for Sign-up
   const [username, setUsername] = useState('');
@@ -254,37 +254,28 @@ export default function Login() {
           throw new Error('That username is already taken. Please pick another.');
         }
 
-        // 1. Register Auth User
+        // Register Auth User with Metadata for Database Trigger
         const { data: authData, error: authErr } = await supabase.auth.signUp({
           email,
           password,
+          options: {
+            data: {
+              username: cleanUsername,
+              display_name: displayName.trim() || cleanUsername,
+              birth_year: birthYear ? parseInt(birthYear, 10) : null,
+              country: country,
+              state: country === 'US' ? stateCode : null,
+            },
+          },
         });
 
         if (authErr) throw authErr;
-
-        // 2. Insert Profile Data into Supabase
-        if (authData.user) {
-          const locationStr =
-            country === 'US' && stateCode ? `${stateCode}, USA` : country;
-
-          const { error: profileErr } = await supabase.from('profiles').upsert({
-            id: authData.user.id,
-            username: cleanUsername,
-            display_name: displayName.trim() || cleanUsername,
-            birth_year: birthYear ? parseInt(birthYear, 10) : null,
-            country_code: country,
-            state_code: country === 'US' ? stateCode : null,
-            updated_at: new Date().toISOString(),
-          });
-
-          if (profileErr) throw profileErr;
-        }
 
         setMessage({
           type: 'success',
           text: 'Account created! If email confirmation is required, check your inbox to activate.',
         });
-        
+
         // If session exists immediately (e.g., auto-confirm enabled), push to root
         if (authData.session) {
           router.push('/');
@@ -318,22 +309,8 @@ export default function Login() {
         </div>
 
         <div className="p-6 sm:p-8 space-y-6">
-          {/* AUTH MODE TOGGLE BUTTONS */}
+          {/* AUTH MODE TOGGLE BUTTONS (Sign Up First) */}
           <div className="flex bg-slate-100 rounded-xl p-1">
-            <button
-              type="button"
-              onClick={() => {
-                setAuthMode('login');
-                setMessage(null);
-              }}
-              className={`flex-1 text-xs font-black py-2.5 rounded-lg transition-all cursor-pointer ${
-                authMode === 'login'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-500 hover:text-slate-700'
-              }`}
-            >
-              Sign In
-            </button>
             <button
               type="button"
               onClick={() => {
@@ -347,6 +324,20 @@ export default function Login() {
               }`}
             >
               Sign Up
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setAuthMode('login');
+                setMessage(null);
+              }}
+              className={`flex-1 text-xs font-black py-2.5 rounded-lg transition-all cursor-pointer ${
+                authMode === 'login'
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              Sign In
             </button>
             <button
               type="button"
@@ -468,27 +459,27 @@ export default function Login() {
                   </div>
 
                   <div>
-  <label className="block text-[9px] font-black text-slate-500 uppercase mb-1">
-    Country
-  </label>
-  <select
-    value={country}
-    onChange={(e) => setCountry(e.target.value)}
-    className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#0072CE] outline-none font-bold text-slate-900 text-xs"
-  >
-    {COUNTRY_OPTIONS.map((c) =>
-      c.code === 'DIVIDER' ? (
-        <option key={c.code} disabled className="text-slate-400">
-          {c.name}
-        </option>
-      ) : (
-        <option key={c.code} value={c.code}>
-          {c.name}
-        </option>
-      )
-    )}
-  </select>
-</div>
+                    <label className="block text-[9px] font-black text-slate-500 uppercase mb-1">
+                      Country
+                    </label>
+                    <select
+                      value={country}
+                      onChange={(e) => setCountry(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#0072CE] outline-none font-bold text-slate-900 text-xs"
+                    >
+                      {COUNTRY_OPTIONS.map((c) =>
+                        c.code === 'DIVIDER' ? (
+                          <option key={c.code} disabled className="text-slate-400">
+                            {c.name}
+                          </option>
+                        ) : (
+                          <option key={c.code} value={c.code}>
+                            {c.name}
+                          </option>
+                        )
+                      )}
+                    </select>
+                  </div>
                 </div>
 
                 {country === 'US' && (
@@ -539,10 +530,10 @@ export default function Login() {
             >
               {loading
                 ? 'Processing...'
-                : authMode === 'login'
-                ? 'Sign In →'
                 : authMode === 'signup'
                 ? 'Create Account & Save Profile 🚀'
+                : authMode === 'login'
+                ? 'Sign In →'
                 : 'Send Magic Link ✨'}
             </button>
           </form>

@@ -13,6 +13,8 @@ import Step3Master from './components/Step3Master';
 import Step4Wrapped from './components/Step4Wrapped';
 import FanStats from './components/FanStats';
 import WeezerFriends from './components/WeezerFriends';
+import StepSignupSuccess from './components/StepSignupSuccess';
+import Login from './login/page';
 
 export default function WeezerRankerPage() {
   const {
@@ -54,6 +56,10 @@ export default function WeezerRankerPage() {
       {step === 'splash' && (
         <Step0Splash onStart={() => setStep('orientation')} />
       )}
+
+      {step === 'login' && <Login />}
+
+      {step === 'signup_success' && <StepSignupSuccess />}
 
       {step === 'orientation' && (
         <Step05Orientation

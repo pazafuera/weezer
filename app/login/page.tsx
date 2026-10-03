@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/utils/supabase';
 import { FlyingWIcon } from '@/app/components/SharedUI';
+import { useWeezer } from '../context/WeezerContext';
 
 const US_STATES = [
   'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
@@ -183,6 +184,7 @@ const COUNTRY_OPTIONS = [
 
 export default function Login() {
   const router = useRouter();
+  const { navigateTo } = useWeezer();
 
   // Auth Credentials State
   const [email, setEmail] = useState('');
@@ -206,10 +208,10 @@ export default function Login() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        router.push('/');
+        navigateTo('dashboard');
       }
     });
-  }, [router]);
+  }, [navigateTo]);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -235,7 +237,7 @@ export default function Login() {
           password,
         });
         if (error) throw error;
-        router.push('/');
+        navigateTo('dashboard');
       } else if (authMode === 'signup') {
         // Validate Username
         const cleanUsername = username.toLowerCase().trim().replace(/[^a-z0-9_]/g, '');
@@ -273,7 +275,7 @@ export default function Login() {
 
         // Route immediately to success onboarding screen upon account creation
         if (authData.session || authData.user) {
-          router.push('/signup-success');
+          navigateTo('signup_success');
         } else {
           setMessage({
             type: 'success',

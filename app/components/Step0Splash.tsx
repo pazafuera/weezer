@@ -1,12 +1,10 @@
 'use client';
 
 import React from 'react';
-import { useRouter } from 'next/navigation';
 import { useWeezer } from '../context/WeezerContext';
 import { FlyingWIcon } from './SharedUI';
 
 export default function Step00Splash() {
-  const router = useRouter();
   const { navigateTo } = useWeezer();
 
   return (
@@ -32,7 +30,7 @@ export default function Step00Splash() {
       {/* STACKED REASONS TO PARTICIPATE WITH CLEAN SVG ICONS */}
       <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 space-y-3 max-w-md mx-auto text-left">
         
-        {/* REASON 1: BUILD YOUR CANON (MUSIC / LIST ICON) */}
+        {/* REASON 1: BUILD YOUR CANON */}
         <div className="flex items-center gap-3.5">
           <div className="w-10 h-10 bg-blue-100 text-[#0072CE] rounded-xl flex items-center justify-center shrink-0">
             <svg
@@ -57,7 +55,7 @@ export default function Step00Splash() {
           </div>
         </div>
 
-        {/* REASON 2: CLASH WITH FRIENDS (SWORDS / MATCHUP ICON) */}
+        {/* REASON 2: CLASH WITH FRIENDS */}
         <div className="flex items-center gap-3.5 border-t border-slate-200/60 pt-3">
           <div className="w-10 h-10 bg-purple-100 text-purple-700 rounded-xl flex items-center justify-center shrink-0">
             <svg
@@ -82,7 +80,7 @@ export default function Step00Splash() {
           </div>
         </div>
 
-        {/* REASON 3: GLOBAL CONSENSUS (GLOBE ICON) */}
+        {/* REASON 3: GLOBAL CONSENSUS */}
         <div className="flex items-center gap-3.5 border-t border-slate-200/60 pt-3">
           <div className="w-10 h-10 bg-emerald-100 text-emerald-700 rounded-xl flex items-center justify-center shrink-0">
             <svg
@@ -112,7 +110,7 @@ export default function Step00Splash() {
       {/* CALL TO ACTION BUTTONS */}
       <div className="space-y-2.5 max-w-sm mx-auto pt-1">
         <button
-          onClick={() => router.push('/login')}
+          onClick={() => navigateTo('login')}
           className="w-full bg-[#0072CE] hover:bg-blue-600 text-white font-black py-3.5 px-6 rounded-2xl shadow-md transition-all active:scale-[0.98] cursor-pointer text-sm"
         >
           Create Account & Join Settle The Canon 🚀
@@ -128,7 +126,7 @@ export default function Step00Splash() {
         <p className="text-[11px] font-bold text-slate-400 pt-1">
           Already have an account?{' '}
           <button
-            onClick={() => router.push('/login')}
+            onClick={() => navigateTo('login')}
             className="text-[#0072CE] hover:underline cursor-pointer font-black"
           >
             Sign In

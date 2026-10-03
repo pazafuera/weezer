@@ -15,6 +15,7 @@ export type AppStep =
   | 'wrapped'
   | 'fan_stats'
   | 'friends'
+  | 'login'
   | 'signup_success';
 
 interface UserProfile {
@@ -356,13 +357,9 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     setStep(targetStep);
 
     if (typeof window !== 'undefined') {
-      if (window.location.pathname !== '/') {
-        router.push(`/?step=${targetStep}`);
-      } else {
-        const url = new URL(window.location.href);
-        url.searchParams.set('step', targetStep);
-        window.history.replaceState({}, '', url.toString());
-      }
+      const url = new URL(window.location.href);
+      url.searchParams.set('step', targetStep);
+      window.history.replaceState({}, '', url.toString());
     }
   };
 

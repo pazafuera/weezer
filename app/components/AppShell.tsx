@@ -1,14 +1,12 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { useWeezer } from '../context/WeezerContext';
 import WeezerAccountDrawer from './WeezerAccountDrawer';
 import WeezerOnboardingModal from './WeezerOnboardingModal';
 import { FlyingWIcon } from './SharedUI';
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
   const {
     step,
     userId,
@@ -28,8 +26,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [isOnboardingModalOpen, setIsOnboardingModalOpen] = useState(false);
 
   const hasProgress = Object.keys(triageMap).length > 0 || masterList.length > 0;
+  const isSplash = step === 'splash';
 
-  // Define dynamic menu items based on Auth & Progress state
+  // Dynamic menu items for non-splash screens
   const menuItems: { id: string; label: string; show: boolean }[] = [
     {
       id: 'dashboard',
@@ -39,7 +38,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     {
       id: 'triage',
       label: 'The Gut Check ⚡',
-      show: true, // Always accessible
+      show: true,
     },
     {
       id: 'rank_buckets',
@@ -59,12 +58,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     {
       id: 'fan_stats',
       label: 'Fan Stats 🌐',
-      show: true, // Always accessible
+      show: true,
     },
     {
       id: 'friends',
       label: 'Friends & Matchups 🤝',
-      show: Boolean(userId), // Requires login
+      show: Boolean(userId),
     },
   ];
 
@@ -94,7 +93,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               </div>
             </button>
 
-            {/* HAMBURGER MENU BUTTON WITH FRIEND REQUEST BADGE */}
+            {/* HAMBURGER MENU BUTTON */}
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setIsMenuOpen(true)}
@@ -116,7 +115,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 </svg>
 
                 {/* Red Notification Badge for Friends */}
-                {userId && pendingRequestsCount > 0 && (
+                {!isSplash && userId && pendingRequestsCount > 0 && (
                   <span className="absolute top-1 right-1 w-3 h-3 bg-rose-500 border-2 border-[#0072CE] rounded-full animate-pulse" />
                 )}
               </button>
@@ -176,119 +175,162 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 </button>
               </div>
 
-              {/* ACCOUNT CARD */}
-              <div className="p-4 bg-blue-50/70 border-b border-blue-100 flex items-center justify-between">
-                <div className="min-w-0 pr-2">
-                  {userId ? (
-                    userProfile?.username ? (
-                      <>
-                        <div className="text-xs font-black text-slate-900 truncate">
-                          {userProfile.displayName || `@${userProfile.username}`}
-                        </div>
-                        <div className="text-[10px] font-extrabold text-[#0072CE]">
-                          @{userProfile.username}
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="text-xs font-black text-slate-900">
-                          Profile Not Set Up
-                        </div>
-                        <div className="text-[10px] font-semibold text-slate-500">
-                          Claim your handle
-                        </div>
-                      </>
-                    )
-                  ) : (
-                    <>
-                      <div className="text-xs font-black text-slate-900">
-                        Guest Mode
-                      </div>
-                      <div className="text-[10px] font-semibold text-slate-500">
-                        Unsaved local rankings
-                      </div>
-                    </>
-                  )}
+              {/* SPLASH-SPECIFIC MENU VS STANDARD APP MENU */}
+              {isSplash ? (
+                <div className="flex-1 p-4 space-y-3">
+                  <div className="pb-2 border-b border-slate-100">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      Welcome Fan
+                    </span>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      navigateTo('login');
+                    }}
+                    className="w-full text-left font-black text-sm px-4 py-3.5 rounded-2xl bg-[#0072CE] text-white hover:bg-blue-600 transition cursor-pointer flex items-center justify-between shadow-sm"
+                  >
+                    <span>Create Account</span>
+                    <span>🚀</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      navigateTo('triage');
+                    }}
+                    className="w-full text-left font-extrabold text-sm px-4 py-3.5 rounded-2xl bg-slate-100 text-slate-900 hover:bg-slate-200 transition cursor-pointer flex items-center justify-between"
+                  >
+                    <span>Sort as a Guest</span>
+                    <span>⚡</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      navigateTo('login');
+                    }}
+                    className="w-full text-left font-extrabold text-sm px-4 py-3.5 rounded-2xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition cursor-pointer flex items-center justify-between"
+                  >
+                    <span>Sign In</span>
+                    <span className="text-[#0072CE]">→</span>
+                  </button>
                 </div>
+              ) : (
+                <>
+                  {/* ACCOUNT CARD */}
+                  <div className="p-4 bg-blue-50/70 border-b border-blue-100 flex items-center justify-between">
+                    <div className="min-w-0 pr-2">
+                      {userId ? (
+                        userProfile?.username ? (
+                          <>
+                            <div className="text-xs font-black text-slate-900 truncate">
+                              {userProfile.displayName || `@${userProfile.username}`}
+                            </div>
+                            <div className="text-[10px] font-extrabold text-[#0072CE]">
+                              @{userProfile.username}
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="text-xs font-black text-slate-900">
+                              Profile Not Set Up
+                            </div>
+                            <div className="text-[10px] font-semibold text-slate-500">
+                              Claim your handle
+                            </div>
+                          </>
+                        )
+                      ) : (
+                        <>
+                          <div className="text-xs font-black text-slate-900">
+                            Guest Mode
+                          </div>
+                          <div className="text-[10px] font-semibold text-slate-500">
+                            Unsaved local rankings
+                          </div>
+                        </>
+                      )}
+                    </div>
 
-                <button
-                  onClick={() => {
-                    setIsMenuOpen(false);
-                    if (userId) {
-                      if (userProfile?.username) setIsAccountDrawerOpen(true);
-                      else setIsOnboardingModalOpen(true);
-                    } else {
-                      router.push('/login');
-                    }
-                  }}
-                  className="bg-[#0072CE] hover:bg-blue-600 text-white text-[10px] font-black px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer shrink-0"
-                >
-                  {userProfile?.username
-                    ? 'Manage'
-                    : userId
-                    ? 'Setup Profile'
-                    : 'Sign In'}
-                </button>
-              </div>
-
-              {/* DYNAMIC NAVIGATION LINKS */}
-              <nav className="flex-1 overflow-y-auto py-2">
-                {menuItems
-                  .filter((item) => item.show)
-                  .map((item) => (
                     <button
-                      key={item.id}
                       onClick={() => {
-                        navigateTo(item.id as any);
+                        setIsMenuOpen(false);
+                        if (userId) {
+                          if (userProfile?.username) setIsAccountDrawerOpen(true);
+                          else setIsOnboardingModalOpen(true);
+                        } else {
+                          navigateTo('login');
+                        }
+                      }}
+                      className="bg-[#0072CE] hover:bg-blue-600 text-white text-[10px] font-black px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer shrink-0"
+                    >
+                      {userProfile?.username
+                        ? 'Manage'
+                        : userId
+                        ? 'Setup Profile'
+                        : 'Sign In'}
+                    </button>
+                  </div>
+
+                  {/* DYNAMIC NAVIGATION LINKS */}
+                  <nav className="flex-1 overflow-y-auto py-2">
+                    {menuItems
+                      .filter((item) => item.show)
+                      .map((item) => (
+                        <button
+                          key={item.id}
+                          onClick={() => {
+                            navigateTo(item.id as any);
+                            setIsMenuOpen(false);
+                          }}
+                          className={`w-full text-left px-5 py-3.5 font-extrabold text-sm border-b border-slate-50 transition cursor-pointer flex items-center justify-between ${
+                            step === item.id
+                              ? 'bg-blue-50 text-[#0072CE]'
+                              : 'text-slate-700 hover:bg-slate-50'
+                          }`}
+                        >
+                          <span>{item.label}</span>
+
+                          {item.id === 'friends' && pendingRequestsCount > 0 && (
+                            <span className="bg-rose-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-xs">
+                              {pendingRequestsCount} new
+                            </span>
+                          )}
+                        </button>
+                      ))}
+                  </nav>
+
+                  {/* DEV TOOLS & CONDITIONAL SIGN OUT */}
+                  <div className="p-4 border-t border-slate-100 bg-slate-50 space-y-3">
+                    <button
+                      onClick={() => {
+                        handleMagicFill();
                         setIsMenuOpen(false);
                       }}
-                      className={`w-full text-left px-5 py-3.5 font-extrabold text-sm border-b border-slate-50 transition cursor-pointer flex items-center justify-between ${
-                        step === item.id
-                          ? 'bg-blue-50 text-[#0072CE]'
-                          : 'text-slate-700 hover:bg-slate-50'
-                      }`}
+                      className="w-full text-xs font-black px-4 py-3 rounded-xl bg-purple-100 text-purple-700 hover:bg-purple-200 transition cursor-pointer text-center"
                     >
-                      <span>{item.label}</span>
-
-                      {/* INCOMING FRIEND REQUEST BADGE */}
-                      {item.id === 'friends' && pendingRequestsCount > 0 && (
-                        <span className="bg-rose-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-xs">
-                          {pendingRequestsCount} new
-                        </span>
-                      )}
+                      🧪 Dev: Magic Fill
                     </button>
-                  ))}
-              </nav>
 
-              {/* DEV TOOLS & CONDITIONAL SIGN OUT */}
-              <div className="p-4 border-t border-slate-100 bg-slate-50 space-y-3">
-                <button
-                  onClick={() => {
-                    handleMagicFill();
-                    setIsMenuOpen(false);
-                  }}
-                  className="w-full text-xs font-black px-4 py-3 rounded-xl bg-purple-100 text-purple-700 hover:bg-purple-200 transition cursor-pointer text-center"
-                >
-                  🧪 Dev: Magic Fill
-                </button>
-
-                {userId && (
-                  <button
-                    onClick={handleSignOut}
-                    className="w-full text-xs font-black px-4 py-3 rounded-xl text-slate-500 bg-white border border-slate-200 hover:bg-slate-100 transition cursor-pointer text-center"
-                  >
-                    Sign Out
-                  </button>
-                )}
-              </div>
+                    {userId && (
+                      <button
+                        onClick={handleSignOut}
+                        className="w-full text-xs font-black px-4 py-3 rounded-xl text-slate-500 bg-white border border-slate-200 hover:bg-slate-100 transition cursor-pointer text-center"
+                      >
+                        Sign Out
+                      </button>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}
 
         {/* MAIN CONTENT AREA */}
-        <main className="max-w-3xl mx-auto px-4 mt-6">
-          {children}
-        </main>
+        <main className="max-w-3xl mx-auto px-4 mt-6">{children}</main>
       </div>
 
       {/* UNIVERSAL FOOTER */}

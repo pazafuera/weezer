@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect } from 'react';
+import { useWeezer } from '../context/WeezerContext';
 import { BUCKET_CONFIG, BucketType } from '../data/constants';
 
 interface OrientationBucket {
@@ -43,13 +44,9 @@ const ORIENTATION_BUCKETS: OrientationBucket[] = [
   },
 ];
 
-export default function Step05Orientation({
-  onContinue,
-  onBack,
-}: {
-  onContinue: () => void;
-  onBack: () => void;
-}) {
+export default function Step05Orientation() {
+  const { navigateTo } = useWeezer();
+
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   }, []);
@@ -59,7 +56,7 @@ export default function Step05Orientation({
       {/* BACK BUTTON */}
       <div className="pt-4 flex items-center justify-start">
         <button
-          onClick={onBack}
+          onClick={() => navigateTo('splash')}
           className="text-xs font-black text-slate-400 hover:text-slate-600 transition-colors flex items-center gap-1 cursor-pointer"
         >
           ← Back to Splash
@@ -127,7 +124,7 @@ export default function Step05Orientation({
       {/* CONTINUATION CTA */}
       <div className="space-y-2 pt-2">
         <button
-          onClick={onContinue}
+          onClick={() => navigateTo('triage')}
           className="w-full bg-[#0072CE] hover:bg-blue-600 active:scale-[0.99] text-white font-black text-base sm:text-lg py-4 rounded-2xl shadow-[0_10px_25px_rgba(0,114,206,0.3)] transition-all cursor-pointer flex items-center justify-center gap-2 group"
         >
           <span>I'm Ready — Start Triage</span>

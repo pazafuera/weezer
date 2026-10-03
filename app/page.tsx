@@ -53,20 +53,13 @@ export default function WeezerRankerPage() {
 
   return (
     <AppShell>
-      {step === 'splash' && (
-        <Step0Splash onStart={() => setStep('orientation')} />
-      )}
+      {step === 'splash' && <Step0Splash />}
 
       {step === 'login' && <Login />}
 
       {step === 'signup_success' && <StepSignupSuccess />}
 
-      {step === 'orientation' && (
-        <Step05Orientation
-          onContinue={() => setStep('triage')}
-          onBack={() => setStep('splash')}
-        />
-      )}
+      {step === 'orientation' && <Step05Orientation />}
 
       {step === 'dashboard' && <StepDashboard />}
 

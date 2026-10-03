@@ -1,76 +1,146 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useWeezer } from '../context/WeezerContext';
+import { BUCKET_CONFIG, BucketType } from '../data/constants';
 import { FlyingWIcon } from './SharedUI';
+
+interface OrientationBucket {
+  key: BucketType;
+  title: string;
+  sub: string;
+  desc: string;
+}
+
+const ORIENTATION_BUCKETS: OrientationBucket[] = [
+  {
+    key: 'banger',
+    title: 'Banger',
+    sub: 'God-Tier / S-Tier',
+    desc: 'Pure magic that defines your entire experience with Weezer.',
+  },
+  {
+    key: 'slaps',
+    title: 'Lowkey Slaps',
+    sub: 'Great / A-Tier',
+    desc: 'Awesome jams, but they would not make your iPod if it could only hold 25 total tracks.',
+  },
+  {
+    key: 'mid',
+    title: 'Mid',
+    sub: 'Solid / B-Tier',
+    desc: 'Enjoyable listens and fun album cuts, but never in your everyday rotation.',
+  },
+  {
+    key: 'skip',
+    title: 'Skip',
+    sub: 'Meh / C-Tier',
+    desc: 'Tracks you don’t hate, but secretly skip when no one is watching.',
+  },
+  {
+    key: 'trash',
+    title: 'Trash',
+    sub: 'Bottom-Tier / D-Tier',
+    desc: 'Songs you kinda wish Rivers had never written.',
+  },
+];
 
 export default function StepSignupSuccess() {
   const { userProfile, navigateTo } = useWeezer();
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, []);
+
   const displayName =
-    userProfile?.displayName || userProfile?.username || 'Weezer Fan';
+    userProfile?.displayName ||
+    (userProfile?.username ? `@${userProfile.username}` : 'Weezer Fan');
 
   return (
-    <div className="max-w-md mx-auto py-10 px-4 text-center space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {/* SUCCESS BADGE & ICON */}
-      <div className="space-y-3">
-        <div className="w-20 h-20 bg-emerald-500 text-white rounded-3xl flex items-center justify-center mx-auto shadow-xl shadow-emerald-500/20 border-4 border-emerald-400/50">
-          <FlyingWIcon className="w-12 h-8 text-white drop-shadow-md" />
+    <div className="space-y-6 pb-24 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-2xl mx-auto px-4">
+      {/* ACCOUNT CONFIRMATION BANNER */}
+      <div className="text-center space-y-3 pt-4">
+        <div className="w-16 h-16 bg-emerald-500 text-white rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/20 border-2 border-emerald-400">
+          <FlyingWIcon className="w-10 h-10 text-white drop-shadow-sm" />
         </div>
 
         <span className="inline-block bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full border border-emerald-200">
-          Account Created ✓
+          Account Created
         </span>
 
-        <h1 className="text-3xl sm:text-4xl font-black text-slate-950 tracking-tight leading-tight">
+        <h1 className="text-3xl sm:text-5xl font-black text-slate-950 tracking-tighter">
           Welcome, <span className="text-[#0072CE]">{displayName}</span>!
         </h1>
 
-        <p className="text-sm font-semibold text-slate-500 max-w-sm mx-auto leading-relaxed">
-          Your handle is claimed and your profile is ready. Time to establish your definitive canon.
+        <p className="text-xs sm:text-sm font-bold text-slate-500 uppercase tracking-widest max-w-md mx-auto">
+          You're ready to get ranking.
         </p>
       </div>
 
-      {/* PRIMARY & SECONDARY NEXT STEPS */}
-      <div className="space-y-3 pt-2">
-        {/* PRIMARY CTA: START RANKING */}
-        <button
-          onClick={() => navigateTo('triage')}
-          className="w-full bg-[#0072CE] hover:bg-blue-600 active:scale-95 text-white font-black text-base py-4 px-6 rounded-2xl shadow-lg shadow-blue-500/25 transition-all cursor-pointer border border-blue-400/30 flex items-center justify-center gap-2 group"
-        >
-          <span>Start The Gut Check →</span>
-        </button>
+      {/* SECTION HEADER & SUCCINCT PRO-TIP */}
+      <div className="space-y-2.5 text-center pt-2">
+      <h2 className="text-base sm:text-xl font-black text-slate-950 tracking-tight">
+  First, you'll put songs into one of the following buckets.
+</h2>
 
-        {/* SECONDARY CTA: GO TO GARAGE */}
-        <button
-          onClick={() => navigateTo('dashboard')}
-          className="w-full bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-800 font-extrabold text-sm py-3.5 px-6 rounded-2xl transition-all cursor-pointer border border-slate-200"
-        >
-          Go to Your Garage
-        </button>
+
       </div>
 
-      {/* QUICK HIGHLIGHT CARDS */}
-      <div className="grid grid-cols-2 gap-3 pt-4 border-t border-slate-200/80">
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs text-left">
-          <span className="text-lg">⚡</span>
-          <h3 className="font-extrabold text-xs text-slate-900 mt-1">
-            206 Songs
-          </h3>
-          <p className="text-[11px] font-medium text-slate-500 mt-0.5">
-            Rapid 5-tier sorting
-          </p>
-        </div>
+      {/* BUCKET CARDS */}
+      <div className="space-y-4">
+        {ORIENTATION_BUCKETS.map(({ key, title, sub, desc }) => {
+          const cfg = BUCKET_CONFIG[key];
+          return (
+            <div
+              key={key}
+              className="bg-white border border-slate-200/90 rounded-3xl p-5 sm:p-6 shadow-sm hover:border-blue-300 transition-all space-y-3"
+            >
+              {/* TOP ROW: ICON + LARGE BUCKET TITLE */}
+              <div className="flex items-center gap-3.5">
+                <div
+                  className={`w-14 h-14 rounded-2xl border flex items-center justify-center text-3xl shrink-0 shadow-sm ${cfg.badgeBg}`}
+                >
+                  {cfg.emoji}
+                </div>
 
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs text-left">
-          <span className="text-lg">📊</span>
-          <h3 className="font-extrabold text-xs text-slate-900 mt-1">
-            Taste DNA
-          </h3>
-          <p className="text-[11px] font-medium text-slate-500 mt-0.5">
-            Compare with friends
-          </p>
-        </div>
+                <div className="flex flex-col min-w-0">
+                  <h2 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight leading-none">
+                    {title}
+                  </h2>
+                  <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-widest text-slate-400 mt-1">
+                    {sub}
+                  </span>
+                </div>
+              </div>
+
+              {/* CARD BODY: DESCRIPTION */}
+              <div className="pt-1 border-t border-slate-100">
+                <p className="text-xs sm:text-sm font-medium text-slate-600 leading-relaxed">
+                  {desc}
+                </p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="bg-amber-50/80 border border-amber-200/80 rounded-2xl p-3 w-full text-amber-950">
+  <p className="text-s font-bold leading-snug">
+    💡 <span className="font-black">Pro Tip:</span> Go with your gut! You'll fine-tune exact rankings later.
+  </p>
+</div>
+
+      {/* CONTINUATION CTA */}
+      <div className="pt-2">
+        <button
+          onClick={() => navigateTo('triage')}
+          className="w-full bg-[#0072CE] hover:bg-blue-600 active:scale-[0.99] text-white font-black text-base sm:text-lg py-4 rounded-2xl shadow-[0_10px_25px_rgba(0,114,206,0.3)] transition-all cursor-pointer flex items-center justify-center gap-2 group"
+        >
+          <span>I'm Ready — Start Triage</span>
+          <span className="transform group-hover:translate-x-1 transition-transform">
+            ⚡️
+          </span>
+        </button>
       </div>
     </div>
   );

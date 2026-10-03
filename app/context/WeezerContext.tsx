@@ -18,6 +18,8 @@ export type AppStep =
   | 'login'
   | 'signup_success';
 
+export type AuthModeType = 'signup' | 'login' | 'magic';
+
 interface UserProfile {
   username?: string;
   displayName?: string;
@@ -33,7 +35,8 @@ interface WeezerContextType {
   setRefineStageIdx: (idx: number) => void;
   autoStartMatchups: boolean;
   setAutoStartMatchups: (val: boolean) => void;
-  navigateTo: (targetStep: AppStep) => void;
+  initialAuthMode: AuthModeType;
+  navigateTo: (targetStep: AppStep, authMode?: AuthModeType) => void;
 
   // Auth & User State
   loadingUser: boolean;
@@ -93,8 +96,9 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   // Social & Friend Requests
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
 
-  // Navigation State
+  // Navigation & Auth Mode State
   const [step, setStepState] = useState<AppStep>('splash');
+  const [initialAuthMode, setInitialAuthMode] = useState<AuthModeType>('signup');
   const [refineStageIdx, setRefineStageIdx] = useState(0);
   const [autoStartMatchups, setAutoStartMatchups] = useState(false);
 
@@ -349,7 +353,10 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     syncRankingsToDatabase(triageMap, list);
   };
 
-  const navigateTo = (targetStep: AppStep) => {
+  const navigateTo = (targetStep: AppStep, authMode?: AuthModeType) => {
+    if (authMode) {
+      setInitialAuthMode(authMode);
+    }
     if (targetStep === 'rank_buckets') {
       setBucketRanks(getDerivedBucketRanks(triageMap, masterList));
       setRefineStageIdx(0);
@@ -384,6 +391,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         setRefineStageIdx,
         autoStartMatchups,
         setAutoStartMatchups,
+        initialAuthMode,
         navigateTo,
         loadingUser,
         userId,

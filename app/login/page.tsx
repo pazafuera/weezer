@@ -184,12 +184,20 @@ const COUNTRY_OPTIONS = [
 
 export default function Login() {
   const router = useRouter();
-  const { navigateTo } = useWeezer();
+  const { navigateTo, initialAuthMode } = useWeezer();
 
-  // Auth Credentials State
+  // Auth Credentials State synced with context initialAuthMode
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [authMode, setAuthMode] = useState<'signup' | 'login' | 'magic'>('signup');
+  const [authMode, setAuthMode] = useState<'signup' | 'login' | 'magic'>(
+    initialAuthMode || 'signup'
+  );
+
+  useEffect(() => {
+    if (initialAuthMode) {
+      setAuthMode(initialAuthMode);
+    }
+  }, [initialAuthMode]);
 
   // Unified Profile State for Sign-up
   const [username, setUsername] = useState('');
@@ -295,10 +303,22 @@ export default function Login() {
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col justify-center items-center p-4 selection:bg-amber-400 selection:text-slate-950 font-sans">
-      <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
+      <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden relative">
         
+        {/* CLOSE (X) BUTTON */}
+        <button
+          type="button"
+          onClick={() => navigateTo('splash')}
+          className="absolute top-4 right-4 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-black/20 hover:bg-black/30 text-white transition-all cursor-pointer"
+          aria-label="Close"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+
         {/* BRANDED HEADER BANNER */}
-        <div className="bg-[#0072CE] p-8 text-center text-white space-y-2">
+        <div className="bg-[#0072CE] p-8 text-center text-white space-y-2 relative">
           <div className="w-12 h-12 bg-white/10 border border-white/20 rounded-2xl flex items-center justify-center mx-auto text-white shadow-inner">
             <FlyingWIcon className="w-8 h-8 text-white drop-shadow-sm" />
           </div>
@@ -311,7 +331,7 @@ export default function Login() {
         </div>
 
         <div className="p-6 sm:p-8 space-y-6">
-          {/* AUTH MODE TOGGLE BUTTONS (Sign Up First) */}
+          {/* AUTH MODE TOGGLE BUTTONS */}
           <div className="flex bg-slate-100 rounded-xl p-1">
             <button
               type="button"
@@ -374,7 +394,7 @@ export default function Login() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="buddy.holly@weezer.com"
                 required
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#0072CE] focus:ring-2 focus:ring-blue-100 outline-none transition-all font-bold text-slate-900 text-sm"
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#0072CE] focus:ring-2 focus:ring-blue-100 outline-none transition-all font-bold text-slate-900 text-base"
               />
             </div>
 
@@ -395,7 +415,7 @@ export default function Login() {
                   placeholder="••••••••"
                   required
                   minLength={6}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#0072CE] focus:ring-2 focus:ring-blue-100 outline-none transition-all font-bold text-slate-900 text-sm"
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#0072CE] focus:ring-2 focus:ring-blue-100 outline-none transition-all font-bold text-slate-900 text-base"
                 />
               </div>
             )}
@@ -412,7 +432,7 @@ export default function Login() {
                     Unique Username (Handle) *
                   </label>
                   <div className="relative">
-                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-black text-sm">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-black text-base">
                       @
                     </span>
                     <input
@@ -421,7 +441,7 @@ export default function Login() {
                       placeholder="rivers_cuomo"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
-                      className="w-full pl-8 pr-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#0072CE] outline-none font-bold text-slate-900 text-sm"
+                      className="w-full pl-8 pr-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#0072CE] outline-none font-bold text-slate-900 text-base"
                     />
                   </div>
                 </div>
@@ -440,7 +460,7 @@ export default function Login() {
                     placeholder="Rivers C."
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#0072CE] outline-none font-bold text-slate-900 text-sm"
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#0072CE] outline-none font-bold text-slate-900 text-base"
                   />
                 </div>
 
@@ -456,7 +476,7 @@ export default function Login() {
                       max={new Date().getFullYear()}
                       value={birthYear}
                       onChange={(e) => setBirthYear(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#0072CE] outline-none font-bold text-slate-900 text-xs"
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#0072CE] outline-none font-bold text-slate-900 text-base"
                     />
                   </div>
 
@@ -467,7 +487,7 @@ export default function Login() {
                     <select
                       value={country}
                       onChange={(e) => setCountry(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#0072CE] outline-none font-bold text-slate-900 text-xs"
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#0072CE] outline-none font-bold text-slate-900 text-base"
                     >
                       {COUNTRY_OPTIONS.map((c) =>
                         c.code === 'DIVIDER' ? (
@@ -492,7 +512,7 @@ export default function Login() {
                     <select
                       value={stateCode}
                       onChange={(e) => setStateCode(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#0072CE] outline-none font-bold text-slate-900 text-xs"
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#0072CE] outline-none font-bold text-slate-900 text-base"
                     >
                       <option value="">Select State...</option>
                       {US_STATES.map((st) => (

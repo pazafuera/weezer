@@ -2,32 +2,53 @@
 
 import React from 'react';
 import { useWeezer } from '../context/WeezerContext';
-import { FlyingWIcon } from './SharedUI';
 
-export default function Step00Splash() {
+const ALBUM_PREVIEWS = [
+  { title: 'Pinkerton', cover: '/albums/pinkerton.jpg', rot: '-rotate-12 -mr-4 sm:-mr-6', z: 'z-0' },
+  { title: 'Green Album', cover: '/albums/green.jpg', rot: '-rotate-6 -mr-4 sm:-mr-6', z: 'z-10' },
+  { title: 'The Blue Album', cover: '/albums/blue.jpg', rot: 'rotate-0', z: 'z-20 scale-105 shadow-xl ring-2 ring-blue-500/50' },
+  { title: 'Red Album', cover: '/albums/red.jpg', rot: 'rotate-6 -ml-4 sm:-ml-6', z: 'z-10' },
+  { title: 'White Album', cover: '/albums/white.jpg', rot: 'rotate-12 -ml-4 sm:-ml-6', z: 'z-0' },
+];
+
+export default function Step0Splash() {
   const { navigateTo } = useWeezer();
 
   return (
-    <div className="max-w-xl mx-auto text-center py-2 sm:py-6 space-y-5 animate-in fade-in duration-500">
+    <div className="max-w-xl mx-auto text-center py-2 sm:py-6 space-y-6 animate-in fade-in duration-500">
       
       {/* HERO SECTION */}
-      <div className="space-y-3">
-        <div className="w-16 h-16 bg-[#0072CE] text-white rounded-2xl flex items-center justify-center mx-auto shadow-lg">
-          <FlyingWIcon className="w-10 h-10 text-white drop-shadow-md" />
-        </div>
-
+      <div className="space-y-3 pt-2">
         <div>
           <h1 className="text-3xl sm:text-4xl font-black text-slate-950 tracking-tight leading-tight">
             30 Years of Debates.
-            <span className="block text-[#0072CE]">One Definitive Canon.</span>
+            <span className="block text-[#0072CE]">One Definitive Ranking.</span>
           </h1>
           <p className="text-xs font-semibold text-slate-500 max-w-md mx-auto mt-2 leading-relaxed">
-            Weezer fans have spent decades arguing over Pinkerton vs. Blue, late-era gems, and unreleased lore. Settle the debate once and for all.
+            Weezer fans have spent decades arguing over albums not named Blue. Help us settle the debate once and for all.
           </p>
         </div>
       </div>
 
-      {/* STACKED REASONS TO PARTICIPATE WITH CLEAN SVG ICONS */}
+      {/* OVERLAPPING ALBUM ARTWORK FAN VISUAL */}
+      <div className="py-3 flex items-center justify-center pointer-events-none select-none">
+        <div className="flex items-center justify-center">
+          {ALBUM_PREVIEWS.map((album, idx) => (
+            <div
+              key={idx}
+              className={`w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden border-2 border-white/90 ${album.rot} ${album.z} shadow-lg transition-transform duration-300 shrink-0 bg-slate-900`}
+            >
+              <img
+                src={album.cover}
+                alt={album.title}
+                className="w-full h-full object-cover"
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* STACKED REASONS TO PARTICIPATE */}
       <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 space-y-3 max-w-md mx-auto text-left">
         
         {/* REASON 1: BUILD YOUR CANON */}
@@ -48,9 +69,9 @@ export default function Step00Splash() {
             </svg>
           </div>
           <div>
-            <h3 className="text-xs font-black text-slate-900 leading-tight">Build Your Canon</h3>
-            <p className="text-[11px] font-medium text-slate-500 mt-0.5 leading-snug">
-              Order your personal 1–206 master song list from Blue through SZNZ.
+            <h3 className="text-xs font-black text-slate-900 leading-tight">Build Your Personal Rankings</h3>
+            <p className="text-[12px] font-medium text-slate-500 mt-0.5 leading-snug">
+              Rank 206 canon album songs from Blue through Gold.
             </p>
           </div>
         </div>
@@ -73,9 +94,9 @@ export default function Step00Splash() {
             </svg>
           </div>
           <div>
-            <h3 className="text-xs font-black text-slate-900 leading-tight">Clash With Friends</h3>
-            <p className="text-[11px] font-medium text-slate-500 mt-0.5 leading-snug">
-              Compare taste alignment scores and uncover your biggest track wars.
+            <h3 className="text-xs font-black text-slate-900 leading-tight">Compare With Friends</h3>
+            <p className="text-[12px] font-medium text-slate-500 mt-0.5 leading-snug">
+              Compare your rankings with friends to uncover your taste compatibility (or lack thereof).
             </p>
           </div>
         </div>
@@ -98,9 +119,9 @@ export default function Step00Splash() {
             </svg>
           </div>
           <div>
-            <h3 className="text-xs font-black text-slate-900 leading-tight">Global Consensus</h3>
-            <p className="text-[11px] font-medium text-slate-500 mt-0.5 leading-snug">
-              Contribute to live worldwide fan rankings and demographic stats.
+            <h3 className="text-xs font-black text-slate-900 leading-tight">Worldwide Fan Rankings</h3>
+            <p className="text-[12px] font-medium text-slate-500 mt-0.5 leading-snug">
+              See how you compare to Weezer fans around the world.
             </p>
           </div>
         </div>
@@ -110,23 +131,23 @@ export default function Step00Splash() {
       {/* CALL TO ACTION BUTTONS */}
       <div className="space-y-2.5 max-w-sm mx-auto pt-1">
         <button
-          onClick={() => navigateTo('login')}
+          onClick={() => navigateTo('login', 'signup')}
           className="w-full bg-[#0072CE] hover:bg-blue-600 text-white font-black py-3.5 px-6 rounded-2xl shadow-md transition-all active:scale-[0.98] cursor-pointer text-sm"
         >
-          Create Account & Join Settle The Canon 🚀
+          Create Account & Start Ranking
         </button>
 
         <button
-          onClick={() => navigateTo('triage')}
+          onClick={() => navigateTo('orientation')}
           className="w-full bg-slate-100 hover:bg-slate-200 text-slate-900 font-black py-3 px-6 rounded-2xl transition-all cursor-pointer text-xs"
         >
-          Start Sorting as Guest 👤
+          Start Ranking as a Guest
         </button>
 
         <p className="text-[11px] font-bold text-slate-400 pt-1">
           Already have an account?{' '}
           <button
-            onClick={() => navigateTo('login')}
+            onClick={() => navigateTo('login', 'login')}
             className="text-[#0072CE] hover:underline cursor-pointer font-black"
           >
             Sign In

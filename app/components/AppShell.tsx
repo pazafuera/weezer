@@ -339,7 +339,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           <p className="text-[11px] font-black uppercase tracking-widest text-slate-400">
             All My Favorite Songs • The Weezer Ranking Project
           </p>
-          <p className="text-xs font-medium text-slate-500 leading-relaxed">
+          <p className="text-xxs font-medium text-slate-500 leading-relaxed">
             This is an independent, non-commercial fan project created for the
             Weezer fan community. It is not affiliated with, endorsed by, or
             connected to Weezer, Rivers Cuomo, Geffen Records, Atlantic Records,

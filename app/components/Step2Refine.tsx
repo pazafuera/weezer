@@ -31,9 +31,17 @@ export default function Step2Refine({
 }) {
   const [stageIdx, setStageIdx] = useState(initialStageIdx);
 
+  const [showMatchups, setShowMatchups] = useState(false);
+
   useEffect(() => {
     setStageIdx(initialStageIdx);
   }, [initialStageIdx]);
+
+  useEffect(() => {
+    if (initialStageIdx === 0 && autoStartMatchups && (bucketRanks.banger || []).length >= 2) {
+      setShowMatchups(true);
+    }
+  }, []);
 
   const currentStage = REFINEMENT_STAGES[stageIdx] || REFINEMENT_STAGES[0];
   const bucket = currentStage.bucket;
@@ -43,7 +51,6 @@ export default function Step2Refine({
   const hasSlider = bucket === 'banger' || bucket === 'slaps';
   const transitions = BUCKET_TRANSITIONS[bucket];
 
-  const [showMatchups, setShowMatchups] = useState(autoStartMatchups && bucket === 'banger');
   const [pendingMove, setPendingMove] = useState<{ song: Song; targetBucket: BucketType } | null>(null);
 
   const [dragState, setDragState] = useState<{ bucket: BucketType; songId: string; type: 'mouse' | 'touch' } | null>(null);
@@ -59,11 +66,7 @@ export default function Step2Refine({
     if (stageIdx < REFINEMENT_STAGES.length - 1) {
       const nextIdx = stageIdx + 1;
       setStageIdx(nextIdx);
-      if (REFINEMENT_STAGES[nextIdx].bucket === 'slaps' && bucketRanks.slaps.length >= 2) {
-        setShowMatchups(true);
-      } else {
-        setShowMatchups(false);
-      }
+      setShowMatchups(false);
     } else {
       handleFinishBucketRanking();
     }
@@ -281,18 +284,8 @@ export default function Step2Refine({
         </div>
       )}
 
-      {/* LOCAL BACK NAVIGATION */}
-      <div className="px-4 pt-2">
-        <button onClick={handleBack} className="text-xs font-black text-slate-400 hover:text-slate-600 transition-colors flex items-center gap-1 cursor-pointer">
-          {stageIdx > 0 ? `← Back to ${REFINEMENT_STAGES[stageIdx - 1].title}` : '← Back to The Gut Check'}
-        </button>
-      </div>
-
       {/* HEADER */}
-      <div className="text-center space-y-2 px-4 mb-8">
-        <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md border ${cfg.badgeBg}`}>
-          Step {stageIdx + 1} of 5
-        </span>
+      <div className="text-center space-y-2 px-4 mb-8 pt-2">
         <h1 className="text-3xl font-black text-slate-950 tracking-tight">{currentStage.title}</h1>
         <p className="text-sm font-bold text-slate-500 max-w-sm mx-auto leading-tight">{currentStage.desc}</p>
       </div>
@@ -304,7 +297,18 @@ export default function Step2Refine({
           <h2 className={`text-sm sm:text-base font-black uppercase tracking-wider ${cfg.color}`}>
             {cfg.emoji} {cfg.label} <span className="text-slate-400">({songs.length})</span>
           </h2>
-          {hasSlider && <span className="text-[11px] font-bold text-slate-400">Drag to rank</span>}
+          
+          {/* HELP ME RANK BUTTON */}
+          {hasSlider && songs.length >= 2 && (
+            <button
+              onClick={() => setShowMatchups(true)}
+              className="text-[11px] font-black text-[#0072CE] hover:bg-blue-50 border border-blue-200 px-3 py-1 rounded-xl transition cursor-pointer flex gap-1 items-center"
+            >
+              <span>⚡️</span>
+              Help Me Rank
+            </button>
+          )}
+          {!hasSlider && <span className="text-[11px] font-bold text-slate-400">Sort by Album</span>}
         </div>
 
         {songs.length === 0 ? (
@@ -406,12 +410,25 @@ export default function Step2Refine({
         )}
       </div>
 
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-auto">
-        <button onClick={handleNext} className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm px-8 py-4 rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.35)] transition transform hover:scale-105 cursor-pointer border-2 border-amber-200 flex items-center gap-2.5 whitespace-nowrap">
+      {/* STICKY BOTTOM NAVIGATION CONTROLS */}
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-auto flex items-center gap-3">
+        <button
+          onClick={handleBack}
+          className="bg-white hover:bg-slate-50 text-slate-700 border-2 border-slate-200 font-black text-sm px-5 py-4 rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.2)] transition transform hover:scale-105 cursor-pointer flex items-center gap-1.5 whitespace-nowrap"
+        >
+          <span>←</span>
+          <span>Back</span>
+        </button>
+
+        <button
+          onClick={handleNext}
+          className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm px-8 py-4 rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.35)] transition transform hover:scale-105 cursor-pointer border-2 border-amber-200 flex items-center gap-2.5 whitespace-nowrap"
+        >
           {stageIdx === REFINEMENT_STAGES.length - 1 && <FlyingWIcon className="w-6 h-4 text-slate-950" />}
           <span>{currentStage.nextBtn}</span>
         </button>
       </div>
+
     </div>
   );
 }

@@ -257,18 +257,31 @@ export default function WeezerFriends() {
 
       {/* SEND FRIEND REQUEST CARD */}
       <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm space-y-3">
-        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-          Send A Friend Request
-        </span>
+        <div className="space-y-0.5">
+          <span className="text-[10px] font-black uppercase tracking-widest text-[#0072CE] block">
+            Add Fan Friends
+          </span>
+          <h3 className="text-sm sm:text-base font-black text-slate-900 tracking-tight">
+            Enter your friend&apos;s username to send an invite:
+          </h3>
+        </div>
 
-        <form onSubmit={handleSendRequest} className="flex flex-col sm:flex-row gap-3">
+        <form onSubmit={handleSendRequest} className="flex flex-col sm:flex-row gap-3 pt-1">
           <div className="relative flex-1">
             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-black">
               @
             </span>
             <input
-              type="text"
-              placeholder="username"
+              type="search"
+              name="search_friend_username_query"
+              id="search_friend_username_query"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="none"
+              spellCheck={false}
+              data-lpignore="true"
+              data-1p-ignore="true"
+              placeholder="friend's username"
               value={searchUsername}
               onChange={(e) => setSearchUsername(e.target.value)}
               className="w-full pl-9 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 focus:outline-none focus:border-[#0072CE]"
@@ -306,18 +319,13 @@ export default function WeezerFriends() {
                 key={req.id}
                 className="bg-white border border-amber-200 rounded-2xl p-4 flex items-center justify-between shadow-sm"
               >
-                <div className="flex items-center gap-3.5 min-w-0 pr-2">
-                  <div className="w-10 h-10 bg-amber-400 text-amber-950 rounded-xl flex items-center justify-center font-black text-base shrink-0">
-                    {req.display_name.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="min-w-0">
-                    <h4 className="text-sm font-black text-slate-900 truncate">
-                      {req.display_name}
-                    </h4>
-                    <span className="text-xs font-bold text-[#0072CE] block truncate">
-                      @{req.username}
-                    </span>
-                  </div>
+                <div className="min-w-0 pr-2">
+                  <h4 className="text-sm font-black text-slate-900 truncate">
+                    {req.display_name}
+                  </h4>
+                  <span className="text-xs font-bold text-[#0072CE] block truncate">
+                    @{req.username}
+                  </span>
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
@@ -369,21 +377,16 @@ export default function WeezerFriends() {
                 key={friend.id}
                 className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-between shadow-sm hover:border-[#0072CE] transition-colors group"
               >
-                <div className="flex items-center gap-4 min-w-0 pr-2">
-                  <div className="w-12 h-12 bg-amber-400 text-amber-950 rounded-full flex items-center justify-center font-black text-xl shadow-sm shrink-0">
-                    {friend.display_name.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="min-w-0">
-                    <h4 className="text-base font-black text-slate-900 truncate">
-                      {friend.display_name}
-                    </h4>
-                    <p className="text-xs font-bold text-[#0072CE] truncate">
-                      @{friend.username}
-                    </p>
-                    <p className="text-[10px] font-bold text-slate-400 truncate mt-0.5">
-                      🥇 {friend.top_song}
-                    </p>
-                  </div>
+                <div className="min-w-0 pr-3">
+                  <h4 className="text-base font-black text-slate-900 truncate">
+                    {friend.display_name}
+                  </h4>
+                  <p className="text-xs font-bold text-[#0072CE] truncate">
+                    @{friend.username}
+                  </p>
+                  <p className="text-[10px] font-bold text-slate-400 truncate mt-0.5">
+                    🥇 {friend.top_song}
+                  </p>
                 </div>
 
                 {friend.status === 'pending_outgoing' ? (

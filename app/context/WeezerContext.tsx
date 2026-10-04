@@ -434,10 +434,17 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     if (authMode) {
       setInitialAuthMode(authMode);
     }
+
     if (targetStep === 'rank_buckets') {
       setBucketRanks(getDerivedBucketRanks(triageMap, masterList));
       setRefineStageIdx(0);
+
+      // GUARD: If user has already completed/sorted their master list, do NOT auto-trigger head-to-head matchups
+      if (masterList && masterList.length > 0) {
+        setAutoStartMatchups(false);
+      }
     }
+
     setStep(targetStep);
 
     if (typeof window !== 'undefined') {

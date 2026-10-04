@@ -1825,9 +1825,9 @@ function SmartShareModule({ stats, top10, userProfile }: any) {
   const publicShareUrl = `https://famduel.com/share?data=${encodedData}`;
   const ogImageUrl = `/api/og?data=${encodedData}`;
 
-  const shareText = `My Weezer Anthem is "${shareData.t}" and my Top Album is ${shareData.a}.\n\nWho has better taste? Rank the Weezer canon and find out:\n${publicShareUrl}`;
+  // Clean text WITHOUT the URL appended inside it (prevents iOS double-link pills)
+  const shareText = `My Weezer Anthem is "${shareData.t}" and my Top Album is ${shareData.a}. Who has better taste?`;
 
-  // Helper to detect actual mobile touch devices vs desktop browsers
   const isMobileDevice = () => {
     if (typeof window === 'undefined') return false;
     return (
@@ -1842,30 +1842,17 @@ function SmartShareModule({ stats, top10, userProfile }: any) {
     setIsSharing(true);
 
     try {
-      const response = await fetch(ogImageUrl);
-      const blob = await response.blob();
-      const file = new File([blob], 'weezer-taste-dna.png', {
-        type: 'image/png',
-      });
-
       const isMobile = isMobileDevice();
 
-      // Mobile devices get the native iOS/Android share sheet for Instagram, TikTok, Snapchat, etc.
-      if (
-        isMobile &&
-        typeof navigator !== 'undefined' &&
-        navigator.canShare &&
-        navigator.canShare({ files: [file] })
-      ) {
-        setIsSharing(false); // Reset button BEFORE opening share popup so it doesn't freeze
+      if (isMobile && typeof navigator !== 'undefined' && navigator.share) {
+        setIsSharing(false);
+        // Clean URL + Text payload. iOS automatically renders the dynamic OG image in 1 card.
         await navigator.share({
           title: 'My Weezer Taste DNA',
           text: shareText,
-          files: [file],
           url: publicShareUrl,
         });
       } else {
-        // Desktop browsers (macOS/Windows) open our rich custom share modal directly
         setIsSharing(false);
         setShowFallback(true);
       }
@@ -1879,7 +1866,7 @@ function SmartShareModule({ stats, top10, userProfile }: any) {
 
   const handleCopyLink = () => {
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
-      navigator.clipboard.writeText(shareText);
+      navigator.clipboard.writeText(`${shareText}\n${publicShareUrl}`);
       setCopySuccess(true);
       setTimeout(() => setCopySuccess(false), 2000);
     }
@@ -1912,7 +1899,7 @@ function SmartShareModule({ stats, top10, userProfile }: any) {
           Who Has Better Taste?
         </h3>
         <p className="text-sm font-bold text-slate-400 max-w-sm mx-auto mb-8">
-          Instantly generate your Weezer Share Card for Instagram, X, TikTok, or text message.
+          Instantly share your Weezer Taste DNA card to Instagram, Facebook, X, or text message.
         </p>
 
         <button
@@ -1923,7 +1910,7 @@ function SmartShareModule({ stats, top10, userProfile }: any) {
           {isSharing ? (
             <>
               <div className="w-5 h-5 border-4 border-white border-t-transparent rounded-full animate-spin" />
-              <span>Generating Image...</span>
+              <span>Preparing Card...</span>
             </>
           ) : (
             <>
@@ -1963,7 +1950,7 @@ function SmartShareModule({ stats, top10, userProfile }: any) {
                 <a
                   href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(
                     publicShareUrl
-                  )}&text=${encodeURIComponent('I ranked the Weezer canon. Who has better taste?')}`}
+                  )}&text=${encodeURIComponent(shareText)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex-1 bg-sky-500 hover:bg-sky-400 text-white font-black text-sm py-3 px-4 rounded-xl flex items-center justify-center gap-2 cursor-pointer text-center"

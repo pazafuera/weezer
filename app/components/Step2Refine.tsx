@@ -229,6 +229,13 @@ export default function Step2Refine({
     setPendingMove(null);
   };
 
+  const handleSongTitleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const card = e.currentTarget.closest('[data-song-card]');
+    const previewBtn = card?.querySelector<HTMLButtonElement>('[data-preview-btn] button');
+    if (previewBtn) previewBtn.click();
+  };
+
   if (showMatchups && (bucket === 'banger' || bucket === 'slaps') && songs.length >= 2) {
     return (
       <Step1_5Matchups
@@ -308,7 +315,6 @@ export default function Step2Refine({
               Help Me Rank
             </button>
           )}
-          {!hasSlider && <span className="text-[11px] font-bold text-slate-400">Sort by Album</span>}
         </div>
 
         {songs.length === 0 ? (
@@ -349,12 +355,21 @@ export default function Step2Refine({
                     )}
 
                     <div className="min-w-0 flex-1">
-                      <h3 className={`text-sm font-bold leading-tight truncate ${isTouchDrag ? 'text-white font-extrabold' : 'text-slate-900'}`}>
+                      <h3
+                        onClick={handleSongTitleClick}
+                        className={`text-sm font-bold leading-tight truncate cursor-pointer hover:text-[#0072CE] transition-colors ${
+                          isTouchDrag ? 'text-white font-extrabold' : 'text-slate-900'
+                        }`}
+                        title="Tap to preview audio"
+                      >
                         {song.title}
                       </h3>
+
                       <div className="flex items-center gap-1.5 min-w-0 mt-0.5">
-                        {/* FORCED TINY INLINE PLAY BUTTON CONTAINER */}
-                        <div className="shrink-0 flex items-center justify-center w-3.5 h-3.5 [&_button]:!w-3.5 [&_button]:!h-3.5 [&_button]:!p-0 [&_button]:!min-w-0 [&_button]:!min-h-0 [&_button]:!bg-transparent [&_button]:!border-none [&_svg]:!w-2.5 [&_svg]:!h-2.5">
+                        <div
+                          data-preview-btn="true"
+                          className="shrink-0 flex items-center justify-center w-3.5 h-3.5 [&_button]:!w-3.5 [&_button]:!h-3.5 [&_button]:!p-0 [&_button]:!min-w-0 [&_button]:!min-h-0 [&_button]:!bg-transparent [&_button]:!border-none [&_svg]:!w-2.5 [&_svg]:!h-2.5"
+                        >
                           <AudioPreviewButton title={song.title} />
                         </div>
                         <span className={`text-[10px] font-semibold truncate ${isTouchDrag ? 'text-slate-300' : 'text-slate-500'}`}>

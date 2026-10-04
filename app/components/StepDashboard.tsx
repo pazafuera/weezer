@@ -120,14 +120,13 @@ export default function StepDashboard() {
       <div className="pt-2 flex items-center justify-between">
         <div>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight">
-            Your Name Is{' '}
+            My Name Is{' '}
             <span className="text-[#0072CE]">
               {userProfile?.displayName || userProfile?.username || 'Guest'}
             </span>{' '}
-            👋
           </h1>
           <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-0.5">
-            Welcome! You're Now In Your Garage.
+            Welcome! You're <b>In The Garage.</b>
           </p>
         </div>
 
@@ -167,8 +166,8 @@ export default function StepDashboard() {
       {/* OVERALL PROGRESS & COMPACT HORIZONTAL BUCKETS */}
       <div className="bg-white border border-slate-200/90 rounded-3xl p-6 shadow-sm space-y-4">
         <div className="flex items-center justify-between">
-          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-            Gut Check Progress
+          <span className="text-[16px] font-black uppercase tracking-widest text-slate-400">
+            My Rankings
           </span>
           <span className="text-xs font-black text-[#0072CE]">
             {triageSortedCount} / {totalSongs} Songs ({triagePct}%)
@@ -280,26 +279,26 @@ export default function StepDashboard() {
 
       {/* COMMUNITY & SOCIAL PORTALS */}
       <div className="space-y-3 pt-2">
-        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-          Community & Social
-        </span>
+        <h2 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight">
+          Community &amp; Social
+        </h2>
 
         <div className="grid grid-cols-2 gap-3">
           {/* FAN STATS (Always Usable) */}
           <button
             type="button"
             onClick={() => navigateTo('fan_stats')}
-            className="bg-white border border-slate-200/90 hover:border-emerald-300 p-5 rounded-3xl text-left transition-all shadow-sm group cursor-pointer flex flex-col justify-between min-h-[110px]"
+            className="p-5 rounded-3xl text-left transition-all flex flex-col justify-between min-h-[110px] border-2 border-slate-200/90 bg-slate-50/90 hover:border-slate-300 text-slate-950 cursor-pointer group shadow-sm"
           >
             <div>
-              <h3 className="font-black text-slate-950 text-base sm:text-lg group-hover:text-emerald-600 transition-colors leading-tight">
+              <h3 className="font-black text-base sm:text-lg leading-tight text-slate-950 group-hover:text-[#0072CE] transition-colors">
                 Fan Stats
               </h3>
-              <p className="text-xs font-medium text-slate-400 mt-0.5">
+              <p className="text-xs font-semibold text-slate-400 mt-1">
                 Global consensus
               </p>
             </div>
-            <span className="text-xs font-black text-slate-400 group-hover:text-emerald-600 transition-colors mt-2">
+            <span className="text-xs font-black mt-3 text-slate-400 group-hover:text-[#0072CE] transition-colors">
               View →
             </span>
           </button>
@@ -309,30 +308,34 @@ export default function StepDashboard() {
             type="button"
             disabled={!userId}
             onClick={!userId ? (e) => e.preventDefault() : () => navigateTo('friends')}
-            className={`p-5 rounded-3xl text-left transition-all flex flex-col justify-between min-h-[110px] border ${
+            className={`p-5 rounded-3xl text-left transition-all flex flex-col justify-between min-h-[110px] border-2 shadow-sm ${
               !userId
-                ? 'bg-slate-100 border-slate-200 opacity-40 cursor-not-allowed pointer-events-none select-none'
-                : 'bg-white border-slate-200/90 hover:border-purple-300 shadow-sm group cursor-pointer'
+                ? 'opacity-40 bg-slate-100 border-slate-200 cursor-not-allowed pointer-events-none select-none'
+                : 'bg-slate-50/90 border-slate-200/90 hover:border-slate-300 text-slate-950 cursor-pointer group'
             }`}
           >
             <div>
               <h3
                 className={`font-black text-base sm:text-lg leading-tight transition-colors ${
-                  !userId ? 'text-slate-400' : 'text-slate-950 group-hover:text-purple-600'
+                  !userId ? 'text-slate-400' : 'text-slate-950 group-hover:text-[#0072CE]'
                 }`}
               >
                 Friends
               </h3>
-              <p className="text-xs font-medium text-slate-400 mt-0.5">
+              <p
+                className={`text-xs font-semibold mt-1 ${
+                  !userId ? 'text-slate-400' : 'text-slate-400'
+                }`}
+              >
                 {!userId ? 'Sign in to unlock' : 'Head-to-head taste'}
               </p>
             </div>
             <span
-              className={`text-xs font-black mt-2 transition-colors ${
-                !userId ? 'text-slate-400' : 'text-slate-400 group-hover:text-purple-600'
+              className={`text-xs font-black mt-3 transition-colors ${
+                !userId ? 'text-slate-400' : 'text-slate-400 group-hover:text-[#0072CE]'
               }`}
             >
-              {!userId ? 'Account Required 🔒' : 'View →'}
+              {!userId ? 'Locked 🔒' : 'View →'}
             </span>
           </button>
         </div>

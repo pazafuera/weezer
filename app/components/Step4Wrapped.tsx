@@ -803,65 +803,64 @@ export default function Step4Wrapped({
       })
       .sort((a, b) => b.score - a.score);
 
-    // VIBE ENCAPSULATED
-    let finalGif = '';
+    // VIBE ENCAPSULATED - SCIENTIFIC LOCAL MAPPING
+    const primaryArchetype = scoredArchetypes[0]?.id || 'scientist';
 
-    const idxBuddy = top10.findIndex((s) => s.title === 'Buddy Holly');
+    const archetypeVibes: Record<string, { img: string; caption: string }> = {
+      '90s': {
+        img: '/img/vibes/grownassman.gif',
+        caption: '"I\'m a grown-ass man! Everything after Pinkerton sucks!"',
+      },
+      blueblood: {
+        img: '/img/vibes/rivers-buddyholly.webp',
+        caption: 'Pure 1994 nostalgia, clean power-pop hooks, and sweater energy.',
+      },
+      vault: {
+        img: '/img/vibes/snuggie.gif',
+        caption: 'Cozy in a Snuggie, excavating unreleased 1998 acoustic demos.',
+      },
+      critic: {
+        img: '/img/vibes/sayitaintso.gif',
+        caption: 'Nobody hates Weezer with as much deep, burning passion as you.',
+      },
+      revisionist: {
+        img: '/img/vibes/snl-beverlyhills.gif',
+        caption: '"Weezer didn\'t peak in the 90s!" — Matt Damon was right.',
+      },
+      scientist: {
+        img: '/img/vibes/rivers-sweater.gif',
+        caption: 'A wholesome, logic-driven appreciation across the entire catalog.',
+      },
+      chaos: {
+        img: '/img/vibes/canoli.gif',
+        caption: 'Eating cannolis while listening to Can\'t Knock the Hustle on loop.',
+      },
+    };
 
-    const idxSIAS = top10.findIndex((s) => s.title === "Say It Ain't So");
+    // Specific Song / Era Priority Overrides
+    let finalVibe = archetypeVibes[primaryArchetype] || archetypeVibes['scientist'];
 
-    const greenAlb = rankedAlbums.find((a) => a.id === 'green');
+    const topSongTitle = top10[0]?.title || '';
 
-    if (haterPercent > 0.4 && modernAverage < 2.5) {
-      finalGif = 'https://i.makeagif.com/media/8-23-2022/NzKMWd.gif';
-    } else if (idxBuddy !== -1 && idxBuddy < 3) {
-      finalGif =
-        'https://64.media.tumblr.com/93fcfb3f9150ba418af5a32d98eac124/tumblr_o8gy54G22d1qk5iduo4_400.gifv';
-    } else if (idxSIAS !== -1 && idxSIAS < 3) {
-      finalGif =
-        'https://y.getyarn.io/9e9476db-0cd6-4464-b0f3-5b244fc3c6e3_text.gif';
-    } else if (listeningAge >= 45) {
-      finalGif =
-        'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSY6ZnxtVWbsD4w6bMgCJrHbtb-UXbtpT7I5_VxGCPTFw&s=10';
-    } else if (
-      top10.some((s) => {
-        const rId = s.albumId || ALBUM_NAME_TO_ID[s.album];
-
-        return rId === 'white';
-      }) ||
-      top10.some((s) => s.title === 'Thank God for Girls')
-    ) {
-      finalGif =
-        'https://64.media.tumblr.com/8a78f15f0bfcba08dee9e6aa6d4e51e9/tumblr_nwulmio6MM1slpeezo6_640.gif';
-    } else if (
-      top10.some((s) => {
-        const rId = s.albumId || ALBUM_NAME_TO_ID[s.album];
-
-        return rId === 'gold';
-      }) ||
-      modernAverage > 4.2
-    ) {
-      finalGif =
-        'https://www.billboard.com/wp-content/uploads/2026/08/rivers-cuomo-tonight-show-2026-1800.jpg?w=904&h=602&crop=1';
-    } else if (
-      top10.some((s) => s.title === 'Island in the Sun') ||
-      (greenAlb && greenAlb.score > 4)
-    ) {
-      finalGif =
-        'https://www.reddit.com/media?url=https%3A%2F%2Fpreview.redd.it%2Fmexican-wedding-island-in-the-sun-music-video-spike-jonze-v0-0yklqc5yc0ld1.jpeg%3Fwidth%3D1551%26format%3Dpjpg%26auto%3Dwebp%26s%3D0fb4bb97281055516fe47e7992ca3f8a83c5f4a3';
-    } else if (sortedEras[0].id === 'reunion') {
-      finalGif =
-        'https://1.bp.blogspot.com/--AnYM0FT8rw/VADIdNUwsUI/AAAAAAAAt6c/vLaTqZNSpeY/s1600/tumblr_lm0diuwDOj1qdfon8.gif';
-    } else if (
-      sortedEras[0].id === 'wildwest' ||
-      sortedEras[0].id === 'renaissance'
-    ) {
-      finalGif =
-        'https://www.reddit.com/media?url=https%3A%2F%2Fexternal-preview.redd.it%2FYDpqOwNiK3nVodUu-PM64pG3mQNeL_BWNtqxmgBzHDU.gif%3Fauto%3Dwebp%26s%3Db687e97a8759d660f449635a319669f0ab5648fe';
-    } else {
-      finalGif =
-        'https://www.ajournalofmusicalthings.com/wp-content/uploads/2018/12/Rivers-Cuomo-gif.gif';
+    if (topSongTitle === 'Island in the Sun') {
+      finalVibe = {
+        img: '/img/vibes/island-in-the-sun.webp',
+        caption: 'Taking a hip-hip trip on an island in the sun.',
+      };
+    } else if (topSongTitle === 'Keep Fishin' || sortedEras[0]?.id === 'reunion') {
+      finalVibe = {
+        img: '/img/vibes/keep-fishin.gif',
+        caption: 'Jamming out in the garage with Miss Piggy and the Muppets.',
+      };
+    } else if (sortedEras[0]?.id === 'gold' || modernAverage > 4.3) {
+      finalVibe = {
+        img: '/img/vibes/gold.webp',
+        caption: 'Living unapologetically in the Golden Era of Weezer.',
+      };
     }
+
+    const finalGif = finalVibe.img;
+    const finalCaption = finalVibe.caption;
 
     // TASTE DNA
     const timelineVal =
@@ -927,6 +926,7 @@ export default function Step4Wrapped({
       scoredArchetypes,
       dnaScores,
       finalGif,
+      finalCaption,
       explicitCount: explicitlyRankedSongs.length,
       rankComparisonSampleSize,
       coreFour,
@@ -1182,18 +1182,22 @@ export default function Step4Wrapped({
 
       {/* VIBE ENCAPSULATED */}
       <div>
-        <div className="bg-slate-950 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl text-center mx-4 sm:mx-0 overflow-hidden">
-          <h3 className="text-2xl sm:text-3xl font-black text-white mb-6 tracking-tight">
+        <div className="bg-slate-950 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl text-center mx-4 sm:mx-0 overflow-hidden space-y-4">
+          <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
             Your Vibe, Encapsulated
           </h3>
 
-          <div className="w-full aspect-video rounded-xl overflow-hidden border-4 border-slate-800 shadow-inner bg-slate-900">
+          <div className="w-full aspect-video rounded-2xl overflow-hidden border-4 border-slate-800 shadow-inner bg-slate-900">
             <img
               src={stats.finalGif}
               alt="Weezer Vibe"
               className="w-full h-full object-cover"
             />
           </div>
+
+          <p className="text-xs sm:text-sm font-bold text-amber-300 italic px-2">
+            {stats.finalCaption}
+          </p>
         </div>
       </div>
 

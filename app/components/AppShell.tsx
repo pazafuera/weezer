@@ -184,6 +184,24 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         {children}
       </main>
 
+      {/* GLOBAL VISIBLE PAGE FOOTER */}
+      <footer className="border-t border-slate-200/80 bg-white py-6 mt-auto text-center">
+        <div className="max-w-3xl mx-auto px-4 space-y-2">
+          <div className="flex items-center justify-center gap-2">
+            <div className="w-5 h-5 bg-[#0072CE] text-white rounded-md flex items-center justify-center">
+              <FlyingWIcon className="w-3 h-3 text-white" />
+            </div>
+            <span className="text-xs font-black text-slate-900 tracking-tight">
+              All My Favorite Songs • Weezer Canon Ranker
+            </span>
+          </div>
+
+          <p className="text-[10px] font-medium text-slate-400 max-w-md mx-auto leading-relaxed">
+            This is an unofficial, non-commercial fan application. It is not affiliated with, endorsed by, sponsored by, or associated with Weezer, Crush Music, Atlantic Records, or Geffen Records. All song titles, album artwork, and trademarks belong to their respective owners.
+          </p>
+        </div>
+      </footer>
+
       {/* SLIDE-OVER DRAWER */}
       {menuOpen && (
         <div className="fixed inset-0 z-50 flex justify-end animate-in fade-in duration-200">
@@ -243,7 +261,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   {/* FAN FRIENDS CARD MODULE */}
                   <div className="mx-4 my-3 p-3.5 bg-blue-50/50 border border-blue-200/80 rounded-2xl space-y-2">
                     <div className="flex items-center justify-between">
-                      {/* CLICKABLE TITLE */}
                       <button
                         onClick={() => {
                           closeMenu();
@@ -254,7 +271,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                         Fan Friends
                       </button>
 
-                      {/* CLICKABLE COUNTER BADGE */}
                       <button
                         onClick={() => {
                           closeMenu();
@@ -266,7 +282,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                       </button>
                     </div>
 
-                    {/* CLICKABLE PENDING INVITE ALERT BANNER */}
                     {pendingRequestsCount > 0 && (
                       <button
                         onClick={() => {
@@ -329,7 +344,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 </div>
               )}
 
-              {/* STREAMLINED NAVIGATION LINKS */}
+              {/* NAVIGATION LINKS */}
               <nav className="p-2 space-y-1">
                 {visibleNavItems.map((item) => {
                   const isActive = step === item.step;
@@ -354,7 +369,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                           : 'text-slate-700 hover:bg-slate-100 cursor-pointer'
                       }`}
                     >
-                      {/* LEFT SIDE: ARROW (IF NEXT STEP) + LINK LABEL */}
                       <div className="flex items-center gap-2">
                         {isNextStep && (
                           <span
@@ -370,7 +384,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                         <span>{item.label}</span>
                       </div>
 
-                      {/* RIGHT SIDE: BADGES */}
                       {item.step === 'friends' && pendingRequestsCount > 0 && (
                         <span className="bg-amber-400 text-slate-950 font-black text-[10px] px-2 py-0.5 rounded-full">
                           {pendingRequestsCount}

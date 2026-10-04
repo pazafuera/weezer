@@ -45,9 +45,11 @@ interface WeezerContextType {
   setUserProfile: (profile: UserProfile | null) => void;
   handleSignOut: () => Promise<void>;
 
-  // Friend Requests State
+  // Friend Requests & Social State
+  friendsList: any[];
   pendingRequestsCount: number;
   refreshPendingRequests: () => Promise<void>;
+  refreshFriends: () => Promise<void>;
 
   // Ranking State
   triageMap: Record<string, BucketType>;
@@ -85,6 +87,37 @@ const getDerivedBucketRanks = (
   };
 };
 
+/**
+ * Copies guest rankings stored in localStorage to Supabase for the authenticated user.
+ */
+export const migrateGuestRankingsToUser = async (newUserId: string) => {
+  if (typeof window === 'undefined') return;
+  const localState = localStorage.getItem('weezer_ranker_state');
+  if (!localState) return;
+
+  try {
+    const { triageMap, masterList } = JSON.parse(localState);
+
+    const hasProgress =
+      (triageMap && Object.keys(triageMap).length > 0) ||
+      (masterList && masterList.length > 0);
+
+    if (hasProgress) {
+      await supabase.from('weezer_rankings').upsert(
+        {
+          user_id: newUserId,
+          triage_map: triageMap || {},
+          master_list: masterList || [],
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id' }
+      );
+    }
+  } catch (err) {
+    console.error('Failed to migrate guest rankings:', err);
+  }
+};
+
 export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
 
@@ -93,7 +126,8 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   const [userId, setUserId] = useState<string | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
-  // Social & Friend Requests
+  // Social & Friends State
+  const [friendsList, setFriendsList] = useState<any[]>([]);
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
 
   // Navigation & Auth Mode State
@@ -142,6 +176,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
       } else {
         setUserId(null);
         setUserProfile(null);
+        setFriendsList([]);
         setPendingRequestsCount(0);
       }
     });
@@ -150,9 +185,11 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const refreshPendingRequests = async () => {
+  // FETCH & REFRESH FRIENDS + PENDING REQUESTS
+  const refreshFriends = async () => {
     if (!userId) return;
     try {
+      // 1. Fetch Pending Requests Count
       const { count } = await supabase
         .from('friendships')
         .select('*', { count: 'exact', head: true })
@@ -160,15 +197,52 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         .eq('status', 'pending');
 
       setPendingRequestsCount(count || 0);
+
+      // 2. Fetch Accepted Friends List
+      const { data: friendshipsData } = await supabase
+        .from('friendships')
+        .select('*')
+        .or(`user_id.eq.${userId},friend_id.eq.${userId}`)
+        .eq('status', 'accepted');
+
+      if (friendshipsData) {
+        setFriendsList(friendshipsData);
+      }
     } catch (err) {
-      console.error('Error fetching pending friend requests:', err);
+      console.error('Error fetching friends:', err);
     }
   };
 
+  const refreshPendingRequests = refreshFriends;
+
+  // REAL-TIME SUBSCRIPTION FOR FRIENDSHIPS
   useEffect(() => {
-    if (userId) {
-      refreshPendingRequests();
+    if (!userId) {
+      setFriendsList([]);
+      setPendingRequestsCount(0);
+      return;
     }
+
+    refreshFriends();
+
+    const channel = supabase
+      .channel('realtime_friendships_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'friendships',
+        },
+        () => {
+          refreshFriends();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [userId]);
 
   async function initUserAndLoadRankings() {
@@ -181,6 +255,9 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
       if (session?.user) {
         const uid = session.user.id;
         setUserId(uid);
+
+        // Migrate guest rankings from localStorage to Supabase
+        await migrateGuestRankingsToUser(uid);
 
         // Fetch User Profile
         const { data: profileData } = await supabase
@@ -237,7 +314,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
 
           setBucketRanks(getDerivedBucketRanks(loadedTriage, loadedMaster));
 
-          // Smart Entry: If user has progress and no URL step is specified, route to Dashboard
+          // Smart Entry: Route to Dashboard if progress exists and no URL step is specified
           if (typeof window !== 'undefined') {
             const params = new URLSearchParams(window.location.search);
             if (
@@ -364,9 +441,14 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     setStep(targetStep);
 
     if (typeof window !== 'undefined') {
-      const url = new URL(window.location.href);
-      url.searchParams.set('step', targetStep);
-      window.history.replaceState({}, '', url.toString());
+      // If navigating from a sub-page (e.g. /u/username), redirect back to root with step param
+      if (window.location.pathname !== '/') {
+        router.push(`/?step=${targetStep}`);
+      } else {
+        const url = new URL(window.location.href);
+        url.searchParams.set('step', targetStep);
+        window.history.replaceState({}, '', url.toString());
+      }
     }
   };
 
@@ -376,6 +458,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     setUserProfile(null);
     setTriageMap({});
     setMasterList([]);
+    setFriendsList([]);
     setPendingRequestsCount(0);
     setBucketRanks({ banger: [], slaps: [], mid: [], skip: [], trash: [] });
     localStorage.removeItem('weezer_ranker_state');
@@ -398,8 +481,10 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         userProfile,
         setUserProfile,
         handleSignOut,
+        friendsList,
         pendingRequestsCount,
         refreshPendingRequests,
+        refreshFriends,
         triageMap,
         setTriageMap,
         bucketRanks,

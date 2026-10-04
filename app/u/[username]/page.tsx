@@ -13,6 +13,50 @@ interface FriendProfile {
   display_name: string;
 }
 
+// WEEZER COMPATIBILITY QUIP HELPER
+function getWeezerCompatibilityQuip(score: number) {
+  if (score >= 90) {
+    return {
+      title: 'Soulmates in Blue 💙',
+      phrase: '"In the Garage together forever." Your taste canons are virtually identical!',
+      color: 'text-emerald-400',
+    };
+  }
+  if (score >= 75) {
+    return {
+      title: 'Island in the Sun ☀️️',
+      phrase: '"On an island in the sun..." Harmonizing on almost every single album cut.',
+      color: 'text-emerald-400',
+    };
+  }
+  if (score >= 50) {
+    return {
+      title: 'The Good Life 🎸',
+      phrase: '"Shaking booty, making sweet love..." Solid agreement with a few fun B-Side debates.',
+      color: 'text-blue-400',
+    };
+  }
+  if (score >= 35) {
+    return {
+      title: 'Hash Pipe ⚡️',
+      phrase: 'A little chaotic and loud, but you can definitely rock out together.',
+      color: 'text-amber-400',
+    };
+  }
+  if (score >= 20) {
+    return {
+      title: "Say It Ain't So 🥀",
+      phrase: 'Major structural disagreements on album quality. Tread carefully!',
+      color: 'text-rose-400',
+    };
+  }
+  return {
+    title: 'Pink Triangle 📐',
+    phrase: '"If anyone’s gonna be the one, it’s not you." Complete taste incompatibility!',
+    color: 'text-rose-500',
+  };
+}
+
 // STATISTICAL HELPER: Kendall's Tau (Rank Agreement)
 function calculateKendallTau(
   userRankMap: Map<string, number>,
@@ -130,7 +174,7 @@ export default function PublicProfilePage() {
           }
         }
 
-        // 4. Fetch Visitor's connected friends for the Carousel Switcher
+        // 4. Fetch Visitor's connected friends for Carousel Switcher
         const { data: friendships } = await supabase
           .from('friendships')
           .select('*')
@@ -245,6 +289,7 @@ export default function PublicProfilePage() {
       sharedSample,
       biggestFight,
       sharedFavorites: sharedFavorites.slice(0, 3),
+      quip: getWeezerCompatibilityQuip(compatibilityScore),
     };
   }, [targetMaster, targetTriage, visitorMaster, visitorTriage]);
 
@@ -254,30 +299,40 @@ export default function PublicProfilePage() {
 
   return (
     <AppShell>
-      <div className="max-w-3xl mx-auto pb-24 font-sans space-y-6">
+      <div className="max-w-3xl mx-auto pb-24 font-sans space-y-5">
         
-        {/* CONNECTION SWITCHER CAROUSEL BAR */}
+        {/* TOP BAR: BREADCRUMB TO FAN FRIENDS */}
+        <div className="flex items-center justify-between pt-1">
+          <button
+            onClick={() => router.push('/?step=friends')}
+            className="inline-flex items-center gap-1.5 text-xs font-black text-[#0072CE] hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-3.5 py-2 rounded-full transition-colors cursor-pointer border border-blue-200/60"
+          >
+            ← Back to Fan Friends
+          </button>
+        </div>
+
+        {/* LIGHT FRIENDS CAROUSEL SWITCHER */}
         {allFriends.length > 1 && (
-          <div className="bg-slate-900 text-white rounded-3xl p-3 flex items-center justify-between shadow-md">
+          <div className="bg-white border border-slate-200 rounded-2xl p-2.5 flex items-center justify-between shadow-xs">
             <button
               onClick={handlePrevFriend}
-              className="p-2 hover:bg-slate-800 rounded-xl transition-colors text-slate-300 font-black text-xs cursor-pointer flex items-center gap-1 shrink-0"
+              className="p-1.5 hover:bg-slate-100 rounded-xl transition-colors text-slate-600 font-black text-xs cursor-pointer flex items-center gap-1 shrink-0"
             >
               ← Prev
             </button>
 
             {/* AVATAR CHIPS */}
-            <div className="flex items-center gap-2 overflow-x-auto px-2 max-w-[280px] sm:max-w-md no-scrollbar">
+            <div className="flex items-center gap-1.5 overflow-x-auto px-2 max-w-[280px] sm:max-w-md no-scrollbar">
               {allFriends.map((f) => {
                 const isActive = f.username.toLowerCase() === username;
                 return (
                   <button
                     key={f.id}
                     onClick={() => router.push(`/u/${f.username}`)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-black shrink-0 transition-all cursor-pointer ${
+                    className={`px-3 py-1 rounded-full text-xs font-black shrink-0 transition-all cursor-pointer ${
                       isActive
-                        ? 'bg-[#0072CE] text-white shadow-sm'
-                        : 'bg-slate-800 text-slate-400 hover:text-white'
+                        ? 'bg-[#0072CE] text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                     }`}
                   >
                     @{f.username}
@@ -288,7 +343,7 @@ export default function PublicProfilePage() {
 
             <button
               onClick={handleNextFriend}
-              className="p-2 hover:bg-slate-800 rounded-xl transition-colors text-slate-300 font-black text-xs cursor-pointer flex items-center gap-1 shrink-0"
+              className="p-1.5 hover:bg-slate-100 rounded-xl transition-colors text-slate-600 font-black text-xs cursor-pointer flex items-center gap-1 shrink-0"
             >
               Next →
             </button>
@@ -311,61 +366,71 @@ export default function PublicProfilePage() {
               onClick={() => router.push('/?step=friends')}
               className="bg-[#0072CE] text-white px-6 py-3 rounded-xl font-black text-xs shadow-md cursor-pointer"
             >
-              Back to Matchups
+              Back to Fan Friends
             </button>
           </div>
         ) : (
-          <main className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <main className="space-y-6 animate-in fade-in duration-300">
             
             {/* HERO HEADER */}
-            <div className="text-center">
+            <div className="text-center pt-1">
               <span className="text-[10px] font-black uppercase tracking-widest text-[#0072CE] block mb-1">
                 {hasVisitorData ? 'Head-to-Head Matchup' : 'Fan Profile'}
               </span>
               <h1 className="text-3xl sm:text-5xl font-black text-slate-950 tracking-tight">
-                {hasVisitorData ? 'Clash of Canons' : `${tName}&apos;s Sweater Thread`}
+                {hasVisitorData ? 'Clash of Canons' : `${tName}'s Master List`}
               </h1>
             </div>
 
-            {/* COMPATIBILITY SCORECARD */}
+            {/* ENHANCED MATCH SCORECARD */}
             {hasVisitorData && stats?.sharedSample ? (
-              <div className="bg-gradient-to-br from-slate-900 to-slate-950 rounded-3xl p-6 sm:p-10 shadow-2xl relative overflow-hidden border border-slate-800">
+              <div className="bg-slate-950 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden border border-slate-800 text-white space-y-6">
+                
+                {/* SCORES AND NAMES ROW */}
                 <div className="flex justify-between items-center relative z-10">
-                  <div className="flex flex-col items-center gap-2 w-1/3 text-center">
-                    <div className="w-14 h-14 bg-amber-400 text-amber-950 rounded-2xl flex items-center justify-center font-black text-2xl shadow-lg border-2 border-white">
-                      {vName.charAt(0).toUpperCase()}
-                    </div>
-                    <span className="text-xs font-black text-white truncate w-full">
-                      {vName}
+                  
+                  {/* VISITOR NAME */}
+                  <div className="flex flex-col items-start w-2/5 min-w-0">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                      You
                     </span>
+                    <h2 className="text-lg sm:text-2xl font-black text-white truncate leading-tight w-full">
+                      {vName}
+                    </h2>
                   </div>
 
-                  <div className="flex flex-col items-center justify-center w-1/3">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">
-                      Match Score
+                  {/* SCORE BADGE */}
+                  <div className="flex flex-col items-center justify-center shrink-0 px-2">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">
+                      Match
                     </span>
-                    <span
-                      className={`text-4xl sm:text-5xl font-black ${
-                        stats.compatibilityScore >= 70
-                          ? 'text-emerald-400'
-                          : stats.compatibilityScore <= 30
-                          ? 'text-rose-400'
-                          : 'text-blue-400'
-                      } drop-shadow-md`}
-                    >
+                    <span className={`text-4xl sm:text-5xl font-black ${stats.quip.color} drop-shadow-md`}>
                       {stats.compatibilityScore}%
                     </span>
                   </div>
 
-                  <div className="flex flex-col items-center gap-2 w-1/3 text-center">
-                    <div className="w-14 h-14 bg-[#0072CE] text-white rounded-2xl flex items-center justify-center font-black text-2xl shadow-lg border-2 border-white">
-                      {tName.charAt(0).toUpperCase()}
-                    </div>
-                    <span className="text-xs font-black text-white truncate w-full">
-                      {tName}
+                  {/* TARGET NAME */}
+                  <div className="flex flex-col items-end w-2/5 min-w-0 text-right">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                      Friend
                     </span>
+                    <h2 className="text-lg sm:text-2xl font-black text-white truncate leading-tight w-full">
+                      {tName}
+                    </h2>
                   </div>
+
                 </div>
+
+                {/* WEEZER THEMED QUIP & VERDICT BANNER */}
+                <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 text-center space-y-1">
+                  <span className={`text-xs font-black uppercase tracking-wider block ${stats.quip.color}`}>
+                    {stats.quip.title}
+                  </span>
+                  <p className="text-xs sm:text-sm font-medium text-slate-300 leading-snug italic">
+                    {stats.quip.phrase}
+                  </p>
+                </div>
+
               </div>
             ) : !hasVisitorData ? (
               /* GUEST BANNER */

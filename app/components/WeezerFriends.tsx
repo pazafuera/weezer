@@ -233,13 +233,26 @@ export default function WeezerFriends() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-8 pb-32 animate-in fade-in duration-500">
-      <div className="text-center px-4 pt-4">
-        <h2 className="text-3xl sm:text-4xl font-black text-slate-950 tracking-tight">
-          Your Matchups
-        </h2>
-        <p className="text-sm font-bold text-slate-500 mt-2">
-          Connect with friends to compare your Weezer canon.
-        </p>
+      
+      {/* HEADER & HERO IMAGE */}
+      <div className="text-center px-4 pt-4 space-y-3">
+        <div>
+          <h2 className="text-3xl sm:text-4xl font-black text-slate-950 tracking-tight">
+            Fan Friends
+          </h2>
+          <p className="text-sm font-bold text-slate-500 mt-2 max-w-md mx-auto">
+            Connect with friends to compare how compatible your Weezer fanhood is.
+          </p>
+        </div>
+
+        {/* RIDE OR DIE ARTWORK */}
+        <div className="pt-2 max-w-xs sm:max-w-sm mx-auto">
+          <img
+            src="/img/rideordie.png"
+            alt="Weezer Ride or Die Friends"
+            className="w-full h-auto rounded-2xl border border-slate-200/80 shadow-sm object-cover"
+          />
+        </div>
       </div>
 
       {/* SEND FRIEND REQUEST CARD */}
@@ -356,11 +369,11 @@ export default function WeezerFriends() {
                 key={friend.id}
                 className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-between shadow-sm hover:border-[#0072CE] transition-colors group"
               >
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 min-w-0 pr-2">
                   <div className="w-12 h-12 bg-amber-400 text-amber-950 rounded-full flex items-center justify-center font-black text-xl shadow-sm shrink-0">
                     {friend.display_name.charAt(0).toUpperCase()}
                   </div>
-                  <div className="min-w-0 pr-4">
+                  <div className="min-w-0">
                     <h4 className="text-base font-black text-slate-900 truncate">
                       {friend.display_name}
                     </h4>
@@ -374,7 +387,7 @@ export default function WeezerFriends() {
                 </div>
 
                 {friend.status === 'pending_outgoing' ? (
-                  <span className="bg-slate-100 text-slate-500 text-[10px] font-black uppercase tracking-wider px-3 py-2 rounded-xl">
+                  <span className="bg-slate-100 text-slate-500 text-[10px] font-black uppercase tracking-wider px-3 py-2 rounded-xl shrink-0">
                     Pending...
                   </span>
                 ) : (
@@ -390,6 +403,7 @@ export default function WeezerFriends() {
           </div>
         )}
       </div>
+
     </div>
   );
 }

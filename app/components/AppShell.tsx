@@ -16,11 +16,19 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     handleSignOut,
     pendingRequestsCount = 0,
     friendsList = [],
+    refreshFriends,
     triageMap,
     masterList,
   } = useWeezer();
 
   const closeMenu = () => setMenuOpen(false);
+
+  // REFRESH FRIENDS DATA INSTANTLY WHEN MENU OPENS
+  useEffect(() => {
+    if (menuOpen && userId && refreshFriends) {
+      refreshFriends();
+    }
+  }, [menuOpen, userId, refreshFriends]);
 
   // TRACK IF USER HAS VIEWED SWEATER THREAD (WRAPPED)
   useEffect(() => {
@@ -117,21 +125,21 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-slate-100 font-sans text-slate-900 flex flex-col selection:bg-amber-300 selection:text-slate-950">
-      {/* TOP HEADER */}
-      <header className="bg-white border-b border-slate-200/80 sticky top-0 z-30 shadow-xs">
+      {/* WEEZER BLUE TOP HEADER */}
+      <header className="bg-[#0072CE] border-b border-blue-600 sticky top-0 z-30 shadow-md">
         <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
           <button
             onClick={() => navigateTo(userId ? 'dashboard' : 'splash')}
             className="flex items-center gap-2.5 text-left cursor-pointer group"
           >
-            <div className="w-8 h-8 bg-[#0072CE] text-white rounded-xl flex items-center justify-center shadow-xs group-hover:bg-blue-600 transition-colors">
-              <FlyingWIcon className="w-5 h-5 text-white" />
+            <div className="w-8 h-8 bg-white text-[#0072CE] rounded-xl flex items-center justify-center shadow-xs group-hover:bg-blue-50 transition-colors">
+              <FlyingWIcon className="w-5 h-5 text-[#0072CE]" />
             </div>
             <div>
-              <span className="text-sm font-black tracking-tight text-slate-950 block leading-none">
+              <span className="text-sm font-black tracking-tight text-white block leading-none">
                 All My Favorite Songs
               </span>
-              <span className="text-[9px] font-bold text-[#0072CE] uppercase tracking-widest block mt-0.5">
+              <span className="text-[9px] font-bold text-blue-100 uppercase tracking-widest block mt-0.5">
                 Weezer Canon Ranker
               </span>
             </div>
@@ -141,7 +149,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             {userId && pendingRequestsCount > 0 && (
               <button
                 onClick={() => navigateTo('friends')}
-                className="bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 font-black text-xs px-2.5 py-1 rounded-full flex items-center gap-1 cursor-pointer transition-all"
+                className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs px-2.5 py-1 rounded-full flex items-center gap-1 cursor-pointer transition-all shadow-xs"
               >
                 <span>👥</span>
                 <span>{pendingRequestsCount}</span>
@@ -150,7 +158,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
             <button
               onClick={() => setMenuOpen(true)}
-              className="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer"
+              className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
               aria-label="Open Navigation Menu"
             >
               <svg
@@ -206,15 +214,16 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 </button>
               </div>
 
-              {/* LOGGED IN USER CARD */}
+              {/* LOGGED IN USER SECTION */}
               {userId && (
                 <>
-                  <div className="mx-4 mt-4 p-3.5 bg-slate-50 border border-slate-200/80 rounded-2xl flex items-center justify-between">
+                  {/* USER NAME (PLAIN CONTAINER) */}
+                  <div className="mx-4 mt-4 px-1 py-1 flex items-center justify-between">
                     <div className="min-w-0">
                       <span className="text-[10px] font-black uppercase tracking-wider text-[#0072CE] block">
-                        Signed In As
+                        My Name Is...
                       </span>
-                      <h3 className="text-xs font-black text-slate-900 truncate mt-0.5">
+                      <h3 className="text-xl font-black text-slate-950 truncate mt-1">
                         {userProfile?.displayName ||
                           `@${userProfile?.username}` ||
                           'Weezer Fan'}
@@ -225,45 +234,53 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                         closeMenu();
                         handleSignOut();
                       }}
-                      className="text-[11px] font-bold text-rose-600 hover:underline cursor-pointer ml-2 shrink-0"
+                      className="text-[11px] font-bold text-rose-600 hover:underline cursor-pointer ml-3 shrink-0"
                     >
                       Sign Out
                     </button>
                   </div>
 
-                  {/* FAN FRIENDS MODULE */}
-                  <div className="mx-4 my-2.5 p-3.5 bg-blue-50/70 border border-blue-200/80 rounded-2xl space-y-2.5">
+                  {/* FAN FRIENDS CARD MODULE */}
+                  <div className="mx-4 my-3 p-3.5 bg-blue-50/50 border border-blue-200/80 rounded-2xl space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-black text-slate-900">
+                      {/* CLICKABLE TITLE */}
+                      <button
+                        onClick={() => {
+                          closeMenu();
+                          navigateTo('friends');
+                        }}
+                        className="text-xs font-black text-[#0072CE] hover:underline cursor-pointer"
+                      >
                         Fan Friends
-                      </span>
-                      <span className="bg-blue-100 text-[#0072CE] text-[10px] font-black px-2 py-0.5 rounded-full border border-blue-200">
+                      </button>
+
+                      {/* CLICKABLE COUNTER BADGE */}
+                      <button
+                        onClick={() => {
+                          closeMenu();
+                          navigateTo('friends');
+                        }}
+                        className="bg-blue-100 hover:bg-blue-200 text-[#0072CE] text-[10px] font-black px-2.5 py-0.5 rounded-full border border-blue-200 transition-colors cursor-pointer"
+                      >
                         {activeFriendsCount} {activeFriendsCount === 1 ? 'Friend' : 'Friends'}
-                      </span>
+                      </button>
                     </div>
 
-                    {pendingRequestsCount > 0 ? (
-                      <div className="bg-amber-100/90 border border-amber-300/80 rounded-xl p-2 flex items-center justify-between text-amber-950">
-                        <span className="text-[11px] font-bold">
-                          {pendingRequestsCount} Pending Invite{pendingRequestsCount > 1 ? 's' : ''}
+                    {/* CLICKABLE PENDING INVITE ALERT BANNER */}
+                    {pendingRequestsCount > 0 && (
+                      <button
+                        onClick={() => {
+                          closeMenu();
+                          navigateTo('friends');
+                        }}
+                        className="w-full bg-amber-100 hover:bg-amber-200 text-amber-950 border border-amber-300 rounded-xl p-2.5 flex items-center justify-between transition-colors cursor-pointer text-left mt-1"
+                      >
+                        <span className="text-[11px] font-black">
+                          {pendingRequestsCount} Pending Invite{pendingRequestsCount > 1 ? 's' : ''} →
                         </span>
                         <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-                      </div>
-                    ) : (
-                      <p className="text-[11px] font-medium text-slate-600 leading-snug">
-                        Compare canon rankings and find your taste soulmate.
-                      </p>
+                      </button>
                     )}
-
-                    <button
-                      onClick={() => {
-                        closeMenu();
-                        navigateTo('friends');
-                      }}
-                      className="w-full bg-[#0072CE] hover:bg-blue-600 text-white font-black py-2 px-3 rounded-xl text-xs transition-all shadow-xs cursor-pointer text-center"
-                    >
-                      {pendingRequestsCount > 0 ? 'Review Pending Invites 👥' : 'Connect & Compare 👥'}
-                    </button>
                   </div>
                 </>
               )}

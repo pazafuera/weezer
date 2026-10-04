@@ -1,353 +1,379 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useWeezer } from '../context/WeezerContext';
-import WeezerAccountDrawer from './WeezerAccountDrawer';
-import WeezerOnboardingModal from './WeezerOnboardingModal';
+import React, { useState, useEffect } from 'react';
+import { useWeezer, AppStep } from '../context/WeezerContext';
 import { FlyingWIcon } from './SharedUI';
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [hasViewedWrapped, setHasViewedWrapped] = useState(false);
+
   const {
     step,
     userId,
     userProfile,
-    setUserProfile,
     navigateTo,
     handleSignOut,
-    handleMagicFill,
+    pendingRequestsCount = 0,
+    friendsList = [],
     triageMap,
     masterList,
-    syncRankingsToDatabase,
-    pendingRequestsCount,
   } = useWeezer();
 
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isAccountDrawerOpen, setIsAccountDrawerOpen] = useState(false);
-  const [isOnboardingModalOpen, setIsOnboardingModalOpen] = useState(false);
+  const closeMenu = () => setMenuOpen(false);
 
-  const hasProgress = Object.keys(triageMap).length > 0 || masterList.length > 0;
-  const isSplash = step === 'splash';
+  // TRACK IF USER HAS VIEWED SWEATER THREAD (WRAPPED)
+  useEffect(() => {
+    if (step === 'wrapped') {
+      setHasViewedWrapped(true);
+      try {
+        localStorage.setItem('weezer_viewed_wrapped', 'true');
+      } catch (e) {
+        // Fallback for private browsing storage restrictions
+      }
+    } else if (
+      typeof window !== 'undefined' &&
+      localStorage.getItem('weezer_viewed_wrapped') === 'true'
+    ) {
+      setHasViewedWrapped(true);
+    }
+  }, [step]);
 
-  // Dynamic menu items for non-splash screens
-  const menuItems: { id: string; label: string; show: boolean }[] = [
+  // PROGRESS COMPLETION CHECKS
+  const isGutCheckDone = Boolean(triageMap && Object.keys(triageMap).length > 0);
+  const isRankOrderDone = Boolean(masterList && masterList.length > 0);
+  const hasNavigatedToRankings = isRankOrderDone;
+
+  // CALCULATE WHICH STEP GETS THE NEXT-STEP ARROW (→)
+  let nextStepKey: AppStep | null = null;
+  if (!isGutCheckDone) {
+    nextStepKey = 'triage';
+  } else if (isGutCheckDone && !isRankOrderDone) {
+    nextStepKey = 'rank_buckets';
+  } else if (isGutCheckDone && isRankOrderDone && !hasViewedWrapped) {
+    nextStepKey = 'wrapped';
+  } else if (hasViewedWrapped) {
+    nextStepKey = 'fan_stats';
+  }
+
+  // NAV ITEM CONFIGURATION
+  interface NavItem {
+    label: string;
+    step: AppStep;
+    requiresAuth?: boolean;
+    hideIf?: boolean;
+    disabled?: boolean;
+  }
+
+  const navItems: NavItem[] = [
     {
-      id: 'dashboard',
-      label: 'Command Center 🏠',
-      show: Boolean(userId || hasProgress),
+      label: 'In The Garage',
+      step: 'dashboard',
+      requiresAuth: true,
     },
     {
-      id: 'triage',
-      label: 'The Gut Check ⚡',
-      show: true,
+      label: 'How It Works',
+      step: 'orientation',
+      hideIf: isGutCheckDone,
     },
     {
-      id: 'rank_buckets',
-      label: 'Refine Buckets ⚔️',
-      show: hasProgress,
+      label: 'Gut Check',
+      step: 'triage',
     },
     {
-      id: 'master',
-      label: 'Final Rankings 📋',
-      show: hasProgress,
+      label: 'Rank Order',
+      step: 'rank_buckets',
+      disabled: !isGutCheckDone,
     },
     {
-      id: 'wrapped',
-      label: 'Sweater Thread 🧵',
-      show: hasProgress,
+      label: 'My Rankings',
+      step: 'master',
+      disabled: !isRankOrderDone,
     },
     {
-      id: 'fan_stats',
-      label: 'Fan Stats 🌐',
-      show: true,
+      label: 'My Sweater Thread',
+      step: 'wrapped',
+      disabled: !hasNavigatedToRankings,
     },
     {
-      id: 'friends',
-      label: 'Friends & Matchups 🤝',
-      show: Boolean(userId),
+      label: 'Global Rankings',
+      step: 'fan_stats',
+    },
+    {
+      label: 'Compare with Friends',
+      step: 'friends',
+      requiresAuth: true,
     },
   ];
 
+  // FILTER NAV ITEMS
+  const visibleNavItems = navItems.filter((item) => {
+    if (item.requiresAuth && !userId) return false;
+    if (item.hideIf) return false;
+    return true;
+  });
+
+  const activeFriendsCount = Array.isArray(friendsList) ? friendsList.length : 0;
+
   return (
-    <div className="min-h-screen flex flex-col justify-between bg-white text-slate-900 font-sans selection:bg-amber-400 selection:text-slate-950">
-      <div>
-        {/* UNIVERSAL HEADER */}
-        <header className="bg-[#0072CE] sticky top-0 z-40 shadow-md">
-          <div className="max-w-3xl mx-auto px-4 py-2.5 flex items-center justify-between">
-            {/* BRANDING + FLYING W ICON BUTTON */}
-            <button
-              onClick={() => navigateTo(hasProgress ? 'dashboard' : 'splash')}
-              className="flex items-center gap-2.5 group cursor-pointer text-left focus:outline-none"
-              aria-label="Go to Dashboard or Splash"
-            >
-              <div className="w-9 h-9 bg-white/10 group-hover:bg-white/20 border border-white/20 rounded-xl flex items-center justify-center text-white transition-all shrink-0">
-                <FlyingWIcon className="w-6 h-6 text-white drop-shadow-sm" />
-              </div>
-
-              <div className="flex flex-col">
-                <h1 className="font-black tracking-tight text-white text-lg sm:text-xl leading-none group-hover:text-blue-100 transition-colors">
-                  All My Favorite Songs
-                </h1>
-                <span className="text-[9px] sm:text-[10px] font-bold text-blue-200/90 uppercase tracking-widest mt-0.5">
-                  The Weezer Song Ranking Project
-                </span>
-              </div>
-            </button>
-
-            {/* HAMBURGER MENU BUTTON */}
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setIsMenuOpen(true)}
-                className="p-2 -mr-2 text-white hover:text-amber-300 transition-colors cursor-pointer relative"
-                aria-label="Open Menu"
-              >
-                <svg
-                  className="w-7 h-7"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M4 6h16M4 12h16M4 18h16"
-                  />
-                </svg>
-
-                {/* Red Notification Badge for Friends */}
-                {!isSplash && userId && pendingRequestsCount > 0 && (
-                  <span className="absolute top-1 right-1 w-3 h-3 bg-rose-500 border-2 border-[#0072CE] rounded-full animate-pulse" />
-                )}
-              </button>
+    <div className="min-h-screen bg-slate-100 font-sans text-slate-900 flex flex-col selection:bg-amber-300 selection:text-slate-950">
+      {/* TOP HEADER */}
+      <header className="bg-white border-b border-slate-200/80 sticky top-0 z-30 shadow-xs">
+        <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
+          <button
+            onClick={() => navigateTo(userId ? 'dashboard' : 'splash')}
+            className="flex items-center gap-2.5 text-left cursor-pointer group"
+          >
+            <div className="w-8 h-8 bg-[#0072CE] text-white rounded-xl flex items-center justify-center shadow-xs group-hover:bg-blue-600 transition-colors">
+              <FlyingWIcon className="w-5 h-5 text-white" />
             </div>
+            <div>
+              <span className="text-sm font-black tracking-tight text-slate-950 block leading-none">
+                All My Favorite Songs
+              </span>
+              <span className="text-[9px] font-bold text-[#0072CE] uppercase tracking-widest block mt-0.5">
+                Weezer Canon Ranker
+              </span>
+            </div>
+          </button>
+
+          <div className="flex items-center gap-2">
+            {userId && pendingRequestsCount > 0 && (
+              <button
+                onClick={() => navigateTo('friends')}
+                className="bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 font-black text-xs px-2.5 py-1 rounded-full flex items-center gap-1 cursor-pointer transition-all"
+              >
+                <span>👥</span>
+                <span>{pendingRequestsCount}</span>
+              </button>
+            )}
+
+            <button
+              onClick={() => setMenuOpen(true)}
+              className="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer"
+              aria-label="Open Navigation Menu"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
+                />
+              </svg>
+            </button>
           </div>
-        </header>
+        </div>
+      </header>
 
-        {/* ACCOUNT DRAWER & ONBOARDING MODAL */}
-        <WeezerAccountDrawer
-          isOpen={isAccountDrawerOpen}
-          onClose={() => setIsAccountDrawerOpen(false)}
-          userProfile={userProfile || undefined}
-          onLogout={handleSignOut}
-          onOpenOnboarding={() => setIsOnboardingModalOpen(true)}
-        />
+      {/* MAIN CONTENT */}
+      <main className="flex-1 max-w-3xl w-full mx-auto p-4 sm:p-6">
+        {children}
+      </main>
 
-        <WeezerOnboardingModal
-          isOpen={isOnboardingModalOpen}
-          onClose={() => setIsOnboardingModalOpen(false)}
-          currentUserId={userId}
-          onSuccess={(newProfile) => {
-            setUserProfile(newProfile);
-            syncRankingsToDatabase(triageMap, masterList);
-          }}
-        />
+      {/* SLIDE-OVER DRAWER */}
+      {menuOpen && (
+        <div className="fixed inset-0 z-50 flex justify-end animate-in fade-in duration-200">
+          <div
+            onClick={closeMenu}
+            className="absolute inset-0 bg-slate-950/40 backdrop-blur-xs transition-opacity"
+          />
 
-        {/* FLYOUT HAMBURGER MENU */}
-        {isMenuOpen && (
-          <div className="fixed inset-0 z-[100] flex justify-end">
-            <div
-              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200"
-              onClick={() => setIsMenuOpen(false)}
-            />
+          <div className="relative w-full max-w-xs bg-white h-full shadow-2xl border-l border-slate-200 flex flex-col justify-between overflow-y-auto z-10 animate-in slide-in-from-right duration-300">
+            <div>
+              {/* DRAWER HEADER */}
+              <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 bg-[#0072CE] text-white rounded-lg flex items-center justify-center">
+                    <FlyingWIcon className="w-4 h-4 text-white" />
+                  </div>
+                  <span className="text-xs font-black text-slate-900 uppercase tracking-wider">
+                    Menu
+                  </span>
+                </div>
 
-            <div className="w-64 sm:w-80 bg-white h-full relative z-10 shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
-              <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-                <span className="font-black text-slate-900 tracking-tight uppercase text-xs">
-                  Menu
-                </span>
                 <button
-                  onClick={() => setIsMenuOpen(false)}
-                  className="p-1 text-slate-400 hover:text-slate-600 transition cursor-pointer"
+                  onClick={closeMenu}
+                  className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors cursor-pointer"
+                  aria-label="Close Menu"
                 >
-                  <svg
-                    className="w-6 h-6"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
+                  ✕
                 </button>
               </div>
 
-              {/* SPLASH-SPECIFIC MENU VS STANDARD APP MENU */}
-              {isSplash ? (
-                <div className="flex-1 p-4 space-y-3">
-                  <div className="pb-2 border-b border-slate-100">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                      Welcome Fan
-                    </span>
+              {/* LOGGED IN USER CARD */}
+              {userId && (
+                <>
+                  <div className="mx-4 mt-4 p-3.5 bg-slate-50 border border-slate-200/80 rounded-2xl flex items-center justify-between">
+                    <div className="min-w-0">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-[#0072CE] block">
+                        Signed In As
+                      </span>
+                      <h3 className="text-xs font-black text-slate-900 truncate mt-0.5">
+                        {userProfile?.displayName ||
+                          `@${userProfile?.username}` ||
+                          'Weezer Fan'}
+                      </h3>
+                    </div>
+                    <button
+                      onClick={() => {
+                        closeMenu();
+                        handleSignOut();
+                      }}
+                      className="text-[11px] font-bold text-rose-600 hover:underline cursor-pointer ml-2 shrink-0"
+                    >
+                      Sign Out
+                    </button>
                   </div>
 
-                  <button
-                    onClick={() => {
-                      setIsMenuOpen(false);
-                      navigateTo('login');
-                    }}
-                    className="w-full text-left font-black text-sm px-4 py-3.5 rounded-2xl bg-[#0072CE] text-white hover:bg-blue-600 transition cursor-pointer flex items-center justify-between shadow-sm"
-                  >
-                    <span>Create Account</span>
-                    <span>🚀</span>
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      setIsMenuOpen(false);
-                      navigateTo('triage');
-                    }}
-                    className="w-full text-left font-extrabold text-sm px-4 py-3.5 rounded-2xl bg-slate-100 text-slate-900 hover:bg-slate-200 transition cursor-pointer flex items-center justify-between"
-                  >
-                    <span>Sort as a Guest</span>
-                    <span>⚡</span>
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      setIsMenuOpen(false);
-                      navigateTo('login');
-                    }}
-                    className="w-full text-left font-extrabold text-sm px-4 py-3.5 rounded-2xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition cursor-pointer flex items-center justify-between"
-                  >
-                    <span>Sign In</span>
-                    <span className="text-[#0072CE]">→</span>
-                  </button>
-                </div>
-              ) : (
-                <>
-                  {/* ACCOUNT CARD */}
-                  <div className="p-4 bg-blue-50/70 border-b border-blue-100 flex items-center justify-between">
-                    <div className="min-w-0 pr-2">
-                      {userId ? (
-                        userProfile?.username ? (
-                          <>
-                            <div className="text-xs font-black text-slate-900 truncate">
-                              {userProfile.displayName || `@${userProfile.username}`}
-                            </div>
-                            <div className="text-[10px] font-extrabold text-[#0072CE]">
-                              @{userProfile.username}
-                            </div>
-                          </>
-                        ) : (
-                          <>
-                            <div className="text-xs font-black text-slate-900">
-                              Profile Not Set Up
-                            </div>
-                            <div className="text-[10px] font-semibold text-slate-500">
-                              Claim your handle
-                            </div>
-                          </>
-                        )
-                      ) : (
-                        <>
-                          <div className="text-xs font-black text-slate-900">
-                            Guest Mode
-                          </div>
-                          <div className="text-[10px] font-semibold text-slate-500">
-                            Unsaved local rankings
-                          </div>
-                        </>
-                      )}
+                  {/* FAN FRIENDS MODULE */}
+                  <div className="mx-4 my-2.5 p-3.5 bg-blue-50/70 border border-blue-200/80 rounded-2xl space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black text-slate-900">
+                        Fan Friends
+                      </span>
+                      <span className="bg-blue-100 text-[#0072CE] text-[10px] font-black px-2 py-0.5 rounded-full border border-blue-200">
+                        {activeFriendsCount} {activeFriendsCount === 1 ? 'Friend' : 'Friends'}
+                      </span>
                     </div>
 
-                    <button
-                      onClick={() => {
-                        setIsMenuOpen(false);
-                        if (userId) {
-                          if (userProfile?.username) setIsAccountDrawerOpen(true);
-                          else setIsOnboardingModalOpen(true);
-                        } else {
-                          navigateTo('login');
-                        }
-                      }}
-                      className="bg-[#0072CE] hover:bg-blue-600 text-white text-[10px] font-black px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer shrink-0"
-                    >
-                      {userProfile?.username
-                        ? 'Manage'
-                        : userId
-                        ? 'Setup Profile'
-                        : 'Sign In'}
-                    </button>
-                  </div>
-
-                  {/* DYNAMIC NAVIGATION LINKS */}
-                  <nav className="flex-1 overflow-y-auto py-2">
-                    {menuItems
-                      .filter((item) => item.show)
-                      .map((item) => (
-                        <button
-                          key={item.id}
-                          onClick={() => {
-                            navigateTo(item.id as any);
-                            setIsMenuOpen(false);
-                          }}
-                          className={`w-full text-left px-5 py-3.5 font-extrabold text-sm border-b border-slate-50 transition cursor-pointer flex items-center justify-between ${
-                            step === item.id
-                              ? 'bg-blue-50 text-[#0072CE]'
-                              : 'text-slate-700 hover:bg-slate-50'
-                          }`}
-                        >
-                          <span>{item.label}</span>
-
-                          {item.id === 'friends' && pendingRequestsCount > 0 && (
-                            <span className="bg-rose-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-xs">
-                              {pendingRequestsCount} new
-                            </span>
-                          )}
-                        </button>
-                      ))}
-                  </nav>
-
-                  {/* DEV TOOLS & CONDITIONAL SIGN OUT */}
-                  <div className="p-4 border-t border-slate-100 bg-slate-50 space-y-3">
-                    <button
-                      onClick={() => {
-                        handleMagicFill();
-                        setIsMenuOpen(false);
-                      }}
-                      className="w-full text-xs font-black px-4 py-3 rounded-xl bg-purple-100 text-purple-700 hover:bg-purple-200 transition cursor-pointer text-center"
-                    >
-                      🧪 Dev: Magic Fill
-                    </button>
-
-                    {userId && (
-                      <button
-                        onClick={handleSignOut}
-                        className="w-full text-xs font-black px-4 py-3 rounded-xl text-slate-500 bg-white border border-slate-200 hover:bg-slate-100 transition cursor-pointer text-center"
-                      >
-                        Sign Out
-                      </button>
+                    {pendingRequestsCount > 0 ? (
+                      <div className="bg-amber-100/90 border border-amber-300/80 rounded-xl p-2 flex items-center justify-between text-amber-950">
+                        <span className="text-[11px] font-bold">
+                          {pendingRequestsCount} Pending Invite{pendingRequestsCount > 1 ? 's' : ''}
+                        </span>
+                        <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                      </div>
+                    ) : (
+                      <p className="text-[11px] font-medium text-slate-600 leading-snug">
+                        Compare canon rankings and find your taste soulmate.
+                      </p>
                     )}
+
+                    <button
+                      onClick={() => {
+                        closeMenu();
+                        navigateTo('friends');
+                      }}
+                      className="w-full bg-[#0072CE] hover:bg-blue-600 text-white font-black py-2 px-3 rounded-xl text-xs transition-all shadow-xs cursor-pointer text-center"
+                    >
+                      {pendingRequestsCount > 0 ? 'Review Pending Invites 👥' : 'Connect & Compare 👥'}
+                    </button>
                   </div>
                 </>
               )}
+
+              {/* GUEST MODE CARD */}
+              {!userId && (
+                <div className="mx-4 my-3 p-4 bg-amber-50 border border-amber-200/80 rounded-2xl space-y-3">
+                  <div className="flex items-center justify-start">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-200/70 text-amber-900">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-600 animate-pulse" />
+                      Guest Mode
+                    </span>
+                  </div>
+
+                  <div className="space-y-1">
+                    <h4 className="text-xs font-black text-amber-950">
+                      Why Bother creating an account?
+                    </h4>
+                    <p className="text-[11px] font-medium text-amber-800 leading-snug">
+                      Guest rankings are only saved temporarily. Create an
+                      account now to save your work.
+                    </p>
+                  </div>
+
+                  <div className="space-y-1.5 pt-1">
+                    <button
+                      onClick={() => {
+                        closeMenu();
+                        navigateTo('login', 'signup');
+                      }}
+                      className="w-full bg-[#0072CE] hover:bg-blue-600 text-white font-black py-2.5 px-4 rounded-xl text-xs transition-all shadow-xs cursor-pointer text-center"
+                    >
+                      Create Free Account to Backup 🚀
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        closeMenu();
+                        navigateTo('login', 'login');
+                      }}
+                      className="w-full text-center text-[11px] font-bold text-amber-900 hover:underline cursor-pointer py-1"
+                    >
+                      Already have an account? Sign In
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* STREAMLINED NAVIGATION LINKS */}
+              <nav className="p-2 space-y-1">
+                {visibleNavItems.map((item) => {
+                  const isActive = step === item.step;
+                  const isDisabled = item.disabled;
+                  const isNextStep = nextStepKey === item.step;
+
+                  return (
+                    <button
+                      key={item.step}
+                      disabled={isDisabled}
+                      onClick={() => {
+                        if (!isDisabled) {
+                          closeMenu();
+                          navigateTo(item.step);
+                        }
+                      }}
+                      className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-xs font-black transition-all ${
+                        isDisabled
+                          ? 'opacity-40 cursor-not-allowed text-slate-400 bg-slate-50'
+                          : isActive
+                          ? 'bg-[#0072CE] text-white shadow-xs cursor-pointer'
+                          : 'text-slate-700 hover:bg-slate-100 cursor-pointer'
+                      }`}
+                    >
+                      {/* LEFT SIDE: ARROW (IF NEXT STEP) + LINK LABEL */}
+                      <div className="flex items-center gap-2">
+                        {isNextStep && (
+                          <span
+                            className={
+                              isActive
+                                ? 'text-white font-black text-sm'
+                                : 'text-[#0072CE] font-black text-sm animate-pulse'
+                            }
+                          >
+                            →
+                          </span>
+                        )}
+                        <span>{item.label}</span>
+                      </div>
+
+                      {/* RIGHT SIDE: BADGES */}
+                      {item.step === 'friends' && pendingRequestsCount > 0 && (
+                        <span className="bg-amber-400 text-slate-950 font-black text-[10px] px-2 py-0.5 rounded-full">
+                          {pendingRequestsCount}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </nav>
+            </div>
+
+            {/* DRAWER FOOTER */}
+            <div className="p-4 border-t border-slate-100 text-center">
+              <p className="text-[10px] font-bold text-slate-300">
+                All My Favorite Songs • 2026 Canon
+              </p>
             </div>
           </div>
-        )}
-
-        {/* MAIN CONTENT AREA */}
-        <main className="max-w-3xl mx-auto px-4 mt-6">{children}</main>
-      </div>
-
-      {/* UNIVERSAL FOOTER */}
-      <footer className="mt-16 border-t border-slate-100 bg-slate-50 py-8 px-4 text-center">
-        <div className="max-w-2xl mx-auto space-y-3">
-          <p className="text-[11px] font-black uppercase tracking-widest text-slate-400">
-            All My Favorite Songs • The Weezer Ranking Project
-          </p>
-          <p className="text-xxs font-medium text-slate-500 leading-relaxed">
-            This is an independent, non-commercial fan project created for the
-            Weezer fan community. It is not affiliated with, endorsed by, or
-            connected to Weezer, Rivers Cuomo, Geffen Records, Atlantic Records,
-            or Crush Music. All song titles, lyrics, and album artwork remain
-            the property of their respective trademark and copyright holders.
-          </p>
         </div>
-      </footer>
+      )}
     </div>
   );
 }

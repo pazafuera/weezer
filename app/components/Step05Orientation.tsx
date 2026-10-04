@@ -16,13 +16,13 @@ const ORIENTATION_BUCKETS: OrientationBucket[] = [
     key: 'banger',
     title: 'Banger',
     sub: 'God-Tier / S-Tier',
-    desc: 'The undisputed canon. Pure Weezer magic that defines your entire experience with the band.',
+    desc: 'Pure magic that defines your entire experience with Weezer.',
   },
   {
     key: 'slaps',
     title: 'Lowkey Slaps',
     sub: 'Great / A-Tier',
-    desc: 'Awesome jams you love hearing, but they might not make an iPod with only 25 total tracks.',
+    desc: 'Awesome jams, but they would not make your iPod if it could only hold 25 total tracks.',
   },
   {
     key: 'mid',
@@ -40,7 +40,7 @@ const ORIENTATION_BUCKETS: OrientationBucket[] = [
     key: 'trash',
     title: 'Trash',
     sub: 'Bottom-Tier / D-Tier',
-    desc: 'Songs you’d be completely fine never hearing again for the rest of your life.',
+    desc: 'Songs you kinda wish Rivers had never written.',
   },
 ];
 
@@ -52,7 +52,7 @@ export default function Step05Orientation() {
   }, []);
 
   return (
-    <div className="space-y-8 pb-24 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-2xl mx-auto px-4">
+    <div className="space-y-6 pb-24 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-2xl mx-auto px-4">
       {/* BACK BUTTON */}
       <div className="pt-4 flex items-center justify-start">
         <button
@@ -63,16 +63,24 @@ export default function Step05Orientation() {
         </button>
       </div>
 
+      {/* GUEST HEADER */}
       <div className="text-center space-y-2">
         <h1 className="text-3xl sm:text-5xl font-black text-slate-950 tracking-tighter">
           The Rules of <span className="text-[#0072CE]">Engagement.</span>
         </h1>
         <p className="text-xs sm:text-sm font-bold text-slate-500 uppercase tracking-widest max-w-md mx-auto">
-          How to calibrate your 5 buckets during the Gut Check
+          You're ready to get ranking.
         </p>
       </div>
 
-      {/* BUCKETS CARDS */}
+      {/* SECTION HEADER */}
+      <div className="space-y-2.5 text-center pt-2">
+        <h2 className="text-base sm:text-xl font-black text-slate-950 tracking-tight">
+          First, you'll put songs into one of the following buckets.
+        </h2>
+      </div>
+
+      {/* BUCKET CARDS */}
       <div className="space-y-4">
         {ORIENTATION_BUCKETS.map(({ key, title, sub, desc }) => {
           const cfg = BUCKET_CONFIG[key];
@@ -110,32 +118,31 @@ export default function Step05Orientation() {
         })}
       </div>
 
-      {/* PRO TIP / GUIDANCE CARD */}
-      <div className="bg-slate-950 text-white border border-slate-800 rounded-3xl p-5 text-center shadow-lg">
-        <span className="text-[10px] font-black uppercase tracking-widest text-amber-400 block mb-1">
-          💡 Pro Tip: Don’t Overthink It
-        </span>
-        <p className="text-xs font-medium text-slate-300 max-w-md mx-auto leading-relaxed">
-          The Gut Check is designed for fast, instinctual sorting. You can
-          fine-tune exact positions in the head-to-head matchup stage!
+      {/* PRO TIP */}
+      <div className="bg-amber-50/80 border border-amber-200/80 rounded-2xl p-3 w-full text-amber-950">
+        <p className="text-s font-bold leading-snug">
+          💡 <span className="font-black">Pro Tip:</span> Go with your gut! You'll fine-tune exact rankings later.
         </p>
       </div>
 
-      {/* CONTINUATION CTA */}
-      <div className="space-y-2 pt-2">
+      {/* CONTINUATION CTAS */}
+      <div className="pt-2 space-y-2.5">
         <button
           onClick={() => navigateTo('triage')}
           className="w-full bg-[#0072CE] hover:bg-blue-600 active:scale-[0.99] text-white font-black text-base sm:text-lg py-4 rounded-2xl shadow-[0_10px_25px_rgba(0,114,206,0.3)] transition-all cursor-pointer flex items-center justify-center gap-2 group"
         >
           <span>I'm Ready — Start Triage</span>
           <span className="transform group-hover:translate-x-1 transition-transform">
-            🚀
+            ⚡️
           </span>
         </button>
 
-        <p className="text-center text-[11px] font-bold text-slate-400">
-          206 Songs • Rapid Fire Triage Mode
-        </p>
+        <button
+          onClick={() => navigateTo('login', 'signup')}
+          className="w-full bg-white hover:bg-slate-50 text-slate-600 font-bold py-3 px-6 rounded-2xl transition-all cursor-pointer text-xs border border-slate-200 text-center"
+        >
+          Create an Account First
+        </button>
       </div>
     </div>
   );

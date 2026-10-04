@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { supabase } from '@/utils/supabase';
+import { useWeezer } from '../context/WeezerContext';
 import {
   Song,
   BucketType,
@@ -10,6 +11,7 @@ import {
   ALBUM_NAME_TO_ID,
 } from '../data/constants';
 import { FlyingWIcon, AlbumArtwork } from './SharedUI';
+import { encodeShareData } from '@/utils/shareHelper';
 
 // STATISTICAL HELPER: Kendall's Tau (Rank Agreement)
 function calculateKendallTau(
@@ -65,7 +67,7 @@ export default function Step4Wrapped({
   ) => void;
   globalConsensus?: string[];
 }) {
-  const [copySuccess, setCopySuccess] = useState(false);
+  const { userProfile } = useWeezer();
   const [activeArchIndex, setActiveArchIndex] = useState(0);
   const [activeEraIndex, setActiveEraIndex] = useState(0);
   const [showAllAlbums, setShowAllAlbums] = useState(false);
@@ -360,7 +362,6 @@ export default function Step4Wrapped({
     } | null = null;
 
     if (rankedComparisons.length > 0) {
-      // Biggest Betrayal: largest case where user ranks a song WORSE than community.
       const betrayalCandidates = rankedComparisons
         .filter((c) => c.difference > 0)
         .sort((a, b) => b.difference - a.difference);
@@ -377,7 +378,6 @@ export default function Step4Wrapped({
         };
       }
 
-      // Hidden Gem: user ranks song BETTER than community.
       const hiddenGemCandidates = rankedComparisons
         .filter(
           (c) =>
@@ -666,13 +666,9 @@ export default function Step4Wrapped({
 
     // ARCHETYPES
     const normClassic = Math.max(0, Math.min(1, (classicAverage - 1) / 4));
-
     const normModern = Math.max(0, Math.min(1, (modernAverage - 1) / 4));
-
     const normDeepCut = Math.max(0, Math.min(1, deepCutRatio));
-
     const normPositivity = Math.max(0, Math.min(1, globalPositivity));
-
     const normChaos = Math.max(0, Math.min(1, hotTakeScore / 100));
 
     const userVector = {
@@ -803,64 +799,29 @@ export default function Step4Wrapped({
       })
       .sort((a, b) => b.score - a.score);
 
-    // VIBE ENCAPSULATED - SCIENTIFIC LOCAL MAPPING
+    // VIBE ENCAPSULATED - LOCAL MAPPING
     const primaryArchetype = scoredArchetypes[0]?.id || 'scientist';
 
-    const archetypeVibes: Record<string, { img: string; caption: string }> = {
-      '90s': {
-        img: '/img/vibes/grownassman.gif',
-        caption: '"I\'m a grown-ass man! Everything after Pinkerton sucks!"',
-      },
-      blueblood: {
-        img: '/img/vibes/rivers-buddyholly.webp',
-        caption: 'Pure 1994 nostalgia, clean power-pop hooks, and sweater energy.',
-      },
-      vault: {
-        img: '/img/vibes/snuggie.gif',
-        caption: 'Cozy in a Snuggie, excavating unreleased 1998 acoustic demos.',
-      },
-      critic: {
-        img: '/img/vibes/sayitaintso.gif',
-        caption: 'Nobody hates Weezer with as much deep, burning passion as you.',
-      },
-      revisionist: {
-        img: '/img/vibes/snl-beverlyhills.gif',
-        caption: '"Weezer didn\'t peak in the 90s!" — Matt Damon was right.',
-      },
-      scientist: {
-        img: '/img/vibes/rivers-sweater.gif',
-        caption: 'A wholesome, logic-driven appreciation across the entire catalog.',
-      },
-      chaos: {
-        img: '/img/vibes/canoli.gif',
-        caption: 'Eating cannolis while listening to Can\'t Knock the Hustle on loop.',
-      },
+    const archetypeVibes: Record<string, string> = {
+      '90s': '/img/vibes/grownassman.gif',
+      blueblood: '/img/vibes/rivers-buddyholly.webp',
+      vault: '/img/vibes/snuggie.gif',
+      critic: '/img/vibes/sayitaintso.gif',
+      revisionist: '/img/vibes/snl-beverlyhills.gif',
+      scientist: '/img/vibes/rivers-sweater.gif',
+      chaos: '/img/vibes/canoli.gif',
     };
 
-    // Specific Song / Era Priority Overrides
-    let finalVibe = archetypeVibes[primaryArchetype] || archetypeVibes['scientist'];
-
+    let finalGif = archetypeVibes[primaryArchetype] || archetypeVibes['scientist'];
     const topSongTitle = top10[0]?.title || '';
 
     if (topSongTitle === 'Island in the Sun') {
-      finalVibe = {
-        img: '/img/vibes/island-in-the-sun.webp',
-        caption: 'Taking a hip-hip trip on an island in the sun.',
-      };
+      finalGif = '/img/vibes/island-in-the-sun.webp';
     } else if (topSongTitle === 'Keep Fishin' || sortedEras[0]?.id === 'reunion') {
-      finalVibe = {
-        img: '/img/vibes/keep-fishin.gif',
-        caption: 'Jamming out in the garage with Miss Piggy and the Muppets.',
-      };
+      finalGif = '/img/vibes/keep-fishin.gif';
     } else if (sortedEras[0]?.id === 'gold' || modernAverage > 4.3) {
-      finalVibe = {
-        img: '/img/vibes/gold.webp',
-        caption: 'Living unapologetically in the Golden Era of Weezer.',
-      };
+      finalGif = '/img/vibes/gold.webp';
     }
-
-    const finalGif = finalVibe.img;
-    const finalCaption = finalVibe.caption;
 
     // TASTE DNA
     const timelineVal =
@@ -926,7 +887,6 @@ export default function Step4Wrapped({
       scoredArchetypes,
       dnaScores,
       finalGif,
-      finalCaption,
       explicitCount: explicitlyRankedSongs.length,
       rankComparisonSampleSize,
       coreFour,
@@ -942,45 +902,35 @@ export default function Step4Wrapped({
     rankedComparisons,
   ]);
 
-  const handleShare = async () => {
-    const shareText =
-      `🧵 My Weezer "Sweater Thread" 🧵\n\n` +
-      `🥇 Anthem: ${top10[0]?.title}\n` +
-      `🧑‍🔬 Archetype: ${stats.scoredArchetypes[0].name}\n` +
-      `⚖️ Lean: ${stats.persona}\n\n` +
-      `Top Albums:\n` +
-      `1. ${stats.rankedAlbums[0]?.name}\n` +
-      `2. ${stats.rankedAlbums[1]?.name}\n` +
-      `3. ${stats.rankedAlbums[2]?.name}\n\n` +
-      `Unravel your Weezer taste at famduel.com/weezer`;
+  // AGE DELTA COMMENTARY
+  const ageComment = useMemo(() => {
+    const birthYear = userProfile?.birthYear;
+    if (!birthYear) return null;
 
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: 'My Sweater Thread',
-          text: shareText,
-        });
-      } catch (err) {
-        console.error('Share failed', err);
-      }
+    const currentYear = new Date().getFullYear();
+    const actualAge = currentYear - birthYear;
+    const delta = stats.listeningAge - actualAge;
+
+    if (delta <= -8) {
+      return `Aging in reverse! You're ${actualAge}, but your ears are happily stuck in your youthful age of ${stats.listeningAge}.`;
+    } else if (delta < -2) {
+      return `Slightly younger musical spirit! At ${actualAge}, your playlist carries the energy of a ${stats.listeningAge}-year-old.`;
+    } else if (Math.abs(delta) <= 2) {
+      return `Spot on! At ${actualAge}, your musical clock matches your birth certificate almost perfectly.`;
+    } else if (delta <= 8) {
+      return `A fine vintage! At ${actualAge}, you carry the refined taste of a ${stats.listeningAge}-year-old music scholar.`;
     } else {
-      navigator.clipboard.writeText(shareText);
-      setCopySuccess(true);
-      setTimeout(() => setCopySuccess(false), 3000);
+      return `An old soul (or exceptionally well-raised!). You're ${actualAge}, but your ears belong to a ${stats.listeningAge}-year-old veteran.`;
     }
-  };
+  }, [userProfile?.birthYear, stats.listeningAge]);
 
   const handleArchScroll = () => {
     if (!archScrollRef.current) return;
-
     const firstChild = archScrollRef.current.children[0];
-
     if (!firstChild) return;
-
     const index = Math.round(
       archScrollRef.current.scrollLeft / (firstChild as HTMLElement).clientWidth
     );
-
     setActiveArchIndex(
       Math.max(0, Math.min(stats.scoredArchetypes.length, index))
     );
@@ -988,46 +938,28 @@ export default function Step4Wrapped({
 
   const handleEraScroll = () => {
     if (!eraScrollRef.current) return;
-
     const firstChild = eraScrollRef.current.children[0];
-
     if (!firstChild) return;
-
     const index = Math.round(
       eraScrollRef.current.scrollLeft / (firstChild as HTMLElement).clientWidth
     );
-
     setActiveEraIndex(Math.max(0, Math.min(stats.sortedEras.length, index)));
   };
 
   const scrollToArch = (index: number) => {
     if (!archScrollRef.current) return;
-
     const firstChild = archScrollRef.current.children[0];
-
     if (!firstChild) return;
-
     const offset = index * (firstChild as HTMLElement).clientWidth;
-
-    archScrollRef.current.scrollTo({
-      left: offset,
-      behavior: 'smooth',
-    });
+    archScrollRef.current.scrollTo({ left: offset, behavior: 'smooth' });
   };
 
   const scrollToEra = (index: number) => {
     if (!eraScrollRef.current) return;
-
     const firstChild = eraScrollRef.current.children[0];
-
     if (!firstChild) return;
-
     const offset = index * (firstChild as HTMLElement).clientWidth;
-
-    eraScrollRef.current.scrollTo({
-      left: offset,
-      behavior: 'smooth',
-    });
+    eraScrollRef.current.scrollTo({ left: offset, behavior: 'smooth' });
   };
 
   if (isFetchingDB) {
@@ -1182,8 +1114,8 @@ export default function Step4Wrapped({
 
       {/* VIBE ENCAPSULATED */}
       <div>
-        <div className="bg-slate-950 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl text-center mx-4 sm:mx-0 overflow-hidden space-y-4">
-          <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+        <div className="bg-slate-950 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl text-center mx-4 sm:mx-0 overflow-hidden">
+          <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tight mb-6">
             Your Vibe, Encapsulated
           </h3>
 
@@ -1194,10 +1126,6 @@ export default function Step4Wrapped({
               className="w-full h-full object-cover"
             />
           </div>
-
-          <p className="text-xs sm:text-sm font-bold text-amber-300 italic px-2">
-            {stats.finalCaption}
-          </p>
         </div>
       </div>
 
@@ -1236,13 +1164,13 @@ export default function Step4Wrapped({
                           {item.label}
                         </span>
 
-                        <h4 className="text-sm font-black text-white truncate drop-shadow-md">
+                        <h4 className="text-sm font-black text-white drop-shadow-md leading-tight">
                           {item.song.title}
                         </h4>
                       </div>
                     </div>
 
-                    <p className="text-[10px] font-bold text-slate-500 leading-tight px-1">
+                    <p className="text-xs font-bold text-slate-500 leading-snug px-1">
                       {item.desc}
                     </p>
                   </div>
@@ -1279,11 +1207,11 @@ export default function Step4Wrapped({
                   }
                 >
                   <div className="text-center mb-2">
-                    <span className="text-[11px] font-black text-slate-700 uppercase tracking-widest inline-flex items-center gap-1 group-hover:text-[#0072CE] transition-colors">
+                    <span className="text-xs sm:text-sm font-black text-slate-700 uppercase tracking-widest inline-flex items-center gap-1.5 group-hover:text-[#0072CE] transition-colors">
                       {score.label}
 
                       <svg
-                        className="w-3 h-3 text-slate-400 group-hover:text-[#0072CE]"
+                        className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#0072CE]"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -1300,19 +1228,19 @@ export default function Step4Wrapped({
 
                   <div className="relative w-full h-1.5 bg-slate-200 rounded-full my-1">
                     <div
-                      className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full shadow-md border-[3px] border-white transition-all duration-1000 z-10 ${score.color}`}
+                      className={`absolute top-1/2 -translate-y-1/2 w-5 h-5 rounded-full shadow-md border-[3px] border-white transition-all duration-1000 z-10 ${score.color}`}
                       style={{
-                        left: `calc(${score.value}% - 8px)`,
+                        left: `calc(${score.value}% - 10px)`,
                       }}
                     />
                   </div>
 
                   <div className="flex justify-between mt-2">
-                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
                       {score.left}
                     </span>
 
-                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
                       {score.right}
                     </span>
                   </div>
@@ -1520,7 +1448,6 @@ export default function Step4Wrapped({
         <div className="flex items-end justify-between gap-2 h-32 mt-8 mb-2 px-2 border-b-2 border-slate-100 pb-2">
           {Object.entries(stats.temporalBins).map(([label, count]) => {
             const maxVal = Math.max(...Object.values(stats.temporalBins), 1);
-
             const heightPct = (count / maxVal) * 100;
 
             return (
@@ -1537,7 +1464,7 @@ export default function Step4Wrapped({
                   />
                 </div>
 
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest shrink-0">
+                <span className="text-xs font-black text-slate-400 tracking-wider shrink-0">
                   {label}
                 </span>
               </div>
@@ -1549,7 +1476,7 @@ export default function Step4Wrapped({
       {/* 6. LISTENING AGE */}
       <div>
         <div className="bg-gradient-to-br from-indigo-900 to-slate-900 border border-indigo-800 rounded-3xl p-8 sm:p-10 shadow-xl relative overflow-hidden mx-4 sm:mx-0 flex flex-col items-center justify-center">
-          <h3 className="text-3xl sm:text-4xl font-black text-white mb-8 tracking-tight text-center">
+          <h3 className="text-3xl sm:text-4xl font-black text-white mb-6 tracking-tight text-center">
             Listening Age
           </h3>
 
@@ -1557,7 +1484,7 @@ export default function Step4Wrapped({
             You listen to Weezer as if you are
           </span>
 
-          <div className="inline-flex flex-col items-center justify-center w-32 h-32 bg-white rounded-full shadow-[0_0_40px_rgba(255,255,255,0.2)]">
+          <div className="inline-flex flex-col items-center justify-center w-32 h-32 bg-white rounded-full shadow-[0_0_40px_rgba(255,255,255,0.2)] mb-6">
             <span className="text-5xl font-black text-slate-900 tracking-tighter -mt-1">
               {stats.listeningAge}
             </span>
@@ -1566,6 +1493,15 @@ export default function Step4Wrapped({
               Years Old
             </span>
           </div>
+
+          {/* QUIPPY BIRTH YEAR DELTA COMMENT */}
+          {ageComment && (
+            <div className="bg-indigo-950/80 border border-indigo-700/60 rounded-2xl p-4 max-w-sm text-center">
+              <p className="text-xs font-bold text-indigo-200 leading-relaxed">
+                💡 {ageComment}
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1585,14 +1521,14 @@ export default function Step4Wrapped({
             <>
               <div className="relative w-full h-1.5 bg-slate-200 rounded-full mb-4 mt-2">
                 <div
-                  className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-[#0072CE] border-[3px] border-white rounded-full shadow-[0_0_10px_rgba(0,114,206,0.3)] transition-all duration-1000 z-10"
+                  className="absolute top-1/2 -translate-y-1/2 w-5 h-5 bg-[#0072CE] border-[3px] border-white rounded-full shadow-[0_0_10px_rgba(0,114,206,0.3)] transition-all duration-1000 z-10"
                   style={{
-                    left: `calc(${stats.independenceIndex}% - 8px)`,
+                    left: `calc(${stats.independenceIndex}% - 10px)`,
                   }}
                 />
               </div>
 
-              <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-slate-400 mt-2">
+              <div className="flex justify-between text-xs font-black uppercase tracking-widest text-slate-400 mt-2">
                 <span>Groupie</span>
                 <span>Independent</span>
               </div>
@@ -1620,13 +1556,13 @@ export default function Step4Wrapped({
         <div className="space-y-6 mx-4 sm:mx-0">
           {stats.biggestBetrayal ? (
             <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl">
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-2 text-center">
+              <h3 className="text-2xl sm:text-3xl font-black text-center text-white mb-1 tracking-tight">
                 The Betrayal
-              </span>
-
-              <h3 className="text-2xl font-black text-center text-white mb-6 tracking-tight">
-                You ranked a community favorite way lower.
               </h3>
+
+              <p className="text-xs font-bold text-center text-slate-400 mb-6">
+                You ranked a fan favorite way lower.
+              </p>
 
               <div className="bg-slate-800 p-5 rounded-2xl border border-slate-700 shadow-inner flex flex-col items-center text-center">
                 <span className="text-xl font-black text-white mb-4 px-2">
@@ -1670,13 +1606,13 @@ export default function Step4Wrapped({
 
           {stats.hiddenGem && (
             <div className="bg-[#0072CE] border border-blue-500 rounded-3xl p-6 sm:p-8 shadow-xl">
-              <span className="text-[10px] font-black uppercase tracking-widest text-blue-300 block mb-2 text-center">
+              <h3 className="text-2xl sm:text-3xl font-black text-center text-white mb-1 tracking-tight">
                 The Hidden Gem
-              </span>
-
-              <h3 className="text-2xl font-black text-center text-white mb-6 tracking-tight">
-                You love what the crowd overlooks.
               </h3>
+
+              <p className="text-xs font-bold text-center text-blue-100 mb-6">
+                You love what the crowd overlooks.
+              </p>
 
               <div className="bg-white p-5 rounded-2xl border border-blue-200 shadow-lg flex flex-col items-center text-center">
                 <span className="text-xl font-black text-slate-900 mb-4 px-2">
@@ -1754,14 +1690,12 @@ export default function Step4Wrapped({
       {stats.mostConsistentAlbum && (
         <div className="mx-4 sm:mx-0">
           <div className="bg-indigo-950 border border-indigo-900 rounded-3xl p-6 sm:p-8 shadow-xl text-center overflow-hidden relative">
-            <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400 block mb-4">
+            <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400 block mb-3">
               The Consistency Index
             </span>
 
-            <h3 className="text-2xl sm:text-3xl font-black text-white mb-4 tracking-tight">
-              You don't just love the hits.
-              <br />
-              You love the album.
+            <h3 className="text-xl sm:text-3xl font-black text-white mb-4 tracking-tight leading-snug">
+              You Don&apos;t Just Love the Hits — You Love the Album.
             </h3>
 
             <p className="text-sm font-bold text-indigo-300 mb-8 max-w-sm mx-auto">
@@ -1865,17 +1799,199 @@ export default function Step4Wrapped({
         </div>
       </div>
 
-      {/* 12. SHARE ACTION MODULE */}
-      <div className="px-4 sm:px-0 text-center pt-4">
+      {/* 12. SMART SHARE MODULE */}
+      <SmartShareModule 
+        stats={stats} 
+        top10={top10} 
+        userProfile={userProfile} 
+      />
+    </div>
+  );
+}
+
+function SmartShareModule({ stats, top10, userProfile }: any) {
+  const [isSharing, setIsSharing] = useState(false);
+  const [showFallback, setShowFallback] = useState(false);
+  const [copySuccess, setCopySuccess] = useState(false);
+
+  const shareData = {
+    n: userProfile?.displayName || userProfile?.username || 'A Fan',
+    t: top10[0]?.title || 'Undecided',
+    a: stats.rankedAlbums[0]?.name || 'Unknown Album',
+    v: stats.scoredArchetypes[0]?.name || 'Weezer Scientist',
+  };
+
+  const encodedData = encodeShareData(shareData);
+  const publicShareUrl = `https://famduel.com/share?data=${encodedData}`;
+  const ogImageUrl = `/api/og?data=${encodedData}`;
+
+  const shareText = `My Weezer Anthem is "${shareData.t}" and my Top Album is ${shareData.a}.\n\nWho has better taste? Rank the Weezer canon and find out:\n${publicShareUrl}`;
+
+  // Helper to detect actual mobile touch devices vs desktop browsers
+  const isMobileDevice = () => {
+    if (typeof window === 'undefined') return false;
+    return (
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+        navigator.userAgent
+      ) ||
+      ('ontouchstart' in window && navigator.maxTouchPoints > 1)
+    );
+  };
+
+  const handleShareClick = async () => {
+    setIsSharing(true);
+
+    try {
+      const response = await fetch(ogImageUrl);
+      const blob = await response.blob();
+      const file = new File([blob], 'weezer-taste-dna.png', {
+        type: 'image/png',
+      });
+
+      const isMobile = isMobileDevice();
+
+      // Mobile devices get the native iOS/Android share sheet for Instagram, TikTok, Snapchat, etc.
+      if (
+        isMobile &&
+        typeof navigator !== 'undefined' &&
+        navigator.canShare &&
+        navigator.canShare({ files: [file] })
+      ) {
+        setIsSharing(false); // Reset button BEFORE opening share popup so it doesn't freeze
+        await navigator.share({
+          title: 'My Weezer Taste DNA',
+          text: shareText,
+          files: [file],
+          url: publicShareUrl,
+        });
+      } else {
+        // Desktop browsers (macOS/Windows) open our rich custom share modal directly
+        setIsSharing(false);
+        setShowFallback(true);
+      }
+    } catch (err: any) {
+      setIsSharing(false);
+      if (err.name !== 'AbortError') {
+        setShowFallback(true);
+      }
+    }
+  };
+
+  const handleCopyLink = () => {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(shareText);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    }
+  };
+
+  const handleDownloadImage = async () => {
+    try {
+      const response = await fetch(ogImageUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = 'weezer-taste-dna.png';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error('Download failed', e);
+    }
+  };
+
+  return (
+    <div className="mx-4 sm:mx-0 pt-6">
+      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-10 shadow-2xl text-center">
+        <span className="text-[10px] font-black uppercase tracking-widest text-amber-400 block mb-2">
+          Challenge Your Friends
+        </span>
+        <h3 className="text-3xl font-black text-white tracking-tight mb-4">
+          Who Has Better Taste?
+        </h3>
+        <p className="text-sm font-bold text-slate-400 max-w-sm mx-auto mb-8">
+          Instantly generate your Weezer Share Card for Instagram, X, TikTok, or text message.
+        </p>
+
         <button
-          onClick={handleShare}
-          className="w-full sm:w-auto bg-[#0072CE] hover:bg-blue-600 text-white font-black text-base sm:text-lg py-4 px-8 rounded-2xl shadow-[0_0_20px_rgba(0,114,206,0.3)] transition-transform hover:scale-105 active:scale-95 cursor-pointer"
+          onClick={handleShareClick}
+          disabled={isSharing}
+          className="w-full bg-[#0072CE] hover:bg-blue-500 active:scale-95 text-white font-black text-lg py-5 px-8 rounded-2xl shadow-[0_10px_30px_rgba(0,114,206,0.4)] transition-all cursor-pointer flex items-center justify-center gap-3 disabled:opacity-70 disabled:active:scale-100"
         >
-          {copySuccess
-            ? 'Copied to Clipboard! ✓'
-            : 'Share Your Sweater Thread 🔗'}
+          {isSharing ? (
+            <>
+              <div className="w-5 h-5 border-4 border-white border-t-transparent rounded-full animate-spin" />
+              <span>Generating Image...</span>
+            </>
+          ) : (
+            <>
+              <span className="text-2xl">📸</span>
+              <span>SHARE MY RESULTS</span>
+            </>
+          )}
         </button>
       </div>
+
+      {showFallback && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl space-y-4">
+            <div className="flex justify-between items-center mb-2">
+              <h4 className="font-black text-slate-900 text-lg">Share Your Card</h4>
+              <button
+                onClick={() => setShowFallback(false)}
+                className="text-slate-400 hover:text-slate-900 font-bold p-1 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="rounded-xl overflow-hidden border border-slate-200 mb-4 bg-slate-100 aspect-[1200/630]">
+              <img src={ogImageUrl} alt="Your Preview" className="w-full h-full object-cover" />
+            </div>
+
+            <div className="space-y-2">
+              <button
+                onClick={handleDownloadImage}
+                className="w-full bg-slate-900 hover:bg-slate-800 text-white font-black text-sm py-3 px-4 rounded-xl flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span>💾</span> Save Image for Instagram/TikTok
+              </button>
+
+              <div className="flex gap-2">
+                <a
+                  href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(
+                    publicShareUrl
+                  )}&text=${encodeURIComponent('I ranked the Weezer canon. Who has better taste?')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 bg-sky-500 hover:bg-sky-400 text-white font-black text-sm py-3 px-4 rounded-xl flex items-center justify-center gap-2 cursor-pointer text-center"
+                >
+                  Post to X
+                </a>
+                <a
+                  href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
+                    publicShareUrl
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-black text-sm py-3 px-4 rounded-xl flex items-center justify-center gap-2 cursor-pointer text-center"
+                >
+                  Facebook
+                </a>
+              </div>
+
+              <button
+                onClick={handleCopyLink}
+                className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-black text-sm py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition cursor-pointer"
+              >
+                {copySuccess ? 'Copied!' : 'Copy Public Link'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

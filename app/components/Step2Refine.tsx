@@ -329,7 +329,7 @@ export default function Step2Refine({
                   data-index={idx}
                   draggable={hasSlider}
                   onDragStart={hasSlider ? (e) => handleDragStart(e, bucket, song) : undefined}
-                  onDragOver={hasSlider ? handleDragOver : undefined}
+                  onDragOver={handleDragOver}
                   onDrop={hasSlider ? (e) => { e.stopPropagation(); handleDrop(bucket, idx); } : undefined}
                   className={`rounded-2xl py-2 px-2.5 flex items-center justify-between gap-2 transition-all duration-150 ${
                     isMouseDrag 
@@ -352,15 +352,19 @@ export default function Step2Refine({
                       <h3 className={`text-sm font-bold leading-tight truncate ${isTouchDrag ? 'text-white font-extrabold' : 'text-slate-900'}`}>
                         {song.title}
                       </h3>
-                      <span className={`text-[10px] font-semibold block truncate ${isTouchDrag ? 'text-slate-300' : 'text-slate-500'}`}>
-                        {song.album} ({song.year})
-                      </span>
+                      <div className="flex items-center gap-1.5 min-w-0 mt-0.5">
+                        {/* FORCED TINY INLINE PLAY BUTTON CONTAINER */}
+                        <div className="shrink-0 flex items-center justify-center w-3.5 h-3.5 [&_button]:!w-3.5 [&_button]:!h-3.5 [&_button]:!p-0 [&_button]:!min-w-0 [&_button]:!min-h-0 [&_button]:!bg-transparent [&_button]:!border-none [&_svg]:!w-2.5 [&_svg]:!h-2.5">
+                          <AudioPreviewButton title={song.title} />
+                        </div>
+                        <span className={`text-[10px] font-semibold truncate ${isTouchDrag ? 'text-slate-300' : 'text-slate-500'}`}>
+                          {song.album} ({song.year})
+                        </span>
+                      </div>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-1.5 shrink-0 ml-auto">
-                    <AudioPreviewButton title={song.title} />
-
                     <div className="flex items-center gap-1">
                       {transitions.above && (
                         <button
@@ -414,7 +418,7 @@ export default function Step2Refine({
       <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-auto flex items-center gap-3">
         <button
           onClick={handleBack}
-          className="bg-white hover:bg-slate-50 text-slate-700 border-2 border-slate-200 font-black text-sm px-5 py-4 rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.2)] transition transform hover:scale-105 cursor-pointer flex items-center gap-1.5 whitespace-nowrap"
+          className="bg-slate-800 hover:bg-slate-700 text-white border-2 border-slate-700 font-black text-sm px-5 py-4 rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.2)] transition transform hover:scale-105 cursor-pointer flex items-center gap-1.5 whitespace-nowrap"
         >
           <span>←</span>
           <span>Back</span>

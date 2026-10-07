@@ -1,3 +1,4 @@
+// app/api/og/route.tsx
 import { ImageResponse } from '@vercel/og';
 import { NextRequest } from 'next/server';
 import { decodeShareData } from '@/utils/shareHelper';
@@ -17,10 +18,10 @@ export async function GET(request: NextRequest) {
     if (dataParam) {
       const decoded = decodeShareData(dataParam);
       if (decoded) {
-        name = decoded.n ? decoded.n.slice(0, 20) : 'A Fan';
-        anthem = decoded.t ? decoded.t.slice(0, 40) : 'Undecided';
-        album = decoded.a ? decoded.a.slice(0, 30) : 'Unknown Album';
-        vibe = decoded.v ? decoded.v.slice(0, 30) : 'Weezer Scientist';
+        if (decoded.n) name = decoded.n.slice(0, 20);
+        if (decoded.t) anthem = decoded.t.slice(0, 40);
+        if (decoded.a) album = decoded.a.slice(0, 30);
+        if (decoded.v) vibe = decoded.v.slice(0, 30);
       }
     }
 
@@ -35,12 +36,24 @@ export async function GET(request: NextRequest) {
             alignItems: 'center',
             justifyContent: 'center',
             backgroundColor: '#0f172a',
-            backgroundImage: 'linear-gradient(to bottom right, #0072CE, #0f172a)',
             color: 'white',
             fontFamily: 'sans-serif',
             padding: '40px',
+            position: 'relative',
           }}
         >
+          {/* Top Blue Accent Line */}
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: '12px',
+              backgroundColor: '#0072CE',
+            }}
+          />
+
           {/* Header */}
           <div
             style={{
@@ -48,69 +61,75 @@ export async function GET(request: NextRequest) {
               color: '#fbbf24',
               textTransform: 'uppercase',
               letterSpacing: '4px',
-              marginBottom: '30px',
+              marginBottom: '24px',
               fontWeight: 900,
+              display: 'flex',
             }}
           >
-            {name}&apos;s Weezer Taste DNA
+            {name}'s Weezer Taste DNA
           </div>
 
-          {/* Main Card */}
+          {/* Main Card Container */}
           <div
             style={{
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              backgroundColor: 'rgba(255, 255, 255, 0.1)',
-              padding: '40px 60px',
-              borderRadius: '30px',
+              backgroundColor: '#1e293b',
+              padding: '36px 50px',
+              borderRadius: '24px',
               width: '85%',
-              border: '2px solid rgba(255, 255, 255, 0.2)',
-              boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
+              border: '2px solid #334155',
             }}
           >
             <div
               style={{
-                fontSize: 24,
+                fontSize: 22,
                 color: '#93c5fd',
                 textTransform: 'uppercase',
                 letterSpacing: '2px',
-                marginBottom: '10px',
+                marginBottom: '8px',
                 fontWeight: 700,
+                display: 'flex',
               }}
             >
               Top Anthem
             </div>
             <div
               style={{
-                fontSize: 64,
+                fontSize: 56,
                 fontWeight: 900,
-                marginBottom: '40px',
+                color: '#ffffff',
+                marginBottom: '32px',
                 textAlign: 'center',
                 lineHeight: 1.1,
+                display: 'flex',
               }}
             >
-              &quot;{anthem}&quot;
+              "{anthem}"
             </div>
 
             <div
               style={{
-                fontSize: 24,
+                fontSize: 22,
                 color: '#93c5fd',
                 textTransform: 'uppercase',
                 letterSpacing: '2px',
-                marginBottom: '10px',
+                marginBottom: '8px',
                 fontWeight: 700,
+                display: 'flex',
               }}
             >
               Top Album
             </div>
             <div
               style={{
-                fontSize: 48,
+                fontSize: 42,
                 fontWeight: 800,
-                marginBottom: '40px',
+                color: '#ffffff',
+                marginBottom: '32px',
                 textAlign: 'center',
+                display: 'flex',
               }}
             >
               {album}
@@ -121,18 +140,25 @@ export async function GET(request: NextRequest) {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '15px',
-                backgroundColor: 'rgba(0,0,0,0.3)',
-                padding: '15px 30px',
+                backgroundColor: '#0f172a',
+                padding: '12px 28px',
                 borderRadius: '100px',
+                border: '1px solid #334155',
               }}
             >
-              <span style={{ fontSize: 24, color: '#94a3b8', fontWeight: 700 }}>
+              <span
+                style={{
+                  fontSize: 22,
+                  color: '#94a3b8',
+                  fontWeight: 700,
+                  marginRight: '10px',
+                }}
+              >
                 Vibe:
               </span>
               <span
                 style={{
-                  fontSize: 32,
+                  fontSize: 28,
                   fontWeight: 800,
                   color: '#fbbf24',
                   textTransform: 'uppercase',
@@ -147,18 +173,22 @@ export async function GET(request: NextRequest) {
           <div
             style={{
               position: 'absolute',
-              bottom: 35,
-              fontSize: 20,
-              color: 'rgba(255,255,255,0.5)',
+              bottom: 30,
+              fontSize: 18,
+              color: '#64748b',
               fontWeight: 700,
               letterSpacing: '2px',
+              display: 'flex',
             }}
           >
             FAMDUEL.COM/WEEZER
           </div>
         </div>
       ),
-      { width: 1200, height: 630 }
+      {
+        width: 1200,
+        height: 630,
+      }
     );
   } catch (e: any) {
     return new Response('Failed to generate image', { status: 500 });

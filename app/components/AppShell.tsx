@@ -4,7 +4,13 @@ import React, { useState, useEffect } from 'react';
 import { useWeezer, AppStep } from '../context/WeezerContext';
 import { FlyingWIcon } from './SharedUI';
 
-export default function AppShell({ children }: { children: React.ReactNode }) {
+export default function AppShell({
+  children,
+  fullWidth = false,
+}: {
+  children: React.ReactNode;
+  fullWidth?: boolean;
+}) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [hasViewedWrapped, setHasViewedWrapped] = useState(false);
 
@@ -125,31 +131,31 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-slate-100 font-sans text-slate-900 flex flex-col selection:bg-amber-300 selection:text-slate-950">
-      {/* WEEZER BLUE TOP HEADER */}
+      {/* WEEZER BLUE TOP HEADER (SCALED UP FOR DESKTOP) */}
       <header className="bg-[#0072CE] border-b border-blue-600 sticky top-0 z-30 shadow-md">
-        <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 lg:h-16 flex items-center justify-between">
           <button
             onClick={() => navigateTo(userId ? 'dashboard' : 'splash')}
-            className="flex items-center gap-2.5 text-left cursor-pointer group"
+            className="flex items-center gap-2.5 lg:gap-3 text-left cursor-pointer group"
           >
-            <div className="w-8 h-8 bg-white text-[#0072CE] rounded-xl flex items-center justify-center shadow-xs group-hover:bg-blue-50 transition-colors">
-              <FlyingWIcon className="w-5 h-5 text-[#0072CE]" />
+            <div className="w-8 h-8 lg:w-9 lg:h-9 bg-white text-[#0072CE] rounded-xl flex items-center justify-center shadow-xs group-hover:bg-blue-50 transition-colors">
+              <FlyingWIcon className="w-5 h-5 lg:w-6 lg:h-6 text-[#0072CE]" />
             </div>
             <div>
-              <span className="text-sm font-black tracking-tight text-white block leading-none">
+              <span className="text-sm lg:text-base font-black tracking-tight text-white block leading-none">
                 All My Favorite Songs
               </span>
-              <span className="text-[9px] font-bold text-blue-100 uppercase tracking-widest block mt-0.5">
+              <span className="text-[9px] lg:text-[10px] font-bold text-blue-100 uppercase tracking-widest block mt-0.5">
                 Weezer Canon Ranker
               </span>
             </div>
           </button>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 lg:gap-3">
             {userId && pendingRequestsCount > 0 && (
               <button
                 onClick={() => navigateTo('friends')}
-                className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs px-2.5 py-1 rounded-full flex items-center gap-1 cursor-pointer transition-all shadow-xs"
+                className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs px-3 py-1.5 rounded-full flex items-center gap-1.5 cursor-pointer transition-all shadow-xs"
               >
                 <span>👥</span>
                 <span>{pendingRequestsCount}</span>
@@ -158,11 +164,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
             <button
               onClick={() => setMenuOpen(true)}
-              className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+              className="w-9 h-9 lg:w-10 lg:h-10 flex items-center justify-center rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
               aria-label="Open Navigation Menu"
             >
               <svg
-                className="w-5 h-5"
+                className="w-5 h-5 lg:w-6 lg:h-6"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="2.5"
@@ -179,14 +185,18 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </header>
 
-      {/* MAIN CONTENT */}
-      <main className="flex-1 max-w-3xl w-full mx-auto p-4 sm:p-6">
+      {/* MAIN CONTENT AREA */}
+      <main
+        className={`flex-1 w-full mx-auto p-4 sm:p-6 lg:p-8 transition-all duration-300 ${
+          fullWidth ? 'max-w-7xl' : 'max-w-5xl lg:max-w-6xl'
+        }`}
+      >
         {children}
       </main>
 
       {/* GLOBAL VISIBLE PAGE FOOTER */}
       <footer className="border-t border-slate-200/80 bg-white py-6 mt-auto text-center">
-        <div className="max-w-3xl mx-auto px-4 space-y-2">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-2">
           <div className="flex items-center justify-center gap-2">
             <div className="w-5 h-5 bg-[#0072CE] text-white rounded-md flex items-center justify-center">
               <FlyingWIcon className="w-3 h-3 text-white" />
@@ -196,7 +206,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             </span>
           </div>
 
-          <p className="text-[10px] font-medium text-slate-400 max-w-md mx-auto leading-relaxed">
+          <p className="text-[10px] font-medium text-slate-400 max-w-xl mx-auto leading-relaxed">
             This is an unofficial, non-commercial fan application. It is not affiliated with, endorsed by, sponsored by, or associated with Weezer, Crush Music, Atlantic Records, or Geffen Records. All song titles, album artwork, and trademarks belong to their respective owners.
           </p>
         </div>
@@ -212,7 +222,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
           <div className="relative w-full max-w-xs bg-white h-full shadow-2xl border-l border-slate-200 flex flex-col justify-between overflow-y-auto z-10 animate-in slide-in-from-right duration-300">
             <div>
-              {/* DRAWER HEADER */}
               <div className="p-4 border-b border-slate-100 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-7 h-7 bg-[#0072CE] text-white rounded-lg flex items-center justify-center">
@@ -232,10 +241,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 </button>
               </div>
 
-              {/* LOGGED IN USER SECTION */}
               {userId && (
                 <>
-                  {/* USER NAME (PLAIN CONTAINER) */}
                   <div className="mx-4 mt-4 px-1 py-1 flex items-center justify-between">
                     <div className="min-w-0">
                       <span className="text-[10px] font-black uppercase tracking-wider text-[#0072CE] block">
@@ -258,7 +265,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                     </button>
                   </div>
 
-                  {/* FAN FRIENDS CARD MODULE */}
                   <div className="mx-4 my-3 p-3.5 bg-blue-50/50 border border-blue-200/80 rounded-2xl space-y-2">
                     <div className="flex items-center justify-between">
                       <button
@@ -300,7 +306,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 </>
               )}
 
-              {/* GUEST MODE CARD */}
               {!userId && (
                 <div className="mx-4 my-3 p-4 bg-amber-50 border border-amber-200/80 rounded-2xl space-y-3">
                   <div className="flex items-center justify-start">
@@ -344,7 +349,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 </div>
               )}
 
-              {/* NAVIGATION LINKS */}
               <nav className="p-2 space-y-1">
                 {visibleNavItems.map((item) => {
                   const isActive = step === item.step;
@@ -395,7 +399,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               </nav>
             </div>
 
-            {/* DRAWER FOOTER */}
             <div className="p-4 border-t border-slate-100 text-center">
               <p className="text-[10px] font-bold text-slate-300">
                 All My Favorite Songs • 2026 Canon

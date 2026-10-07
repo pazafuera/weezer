@@ -57,6 +57,12 @@ interface WeezerContextType {
   bucketRanks: Record<BucketType, Song[]>;
   masterList: Song[];
 
+  // Cached Community Data State (Fix B)
+  communityMasterLists: Song[][];
+  communityTriageMaps: Record<string, BucketType>[];
+  loadingCommunity: boolean;
+  refreshCommunityData: () => Promise<void>;
+
   // Actions
   syncRankingsToDatabase: (map: Record<string, BucketType>, master: Song[]) => Promise<void>;
   updateAndSyncBucketRanks: (
@@ -147,10 +153,46 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   });
   const [masterList, setMasterList] = useState<Song[]>([]);
 
+  // Cached Community Data State (Fix B)
+  const [communityMasterLists, setCommunityMasterLists] = useState<Song[][]>([]);
+  const [communityTriageMaps, setCommunityTriageMaps] = useState<Record<string, BucketType>[]>([]);
+  const [loadingCommunity, setLoadingCommunity] = useState<boolean>(false);
+
   const setStep = (newStep: AppStep) => {
     setStepState(newStep);
     if (typeof window !== 'undefined') {
       window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    }
+  };
+
+  // FETCH & CACHE COMMUNITY DATA IN BACKGROUND
+  const refreshCommunityData = async () => {
+    setLoadingCommunity(true);
+    try {
+      const { data, error } = await supabase
+        .from('weezer_rankings')
+        .select('master_list, triage_map');
+
+      if (!error && data) {
+        const cleanRankings: Song[][] = [];
+        const cleanTriageMaps: Record<string, BucketType>[] = [];
+
+        data.forEach((row) => {
+          if (Array.isArray(row.master_list) && row.master_list.length > 0) {
+            cleanRankings.push(row.master_list);
+          }
+          if (row.triage_map && Object.keys(row.triage_map).length > 0) {
+            cleanTriageMaps.push(row.triage_map);
+          }
+        });
+
+        setCommunityMasterLists(cleanRankings);
+        setCommunityTriageMaps(cleanTriageMaps);
+      }
+    } catch (err) {
+      console.error('Error fetching background community data:', err);
+    } finally {
+      setLoadingCommunity(false);
     }
   };
 
@@ -163,6 +205,11 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         setStepState(urlStep);
       }
     }
+  }, []);
+
+  // Fetch community data once on initial startup
+  useEffect(() => {
+    refreshCommunityData();
   }, []);
 
   useEffect(() => {
@@ -496,6 +543,10 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         setTriageMap,
         bucketRanks,
         masterList,
+        communityMasterLists,
+        communityTriageMaps,
+        loadingCommunity,
+        refreshCommunityData,
         syncRankingsToDatabase,
         updateAndSyncBucketRanks,
         moveMasterSong,

@@ -7,19 +7,32 @@ export interface ShareData {
   }
   
   export function encodeShareData(data: ShareData): string {
-    if (typeof window === 'undefined') {
-      return Buffer.from(JSON.stringify(data)).toString('base64url');
+    const json = JSON.stringify(data);
+    try {
+      if (typeof window !== 'undefined' && window.btoa) {
+        return encodeURIComponent(btoa(encodeURIComponent(json)));
+      }
+      return encodeURIComponent(Buffer.from(json).toString('base64'));
+    } catch (e) {
+      return encodeURIComponent(json);
     }
-    return btoa(encodeURIComponent(JSON.stringify(data)));
   }
   
   export function decodeShareData(encoded: string): ShareData | null {
     try {
-      if (typeof window === 'undefined') {
-        return JSON.parse(Buffer.from(encoded, 'base64url').toString('utf-8'));
+      const decodedUri = decodeURIComponent(encoded);
+      let jsonStr = '';
+      if (typeof window !== 'undefined' && window.atob) {
+        jsonStr = decodeURIComponent(atob(decodedUri));
+      } else {
+        jsonStr = decodeURIComponent(Buffer.from(decodedUri, 'base64').toString('utf-8'));
       }
-      return JSON.parse(decodeURIComponent(atob(encoded)));
+      return JSON.parse(jsonStr);
     } catch (e) {
-      return null;
+      try {
+        return JSON.parse(decodeURIComponent(encoded));
+      } catch {
+        return null;
+      }
     }
   }

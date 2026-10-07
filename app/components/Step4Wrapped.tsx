@@ -978,432 +978,165 @@ export default function Step4Wrapped({
     : stats.rankedAlbums.slice(0, 5);
 
   return (
-    <div className="space-y-16 sm:space-y-20 pb-32 animate-in fade-in slide-in-from-bottom-4 duration-700 max-w-full overflow-hidden">
-      <div className="pt-2 flex items-center justify-between px-2">
-        <button
-          onClick={() => setStep('master')}
-          className="text-xs font-black text-slate-400 hover:text-slate-600 transition-colors flex items-center gap-1 cursor-pointer"
-        >
-          ← Edit Final Rankings
-        </button>
-
-        <button
-          onClick={() => setStep('fan_stats')}
-          className="text-xs font-black text-[#0072CE] hover:text-blue-700 transition-colors flex items-center gap-1 cursor-pointer"
-        >
-          Fan Stats →
-        </button>
+    <div className="min-h-screen bg-slate-950 text-slate-100 py-6 sm:py-10 lg:py-16 px-2 sm:px-6 relative overflow-hidden selection:bg-[#0072CE] selection:text-white">
+      {/* DESKTOP AMBIENT STAGE BACKDROP (Invisible on Mobile) */}
+      <div className="hidden lg:block pointer-events-none fixed inset-0 z-0 overflow-hidden opacity-30">
+        <div className="absolute -top-40 -left-40 w-[700px] h-[600px] bg-[#0072CE]/35 rounded-full blur-[160px]" />
+        <div className="absolute -bottom-40 -right-40 w-[700px] h-[600px] bg-amber-500/25 rounded-full blur-[160px]" />
+        <div className="absolute inset-0 bg-[radial-gradient(#334155_1px,transparent_1px)] [background-size:32px_32px] opacity-25" />
       </div>
 
-      <div className="text-center px-4 pt-2">
-        <h1 className="text-5xl sm:text-6xl font-black text-slate-950 tracking-tighter mb-2">
-          The Sweater <span className="text-[#0072CE]">Thread</span>
-        </h1>
+      {/* FULL-WIDTH RESPONSIVE APP SHELL CONTAINER */}
+      <main className="relative z-10 w-full max-w-2xl lg:max-w-6xl xl:max-w-7xl mx-auto bg-slate-900/90 backdrop-blur-xl border border-slate-800/80 rounded-[2.5rem] p-4 sm:p-8 lg:p-12 shadow-[0_0_100px_rgba(0,114,206,0.18)] space-y-12 lg:space-y-16">
+        <div className="pt-2 flex items-center justify-between px-2">
+          <button
+            onClick={() => setStep('master')}
+            className="text-xs font-black text-slate-400 hover:text-slate-200 transition-colors flex items-center gap-1 cursor-pointer"
+          >
+            ← Edit Final Rankings
+          </button>
 
-        <p className="text-sm font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap truncate">
-          Your Weezer Taste, Unraveled.
-        </p>
-      </div>
-
-      {/* 1. HERO */}
-      <div>
-        <div className="bg-gradient-to-b from-[#0072CE] via-[#005fA3] to-slate-900 rounded-3xl p-8 sm:p-12 text-center shadow-2xl border border-[#0072CE]/30 relative overflow-hidden mx-4 sm:mx-0">
-          <span className="text-[10px] font-black uppercase tracking-widest text-amber-300 block mb-4">
-            Your Anthem
-          </span>
-
-          <h2 className="text-4xl sm:text-6xl font-black text-white tracking-tighter leading-tight mb-3 drop-shadow-lg">
-            "{top10[0]?.title || 'Undecided'}"
-          </h2>
-
-          {top10[0] && (
-            <p className="text-sm font-bold text-blue-200 uppercase tracking-widest">
-              {ALBUMS_BY_ID[
-                top10[0].albumId || ALBUM_NAME_TO_ID[top10[0].album]
-              ]?.name || top10[0].album}{' '}
-              ({top10[0].year})
-            </p>
-          )}
-        </div>
-      </div>
-
-      {/* 2. ARCHETYPES CAROUSEL */}
-      <div>
-        <h3 className="text-2xl sm:text-3xl font-black text-slate-900 text-center mb-6 tracking-tight truncate">
-          Fandom Archetype
-        </h3>
-
-        <div
-          ref={archScrollRef}
-          onScroll={handleArchScroll}
-          className="flex gap-4 overflow-x-auto snap-x snap-mandatory px-4 pb-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] items-stretch"
-        >
-          {stats.scoredArchetypes.map((arch, idx) => (
-            <React.Fragment key={arch.id}>
-              <div
-                className={`w-[90vw] sm:w-[400px] shrink-0 snap-center rounded-3xl p-6 sm:p-8 text-center border-2 transition-all relative overflow-hidden flex flex-col justify-center ${
-                  idx === 0
-                    ? 'bg-white border-[#0072CE]/30 shadow-lg'
-                    : 'bg-slate-50 border-slate-200 opacity-80'
-                }`}
-              >
-                {idx === 0 ? (
-                  <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-amber-400 text-slate-950 text-[10px] font-black uppercase px-4 py-1.5 rounded-full tracking-widest z-10 whitespace-nowrap">
-                    Your Match
-                  </div>
-                ) : (
-                  <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-slate-200 text-slate-600 text-[9px] font-black uppercase px-3 py-1 rounded-full tracking-widest shadow-sm z-10 whitespace-nowrap">
-                    {Math.round(arch.score)}% Similarity
-                  </div>
-                )}
-
-                <div
-                  className={`text-6xl ${
-                    idx === 0 ? 'mb-6 mt-8' : 'mb-4 mt-8'
-                  } drop-shadow-sm`}
-                >
-                  {arch.emoji}
-                </div>
-
-                <h3
-                  className={`text-2xl font-black mb-3 tracking-tight truncate ${arch.color}`}
-                >
-                  {arch.name}
-                </h3>
-
-                <p className="text-sm font-bold text-slate-500 leading-relaxed px-2">
-                  {arch.desc}
-                </p>
-              </div>
-
-              {idx === 0 && (
-                <div
-                  onClick={() => scrollToArch(1)}
-                  className="w-[30vw] sm:w-[140px] shrink-0 snap-center rounded-3xl flex flex-col items-center justify-center border-2 border-slate-700 bg-slate-800 text-slate-300 cursor-pointer hover:bg-slate-700 transition-all shadow-md"
-                >
-                  <span className="text-3xl mb-3">👀</span>
-                  <span className="text-xs font-black uppercase tracking-widest text-center leading-snug">
-                    Explore
-                    <br />
-                    Other
-                    <br />
-                    Matches
-                  </span>
-                </div>
-              )}
-            </React.Fragment>
-          ))}
+          <button
+            onClick={() => setStep('fan_stats')}
+            className="text-xs font-black text-[#0072CE] hover:text-blue-400 transition-colors flex items-center gap-1 cursor-pointer"
+          >
+            Fan Stats →
+          </button>
         </div>
 
-        <div className="flex items-center justify-center gap-2 mt-2 mb-4">
-          {Array.from({
-            length: stats.scoredArchetypes.length + 1,
-          }).map((_, i) => (
-            <button
-              key={i}
-              onClick={() => scrollToArch(i)}
-              className={`h-2.5 rounded-full transition-all duration-300 cursor-pointer ${
-                activeArchIndex === i
-                  ? 'w-8 bg-[#0072CE]'
-                  : 'w-2.5 bg-slate-300 hover:bg-slate-400'
-              }`}
-            />
-          ))}
+        <div className="text-center px-4 pt-2">
+          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black text-white tracking-tighter mb-2">
+            The Sweater <span className="text-[#0072CE]">Thread</span>
+          </h1>
+
+          <p className="text-sm font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap truncate">
+            Your Weezer Taste, Unraveled.
+          </p>
         </div>
-      </div>
 
-      {/* VIBE ENCAPSULATED */}
-      <div>
-        <div className="bg-slate-950 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl text-center mx-4 sm:mx-0 overflow-hidden">
-          <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tight mb-6">
-            Your Vibe, Encapsulated
-          </h3>
+        {/* 1. HERO ROW: ANTHEM + VIBE ENCAPSULATED (SIDE-BY-SIDE ON DESKTOP) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+          {/* ANTHEM CARD (7 COLS ON DESKTOP) */}
+          <div className="lg:col-span-7 bg-gradient-to-b from-[#0072CE] via-[#005fA3] to-slate-900 rounded-3xl p-8 sm:p-12 text-center shadow-2xl border border-[#0072CE]/30 relative overflow-hidden flex flex-col justify-center">
+            <span className="text-[10px] font-black uppercase tracking-widest text-amber-300 block mb-4">
+              Your Anthem
+            </span>
 
-          <div className="w-full aspect-video rounded-2xl overflow-hidden border-4 border-slate-800 shadow-inner bg-slate-900">
-            <img
-              src={stats.finalGif}
-              alt="Weezer Vibe"
-              className="w-full h-full object-cover"
-            />
+            <h2 className="text-4xl sm:text-6xl lg:text-7xl font-black text-white tracking-tighter leading-tight mb-3 drop-shadow-lg">
+              "{top10[0]?.title || 'Undecided'}"
+            </h2>
+
+            {top10[0] && (
+              <p className="text-sm font-bold text-blue-200 uppercase tracking-widest">
+                {ALBUMS_BY_ID[
+                  top10[0].albumId || ALBUM_NAME_TO_ID[top10[0].album]
+                ]?.name || top10[0].album}{' '}
+                ({top10[0].year})
+              </p>
+            )}
           </div>
-        </div>
-      </div>
 
-      {/* THE CORE FOUR */}
-      {stats.coreFour.length === 4 && (
-        <div>
-          <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm mx-4 sm:mx-0">
-            <h3 className="text-2xl sm:text-3xl font-black text-center text-slate-950 mb-3 tracking-tight truncate">
-              The Core Four
+          {/* VIBE ENCAPSULATED CARD (5 COLS ON DESKTOP) */}
+          <div className="lg:col-span-5 bg-slate-950 border border-slate-800 rounded-3xl p-6 shadow-xl text-center flex flex-col justify-center overflow-hidden">
+            <h3 className="text-2xl font-black text-white tracking-tight mb-4">
+              Your Vibe, Encapsulated
             </h3>
 
-            <p className="text-xs font-bold text-center text-slate-500 mb-8 max-w-sm mx-auto">
-              If your Weezer fandom was a Mount Rushmore, these are the four
-              distinct tracks carving out your identity.
-            </p>
-
-            <div className="grid grid-cols-2 gap-4">
-              {stats.coreFour.map((item, i) => {
-                const resolvedId =
-                  item.song.albumId ||
-                  ALBUM_NAME_TO_ID[item.song.album] ||
-                  'unknown';
-
-                return (
-                  <div key={i} className="flex flex-col text-center">
-                    <div className="w-full aspect-square rounded-xl shadow-md overflow-hidden mb-3 border border-slate-200 relative bg-slate-800">
-                      <AlbumArtwork
-                        albumId={resolvedId}
-                        className="w-full h-full object-cover"
-                      />
-
-                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 to-transparent" />
-
-                      <div className="absolute bottom-2 left-2 right-2 text-left">
-                        <span className="text-[9px] font-black uppercase text-amber-400 block tracking-wider drop-shadow-md">
-                          {item.label}
-                        </span>
-
-                        <h4 className="text-sm font-black text-white drop-shadow-md leading-tight">
-                          {item.song.title}
-                        </h4>
-                      </div>
-                    </div>
-
-                    <p className="text-xs font-bold text-slate-500 leading-snug px-1">
-                      {item.desc}
-                    </p>
-                  </div>
-                );
-              })}
+            <div className="w-full aspect-video rounded-2xl overflow-hidden border-4 border-slate-800 shadow-inner bg-slate-900 flex-1">
+              <img
+                src={stats.finalGif}
+                alt="Weezer Vibe"
+                className="w-full h-full object-cover"
+              />
             </div>
           </div>
         </div>
-      )}
 
-      {/* 3. TASTE DNA */}
-      <div>
-        <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm mx-4 sm:mx-0">
-          <div className="text-center mb-8">
-            <h3 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight mb-2 truncate">
-              Taste DNA
+        {/* 2. ARCHETYPES CAROUSEL WITH DESKTOP ARROWS */}
+        <div>
+          <div className="flex items-center justify-between mb-6 px-2">
+            <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tight truncate">
+              Fandom Archetype
             </h3>
 
-            <p className="text-xs font-bold text-slate-500 max-w-xs mx-auto leading-relaxed">
-              The underlying traits and biases driving your rankings. Tap to
-              reveal definitions.
-            </p>
+            {/* Desktop Carousel Arrows */}
+            <div className="hidden lg:flex items-center gap-2">
+              <button
+                onClick={() => scrollToArch(Math.max(0, activeArchIndex - 1))}
+                disabled={activeArchIndex === 0}
+                className="w-10 h-10 rounded-full bg-slate-800 hover:bg-slate-700 text-white flex items-center justify-center font-black transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer border border-slate-700"
+              >
+                ←
+              </button>
+              <button
+                onClick={() =>
+                  scrollToArch(
+                    Math.min(stats.scoredArchetypes.length, activeArchIndex + 1)
+                  )
+                }
+                disabled={activeArchIndex === stats.scoredArchetypes.length}
+                className="w-10 h-10 rounded-full bg-slate-800 hover:bg-slate-700 text-white flex items-center justify-center font-black transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer border border-slate-700"
+              >
+                →
+              </button>
+            </div>
           </div>
-
-          <div className="space-y-6 max-w-md mx-auto pt-2">
-            {stats.dnaScores.map((score) => (
-              <div key={score.label} className="relative">
-                <div
-                  className="flex flex-col cursor-pointer group"
-                  onClick={() =>
-                    setActiveTooltip(
-                      activeTooltip === score.label ? null : score.label
-                    )
-                  }
-                >
-                  <div className="text-center mb-2">
-                    <span className="text-xs sm:text-sm font-black text-slate-700 uppercase tracking-widest inline-flex items-center gap-1.5 group-hover:text-[#0072CE] transition-colors">
-                      {score.label}
-
-                      <svg
-                        className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#0072CE]"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2.5}
-                          d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
-                    </span>
-                  </div>
-
-                  <div className="relative w-full h-1.5 bg-slate-200 rounded-full my-1">
-                    <div
-                      className={`absolute top-1/2 -translate-y-1/2 w-5 h-5 rounded-full shadow-md border-[3px] border-white transition-all duration-1000 z-10 ${score.color}`}
-                      style={{
-                        left: `calc(${score.value}% - 10px)`,
-                      }}
-                    />
-                  </div>
-
-                  <div className="flex justify-between mt-2">
-                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                      {score.left}
-                    </span>
-
-                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                      {score.right}
-                    </span>
-                  </div>
-                </div>
-
-                {activeTooltip === score.label && (
-                  <div className="bg-slate-900 text-white text-[10px] font-bold p-3 rounded-xl mt-3 shadow-lg animate-in fade-in slide-in-from-top-2 relative z-20 text-center">
-                    <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-900 rotate-45" />
-                    {score.desc}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* 4. THE GREAT DEBATE */}
-      <div>
-        <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm relative overflow-hidden mx-4 sm:mx-0">
-          <h3 className="text-2xl sm:text-3xl font-black text-center text-slate-950 mb-3 tracking-tight truncate">
-            The Great Debate
-          </h3>
-
-          <p className="text-xs font-bold text-center text-slate-500 mb-10 max-w-xs mx-auto">
-            The ultimate dividing line. Do you prefer the tight pop hooks of
-            Blue, or the abrasive confessional of Pinkerton?
-          </p>
-
-          <div className="flex items-center justify-between mb-2">
-            <h4 className="text-xs font-black text-[#0072CE] uppercase tracking-widest w-1/4 text-center">
-              Blue
-            </h4>
-
-            <h4 className="text-xs font-black text-[#8C6239] uppercase tracking-widest w-1/4 text-center">
-              Pinkerton
-            </h4>
-          </div>
-
-          <div className="relative h-6 bg-slate-100 rounded-full mb-8 border border-slate-200 flex items-center mt-2 mx-4">
-            <div className="absolute left-1/2 top-[-10px] bottom-[-10px] w-[3px] bg-slate-300 z-0 -translate-x-1/2 rounded-full" />
-
-            <div className="absolute left-0 w-6 h-6 bg-[#0072CE] rounded-full z-10 -translate-x-3 shadow-md border-2 border-white" />
-
-            <div className="absolute right-0 w-6 h-6 bg-[#8C6239] rounded-full z-10 translate-x-3 shadow-md border-2 border-white" />
-
-            {stats.tugOfWarPct < 50 && (
-              <div
-                className="absolute h-full bg-[#0072CE] z-0 transition-all duration-1000"
-                style={{
-                  left: `${stats.tugOfWarPct}%`,
-                  right: '50%',
-                  borderTopLeftRadius: '9999px',
-                  borderBottomLeftRadius: '9999px',
-                }}
-              />
-            )}
-
-            {stats.tugOfWarPct > 50 && (
-              <div
-                className="absolute h-full bg-[#8C6239] z-0 transition-all duration-1000"
-                style={{
-                  left: '50%',
-                  right: `${100 - stats.tugOfWarPct}%`,
-                  borderTopRightRadius: '9999px',
-                  borderBottomRightRadius: '9999px',
-                }}
-              />
-            )}
-
-            <div
-              className="absolute w-6 h-6 bg-white border-[4px] shadow-lg rounded-full transition-all duration-1000 -translate-x-1/2 z-20 flex items-center justify-center"
-              style={{
-                left: `${stats.tugOfWarPct}%`,
-                borderColor: stats.tugOfWarPct < 50 ? '#0072CE' : '#8C6239',
-              }}
-            />
-          </div>
-
-          <div className="text-center text-sm font-black text-slate-700 uppercase tracking-widest bg-slate-50 py-4 px-2 rounded-xl border border-slate-100">
-            {stats.debateDescriptor}
-          </div>
-        </div>
-      </div>
-
-      {/* 5. ERAS CAROUSEL */}
-      <div>
-        <div className="relative">
-          <h3 className="text-2xl sm:text-3xl font-black text-center text-slate-900 mb-3 tracking-tight truncate">
-            Weezer Era
-          </h3>
-
-          <p className="text-xs font-bold text-center text-slate-500 mb-6 max-w-sm mx-auto">
-            Your favorite-song era, based on your ranked tracks.
-          </p>
 
           <div
-            ref={eraScrollRef}
-            onScroll={handleEraScroll}
-            className="flex gap-4 overflow-x-auto snap-x snap-mandatory px-4 pb-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] items-stretch"
+            ref={archScrollRef}
+            onScroll={handleArchScroll}
+            className="flex gap-4 overflow-x-auto snap-x snap-mandatory px-2 pb-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] items-stretch"
           >
-            {stats.sortedEras.map((era, idx) => (
-              <React.Fragment key={era.id}>
+            {stats.scoredArchetypes.map((arch, idx) => (
+              <React.Fragment key={arch.id}>
                 <div
-                  className={`w-[85vw] sm:w-[360px] shrink-0 snap-center rounded-3xl p-6 sm:p-8 transition-all relative overflow-hidden flex flex-col justify-between shadow-lg ${
-                    era.color
-                  } ${idx !== 0 && 'opacity-90'}`}
+                  className={`w-[88vw] sm:w-[380px] lg:w-[420px] shrink-0 snap-center rounded-3xl p-6 sm:p-8 text-center border-2 transition-all relative overflow-hidden flex flex-col justify-center ${
+                    idx === 0
+                      ? 'bg-slate-800/90 border-[#0072CE]/60 shadow-xl'
+                      : 'bg-slate-900/60 border-slate-800 opacity-80'
+                  }`}
                 >
                   {idx === 0 ? (
-                    <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white text-slate-900 text-[10px] font-black uppercase px-4 py-1.5 rounded-full tracking-widest shadow-sm whitespace-nowrap">
-                      Your Era
+                    <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-amber-400 text-slate-950 text-[10px] font-black uppercase px-4 py-1.5 rounded-full tracking-widest z-10 whitespace-nowrap">
+                      Your Match
                     </div>
                   ) : (
-                    <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-black/20 text-white text-[9px] font-black uppercase px-3 py-1 rounded-full tracking-widest shadow-sm whitespace-nowrap">
-                      {era.matchScore}% Match
+                    <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-slate-800 text-slate-400 text-[9px] font-black uppercase px-3 py-1 rounded-full tracking-widest shadow-sm z-10 whitespace-nowrap border border-slate-700">
+                      {Math.round(arch.score)}% Similarity
                     </div>
                   )}
 
-                  <div className="text-center mt-8 mb-8">
-                    <h3
-                      className={`text-3xl font-black mb-2 tracking-tight truncate ${era.text}`}
-                    >
-                      {era.name}
-                    </h3>
-
-                    <p className={`text-sm font-bold opacity-90 ${era.text}`}>
-                      {era.subtitle}
-                    </p>
+                  <div
+                    className={`text-6xl ${
+                      idx === 0 ? 'mb-6 mt-8' : 'mb-4 mt-8'
+                    } drop-shadow-sm`}
+                  >
+                    {arch.emoji}
                   </div>
 
-                  <div className="mt-auto">
-                    <span
-                      className={`text-[9px] font-black uppercase tracking-[0.2em] block mb-3 text-center opacity-80 ${era.text}`}
-                    >
-                      {era.years}
-                    </span>
+                  <h3
+                    className={`text-2xl font-black mb-3 tracking-tight truncate ${arch.color}`}
+                  >
+                    {arch.name}
+                  </h3>
 
-                    <div className="flex h-2 w-full gap-0.5 rounded-full overflow-hidden opacity-90">
-                      {stats.allEras.map((blockEra) => (
-                        <div
-                          key={blockEra.id}
-                          className={`flex-1 h-full ${
-                            blockEra.id === era.id ? 'bg-white' : 'bg-black/20'
-                          }`}
-                        />
-                      ))}
-                    </div>
-                  </div>
+                  <p className="text-sm font-bold text-slate-300 leading-relaxed px-2">
+                    {arch.desc}
+                  </p>
                 </div>
 
                 {idx === 0 && (
                   <div
-                    onClick={() => scrollToEra(1)}
+                    onClick={() => scrollToArch(1)}
                     className="w-[30vw] sm:w-[140px] shrink-0 snap-center rounded-3xl flex flex-col items-center justify-center border-2 border-slate-700 bg-slate-800 text-slate-300 cursor-pointer hover:bg-slate-700 transition-all shadow-md"
                   >
-                    <span className="text-3xl mb-3">🎸</span>
-
+                    <span className="text-3xl mb-3">👀</span>
                     <span className="text-xs font-black uppercase tracking-widest text-center leading-snug">
                       Explore
                       <br />
                       Other
                       <br />
-                      Eras
+                      Matches
                     </span>
                   </div>
                 )}
@@ -1413,398 +1146,727 @@ export default function Step4Wrapped({
 
           <div className="flex items-center justify-center gap-2 mt-2 mb-4">
             {Array.from({
-              length: stats.sortedEras.length + 1,
+              length: stats.scoredArchetypes.length + 1,
             }).map((_, i) => (
               <button
                 key={i}
-                onClick={() => scrollToEra(i)}
+                onClick={() => scrollToArch(i)}
                 className={`h-2.5 rounded-full transition-all duration-300 cursor-pointer ${
-                  activeEraIndex === i
+                  activeArchIndex === i
                     ? 'w-8 bg-[#0072CE]'
-                    : 'w-2.5 bg-slate-300 hover:bg-slate-400'
+                    : 'w-2.5 bg-slate-700 hover:bg-slate-600'
                 }`}
               />
             ))}
           </div>
         </div>
-      </div>
 
-      {/* TEMPORAL LOYALTY CURVE */}
-      <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm mx-4 sm:mx-0">
-        <div className="text-center mb-6">
-          <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 block mb-1">
-            Temporal Loyalty
-          </span>
+        {/* THE CORE FOUR (EXPANDS TO 4 COLUMNS ON DESKTOP) */}
+        {stats.coreFour.length === 4 && (
+          <div>
+            <div className="bg-white text-slate-950 border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm">
+              <h3 className="text-2xl sm:text-3xl font-black text-center text-slate-950 mb-3 tracking-tight truncate">
+                The Core Four
+              </h3>
 
-          <h3 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight mb-2">
-            Nostalgia vs. Discovery
-          </h3>
+              <p className="text-xs font-bold text-center text-slate-500 mb-8 max-w-sm mx-auto">
+                If your Weezer fandom was a Mount Rushmore, these are the four
+                distinct tracks carving out your identity.
+              </p>
 
-          <p className="text-xs font-bold text-slate-500 max-w-xs mx-auto leading-relaxed">
-            The volume of songs in your ranked list by decade.
-          </p>
-        </div>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                {stats.coreFour.map((item, i) => {
+                  const resolvedId =
+                    item.song.albumId ||
+                    ALBUM_NAME_TO_ID[item.song.album] ||
+                    'unknown';
 
-        <div className="flex items-end justify-between gap-2 h-32 mt-8 mb-2 px-2 border-b-2 border-slate-100 pb-2">
-          {Object.entries(stats.temporalBins).map(([label, count]) => {
-            const maxVal = Math.max(...Object.values(stats.temporalBins), 1);
-            const heightPct = (count / maxVal) * 100;
+                  return (
+                    <div key={i} className="flex flex-col text-center group">
+                      <div className="w-full aspect-square rounded-xl shadow-md overflow-hidden mb-3 border border-slate-200 relative bg-slate-800 group-hover:scale-105 transition-transform duration-300">
+                        <AlbumArtwork
+                          albumId={resolvedId}
+                          className="w-full h-full object-cover"
+                        />
 
-            return (
-              <div
-                key={label}
-                className="flex-1 flex flex-col items-center justify-end gap-2 h-full"
-              >
-                <div className="w-full bg-slate-100 rounded-t-lg relative overflow-hidden transition-all duration-500 flex items-end justify-center flex-1">
-                  <div
-                    className="w-full bg-emerald-500 rounded-t-lg transition-all duration-1000 ease-out"
-                    style={{
-                      height: `${heightPct}%`,
-                    }}
-                  />
-                </div>
+                        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 to-transparent" />
 
-                <span className="text-xs font-black text-slate-400 tracking-wider shrink-0">
-                  {label}
-                </span>
+                        <div className="absolute bottom-2 left-2 right-2 text-left">
+                          <span className="text-[9px] font-black uppercase text-amber-400 block tracking-wider drop-shadow-md">
+                            {item.label}
+                          </span>
+
+                          <h4 className="text-sm font-black text-white drop-shadow-md leading-tight">
+                            {item.song.title}
+                          </h4>
+                        </div>
+                      </div>
+
+                      <p className="text-xs font-bold text-slate-500 leading-snug px-1">
+                        {item.desc}
+                      </p>
+                    </div>
+                  );
+                })}
               </div>
-            );
-          })}
-        </div>
-      </div>
+            </div>
+          </div>
+        )}
 
-      {/* 6. LISTENING AGE */}
-      <div>
-        <div className="bg-gradient-to-br from-indigo-900 to-slate-900 border border-indigo-800 rounded-3xl p-8 sm:p-10 shadow-xl relative overflow-hidden mx-4 sm:mx-0 flex flex-col items-center justify-center">
-          <h3 className="text-3xl sm:text-4xl font-black text-white mb-6 tracking-tight text-center">
-            Listening Age
-          </h3>
+        {/* 3. TASTE DNA & 4. THE GREAT DEBATE (SIDE-BY-SIDE DESKTOP GRID) */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+          {/* TASTE DNA */}
+          <div className="bg-white text-slate-950 border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm flex flex-col justify-between">
+            <div>
+              <div className="text-center mb-8">
+                <h3 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight mb-2 truncate">
+                  Taste DNA
+                </h3>
 
-          <span className="text-[11px] font-black uppercase tracking-widest text-indigo-300 block mb-6 text-center leading-relaxed">
-            You listen to Weezer as if you are
-          </span>
+                <p className="text-xs font-bold text-slate-500 max-w-xs mx-auto leading-relaxed">
+                  The underlying traits and biases driving your rankings. Tap to
+                  reveal definitions.
+                </p>
+              </div>
 
-          <div className="inline-flex flex-col items-center justify-center w-32 h-32 bg-white rounded-full shadow-[0_0_40px_rgba(255,255,255,0.2)] mb-6">
-            <span className="text-5xl font-black text-slate-900 tracking-tighter -mt-1">
-              {stats.listeningAge}
-            </span>
+              <div className="space-y-6 max-w-md mx-auto pt-2">
+                {stats.dnaScores.map((score) => (
+                  <div key={score.label} className="relative">
+                    <div
+                      className="flex flex-col cursor-pointer group"
+                      onClick={() =>
+                        setActiveTooltip(
+                          activeTooltip === score.label ? null : score.label
+                        )
+                      }
+                    >
+                      <div className="text-center mb-2">
+                        <span className="text-xs sm:text-sm font-black text-slate-700 uppercase tracking-widest inline-flex items-center gap-1.5 group-hover:text-[#0072CE] transition-colors">
+                          {score.label}
 
-            <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
-              Years Old
-            </span>
+                          <svg
+                            className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#0072CE]"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2.5}
+                              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                            />
+                          </svg>
+                        </span>
+                      </div>
+
+                      <div className="relative w-full h-1.5 bg-slate-200 rounded-full my-1">
+                        <div
+                          className={`absolute top-1/2 -translate-y-1/2 w-5 h-5 rounded-full shadow-md border-[3px] border-white transition-all duration-1000 z-10 ${score.color}`}
+                          style={{
+                            left: `calc(${score.value}% - 10px)`,
+                          }}
+                        />
+                      </div>
+
+                      <div className="flex justify-between mt-2">
+                        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                          {score.left}
+                        </span>
+
+                        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                          {score.right}
+                        </span>
+                      </div>
+                    </div>
+
+                    {activeTooltip === score.label && (
+                      <div className="bg-slate-900 text-white text-[10px] font-bold p-3 rounded-xl mt-3 shadow-lg animate-in fade-in slide-in-from-top-2 relative z-20 text-center">
+                        <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-900 rotate-45" />
+                        {score.desc}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
 
-          {/* QUIPPY BIRTH YEAR DELTA COMMENT */}
-          {ageComment && (
-            <div className="bg-indigo-950/80 border border-indigo-700/60 rounded-2xl p-4 max-w-sm text-center">
-              <p className="text-xs font-bold text-indigo-200 leading-relaxed">
-                💡 {ageComment}
+          {/* THE GREAT DEBATE */}
+          <div className="bg-white text-slate-950 border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm relative overflow-hidden flex flex-col justify-between">
+            <div>
+              <h3 className="text-2xl sm:text-3xl font-black text-center text-slate-950 mb-3 tracking-tight truncate">
+                The Great Debate
+              </h3>
+
+              <p className="text-xs font-bold text-center text-slate-500 mb-10 max-w-xs mx-auto">
+                The ultimate dividing line. Do you prefer the tight pop hooks of
+                Blue, or the abrasive confessional of Pinkerton?
               </p>
-            </div>
-          )}
-        </div>
-      </div>
 
-      {/* 7. INDEPENDENCE INDEX */}
-      <div>
-        <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm mx-4 sm:mx-0">
-          <h3 className="text-2xl sm:text-3xl font-black text-center text-slate-900 mb-2 tracking-tight truncate">
-            Independence Index
-          </h3>
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-xs font-black text-[#0072CE] uppercase tracking-widest w-1/4 text-center">
+                  Blue
+                </h4>
 
-          <p className="text-xs font-bold text-center text-slate-500 leading-relaxed mb-8">
-            How differently you order the songs you ranked compared to the
-            community.
-          </p>
+                <h4 className="text-xs font-black text-[#8C6239] uppercase tracking-widest w-1/4 text-center">
+                  Pinkerton
+                </h4>
+              </div>
 
-          {stats.independenceIndex !== null ? (
-            <>
-              <div className="relative w-full h-1.5 bg-slate-200 rounded-full mb-4 mt-2">
+              <div className="relative h-6 bg-slate-100 rounded-full mb-8 border border-slate-200 flex items-center mt-2 mx-4">
+                <div className="absolute left-1/2 top-[-10px] bottom-[-10px] w-[3px] bg-slate-300 z-0 -translate-x-1/2 rounded-full" />
+
+                <div className="absolute left-0 w-6 h-6 bg-[#0072CE] rounded-full z-10 -translate-x-3 shadow-md border-2 border-white" />
+
+                <div className="absolute right-0 w-6 h-6 bg-[#8C6239] rounded-full z-10 translate-x-3 shadow-md border-2 border-white" />
+
+                {stats.tugOfWarPct < 50 && (
+                  <div
+                    className="absolute h-full bg-[#0072CE] z-0 transition-all duration-1000"
+                    style={{
+                      left: `${stats.tugOfWarPct}%`,
+                      right: '50%',
+                      borderTopLeftRadius: '9999px',
+                      borderBottomLeftRadius: '9999px',
+                    }}
+                  />
+                )}
+
+                {stats.tugOfWarPct > 50 && (
+                  <div
+                    className="absolute h-full bg-[#8C6239] z-0 transition-all duration-1000"
+                    style={{
+                      left: '50%',
+                      right: `${100 - stats.tugOfWarPct}%`,
+                      borderTopRightRadius: '9999px',
+                      borderBottomRightRadius: '9999px',
+                    }}
+                  />
+                )}
+
                 <div
-                  className="absolute top-1/2 -translate-y-1/2 w-5 h-5 bg-[#0072CE] border-[3px] border-white rounded-full shadow-[0_0_10px_rgba(0,114,206,0.3)] transition-all duration-1000 z-10"
+                  className="absolute w-6 h-6 bg-white border-[4px] shadow-lg rounded-full transition-all duration-1000 -translate-x-1/2 z-20 flex items-center justify-center"
                   style={{
-                    left: `calc(${stats.independenceIndex}% - 10px)`,
+                    left: `${stats.tugOfWarPct}%`,
+                    borderColor: stats.tugOfWarPct < 50 ? '#0072CE' : '#8C6239',
                   }}
                 />
               </div>
-
-              <div className="flex justify-between text-xs font-black uppercase tracking-widest text-slate-400 mt-2">
-                <span>Groupie</span>
-                <span>Independent</span>
-              </div>
-
-              {stats.rankComparisonSampleSize > 0 && (
-                <p className="text-[9px] font-bold text-slate-400 text-center mt-4">
-                  Based on {stats.rankComparisonSampleSize} songs you and the
-                  community both explicitly ranked.
-                </p>
-              )}
-            </>
-          ) : (
-            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 text-center">
-              <p className="text-xs font-bold text-slate-500">
-                Need at least 2 shared ranked songs with the community to
-                compute Independence Index.
-              </p>
             </div>
-          )}
-        </div>
-      </div>
 
-      {/* 8. RANK CLASHES */}
-      <div>
-        <div className="space-y-6 mx-4 sm:mx-0">
-          {stats.biggestBetrayal ? (
-            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl">
-              <h3 className="text-2xl sm:text-3xl font-black text-center text-white mb-1 tracking-tight">
-                The Betrayal
+            <div className="text-center text-sm font-black text-slate-700 uppercase tracking-widest bg-slate-50 py-4 px-2 rounded-xl border border-slate-100">
+              {stats.debateDescriptor}
+            </div>
+          </div>
+        </div>
+
+        {/* 5. ERAS CAROUSEL WITH DESKTOP ARROWS */}
+        <div>
+          <div className="relative">
+            <div className="flex items-center justify-between mb-3 px-2">
+              <h3 className="text-2xl sm:text-3xl font-black text-[#ffffff] tracking-tight truncate">
+                Weezer Era
               </h3>
 
-              <p className="text-xs font-bold text-center text-slate-400 mb-6">
-                You ranked a fan favorite way lower.
-              </p>
-
-              <div className="bg-slate-800 p-5 rounded-2xl border border-slate-700 shadow-inner flex flex-col items-center text-center">
-                <span className="text-xl font-black text-white mb-4 px-2">
-                  {stats.biggestBetrayal.song.title}
-                </span>
-
-                <div className="flex items-center w-full justify-around">
-                  <div className="flex flex-col items-center w-2/5">
-                    <span className="text-[9px] font-black uppercase text-slate-500 mb-1">
-                      Community Rank
-                    </span>
-
-                    <span className="text-xl sm:text-2xl font-black text-slate-400">
-                      #{stats.biggestBetrayal.cRank}
-                    </span>
-                  </div>
-
-                  <div className="text-slate-600 font-black text-xl">→</div>
-
-                  <div className="flex flex-col items-center w-2/5">
-                    <span className="text-[9px] font-black uppercase text-amber-400 mb-1">
-                      Your Rank
-                    </span>
-
-                    <span className="text-2xl sm:text-3xl font-black text-amber-400">
-                      #{stats.biggestBetrayal.uRank}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl text-center">
-              <p className="text-sm font-bold text-slate-500">
-                {stats.explicitCount === 0
-                  ? 'Rank some songs into Banger or Slaps to reveal your community disagreements!'
-                  : 'No major betrayals found—your explicitly ranked favorites line up well with community favorites.'}
-              </p>
-            </div>
-          )}
-
-          {stats.hiddenGem && (
-            <div className="bg-[#0072CE] border border-blue-500 rounded-3xl p-6 sm:p-8 shadow-xl">
-              <h3 className="text-2xl sm:text-3xl font-black text-center text-white mb-1 tracking-tight">
-                The Hidden Gem
-              </h3>
-
-              <p className="text-xs font-bold text-center text-blue-100 mb-6">
-                You love what the crowd overlooks.
-              </p>
-
-              <div className="bg-white p-5 rounded-2xl border border-blue-200 shadow-lg flex flex-col items-center text-center">
-                <span className="text-xl font-black text-slate-900 mb-4 px-2">
-                  {stats.hiddenGem.song.title}
-                </span>
-
-                <div className="flex items-center w-full justify-around">
-                  <div className="flex flex-col items-center w-2/5">
-                    <span className="text-[9px] font-black uppercase text-slate-400 mb-1">
-                      Community Rank
-                    </span>
-
-                    <span className="text-xl sm:text-2xl font-black text-slate-400">
-                      #{stats.hiddenGem.cRank}
-                    </span>
-                  </div>
-
-                  <div className="text-[#0072CE] font-black text-xl">→</div>
-
-                  <div className="flex flex-col items-center w-2/5">
-                    <span className="text-[9px] font-black uppercase text-[#0072CE] mb-1">
-                      Your Rank
-                    </span>
-
-                    <span className="text-3xl sm:text-4xl font-black text-[#0072CE]">
-                      #{stats.hiddenGem.uRank}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* 9. TOP 10 SETLIST */}
-      <div>
-        <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm mx-4 sm:mx-0">
-          <div className="mb-6 border-b border-slate-100 pb-4 text-center">
-            <h3 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-950 truncate">
-              Top 10 Tracks
-            </h3>
-          </div>
-
-          <div className="space-y-3">
-            {top10.length === 0 && (
-              <p className="text-center text-sm font-bold text-slate-400">
-                No songs ranked yet.
-              </p>
-            )}
-
-            {top10.map((song, i) => (
-              <div key={song.id} className="flex items-center gap-3">
-                <span className="text-lg font-black text-slate-300 w-5 text-right shrink-0">
-                  {i + 1}.
-                </span>
-
-                <div className="min-w-0 flex-1 border-b border-slate-100 pb-2">
-                  <h4 className="text-sm font-extrabold text-slate-900 truncate">
-                    {song.title}
-                  </h4>
-
-                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest truncate">
-                    {ALBUMS_BY_ID[song.albumId || ALBUM_NAME_TO_ID[song.album]]
-                      ?.name || song.album}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* 10. THE CONSISTENCY INDEX */}
-      {stats.mostConsistentAlbum && (
-        <div className="mx-4 sm:mx-0">
-          <div className="bg-indigo-950 border border-indigo-900 rounded-3xl p-6 sm:p-8 shadow-xl text-center overflow-hidden relative">
-            <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400 block mb-3">
-              The Consistency Index
-            </span>
-
-            <h3 className="text-xl sm:text-3xl font-black text-white mb-4 tracking-tight leading-snug">
-              You Don&apos;t Just Love the Hits — You Love the Album.
-            </h3>
-
-            <p className="text-sm font-bold text-indigo-300 mb-8 max-w-sm mx-auto">
-              Based on your raw bucket scores, this album had the highest
-              average rating with the lowest variance. You rated almost every
-              track a Banger or Slap.
-            </p>
-
-            <div className="bg-indigo-900 rounded-2xl p-4 flex items-center justify-center gap-4 border border-indigo-800 shadow-inner">
-              <AlbumArtwork
-                albumId={stats.mostConsistentAlbum.id}
-                className="w-16 h-16 rounded-md shadow-md object-cover"
-              />
-
-              <div className="text-left">
-                <h4 className="text-lg font-black text-white">
-                  {stats.mostConsistentAlbum.name}
-                </h4>
-
-                <p className="text-xs font-bold text-indigo-300 uppercase tracking-wider">
-                  {stats.mostConsistentAlbum.count} Tracks Rated
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 11. ALBUM POWER RANKINGS */}
-      <div>
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl mx-4 sm:mx-0">
-          <div className="mb-6 border-b border-slate-800 pb-4 flex flex-col items-center text-center">
-            <h3 className="text-2xl sm:text-3xl font-black tracking-tight text-white mb-2 truncate">
-              Top Albums
-            </h3>
-
-            <p className="text-xs font-bold text-slate-400 truncate mb-4">
-              Album sentiment, adjusted for catalog size.
-            </p>
-
-            <button
-              onClick={() => setShowAllAlbums(!showAllAlbums)}
-              className="text-[10px] font-black uppercase text-[#0072CE] bg-blue-950 hover:bg-blue-900 px-3 py-1.5 rounded-lg transition-colors cursor-pointer shrink-0"
-            >
-              {showAllAlbums ? 'Show Less' : 'Show All'}
-            </button>
-          </div>
-
-          <div className="space-y-5">
-            {displayedAlbums.map((album, i) => (
-              <div key={album.name} className="flex items-center gap-4">
-                <span
-                  className={`text-xl font-black w-5 text-center shrink-0 ${
-                    i === 0 ? 'text-amber-400' : 'text-slate-600'
-                  }`}
+              {/* Desktop Carousel Arrows */}
+              <div className="hidden lg:flex items-center gap-2">
+                <button
+                  onClick={() => scrollToEra(Math.max(0, activeEraIndex - 1))}
+                  disabled={activeEraIndex === 0}
+                  className="w-10 h-10 rounded-full bg-slate-800 hover:bg-slate-700 text-white flex items-center justify-center font-black transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer border border-slate-700"
                 >
-                  {i + 1}
-                </span>
+                  ←
+                </button>
+                <button
+                  onClick={() =>
+                    scrollToEra(
+                      Math.min(stats.sortedEras.length, activeEraIndex + 1)
+                    )
+                  }
+                  disabled={activeEraIndex === stats.sortedEras.length}
+                  className="w-10 h-10 rounded-full bg-slate-800 hover:bg-slate-700 text-white flex items-center justify-center font-black transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer border border-slate-700"
+                >
+                  →
+                </button>
+              </div>
+            </div>
 
-                <div className="w-12 h-12 bg-slate-800 rounded-md shrink-0 shadow-lg border border-slate-700 overflow-hidden relative flex items-center justify-center">
-                  <AlbumArtwork
-                    albumId={album.id}
-                    className="absolute inset-0 w-full h-full object-cover z-10"
-                  />
-                </div>
+            <p className="text-xs font-bold text-slate-400 mb-6 px-2">
+              Your favorite-song era, based on your ranked tracks.
+            </p>
 
-                <div className="min-w-0 flex-1">
-                  <div className="flex justify-between items-end mb-1">
-                    <h4 className="text-sm font-bold text-white truncate pr-2">
-                      {album.name}
-                    </h4>
+            <div
+              ref={eraScrollRef}
+              onScroll={handleEraScroll}
+              className="flex gap-4 overflow-x-auto snap-x snap-mandatory px-2 pb-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] items-stretch"
+            >
+              {stats.sortedEras.map((era, idx) => (
+                <React.Fragment key={era.id}>
+                  <div
+                    className={`w-[85vw] sm:w-[360px] lg:w-[400px] shrink-0 snap-center rounded-3xl p-6 sm:p-8 transition-all relative overflow-hidden flex flex-col justify-between shadow-lg ${
+                      era.color
+                    } ${idx !== 0 && 'opacity-90'}`}
+                  >
+                    {idx === 0 ? (
+                      <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white text-slate-900 text-[10px] font-black uppercase px-4 py-1.5 rounded-full tracking-widest shadow-sm whitespace-nowrap">
+                        Your Era
+                      </div>
+                    ) : (
+                      <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-black/20 text-white text-[9px] font-black uppercase px-3 py-1 rounded-full tracking-widest shadow-sm whitespace-nowrap">
+                        {era.matchScore}% Match
+                      </div>
+                    )}
 
-                    <span className="text-[10px] font-black text-slate-400 shrink-0">
-                      {album.score.toFixed(2)}
-                    </span>
+                    <div className="text-center mt-8 mb-8">
+                      <h3
+                        className={`text-3xl font-black mb-2 tracking-tight truncate ${era.text}`}
+                      >
+                        {era.name}
+                      </h3>
+
+                      <p className={`text-sm font-bold opacity-90 ${era.text}`}>
+                        {era.subtitle}
+                      </p>
+                    </div>
+
+                    <div className="mt-auto">
+                      <span
+                        className={`text-[9px] font-black uppercase tracking-[0.2em] block mb-3 text-center opacity-80 ${era.text}`}
+                      >
+                        {era.years}
+                      </span>
+
+                      <div className="flex h-2 w-full gap-0.5 rounded-full overflow-hidden opacity-90">
+                        {stats.allEras.map((blockEra) => (
+                          <div
+                            key={blockEra.id}
+                            className={`flex-1 h-full ${
+                              blockEra.id === era.id ? 'bg-white' : 'bg-black/20'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                  {idx === 0 && (
                     <div
-                      className={`h-full rounded-full ${
-                        album.color || 'bg-slate-500'
-                      }`}
+                      onClick={() => scrollToEra(1)}
+                      className="w-[30vw] sm:w-[140px] shrink-0 snap-center rounded-3xl flex flex-col items-center justify-center border-2 border-slate-700 bg-slate-800 text-slate-300 cursor-pointer hover:bg-slate-700 transition-all shadow-md"
+                    >
+                      <span className="text-3xl mb-3">🎸</span>
+
+                      <span className="text-xs font-black uppercase tracking-widest text-center leading-snug">
+                        Explore
+                        <br />
+                        Other
+                        <br />
+                        Eras
+                      </span>
+                    </div>
+                  )}
+                </React.Fragment>
+              ))}
+            </div>
+
+            <div className="flex items-center justify-center gap-2 mt-2 mb-4">
+              {Array.from({
+                length: stats.sortedEras.length + 1,
+              }).map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => scrollToEra(i)}
+                  className={`h-2.5 rounded-full transition-all duration-300 cursor-pointer ${
+                    activeEraIndex === i
+                      ? 'w-8 bg-[#0072CE]'
+                      : 'w-2.5 bg-slate-700 hover:bg-slate-600'
+                  }`}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* TEMPORAL LOYALTY, INDEPENDENCE INDEX, LISTENING AGE (SIDE-BY-SIDE DESKTOP GRID) */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+          {/* TEMPORAL LOYALTY CURVE */}
+          <div className="bg-white text-slate-950 border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm flex flex-col justify-between">
+            <div>
+              <div className="text-center mb-6">
+                <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 block mb-1">
+                  Temporal Loyalty
+                </span>
+
+                <h3 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight mb-2">
+                  Nostalgia vs. Discovery
+                </h3>
+
+                <p className="text-xs font-bold text-slate-500 max-w-xs mx-auto leading-relaxed">
+                  The volume of songs in your ranked list by decade.
+                </p>
+              </div>
+
+              <div className="flex items-end justify-between gap-2 h-32 mt-8 mb-2 px-2 border-b-2 border-slate-100 pb-2">
+                {Object.entries(stats.temporalBins).map(([label, count]) => {
+                  const maxVal = Math.max(...Object.values(stats.temporalBins), 1);
+                  const heightPct = (count / maxVal) * 100;
+
+                  return (
+                    <div
+                      key={label}
+                      className="flex-1 flex flex-col items-center justify-end gap-2 h-full"
+                    >
+                      <div className="w-full bg-slate-100 rounded-t-lg relative overflow-hidden transition-all duration-500 flex items-end justify-center flex-1">
+                        <div
+                          className="w-full bg-emerald-500 rounded-t-lg transition-all duration-1000 ease-out"
+                          style={{
+                            height: `${heightPct}%`,
+                          }}
+                        />
+                      </div>
+
+                      <span className="text-xs font-black text-slate-400 tracking-wider shrink-0">
+                        {label}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* INDEPENDENCE INDEX */}
+          <div className="bg-white text-slate-950 border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm flex flex-col justify-between">
+            <div>
+              <h3 className="text-2xl sm:text-3xl font-black text-center text-slate-900 mb-2 tracking-tight truncate">
+                Independence Index
+              </h3>
+
+              <p className="text-xs font-bold text-center text-slate-500 leading-relaxed mb-8">
+                How differently you order the songs you ranked compared to the
+                community.
+              </p>
+
+              {stats.independenceIndex !== null ? (
+                <>
+                  <div className="relative w-full h-1.5 bg-slate-200 rounded-full mb-4 mt-2">
+                    <div
+                      className="absolute top-1/2 -translate-y-1/2 w-5 h-5 bg-[#0072CE] border-[3px] border-white rounded-full shadow-[0_0_10px_rgba(0,114,206,0.3)] transition-all duration-1000 z-10"
                       style={{
-                        width: `${(album.score / 5) * 100}%`,
+                        left: `calc(${stats.independenceIndex}% - 10px)`,
                       }}
                     />
                   </div>
+
+                  <div className="flex justify-between text-xs font-black uppercase tracking-widest text-slate-400 mt-2">
+                    <span>Groupie</span>
+                    <span>Independent</span>
+                  </div>
+
+                  {stats.rankComparisonSampleSize > 0 && (
+                    <p className="text-[9px] font-bold text-slate-400 text-center mt-6">
+                      Based on {stats.rankComparisonSampleSize} songs you and the
+                      community both explicitly ranked.
+                    </p>
+                  )}
+                </>
+              ) : (
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 text-center">
+                  <p className="text-xs font-bold text-slate-500">
+                    Need at least 2 shared ranked songs with the community to
+                    compute Independence Index.
+                  </p>
                 </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* 6. LISTENING AGE & 10. CONSISTENCY INDEX (SIDE-BY-SIDE DESKTOP GRID) */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+          {/* LISTENING AGE */}
+          <div className="bg-gradient-to-br from-indigo-900 to-slate-900 border border-indigo-800 rounded-3xl p-8 sm:p-10 shadow-xl relative overflow-hidden flex flex-col items-center justify-center">
+            <h3 className="text-3xl sm:text-4xl font-black text-white mb-6 tracking-tight text-center">
+              Listening Age
+            </h3>
+
+            <span className="text-[11px] font-black uppercase tracking-widest text-indigo-300 block mb-6 text-center leading-relaxed">
+              You listen to Weezer as if you are
+            </span>
+
+            <div className="inline-flex flex-col items-center justify-center w-32 h-32 bg-white rounded-full shadow-[0_0_40px_rgba(255,255,255,0.2)] mb-6">
+              <span className="text-5xl font-black text-slate-900 tracking-tighter -mt-1">
+                {stats.listeningAge}
+              </span>
+
+              <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                Years Old
+              </span>
+            </div>
+
+            {ageComment && (
+              <div className="bg-indigo-950/80 border border-indigo-700/60 rounded-2xl p-4 max-w-sm text-center">
+                <p className="text-xs font-bold text-indigo-200 leading-relaxed">
+                  💡 {ageComment}
+                </p>
               </div>
-            ))}
+            )}
           </div>
 
-          {!showAllAlbums && stats.rankedAlbums.length > 5 && (
-            <button
-              onClick={() => setShowAllAlbums(true)}
-              className="w-full mt-6 text-[10px] font-black uppercase text-slate-400 hover:text-white border border-slate-700 hover:border-slate-500 py-2.5 rounded-xl transition-colors cursor-pointer"
-            >
-              Show Full Catalog ↓
-            </button>
-          )}
-        </div>
-      </div>
+          {/* THE CONSISTENCY INDEX */}
+          {stats.mostConsistentAlbum ? (
+            <div className="bg-indigo-950 border border-indigo-900 rounded-3xl p-6 sm:p-8 shadow-xl text-center overflow-hidden flex flex-col justify-between">
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400 block mb-3">
+                  The Consistency Index
+                </span>
 
-      {/* 12. SMART SHARE MODULE */}
-      <SmartShareModule 
-        stats={stats} 
-        top10={top10} 
-        userProfile={userProfile} 
-      />
+                <h3 className="text-xl sm:text-3xl font-black text-white mb-4 tracking-tight leading-snug">
+                  You Don&apos;t Just Love the Hits — You Love the Album.
+                </h3>
+
+                <p className="text-sm font-bold text-indigo-300 mb-8 max-w-sm mx-auto">
+                  Based on your raw bucket scores, this album had the highest
+                  average rating with the lowest variance. You rated almost every
+                  track a Banger or Slap.
+                </p>
+              </div>
+
+              <div className="bg-indigo-900 rounded-2xl p-4 flex items-center justify-center gap-4 border border-indigo-800 shadow-inner max-w-md mx-auto w-full">
+                <AlbumArtwork
+                  albumId={stats.mostConsistentAlbum.id}
+                  className="w-16 h-16 rounded-md shadow-md object-cover"
+                />
+
+                <div className="text-left">
+                  <h4 className="text-lg font-black text-white">
+                    {stats.mostConsistentAlbum.name}
+                  </h4>
+
+                  <p className="text-xs font-bold text-indigo-300 uppercase tracking-wider">
+                    {stats.mostConsistentAlbum.count} Tracks Rated
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </div>
+
+        {/* 8. RANK CLASHES (SIDE-BY-SIDE DESKTOP GRID) */}
+        {(stats.biggestBetrayal || stats.hiddenGem) && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+            {stats.biggestBetrayal ? (
+              <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl flex flex-col justify-between">
+                <div>
+                  <h3 className="text-2xl sm:text-3xl font-black text-center text-white mb-1 tracking-tight">
+                    The Betrayal
+                  </h3>
+
+                  <p className="text-xs font-bold text-center text-slate-400 mb-6">
+                    You ranked a fan favorite way lower.
+                  </p>
+
+                  <div className="bg-slate-800 p-5 rounded-2xl border border-slate-700 shadow-inner flex flex-col items-center text-center">
+                    <span className="text-xl font-black text-white mb-4 px-2">
+                      {stats.biggestBetrayal.song.title}
+                    </span>
+
+                    <div className="flex items-center w-full justify-around">
+                      <div className="flex flex-col items-center w-2/5">
+                        <span className="text-[9px] font-black uppercase text-slate-500 mb-1">
+                          Community Rank
+                        </span>
+
+                        <span className="text-xl sm:text-2xl font-black text-slate-400">
+                          #{stats.biggestBetrayal.cRank}
+                        </span>
+                      </div>
+
+                      <div className="text-slate-600 font-black text-xl">→</div>
+
+                      <div className="flex flex-col items-center w-2/5">
+                        <span className="text-[9px] font-black uppercase text-amber-400 mb-1">
+                          Your Rank
+                        </span>
+
+                        <span className="text-2xl sm:text-3xl font-black text-amber-400">
+                          #{stats.biggestBetrayal.uRank}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            {stats.hiddenGem ? (
+              <div className="bg-[#0072CE] border border-blue-500 rounded-3xl p-6 sm:p-8 shadow-xl flex flex-col justify-between">
+                <div>
+                  <h3 className="text-2xl sm:text-3xl font-black text-center text-white mb-1 tracking-tight">
+                    The Hidden Gem
+                  </h3>
+
+                  <p className="text-xs font-bold text-center text-blue-100 mb-6">
+                    You love what the crowd overlooks.
+                  </p>
+
+                  <div className="bg-white p-5 rounded-2xl border border-blue-200 shadow-lg flex flex-col items-center text-center">
+                    <span className="text-xl font-black text-slate-900 mb-4 px-2">
+                      {stats.hiddenGem.song.title}
+                    </span>
+
+                    <div className="flex items-center w-full justify-around">
+                      <div className="flex flex-col items-center w-2/5">
+                        <span className="text-[9px] font-black uppercase text-slate-400 mb-1">
+                          Community Rank
+                        </span>
+
+                        <span className="text-xl sm:text-2xl font-black text-slate-400">
+                          #{stats.hiddenGem.cRank}
+                        </span>
+                      </div>
+
+                      <div className="text-[#0072CE] font-black text-xl">→</div>
+
+                      <div className="flex flex-col items-center w-2/5">
+                        <span className="text-[9px] font-black uppercase text-[#0072CE] mb-1">
+                          Your Rank
+                        </span>
+
+                        <span className="text-3xl sm:text-4xl font-black text-[#0072CE]">
+                          #{stats.hiddenGem.uRank}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        )}
+
+        {/* 9. TOP 10 SETLIST & 11. ALBUM POWER RANKINGS (SIDE-BY-SIDE DESKTOP GRID) */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+          {/* TOP 10 SETLIST */}
+          <div className="bg-white text-slate-950 border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm">
+            <div className="mb-6 border-b border-slate-100 pb-4 text-center">
+              <h3 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-950 truncate">
+                Top 10 Tracks
+              </h3>
+            </div>
+
+            <div className="space-y-3">
+              {top10.length === 0 && (
+                <p className="text-center text-sm font-bold text-slate-400">
+                  No songs ranked yet.
+                </p>
+              )}
+
+              {top10.map((song, i) => (
+                <div key={song.id} className="flex items-center gap-3">
+                  <span className="text-lg font-black text-slate-300 w-5 text-right shrink-0">
+                    {i + 1}.
+                  </span>
+
+                  <div className="min-w-0 flex-1 border-b border-slate-100 pb-2">
+                    <h4 className="text-sm font-extrabold text-slate-900 truncate">
+                      {song.title}
+                    </h4>
+
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest truncate">
+                      {ALBUMS_BY_ID[song.albumId || ALBUM_NAME_TO_ID[song.album]]
+                        ?.name || song.album}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* ALBUM POWER RANKINGS */}
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl">
+            <div className="mb-6 border-b border-slate-800 pb-4 flex flex-col items-center text-center">
+              <h3 className="text-2xl sm:text-3xl font-black tracking-tight text-white mb-2 truncate">
+                Top Albums
+              </h3>
+
+              <p className="text-xs font-bold text-slate-400 truncate mb-4">
+                Album sentiment, adjusted for catalog size.
+              </p>
+
+              <button
+                onClick={() => setShowAllAlbums(!showAllAlbums)}
+                className="text-[10px] font-black uppercase text-[#0072CE] bg-blue-950 hover:bg-blue-900 px-3 py-1.5 rounded-lg transition-colors cursor-pointer shrink-0"
+              >
+                {showAllAlbums ? 'Show Less' : 'Show All'}
+              </button>
+            </div>
+
+            <div className="space-y-5">
+              {displayedAlbums.map((album, i) => (
+                <div key={album.name} className="flex items-center gap-4">
+                  <span
+                    className={`text-xl font-black w-5 text-center shrink-0 ${
+                      i === 0 ? 'text-amber-400' : 'text-slate-600'
+                    }`}
+                  >
+                    {i + 1}
+                  </span>
+
+                  <div className="w-12 h-12 bg-slate-800 rounded-md shrink-0 shadow-lg border border-slate-700 overflow-hidden relative flex items-center justify-center">
+                    <AlbumArtwork
+                      albumId={album.id}
+                      className="absolute inset-0 w-full h-full object-cover z-10"
+                    />
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex justify-between items-end mb-1">
+                      <h4 className="text-sm font-bold text-white truncate pr-2">
+                        {album.name}
+                      </h4>
+
+                      <span className="text-[10px] font-black text-slate-400 shrink-0">
+                        {album.score.toFixed(2)}
+                      </span>
+                    </div>
+
+                    <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${
+                          album.color || 'bg-slate-500'
+                        }`}
+                        style={{
+                          width: `${(album.score / 5) * 100}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {!showAllAlbums && stats.rankedAlbums.length > 5 && (
+              <button
+                onClick={() => setShowAllAlbums(true)}
+                className="w-full mt-6 text-[10px] font-black uppercase text-slate-400 hover:text-white border border-slate-700 hover:border-slate-500 py-2.5 rounded-xl transition-colors cursor-pointer"
+              >
+                Show Full Catalog ↓
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* 12. SMART SHARE MODULE */}
+        <div className="max-w-xl mx-auto">
+          <SmartShareModule
+            stats={stats}
+            top10={top10}
+            userProfile={userProfile}
+          />
+        </div>
+      </main>
     </div>
   );
 }
@@ -1825,7 +1887,6 @@ function SmartShareModule({ stats, top10, userProfile }: any) {
   const publicShareUrl = `https://famduel.com/share?data=${encodedData}`;
   const ogImageUrl = `/api/og?data=${encodedData}`;
 
-  // Clean text WITHOUT the URL appended inside it (prevents iOS double-link pills)
   const shareText = `My Weezer Anthem is "${shareData.t}" and my Top Album is ${shareData.a}. Who has better taste?`;
 
   const isMobileDevice = () => {
@@ -1846,7 +1907,6 @@ function SmartShareModule({ stats, top10, userProfile }: any) {
 
       if (isMobile && typeof navigator !== 'undefined' && navigator.share) {
         setIsSharing(false);
-        // Clean URL + Text payload. iOS automatically renders the dynamic OG image in 1 card.
         await navigator.share({
           title: 'My Weezer Taste DNA',
           text: shareText,
@@ -1890,7 +1950,7 @@ function SmartShareModule({ stats, top10, userProfile }: any) {
   };
 
   return (
-    <div className="mx-4 sm:mx-0 pt-6">
+    <div className="pt-2">
       <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-10 shadow-2xl text-center">
         <span className="text-[10px] font-black uppercase tracking-widest text-amber-400 block mb-2">
           Challenge Your Friends
@@ -1923,7 +1983,7 @@ function SmartShareModule({ stats, top10, userProfile }: any) {
 
       {showFallback && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl space-y-4">
+          <div className="bg-white text-slate-950 rounded-3xl p-6 max-w-sm w-full shadow-2xl space-y-4">
             <div className="flex justify-between items-center mb-2">
               <h4 className="font-black text-slate-900 text-lg">Share Your Card</h4>
               <button

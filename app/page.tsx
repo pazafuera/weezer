@@ -40,7 +40,7 @@ export default function WeezerRankerPage() {
       <div className="flex flex-col h-screen items-center justify-center bg-slate-50 gap-4">
         <div className="w-8 h-8 border-4 border-[#0072CE] border-t-transparent rounded-full animate-spin" />
         <p className="text-sm font-bold text-slate-500 animate-pulse">
-          Syncing Weezer Canon Ranker...
+          Busy wrestling with Jimmy...
         </p>
       </div>
     );
@@ -52,7 +52,7 @@ export default function WeezerRankerPage() {
   };
 
   return (
-    <AppShell>
+    <AppShell fullWidth={step === 'wrapped'}>
       {step === 'splash' && <Step0Splash />}
 
       {step === 'login' && <Login />}

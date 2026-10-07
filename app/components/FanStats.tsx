@@ -5,6 +5,7 @@ import { supabase } from '@/utils/supabase';
 import { Song, BucketType, FULL_SONG_POOL, ALBUMS_BY_ID, ALBUM_NAME_TO_ID } from '../data/constants';
 import { FlyingWIcon, AlbumArtwork } from './SharedUI';
 import GenerationalTasteGrid from './GenerationalTasteGrid';
+import { useWeezer } from '../context/WeezerContext';
 
 // Reusable 5-Bar Distribution Component
 const DistributionBars = ({ pBanger, pSlaps, pMid, pSkip, pTrash }: { pBanger: number, pSlaps: number, pMid: number, pSkip: number, pTrash: number }) => (
@@ -55,42 +56,19 @@ export default function FanStats({
   userMasterList?: Song[];
   setStep?: (s: 'master' | 'triage' | 'rank_buckets' | 'wrapped' | 'fan_stats') => void;
 }) {
-  const [explicitRankings, setExplicitRankings] = useState<Song[][]>([]);
-  const [triageMaps, setTriageMaps] = useState<Record<string, BucketType>[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { communityMasterLists = [], communityTriageMaps = [], refreshCommunityData } = useWeezer();
   const [expandedTribe, setExpandedTribe] = useState<string | null>(null);
 
+  // If context hasn't loaded data yet when user jumps straight to Fan Stats, trigger background fetch
   useEffect(() => {
-    fetchCommunityData();
-  }, []);
-
-  async function fetchCommunityData() {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase.from('weezer_rankings').select('master_list, triage_map');
-
-      if (!error && data) {
-        const cleanRankings: Song[][] = [];
-        const cleanTriageMaps: Record<string, BucketType>[] = [];
-        
-        data.forEach((row) => {
-          if (Array.isArray(row.master_list) && row.master_list.length > 0) cleanRankings.push(row.master_list);
-          if (row.triage_map && Object.keys(row.triage_map).length > 0) cleanTriageMaps.push(row.triage_map);
-        });
-        
-        setExplicitRankings(cleanRankings);
-        setTriageMaps(cleanTriageMaps);
-      }
-    } catch (err) {
-      console.error('Error fetching community stats:', err);
-    } finally {
-      setLoading(false);
+    if (communityTriageMaps.length === 0 && refreshCommunityData) {
+      refreshCommunityData();
     }
-  }
+  }, [communityTriageMaps.length, refreshCommunityData]);
 
   const communityStats = useMemo(() => {
-    if (triageMaps.length === 0) return null;
-    const totalFans = triageMaps.length;
+    if (communityTriageMaps.length === 0) return null;
+    const totalFans = communityTriageMaps.length;
     const points: Record<BucketType, number> = { banger: 5, slaps: 4, mid: 3, skip: 2, trash: 1 };
 
     const songL1: Record<string, { total: number; count: number; buckets: Record<BucketType, number>; scores: number[] }> = {};
@@ -107,7 +85,7 @@ export default function FanStats({
       songL1[s.id] = { total: 0, count: 0, buckets: { banger: 0, slaps: 0, mid: 0, skip: 0, trash: 0 }, scores: [] };
     });
 
-    triageMaps.forEach(map => {
+    communityTriageMaps.forEach(map => {
       let blueSum = 0, blueCount = 0;
       let pinkSum = 0, pinkCount = 0;
       let classicSum = 0, classicCount = 0;
@@ -257,7 +235,7 @@ export default function FanStats({
     const songL2: Record<string, { percentiles: number[]; count: number }> = {};
     FULL_SONG_POOL.forEach(s => songL2[s.id] = { percentiles: [], count: 0 });
 
-    explicitRankings.forEach(list => {
+    communityMasterLists.forEach(list => {
       if (list.length < 2) return;
       list.forEach((song, idx) => {
         const pct = ((idx + 0.5) / list.length) * 100; 
@@ -270,7 +248,7 @@ export default function FanStats({
 
     const combinedMetrics = l1Metrics.map(l1 => {
       const l2 = songL2[l1.id];
-      const reach = l2.count / Math.max(1, explicitRankings.length);
+      const reach = l2.count / Math.max(1, communityMasterLists.length);
       const avgPct = l2.count > 0 ? l2.percentiles.reduce((a,b) => a+b, 0) / l2.count : 100;
       return { ...l1, reach, avgPct, song: FULL_SONG_POOL.find(s => s.id === l1.id)! };
     }).filter(m => m.song && m.count > totalFans * 0.1);
@@ -286,7 +264,7 @@ export default function FanStats({
     let tasteTwin = null;
     if (topConsensus.length > 0) {
       const targetSong = topConsensus[0].song;
-      const lovers = triageMaps.filter(m => m[targetSong.id] === 'banger' || m[targetSong.id] === 'slaps');
+      const lovers = communityTriageMaps.filter(m => m[targetSong.id] === 'banger' || m[targetSong.id] === 'slaps');
       const coCounts: Record<string, number> = {};
       lovers.forEach(m => {
         Object.entries(m).forEach(([id, bucket]) => {
@@ -318,9 +296,10 @@ export default function FanStats({
       anatomyCategories, topConsensus, albumLeaderboard, loneBangers, 
       genClassicistSong, genModernistSong, tasteTwin
     };
-  }, [explicitRankings, triageMaps]);
+  }, [communityMasterLists, communityTriageMaps]);
 
-  if (loading) {
+  // Show a soft inline loader ONLY if data hasn't finished its first initial fetch yet
+  if (!communityStats || communityStats.totalFans === 0) {
     return (
       <div className="py-20 text-center space-y-3">
         <div className="w-8 h-8 border-4 border-[#0072CE] border-t-transparent rounded-full animate-spin mx-auto" />
@@ -328,8 +307,6 @@ export default function FanStats({
       </div>
     );
   }
-
-  if (!communityStats || communityStats.totalFans === 0) return null;
 
   return (
     <div className="pb-32 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -482,9 +459,9 @@ export default function FanStats({
         </div>
       </div>
 
-      {/* SECTION 2: FULL-WIDTH ANATOMY OF A JAM (Outside max-w container) */}
-      <div className="w-full pt-10 pb-8 mt-10 border-t border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 text-center mb-8">
+      {/* SECTION 2: FULL-BLEED ANATOMY OF A JAM (Negative horizontal margins expand to screen edges) */}
+      <div className="-mx-4 sm:-mx-6 lg:-mx-8 pt-10 pb-8 mt-10 border-t border-slate-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center mb-8">
           <h2 className="text-4xl sm:text-5xl font-black text-slate-900 tracking-tight leading-tight">Anatomy of a Jam</h2>
           <p className="text-base font-medium text-slate-500 mt-2 max-w-xl mx-auto text-balance">
             Every song has a specific demographic shape. We classified the catalog into distinct ranking patterns.
@@ -492,23 +469,21 @@ export default function FanStats({
         </div>
 
         <div className="space-y-6">
-          {communityStats.anatomyCategories.map((category, idx) => (
-            <div key={category.id} className="relative">
+          {communityStats.anatomyCategories.map((category) => (
+            <div key={category.id} className={`w-full ${category.badgeBg} border-y py-6 my-2 shadow-xs`}>
               
-              {/* FULL BLEED BANNER HEADER (Stacked text, tighter padding) */}
-              <div className={`w-full ${category.badgeBg} border-y py-3 mb-4 shadow-sm`}>
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 text-center sm:text-left flex flex-col justify-center">
-                  <h3 className={`text-xl sm:text-2xl font-black tracking-tight ${category.color} leading-tight`}>
-                    {category.title}
-                  </h3>
-                  <p className={`text-xs font-bold opacity-80 mt-0.5 ${category.color}`}>
-                    {category.desc}
-                  </p>
-                </div>
+              {/* FULL BLEED BANNER HEADER (Centered inside max-width constraints) */}
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center sm:text-left mb-4">
+                <h3 className={`text-xl sm:text-2xl font-black tracking-tight ${category.color} leading-tight`}>
+                  {category.title}
+                </h3>
+                <p className={`text-xs font-bold opacity-80 mt-0.5 ${category.color}`}>
+                  {category.desc}
+                </p>
               </div>
 
               {/* CAROUSEL */}
-              <div className="max-w-7xl mx-auto px-0 sm:px-2">
+              <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6">
                 <HorizontalCarousel itemCount={category.songs.length}>
                   {category.songs.map((m, songIdx) => {
                     const resolvedId = m.song.albumId || ALBUM_NAME_TO_ID[m.song.album] || "unknown";
@@ -531,10 +506,6 @@ export default function FanStats({
                 </HorizontalCarousel>
               </div>
 
-              {/* TIGHTER DIVIDER BETWEEN CATEGORIES */}
-              {idx < communityStats.anatomyCategories.length - 1 && (
-                <div className="mt-8 max-w-4xl mx-auto border-b-2 border-slate-100 border-dashed" />
-              )}
             </div>
           ))}
         </div>

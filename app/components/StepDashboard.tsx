@@ -320,6 +320,9 @@ export default function StepDashboard() {
           <div>
             <h1 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight">
               My Name Is{' '}
+              <span className="line-through text-[#0072CE] mr-1.5">
+              Jonas
+              </span>
               <span className="text-[#0072CE]">
                 {userProfile?.displayName || userProfile?.username || 'Guest'}
               </span>

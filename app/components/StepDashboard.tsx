@@ -119,66 +119,6 @@ export default function StepDashboard() {
     },
   ];
 
-  // REUSABLE COMMUNITY & SOCIAL PORTALS MODULE
-  const CommunitySocialModule = () => (
-    <div className="space-y-3 pt-2">
-      <h2 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight">
-        Community &amp; Social
-      </h2>
-
-      <div className="grid grid-cols-2 gap-3">
-        <button
-          type="button"
-          onClick={() => navigateTo('fan_stats')}
-          className="p-5 rounded-3xl text-left transition-all flex flex-col justify-between min-h-[110px] border-2 border-slate-200/90 bg-slate-50/90 hover:border-slate-300 text-slate-950 cursor-pointer group shadow-sm"
-        >
-          <div>
-            <h3 className="font-black text-base sm:text-lg leading-tight text-slate-950 group-hover:text-[#0072CE] transition-colors">
-              Fan Stats
-            </h3>
-            <p className="text-xs font-semibold text-slate-400 mt-1">
-              Global consensus
-            </p>
-          </div>
-          <span className="text-xs font-black mt-3 text-slate-400 group-hover:text-[#0072CE] transition-colors">
-            View →
-          </span>
-        </button>
-
-        <button
-          type="button"
-          disabled={!userId}
-          onClick={!userId ? (e) => e.preventDefault() : () => navigateTo('friends')}
-          className={`p-5 rounded-3xl text-left transition-all flex flex-col justify-between min-h-[110px] border-2 shadow-sm ${
-            !userId
-              ? 'opacity-40 bg-slate-100 border-slate-200 cursor-not-allowed pointer-events-none select-none'
-              : 'bg-slate-50/90 border-slate-200/90 hover:border-slate-300 text-slate-950 cursor-pointer group'
-          }`}
-        >
-          <div>
-            <h3
-              className={`font-black text-base sm:text-lg leading-tight transition-colors ${
-                !userId ? 'text-slate-400' : 'text-slate-950 group-hover:text-[#0072CE]'
-              }`}
-            >
-              Friends
-            </h3>
-            <p className="text-xs font-semibold mt-1 text-slate-400">
-              {!userId ? 'Sign in to unlock' : 'Head-to-head taste'}
-            </p>
-          </div>
-          <span
-            className={`text-xs font-black mt-3 transition-colors ${
-              !userId ? 'text-slate-400' : 'text-slate-400 group-hover:text-[#0072CE]'
-            }`}
-          >
-            {!userId ? 'Locked 🔒' : 'View →'}
-          </span>
-        </button>
-      </div>
-    </div>
-  );
-
   // REUSABLE UNIFIED CATALOG & PROGRESS CARD MODULE
   const UnifiedCatalogProgressModule = () => (
     <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs space-y-4">
@@ -321,7 +261,7 @@ export default function StepDashboard() {
             <h1 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight">
               My Name Is{' '}
               <span className="line-through text-[#0072CE] mr-1.5">
-              Jonas
+                Jonas
               </span>
               <span className="text-[#0072CE]">
                 {userProfile?.displayName || userProfile?.username || 'Guest'}
@@ -395,43 +335,39 @@ export default function StepDashboard() {
         )}
 
         {isRefinedMasterComplete && (
-          <div className="space-y-6">
-            {/* STAGE 3: ALL STEPS DONE - SWEATER THREAD HERO LINK */}
-            <button
-              type="button"
-              onClick={() => navigateTo('wrapped')}
-              className="w-full text-left bg-slate-900 hover:bg-slate-950 text-white rounded-3xl p-6 shadow-md border border-slate-800 hover:border-[#0072CE] transition-all cursor-pointer group space-y-3"
-            >
-              
+          /* STAGE 3: ALL STEPS DONE - SWEATER THREAD HERO LINK */
+          <button
+            type="button"
+            onClick={() => navigateTo('wrapped')}
+            className="w-full text-left bg-slate-900 hover:bg-slate-950 text-white rounded-3xl p-6 shadow-md border border-slate-800 hover:border-[#0072CE] transition-all cursor-pointer group space-y-3"
+          >
+            
 
-              <div className="space-y-1">
-                <h2 className="text-l sm:text-2xl font-black tracking-tight leading-tight group-hover:text-[#0072CE] transition-colors">
-                  Your Sweater Thread is Unraveled!
-                </h2>
-                <p className="text-xs sm:text-sm text-slate-400 font-medium leading-relaxed">
-                  Explore your personalized Weezer fandom analytics.
-                </p>
-              </div>
+            <div className="space-y-1">
+              <h2 className="text-l sm:text-2xl font-black tracking-tight leading-tight group-hover:text-[#0072CE] transition-colors">
+                Your Sweater Thread is Unraveled!
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-400 font-medium leading-relaxed">
+                Explore your personalized Weezer fandom analytics.
+              </p>
+            </div>
 
-              <div className="pt-1 flex items-center text-xs font-black text-amber-400 group-hover:underline">
-                View Your Sweater Thread →
-              </div>
-            </button>
-
-            {/* COMMUNITY & SOCIAL PORTALS (PLACED DIRECTLY BENEATH SWEATER THREAD CARD WHEN COMPLETED) */}
-            <CommunitySocialModule />
-          </div>
+            <div className="pt-1 flex items-center text-xs font-black text-amber-400 group-hover:underline">
+              View Your Sweater Thread →
+            </div>
+          </button>
         )}
 
         {/* STAGE 1 (INCOMPLETE TRIAGE): RENDER UNIFIED MODULE HIGH UP */}
         {!isTriageComplete && <UnifiedCatalogProgressModule />}
 
-        {/* WHAT'S NEXT SECTION */}
+        {/* WHAT'S NEXT SECTION (INCLUDES COMMUNITY & SOCIAL CARDS) */}
         <div className="space-y-3 pt-2">
           <h2 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight">
             What&apos;s Next
           </h2>
 
+          {/* 4 CORE RANKING PIPELINE STEPS */}
           <div className="grid grid-cols-2 gap-3">
             {stepsState.map((st) => (
               <button
@@ -497,13 +433,62 @@ export default function StepDashboard() {
               </button>
             ))}
           </div>
+
+          {/* COMMUNITY & SOCIAL CARDS (EMBEDDED INSIDE WHAT'S NEXT) */}
+          <div className="grid grid-cols-2 gap-3 pt-1">
+            <button
+              type="button"
+              onClick={() => navigateTo('fan_stats')}
+              className="p-5 rounded-3xl text-left transition-all flex flex-col justify-between min-h-[110px] border-2 border-slate-200/90 bg-slate-50/90 hover:border-slate-300 text-slate-950 cursor-pointer group shadow-sm"
+            >
+              <div>
+                <h3 className="font-black text-base sm:text-lg leading-tight text-slate-950 group-hover:text-[#0072CE] transition-colors">
+                  Fan Stats
+                </h3>
+                <p className="text-xs font-semibold text-slate-400 mt-1">
+                  Global consensus
+                </p>
+              </div>
+              <span className="text-xs font-black mt-3 text-slate-400 group-hover:text-[#0072CE] transition-colors">
+                View →
+              </span>
+            </button>
+
+            <button
+              type="button"
+              disabled={!userId}
+              onClick={!userId ? (e) => e.preventDefault() : () => navigateTo('friends')}
+              className={`p-5 rounded-3xl text-left transition-all flex flex-col justify-between min-h-[110px] border-2 shadow-sm ${
+                !userId
+                  ? 'opacity-40 bg-slate-100 border-slate-200 cursor-not-allowed pointer-events-none select-none'
+                  : 'bg-slate-50/90 border-slate-200/90 hover:border-slate-300 text-slate-950 cursor-pointer group'
+              }`}
+            >
+              <div>
+                <h3
+                  className={`font-black text-base sm:text-lg leading-tight transition-colors ${
+                    !userId ? 'text-slate-400' : 'text-slate-950 group-hover:text-[#0072CE]'
+                  }`}
+                >
+                  Fan Friends
+                </h3>
+                <p className="text-xs font-semibold mt-1 text-slate-400">
+                  {!userId ? 'Sign in to unlock' : 'Head-to-head taste'}
+                </p>
+              </div>
+              <span
+                className={`text-xs font-black mt-3 transition-colors ${
+                  !userId ? 'text-slate-400' : 'text-slate-400 group-hover:text-[#0072CE]'
+                }`}
+              >
+                {!userId ? 'Locked 🔒' : 'View →'}
+              </span>
+            </button>
+          </div>
         </div>
 
         {/* STAGES 2 & 3 (TRIAGE DONE): UNIFIED MODULE PUSHED LOWER ON PAGE */}
         {isTriageComplete && <UnifiedCatalogProgressModule />}
-
-        {/* COMMUNITY & SOCIAL PORTALS (RENDERED AT BOTTOM ONLY IF NOT YET FULLY COMPLETED) */}
-        {!isRefinedMasterComplete && <CommunitySocialModule />}
       </div>
     </div>
   );

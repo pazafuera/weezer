@@ -68,7 +68,7 @@ export default function StepDashboard() {
       id: 'triage',
       title: 'The Gut Check',
       desc: isTriageComplete
-        ? 'All 206 sorted'
+        ? 'All 206 songs sorted'
         : `${triageSortedCount}/${totalSongs} sorted`,
       isComplete: isTriageComplete,
       isCurrent: !isTriageComplete,
@@ -79,7 +79,7 @@ export default function StepDashboard() {
     {
       id: 'rank_buckets',
       title: 'Refine Buckets',
-      desc: isRefinedMasterComplete ? 'Matchups done' : 'Head-to-head matchups',
+      desc: isRefinedMasterComplete ? 'Matchups completed' : 'Head-to-head matchups',
       isComplete: isRefinedMasterComplete,
       isCurrent: isTriageComplete && !isRefinedMasterComplete,
       isDisabled: !isTriageComplete,
@@ -94,7 +94,7 @@ export default function StepDashboard() {
     {
       id: 'master',
       title: 'Master List',
-      desc: '1–206 canon ranking',
+      desc: 'Your Personalized Playlist',
       isComplete: isRefinedMasterComplete,
       isCurrent: false,
       isDisabled: !isTriageComplete,
@@ -107,7 +107,7 @@ export default function StepDashboard() {
     {
       id: 'wrapped',
       title: 'Sweater Thread',
-      desc: 'Taste DNA & Stats',
+      desc: 'Your Fan DNA',
       isComplete: isRefinedMasterComplete,
       isCurrent: isRefinedMasterComplete,
       isDisabled: !isTriageComplete,
@@ -119,6 +119,66 @@ export default function StepDashboard() {
     },
   ];
 
+  // REUSABLE COMMUNITY & SOCIAL PORTALS MODULE
+  const CommunitySocialModule = () => (
+    <div className="space-y-3 pt-2">
+      <h2 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight">
+        Community &amp; Social
+      </h2>
+
+      <div className="grid grid-cols-2 gap-3">
+        <button
+          type="button"
+          onClick={() => navigateTo('fan_stats')}
+          className="p-5 rounded-3xl text-left transition-all flex flex-col justify-between min-h-[110px] border-2 border-slate-200/90 bg-slate-50/90 hover:border-slate-300 text-slate-950 cursor-pointer group shadow-sm"
+        >
+          <div>
+            <h3 className="font-black text-base sm:text-lg leading-tight text-slate-950 group-hover:text-[#0072CE] transition-colors">
+              Fan Stats
+            </h3>
+            <p className="text-xs font-semibold text-slate-400 mt-1">
+              Global consensus
+            </p>
+          </div>
+          <span className="text-xs font-black mt-3 text-slate-400 group-hover:text-[#0072CE] transition-colors">
+            View →
+          </span>
+        </button>
+
+        <button
+          type="button"
+          disabled={!userId}
+          onClick={!userId ? (e) => e.preventDefault() : () => navigateTo('friends')}
+          className={`p-5 rounded-3xl text-left transition-all flex flex-col justify-between min-h-[110px] border-2 shadow-sm ${
+            !userId
+              ? 'opacity-40 bg-slate-100 border-slate-200 cursor-not-allowed pointer-events-none select-none'
+              : 'bg-slate-50/90 border-slate-200/90 hover:border-slate-300 text-slate-950 cursor-pointer group'
+          }`}
+        >
+          <div>
+            <h3
+              className={`font-black text-base sm:text-lg leading-tight transition-colors ${
+                !userId ? 'text-slate-400' : 'text-slate-950 group-hover:text-[#0072CE]'
+              }`}
+            >
+              Friends
+            </h3>
+            <p className="text-xs font-semibold mt-1 text-slate-400">
+              {!userId ? 'Sign in to unlock' : 'Head-to-head taste'}
+            </p>
+          </div>
+          <span
+            className={`text-xs font-black mt-3 transition-colors ${
+              !userId ? 'text-slate-400' : 'text-slate-400 group-hover:text-[#0072CE]'
+            }`}
+          >
+            {!userId ? 'Locked 🔒' : 'View →'}
+          </span>
+        </button>
+      </div>
+    </div>
+  );
+
   // REUSABLE UNIFIED CATALOG & PROGRESS CARD MODULE
   const UnifiedCatalogProgressModule = () => (
     <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs space-y-4">
@@ -126,7 +186,7 @@ export default function StepDashboard() {
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <span className="text-sm sm:text-base font-black uppercase tracking-widest text-slate-400">
-            Overall Progress
+            Your Progress
           </span>
           <span className="text-xs font-black text-[#0072CE]">
             {triageSortedCount} / {totalSongs} Songs ({triagePct}%)
@@ -209,15 +269,6 @@ export default function StepDashboard() {
 
       {/* BOTTOM: BUCKET BREAKDOWN */}
       <div className="pt-2 border-t border-slate-100 space-y-2">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-black uppercase tracking-widest text-slate-400">
-            My Buckets
-          </span>
-          <span className="text-[11px] font-bold text-slate-400">
-            Categorized Tiers
-          </span>
-        </div>
-
         <div className="flex items-center justify-between gap-1">
           {(Object.keys(BUCKET_CONFIG) as BucketType[]).map((key) => {
             const cfg = BUCKET_CONFIG[key];
@@ -341,49 +392,31 @@ export default function StepDashboard() {
         )}
 
         {isRefinedMasterComplete && (
-          /* STAGE 3: BOTH DONE, PROMPT SWEATER THREAD, FAN STATS & FRIENDS */
-          <div className="bg-slate-900 text-white rounded-3xl p-6 shadow-md border border-slate-800 space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="bg-emerald-400 text-slate-950 font-black text-[10px] uppercase tracking-wider px-2.5 py-0.5 rounded-full">
-                Canon Ranking Complete 🚀
-              </span>
-            </div>
-            <div className="space-y-1">
-              <h2 className="text-xl sm:text-2xl font-black tracking-tight leading-tight">
-                Your Weezer Taste DNA is Unlocked!
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-400 font-medium leading-relaxed">
-                Explore your personalized Sweater Thread analytics, check global fan consensus, or compare rankings with friends.
-              </p>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
-              <button
-                onClick={() => navigateTo('wrapped')}
-                className="bg-[#0072CE] hover:bg-blue-600 text-white font-black text-xs py-3 px-3 rounded-2xl transition-all cursor-pointer text-center flex items-center justify-center gap-1.5 shadow-xs"
-              >
-                <span>🧵</span>
-                <span>Sweater Thread</span>
-              </button>
-              <button
-                onClick={() => navigateTo('fan_stats')}
-                className="bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 font-black text-xs py-3 px-3 rounded-2xl transition-all cursor-pointer text-center flex items-center justify-center gap-1.5"
-              >
-                <span>📊</span>
-                <span>Fan Stats</span>
-              </button>
-              <button
-                onClick={() => navigateTo('friends')}
-                disabled={!userId}
-                className={`font-black text-xs py-3 px-3 rounded-2xl transition-all text-center flex items-center justify-center gap-1.5 ${
-                  !userId
-                    ? 'bg-slate-800/50 text-slate-500 cursor-not-allowed border border-slate-800'
-                    : 'bg-amber-400 hover:bg-amber-300 text-slate-950 cursor-pointer shadow-xs'
-                }`}
-              >
-                <span>👥</span>
-                <span>{userId ? 'Compare Friends' : 'Sign in for Friends'}</span>
-              </button>
-            </div>
+          <div className="space-y-6">
+            {/* STAGE 3: ALL STEPS DONE - SWEATER THREAD HERO LINK */}
+            <button
+              type="button"
+              onClick={() => navigateTo('wrapped')}
+              className="w-full text-left bg-slate-900 hover:bg-slate-950 text-white rounded-3xl p-6 shadow-md border border-slate-800 hover:border-[#0072CE] transition-all cursor-pointer group space-y-3"
+            >
+              
+
+              <div className="space-y-1">
+                <h2 className="text-l sm:text-2xl font-black tracking-tight leading-tight group-hover:text-[#0072CE] transition-colors">
+                  Your Sweater Thread is Unraveled!
+                </h2>
+                <p className="text-xs sm:text-sm text-slate-400 font-medium leading-relaxed">
+                  Explore your personalized Weezer fandom analytics.
+                </p>
+              </div>
+
+              <div className="pt-1 flex items-center text-xs font-black text-amber-400 group-hover:underline">
+                View Your Sweater Thread →
+              </div>
+            </button>
+
+            {/* COMMUNITY & SOCIAL PORTALS (PLACED DIRECTLY BENEATH SWEATER THREAD CARD WHEN COMPLETED) */}
+            <CommunitySocialModule />
           </div>
         )}
 
@@ -466,63 +499,8 @@ export default function StepDashboard() {
         {/* STAGES 2 & 3 (TRIAGE DONE): UNIFIED MODULE PUSHED LOWER ON PAGE */}
         {isTriageComplete && <UnifiedCatalogProgressModule />}
 
-        {/* COMMUNITY & SOCIAL PORTALS */}
-        <div className="space-y-3 pt-2">
-          <h2 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight">
-            Community &amp; Social
-          </h2>
-
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={() => navigateTo('fan_stats')}
-              className="p-5 rounded-3xl text-left transition-all flex flex-col justify-between min-h-[110px] border-2 border-slate-200/90 bg-slate-50/90 hover:border-slate-300 text-slate-950 cursor-pointer group shadow-sm"
-            >
-              <div>
-                <h3 className="font-black text-base sm:text-lg leading-tight text-slate-950 group-hover:text-[#0072CE] transition-colors">
-                  Fan Stats
-                </h3>
-                <p className="text-xs font-semibold text-slate-400 mt-1">
-                  Global consensus
-                </p>
-              </div>
-              <span className="text-xs font-black mt-3 text-slate-400 group-hover:text-[#0072CE] transition-colors">
-                View →
-              </span>
-            </button>
-
-            <button
-              type="button"
-              disabled={!userId}
-              onClick={!userId ? (e) => e.preventDefault() : () => navigateTo('friends')}
-              className={`p-5 rounded-3xl text-left transition-all flex flex-col justify-between min-h-[110px] border-2 shadow-sm ${
-                !userId
-                  ? 'opacity-40 bg-slate-100 border-slate-200 cursor-not-allowed pointer-events-none select-none'
-                  : 'bg-slate-50/90 border-slate-200/90 hover:border-slate-300 text-slate-950 cursor-pointer group'
-              }`}
-            >
-              <div>
-                <h3
-                  className={`font-black text-base sm:text-lg leading-tight transition-colors ${
-                    !userId ? 'text-slate-400' : 'text-slate-950 group-hover:text-[#0072CE]'
-                  }`}
-                >
-                  Friends
-                </h3>
-                <p className="text-xs font-semibold mt-1 text-slate-400">
-                  {!userId ? 'Sign in to unlock' : 'Head-to-head taste'}
-                </p>
-              </div>
-              <span
-                className={`text-xs font-black mt-3 transition-colors ${
-                  !userId ? 'text-slate-400' : 'text-slate-400 group-hover:text-[#0072CE]'
-                }`}
-              >
-                {!userId ? 'Locked 🔒' : 'View →'}
-              </span>
-            </button>
-          </div>
-        </div>
+        {/* COMMUNITY & SOCIAL PORTALS (RENDERED AT BOTTOM ONLY IF NOT YET FULLY COMPLETED) */}
+        {!isRefinedMasterComplete && <CommunitySocialModule />}
       </div>
     </div>
   );

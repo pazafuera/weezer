@@ -112,26 +112,59 @@ export default function TierListChart({ title, subtitle, rankedSongs, username }
     
     setTimeout(async () => {
       try {
+        // iOS Safari sometimes renders blank on the first pass with foreignObjects. 
+        // We generate it once invisibly, then generate it again for safety.
+        await toPng(exportRef.current!, { quality: 0.1, pixelRatio: 1 });
+        
         const dataUrl = await toPng(exportRef.current!, {
           quality: 1.0,
           pixelRatio: 2,
           backgroundColor: '#0f172a',
         });
         
+        const filename = `${username ? `${username}-` : ''}weezer-${viewMode}-tiers.png`;
+
+        // CHECK FOR iOS / MOBILE DEVICE CAPABILITIES
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || 
+                         (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+        if (isMobile && navigator.share) {
+          try {
+            // Convert base64 Data URL to a Blob
+            const fetchRes = await fetch(dataUrl);
+            const blob = await fetchRes.blob();
+            // Create a File object
+            const file = new File([blob], filename, { type: 'image/png' });
+
+            // If the native share API supports sharing files, invoke it!
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+              await navigator.share({
+                files: [file],
+                title: 'My Weezer Tier List',
+              });
+              setIsExporting(false);
+              return; // Exit early, the native share sheet handled it
+            }
+          } catch (shareErr) {
+            console.error('Native sharing failed or was canceled', shareErr);
+            // Fall through to standard download if share fails
+          }
+        }
+
+        // STANDARD DESKTOP FALLBACK
         const link = document.createElement('a');
-        link.download = `${username ? `${username}-` : ''}weezer-${viewMode}-tiers.png`;
+        link.download = filename;
         link.href = dataUrl;
         link.click();
+
       } catch (err) {
         console.error('Failed to export tier list', err);
       } finally {
         setIsExporting(false);
       }
-    }, 100);
+    }, 150);
   };
 
-  // REACT FIX: This is now a standard function returning JSX, NOT a nested component.
-  // This prevents React from destroying the DOM node and resetting the scroll position.
   const renderTierGrid = (isExportMode: boolean) => (
     <div className={`bg-black p-0.5 sm:p-1 flex flex-col gap-0.5 sm:gap-1 w-full rounded-xl overflow-hidden ${isExportMode ? '' : 'border border-slate-800'}`}>
       {processedTiers.map((tier) => (
@@ -275,26 +308,25 @@ export default function TierListChart({ title, subtitle, rankedSongs, username }
         <div ref={exportRef} className="w-[1024px] bg-[#0f172a] p-8">
           
           {/* BRANDING HEADER FOR EXPORT */}
-          <div className="flex items-end justify-between border-b-2 border-slate-800 pb-6 mb-8">
+          <div className="flex items-start justify-between border-b-2 border-slate-800 pb-6 mb-8">
             <div className="flex-1 pr-8">
-              <h2 className="text-5xl font-black text-white tracking-tight leading-none">
-                {title}
+              <h2 className="text-6xl font-black text-white tracking-tight leading-none mb-2">
+                All My Favorite Songs
               </h2>
-              <p className="text-xl font-bold text-slate-400 mt-3 uppercase tracking-widest">
-                {subtitle} {username && `| @${username}`}
+              <h3 className="text-2xl font-black text-slate-300 uppercase tracking-widest mb-4">
+                The Weezer Song Ranking Project
+              </h3>
+              <p className="text-xl font-bold text-amber-400">
+                {username 
+                  ? `@${username}'s Personalized Weezer Song Tiers`
+                  : "The Weezer Fan Community's Weezer Song Tiers"}
               </p>
             </div>
             
             {/* CALL TO ACTION BADGE */}
-            <div className="text-right bg-slate-800/80 border border-slate-700 rounded-2xl p-4 shadow-lg shrink-0">
-              <h3 className="text-2xl font-black text-[#0072CE] tracking-tight">
-                In The Garage
-              </h3>
-              <p className="text-sm font-bold text-slate-300 mt-1">
-                Rank all 206 Weezer songs.
-              </p>
-              <p className="text-sm font-black text-amber-400 mt-0.5">
-                Make your own chart at WeezerRanker.com →
+            <div className="text-left bg-slate-800/80 border border-slate-700 rounded-2xl p-5 shadow-lg shrink-0 w-[320px]">
+              <p className="text-sm font-bold text-slate-300 leading-snug">
+                Make your own Weezer Song rankings list at <span className="text-[#0072CE] font-black">RankingWeezer.com</span> and connect with @usernames to compare your tastes side-by-side.
               </p>
             </div>
           </div>
@@ -304,7 +336,7 @@ export default function TierListChart({ title, subtitle, rankedSongs, username }
           
           {/* SUBTLE FOOTER */}
           <div className="text-center pt-6 text-slate-500 font-bold text-sm tracking-widest uppercase">
-            Generated via WeezerRanker.com
+            Generated via RankingWeezer.com
           </div>
         </div>
       </div>

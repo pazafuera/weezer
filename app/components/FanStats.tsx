@@ -6,6 +6,7 @@ import { Song, BucketType, FULL_SONG_POOL, ALBUMS_BY_ID, ALBUM_NAME_TO_ID } from
 import { FlyingWIcon, AlbumArtwork } from './SharedUI';
 import GenerationalTasteGrid from './GenerationalTasteGrid';
 import { useWeezer } from '../context/WeezerContext';
+import TierListChart from './TierListChart';
 
 // Reusable 5-Bar Distribution Component
 const DistributionBars = ({ pBanger, pSlaps, pMid, pSkip, pTrash }: { pBanger: number, pSlaps: number, pMid: number, pSkip: number, pTrash: number }) => (
@@ -261,6 +262,17 @@ export default function FanStats({
     
     const topConsensus = combinedMetrics.sort((a, b) => ((100 - b.avgPct) * b.reach) - ((100 - a.avgPct) * a.reach)).slice(0, 10);
 
+    // DYNAMIC GLOBAL RANKING ARRAY FOR TIER LIST CHART
+    // Sort all songs by their global average score to rank 1 through N
+    const globalTierListRankings = combinedMetrics
+      .sort((a, b) => b.mean - a.mean)
+      .map((item, idx) => ({
+        id: item.song.id,
+        title: item.song.title,
+        album: item.song.album,
+        rank: idx + 1
+      }));
+
     let tasteTwin = null;
     if (topConsensus.length > 0) {
       const targetSong = topConsensus[0].song;
@@ -294,7 +306,8 @@ export default function FanStats({
       totalFans, bluePct, pinkPct, tribes, 
       mostLoved, mostDivisive, hiddenGem, mostRejected,
       anatomyCategories, topConsensus, albumLeaderboard, loneBangers, 
-      genClassicistSong, genModernistSong, tasteTwin
+      genClassicistSong, genModernistSong, tasteTwin,
+      globalTierListRankings // Passing down the Tier List array
     };
   }, [communityMasterLists, communityTriageMaps]);
 
@@ -325,7 +338,7 @@ export default function FanStats({
         {/* HERO */}
         <div className="text-center mb-6">
           <h1 className="text-5xl sm:text-6xl md:text-7xl font-black text-slate-950 tracking-tighter leading-none mb-3">
-            The State of <br /><span className="text-[#0072CE]">Weezer</span>
+            The Fan <br /><span className="text-[#0072CE]">Club</span>
           </h1>
           <p className="text-base font-bold text-slate-600 max-w-sm mx-auto leading-relaxed">
             206 songs. Thousands of opinions. The definitive consensus.
@@ -457,6 +470,16 @@ export default function FanStats({
             </div>
           </div>
         </div>
+
+        {/* TIER LIST VISUALIZATION SECTION */}
+        <div className="pt-8 sm:pt-10">
+          <TierListChart 
+            title="The Fan Club Tiers" 
+            subtitle="Global Community Consensus"
+            rankedSongs={communityStats.globalTierListRankings} 
+          />
+        </div>
+
       </div>
 
       {/* SECTION 2: FULL-BLEED ANATOMY OF A JAM (Negative horizontal margins expand to screen edges) */}
@@ -498,7 +521,7 @@ export default function FanStats({
                           </div>
                         </div>
                         <div className="border-t border-slate-100 pt-1">
-                          <DistributionBars pBanger={m.pBanger} pSlaps={m.pSlaps} pMid={m.pMid} pSkip={m.pSkip} pTrash={m.pTrash} />
+                          <DistributionBars pBanger={m.pBanger} pSlaps={m.pSlaps} pMid={m.pMid} pSkip={m.pTrash} pTrash={m.pTrash} />
                         </div>
                       </div>
                     );

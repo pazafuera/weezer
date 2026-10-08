@@ -12,6 +12,7 @@ import {
 } from '../data/constants';
 import { FlyingWIcon, AlbumArtwork } from './SharedUI';
 import { encodeShareData } from '@/utils/shareHelper';
+import TierListChart from './TierListChart';
 
 // STATISTICAL HELPER: Kendall's Tau (Rank Agreement)
 function calculateKendallTau(
@@ -143,6 +144,28 @@ export default function Step4Wrapped({
     () => explicitlyRankedSongs.slice(0, 10),
     [explicitlyRankedSongs]
   );
+
+  // USER TIER LIST FORMATTING
+  const personalTierListRankings = useMemo(() => {
+    return masterList.map((song, idx) => ({
+      id: song.id,
+      title: song.title,
+      album: song.album,
+      rank: idx + 1,
+    }));
+  }, [masterList]);
+
+  // EXTRACT FIRST NAME + LAST INITIAL
+  const getFormattedName = () => {
+    if (!userProfile?.displayName) return 'A Fan';
+    const parts = userProfile.displayName.trim().split(' ');
+    if (parts.length > 1) {
+      return `${parts[0]} ${parts[parts.length - 1][0]}.`;
+    }
+    return parts[0];
+  };
+
+  const displayNameStr = getFormattedName();
 
   // EXPLICIT RANK MAPS
   const userRankMap = useMemo(() => {
@@ -964,7 +987,7 @@ export default function Step4Wrapped({
 
   if (isFetchingDB) {
     return (
-      <div className="py-24 text-center space-y-3">
+      <div className="py-24 text-center space-y-3 bg-slate-50">
         <div className="w-8 h-8 border-4 border-[#0072CE] border-t-transparent rounded-full animate-spin mx-auto" />
         <p className="text-sm font-bold text-slate-500">
           Unraveling the Sweater Thread...
@@ -978,46 +1001,47 @@ export default function Step4Wrapped({
     : stats.rankedAlbums.slice(0, 5);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 py-6 sm:py-10 lg:py-16 px-2 sm:px-6 relative overflow-hidden selection:bg-[#0072CE] selection:text-white">
-      {/* DESKTOP AMBIENT STAGE BACKDROP (Invisible on Mobile) */}
-      <div className="hidden lg:block pointer-events-none fixed inset-0 z-0 overflow-hidden opacity-30">
-        <div className="absolute -top-40 -left-40 w-[700px] h-[600px] bg-[#0072CE]/35 rounded-full blur-[160px]" />
-        <div className="absolute -bottom-40 -right-40 w-[700px] h-[600px] bg-amber-500/25 rounded-full blur-[160px]" />
-        <div className="absolute inset-0 bg-[radial-gradient(#334155_1px,transparent_1px)] [background-size:32px_32px] opacity-25" />
+    <div className="min-h-screen bg-slate-50 text-slate-900 py-6 sm:py-8 lg:py-12 px-3 sm:px-6 relative overflow-hidden selection:bg-[#0072CE] selection:text-white">
+      {/* AMBIENT BACKGROUND GLOW */}
+      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden opacity-40">
+        <div className="absolute -top-40 -left-40 w-[700px] h-[600px] bg-blue-100 rounded-full blur-[160px]" />
+        <div className="absolute -bottom-40 -right-40 w-[700px] h-[600px] bg-amber-100 rounded-full blur-[160px]" />
       </div>
 
-      {/* FULL-WIDTH RESPONSIVE APP SHELL CONTAINER */}
-      <main className="relative z-10 w-full max-w-2xl lg:max-w-6xl xl:max-w-7xl mx-auto bg-slate-900/90 backdrop-blur-xl border border-slate-800/80 rounded-[2.5rem] p-4 sm:p-8 lg:p-12 shadow-[0_0_100px_rgba(0,114,206,0.18)] space-y-12 lg:space-y-16">
-        <div className="pt-2 flex items-center justify-between px-2">
+      {/* UNWRAPPED STRUCTURAL MAIN CONTAINER */}
+      <main className="relative z-10 w-full max-w-7xl mx-auto space-y-8 sm:space-y-12">
+        {/* TOP NAVIGATION */}
+        <div className="flex items-center justify-between px-2 pt-2">
           <button
             onClick={() => setStep('master')}
-            className="text-xs font-black text-slate-400 hover:text-slate-200 transition-colors flex items-center gap-1 cursor-pointer"
+            className="text-xs font-black text-slate-500 hover:text-slate-800 transition-colors flex items-center gap-1 cursor-pointer"
           >
             ← Edit Final Rankings
           </button>
 
           <button
             onClick={() => setStep('fan_stats')}
-            className="text-xs font-black text-[#0072CE] hover:text-blue-400 transition-colors flex items-center gap-1 cursor-pointer"
+            className="text-xs font-black text-[#0072CE] hover:text-blue-700 transition-colors flex items-center gap-1 cursor-pointer"
           >
             Fan Stats →
           </button>
         </div>
 
-        <div className="text-center px-4 pt-2">
-          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black text-white tracking-tighter mb-2">
+        {/* HEADER */}
+        <div className="text-center px-4">
+          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black text-slate-950 tracking-tighter mb-2">
             The Sweater <span className="text-[#0072CE]">Thread</span>
           </h1>
 
-          <p className="text-sm font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap truncate">
+          <p className="text-sm font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap truncate">
             Your Weezer Taste, Unraveled.
           </p>
         </div>
 
-        {/* 1. HERO ROW: ANTHEM + VIBE ENCAPSULATED (SIDE-BY-SIDE ON DESKTOP) */}
+        {/* 1. HERO ROW: ANTHEM + VIBE ENCAPSULATED */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-          {/* ANTHEM CARD (7 COLS ON DESKTOP) */}
-          <div className="lg:col-span-7 bg-gradient-to-b from-[#0072CE] via-[#005fA3] to-slate-900 rounded-3xl p-8 sm:p-12 text-center shadow-2xl border border-[#0072CE]/30 relative overflow-hidden flex flex-col justify-center">
+          {/* ANTHEM CARD */}
+          <div className="lg:col-span-7 bg-gradient-to-b from-[#0072CE] via-[#005fA3] to-slate-900 rounded-3xl p-8 sm:p-12 text-center shadow-xl border border-[#0072CE]/30 relative overflow-hidden flex flex-col justify-center">
             <span className="text-[10px] font-black uppercase tracking-widest text-amber-300 block mb-4">
               Your Anthem
             </span>
@@ -1036,8 +1060,8 @@ export default function Step4Wrapped({
             )}
           </div>
 
-          {/* VIBE ENCAPSULATED CARD (5 COLS ON DESKTOP) */}
-          <div className="lg:col-span-5 bg-slate-950 border border-slate-800 rounded-3xl p-6 shadow-xl text-center flex flex-col justify-center overflow-hidden">
+          {/* VIBE ENCAPSULATED CARD */}
+          <div className="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl text-center flex flex-col justify-center overflow-hidden">
             <h3 className="text-2xl font-black text-white tracking-tight mb-4">
               Your Vibe, Encapsulated
             </h3>
@@ -1052,10 +1076,10 @@ export default function Step4Wrapped({
           </div>
         </div>
 
-        {/* 2. ARCHETYPES CAROUSEL WITH DESKTOP ARROWS */}
+        {/* 2. ARCHETYPES CAROUSEL */}
         <div>
-          <div className="flex items-center justify-between mb-6 px-2">
-            <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tight truncate">
+          <div className="flex items-center justify-between mb-4 px-2">
+            <h3 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight truncate">
               Fandom Archetype
             </h3>
 
@@ -1064,7 +1088,7 @@ export default function Step4Wrapped({
               <button
                 onClick={() => scrollToArch(Math.max(0, activeArchIndex - 1))}
                 disabled={activeArchIndex === 0}
-                className="w-10 h-10 rounded-full bg-slate-800 hover:bg-slate-700 text-white flex items-center justify-center font-black transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer border border-slate-700"
+                className="w-10 h-10 rounded-full bg-white hover:bg-slate-100 text-slate-800 flex items-center justify-center font-black transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer border border-slate-200 shadow-xs"
               >
                 ←
               </button>
@@ -1075,7 +1099,7 @@ export default function Step4Wrapped({
                   )
                 }
                 disabled={activeArchIndex === stats.scoredArchetypes.length}
-                className="w-10 h-10 rounded-full bg-slate-800 hover:bg-slate-700 text-white flex items-center justify-center font-black transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer border border-slate-700"
+                className="w-10 h-10 rounded-full bg-white hover:bg-slate-100 text-slate-800 flex items-center justify-center font-black transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer border border-slate-200 shadow-xs"
               >
                 →
               </button>
@@ -1092,8 +1116,8 @@ export default function Step4Wrapped({
                 <div
                   className={`w-[88vw] sm:w-[380px] lg:w-[420px] shrink-0 snap-center rounded-3xl p-6 sm:p-8 text-center border-2 transition-all relative overflow-hidden flex flex-col justify-center ${
                     idx === 0
-                      ? 'bg-slate-800/90 border-[#0072CE]/60 shadow-xl'
-                      : 'bg-slate-900/60 border-slate-800 opacity-80'
+                      ? 'bg-slate-900 text-white border-[#0072CE] shadow-xl'
+                      : 'bg-white border-slate-200 text-slate-900 shadow-xs opacity-90'
                   }`}
                 >
                   {idx === 0 ? (
@@ -1101,7 +1125,7 @@ export default function Step4Wrapped({
                       Your Match
                     </div>
                   ) : (
-                    <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-slate-800 text-slate-400 text-[9px] font-black uppercase px-3 py-1 rounded-full tracking-widest shadow-sm z-10 whitespace-nowrap border border-slate-700">
+                    <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-slate-100 text-slate-700 text-[9px] font-black uppercase px-3 py-1 rounded-full tracking-widest shadow-2xs z-10 whitespace-nowrap border border-slate-200">
                       {Math.round(arch.score)}% Similarity
                     </div>
                   )}
@@ -1115,12 +1139,16 @@ export default function Step4Wrapped({
                   </div>
 
                   <h3
-                    className={`text-2xl font-black mb-3 tracking-tight truncate ${arch.color}`}
+                    className={`text-2xl font-black mb-3 tracking-tight truncate ${
+                      idx === 0 ? 'text-white' : 'text-slate-900'
+                    }`}
                   >
                     {arch.name}
                   </h3>
 
-                  <p className="text-sm font-bold text-slate-300 leading-relaxed px-2">
+                  <p className={`text-sm font-bold leading-relaxed px-2 ${
+                    idx === 0 ? 'text-slate-300' : 'text-slate-600'
+                  }`}>
                     {arch.desc}
                   </p>
                 </div>
@@ -1128,7 +1156,7 @@ export default function Step4Wrapped({
                 {idx === 0 && (
                   <div
                     onClick={() => scrollToArch(1)}
-                    className="w-[30vw] sm:w-[140px] shrink-0 snap-center rounded-3xl flex flex-col items-center justify-center border-2 border-slate-700 bg-slate-800 text-slate-300 cursor-pointer hover:bg-slate-700 transition-all shadow-md"
+                    className="w-[30vw] sm:w-[140px] shrink-0 snap-center rounded-3xl flex flex-col items-center justify-center border-2 border-slate-200 bg-white text-slate-600 cursor-pointer hover:bg-slate-100 transition-all shadow-2xs"
                   >
                     <span className="text-3xl mb-3">👀</span>
                     <span className="text-xs font-black uppercase tracking-widest text-center leading-snug">
@@ -1154,66 +1182,64 @@ export default function Step4Wrapped({
                 className={`h-2.5 rounded-full transition-all duration-300 cursor-pointer ${
                   activeArchIndex === i
                     ? 'w-8 bg-[#0072CE]'
-                    : 'w-2.5 bg-slate-700 hover:bg-slate-600'
+                    : 'w-2.5 bg-slate-300 hover:bg-slate-400'
                 }`}
               />
             ))}
           </div>
         </div>
 
-        {/* THE CORE FOUR (EXPANDS TO 4 COLUMNS ON DESKTOP) */}
+        {/* THE CORE FOUR */}
         {stats.coreFour.length === 4 && (
-          <div>
-            <div className="bg-white text-slate-950 border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm">
-              <h3 className="text-2xl sm:text-3xl font-black text-center text-slate-950 mb-3 tracking-tight truncate">
-                The Core Four
-              </h3>
+          <div className="bg-white text-slate-950 border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm">
+            <h3 className="text-2xl sm:text-3xl font-black text-center text-slate-950 mb-3 tracking-tight truncate">
+              The Core Four
+            </h3>
 
-              <p className="text-xs font-bold text-center text-slate-500 mb-8 max-w-sm mx-auto">
-                If your Weezer fandom was a Mount Rushmore, these are the four
-                distinct tracks carving out your identity.
-              </p>
+            <p className="text-xs font-bold text-center text-slate-500 mb-8 max-w-sm mx-auto">
+              If your Weezer fandom was a Mount Rushmore, these are the four
+              distinct tracks carving out your identity.
+            </p>
 
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                {stats.coreFour.map((item, i) => {
-                  const resolvedId =
-                    item.song.albumId ||
-                    ALBUM_NAME_TO_ID[item.song.album] ||
-                    'unknown';
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {stats.coreFour.map((item, i) => {
+                const resolvedId =
+                  item.song.albumId ||
+                  ALBUM_NAME_TO_ID[item.song.album] ||
+                  'unknown';
 
-                  return (
-                    <div key={i} className="flex flex-col text-center group">
-                      <div className="w-full aspect-square rounded-xl shadow-md overflow-hidden mb-3 border border-slate-200 relative bg-slate-800 group-hover:scale-105 transition-transform duration-300">
-                        <AlbumArtwork
-                          albumId={resolvedId}
-                          className="w-full h-full object-cover"
-                        />
+                return (
+                  <div key={i} className="flex flex-col text-center group">
+                    <div className="w-full aspect-square rounded-xl shadow-md overflow-hidden mb-3 border border-slate-200 relative bg-slate-800 group-hover:scale-105 transition-transform duration-300">
+                      <AlbumArtwork
+                        albumId={resolvedId}
+                        className="w-full h-full object-cover"
+                      />
 
-                        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 to-transparent" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 to-transparent" />
 
-                        <div className="absolute bottom-2 left-2 right-2 text-left">
-                          <span className="text-[9px] font-black uppercase text-amber-400 block tracking-wider drop-shadow-md">
-                            {item.label}
-                          </span>
+                      <div className="absolute bottom-2 left-2 right-2 text-left">
+                        <span className="text-[9px] font-black uppercase text-amber-400 block tracking-wider drop-shadow-md">
+                          {item.label}
+                        </span>
 
-                          <h4 className="text-sm font-black text-white drop-shadow-md leading-tight">
-                            {item.song.title}
-                          </h4>
-                        </div>
+                        <h4 className="text-sm font-black text-white drop-shadow-md leading-tight">
+                          {item.song.title}
+                        </h4>
                       </div>
-
-                      <p className="text-xs font-bold text-slate-500 leading-snug px-1">
-                        {item.desc}
-                      </p>
                     </div>
-                  );
-                })}
-              </div>
+
+                    <p className="text-xs font-bold text-slate-500 leading-snug px-1">
+                      {item.desc}
+                    </p>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
 
-        {/* 3. TASTE DNA & 4. THE GREAT DEBATE (SIDE-BY-SIDE DESKTOP GRID) */}
+        {/* 3. TASTE DNA & 4. THE GREAT DEBATE */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
           {/* TASTE DNA */}
           <div className="bg-white text-slate-950 border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm flex flex-col justify-between">
@@ -1355,17 +1381,17 @@ export default function Step4Wrapped({
               </div>
             </div>
 
-            <div className="text-center text-sm font-black text-slate-700 uppercase tracking-widest bg-slate-50 py-4 px-2 rounded-xl border border-slate-100">
+            <div className="text-center text-sm font-black text-slate-700 uppercase tracking-widest bg-slate-50 py-4 px-2 rounded-xl border border-slate-200 shadow-2xs">
               {stats.debateDescriptor}
             </div>
           </div>
         </div>
 
-        {/* 5. ERAS CAROUSEL WITH DESKTOP ARROWS */}
+        {/* 5. ERAS CAROUSEL */}
         <div>
           <div className="relative">
             <div className="flex items-center justify-between mb-3 px-2">
-              <h3 className="text-2xl sm:text-3xl font-black text-[#ffffff] tracking-tight truncate">
+              <h3 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight truncate">
                 Weezer Era
               </h3>
 
@@ -1374,7 +1400,7 @@ export default function Step4Wrapped({
                 <button
                   onClick={() => scrollToEra(Math.max(0, activeEraIndex - 1))}
                   disabled={activeEraIndex === 0}
-                  className="w-10 h-10 rounded-full bg-slate-800 hover:bg-slate-700 text-white flex items-center justify-center font-black transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer border border-slate-700"
+                  className="w-10 h-10 rounded-full bg-white hover:bg-slate-100 text-slate-800 flex items-center justify-center font-black transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer border border-slate-200 shadow-xs"
                 >
                   ←
                 </button>
@@ -1385,14 +1411,14 @@ export default function Step4Wrapped({
                     )
                   }
                   disabled={activeEraIndex === stats.sortedEras.length}
-                  className="w-10 h-10 rounded-full bg-slate-800 hover:bg-slate-700 text-white flex items-center justify-center font-black transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer border border-slate-700"
+                  className="w-10 h-10 rounded-full bg-white hover:bg-slate-100 text-slate-800 flex items-center justify-center font-black transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer border border-slate-200 shadow-xs"
                 >
                   →
                 </button>
               </div>
             </div>
 
-            <p className="text-xs font-bold text-slate-400 mb-6 px-2">
+            <p className="text-xs font-bold text-slate-500 mb-6 px-2">
               Your favorite-song era, based on your ranked tracks.
             </p>
 
@@ -1404,7 +1430,7 @@ export default function Step4Wrapped({
               {stats.sortedEras.map((era, idx) => (
                 <React.Fragment key={era.id}>
                   <div
-                    className={`w-[85vw] sm:w-[360px] lg:w-[400px] shrink-0 snap-center rounded-3xl p-6 sm:p-8 transition-all relative overflow-hidden flex flex-col justify-between shadow-lg ${
+                    className={`w-[85vw] sm:w-[360px] lg:w-[400px] shrink-0 snap-center rounded-3xl p-6 sm:p-8 transition-all relative overflow-hidden flex flex-col justify-between shadow-md ${
                       era.color
                     } ${idx !== 0 && 'opacity-90'}`}
                   >
@@ -1453,7 +1479,7 @@ export default function Step4Wrapped({
                   {idx === 0 && (
                     <div
                       onClick={() => scrollToEra(1)}
-                      className="w-[30vw] sm:w-[140px] shrink-0 snap-center rounded-3xl flex flex-col items-center justify-center border-2 border-slate-700 bg-slate-800 text-slate-300 cursor-pointer hover:bg-slate-700 transition-all shadow-md"
+                      className="w-[30vw] sm:w-[140px] shrink-0 snap-center rounded-3xl flex flex-col items-center justify-center border-2 border-slate-200 bg-white text-slate-600 cursor-pointer hover:bg-slate-100 transition-all shadow-2xs"
                     >
                       <span className="text-3xl mb-3">🎸</span>
 
@@ -1480,7 +1506,7 @@ export default function Step4Wrapped({
                   className={`h-2.5 rounded-full transition-all duration-300 cursor-pointer ${
                     activeEraIndex === i
                       ? 'w-8 bg-[#0072CE]'
-                      : 'w-2.5 bg-slate-700 hover:bg-slate-600'
+                      : 'w-2.5 bg-slate-300 hover:bg-slate-400'
                   }`}
                 />
               ))}
@@ -1488,7 +1514,7 @@ export default function Step4Wrapped({
           </div>
         </div>
 
-        {/* TEMPORAL LOYALTY, INDEPENDENCE INDEX, LISTENING AGE (SIDE-BY-SIDE DESKTOP GRID) */}
+        {/* TEMPORAL LOYALTY, INDEPENDENCE INDEX, LISTENING AGE */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
           {/* TEMPORAL LOYALTY CURVE */}
           <div className="bg-white text-slate-950 border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm flex flex-col justify-between">
@@ -1507,7 +1533,7 @@ export default function Step4Wrapped({
                 </p>
               </div>
 
-              <div className="flex items-end justify-between gap-2 h-32 mt-8 mb-2 px-2 border-b-2 border-slate-100 pb-2">
+              <div className="flex items-end justify-between gap-2 h-32 mt-8 mb-2 px-2 border-b-2 border-slate-200 pb-2">
                 {Object.entries(stats.temporalBins).map(([label, count]) => {
                   const maxVal = Math.max(...Object.values(stats.temporalBins), 1);
                   const heightPct = (count / maxVal) * 100;
@@ -1583,7 +1609,7 @@ export default function Step4Wrapped({
           </div>
         </div>
 
-        {/* 6. LISTENING AGE & 10. CONSISTENCY INDEX (SIDE-BY-SIDE DESKTOP GRID) */}
+        {/* 6. LISTENING AGE & CONSISTENCY INDEX */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
           {/* LISTENING AGE */}
           <div className="bg-gradient-to-br from-indigo-900 to-slate-900 border border-indigo-800 rounded-3xl p-8 sm:p-10 shadow-xl relative overflow-hidden flex flex-col items-center justify-center">
@@ -1653,7 +1679,7 @@ export default function Step4Wrapped({
           ) : null}
         </div>
 
-        {/* 8. RANK CLASHES (SIDE-BY-SIDE DESKTOP GRID) */}
+        {/* 8. RANK CLASHES */}
         {(stats.biggestBetrayal || stats.hiddenGem) && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
             {stats.biggestBetrayal ? (
@@ -1746,7 +1772,7 @@ export default function Step4Wrapped({
           </div>
         )}
 
-        {/* 9. TOP 10 SETLIST & 11. ALBUM POWER RANKINGS (SIDE-BY-SIDE DESKTOP GRID) */}
+        {/* 9. TOP 10 SETLIST & 11. ALBUM POWER RANKINGS */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
           {/* TOP 10 SETLIST */}
           <div className="bg-white text-slate-950 border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm">
@@ -1856,6 +1882,16 @@ export default function Step4Wrapped({
               </button>
             )}
           </div>
+        </div>
+
+        {/* TIER LIST VISUALIZATION SECTION */}
+        <div>
+          <TierListChart 
+            title="All My Favorite Songs: The Weezer Song Ranking Project" 
+            subtitle={`${displayNameStr}'s Personal Tier List`}
+            username={userProfile?.username}
+            rankedSongs={personalTierListRankings} 
+          />
         </div>
 
         {/* 12. SMART SHARE MODULE */}

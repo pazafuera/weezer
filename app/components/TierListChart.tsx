@@ -12,10 +12,17 @@ interface RankedSong {
   rank: number;
 }
 
+// NEW INTERFACE: Accepts explicit album rankings from the parent
+interface RankedAlbum {
+  album: string;
+  rank: number;
+}
+
 interface TierListChartProps {
   title: string;
   subtitle: string;
   rankedSongs: RankedSong[];
+  rankedAlbums: RankedAlbum[]; // NEW PROP
   username?: string;
 }
 
@@ -66,28 +73,14 @@ const ALBUM_TIERS = [
   { label: 'F', color: 'bg-[#BF7FFF]', text: 'text-purple-950', max: 99 },
 ];
 
-export default function TierListChart({ title, subtitle, rankedSongs, username }: TierListChartProps) {
+export default function TierListChart({ title, subtitle, rankedSongs, rankedAlbums, username }: TierListChartProps) {
   const exportRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [viewMode, setViewMode] = useState<'songs' | 'albums'>('songs');
 
-  // AUTOMATIC ALBUM RANKING CALCULATION
-  const rankedAlbums = useMemo(() => {
-    const albumGroups: Record<string, { totalRank: number; count: number }> = {};
-    rankedSongs.forEach((song) => {
-      if (!albumGroups[song.album]) albumGroups[song.album] = { totalRank: 0, count: 0 };
-      albumGroups[song.album].totalRank += song.rank;
-      albumGroups[song.album].count += 1;
-    });
-
-    return Object.keys(albumGroups)
-      .map((album) => ({ album, avgRank: albumGroups[album].totalRank / albumGroups[album].count }))
-      .sort((a, b) => a.avgRank - b.avgRank)
-      .map((a, index) => ({ ...a, rank: index + 1 }));
-  }, [rankedSongs]);
-
   const currentTiers = viewMode === 'songs' ? SONG_TIERS : ALBUM_TIERS;
 
+  // Process items using the parent's explicit rankings!
   const processedTiers = useMemo(() => {
     return currentTiers.map((tier, index) => {
       const prevMax = index === 0 ? 0 : currentTiers[index - 1].max;
@@ -112,8 +105,6 @@ export default function TierListChart({ title, subtitle, rankedSongs, username }
     
     setTimeout(async () => {
       try {
-        // iOS Safari sometimes renders blank on the first pass with foreignObjects. 
-        // We generate it once invisibly, then generate it again for safety.
         await toPng(exportRef.current!, { quality: 0.1, pixelRatio: 1 });
         
         const dataUrl = await toPng(exportRef.current!, {
@@ -124,34 +115,28 @@ export default function TierListChart({ title, subtitle, rankedSongs, username }
         
         const filename = `${username ? `${username}-` : ''}weezer-${viewMode}-tiers.png`;
 
-        // CHECK FOR iOS / MOBILE DEVICE CAPABILITIES
         const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || 
                          (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
         if (isMobile && navigator.share) {
           try {
-            // Convert base64 Data URL to a Blob
             const fetchRes = await fetch(dataUrl);
             const blob = await fetchRes.blob();
-            // Create a File object
             const file = new File([blob], filename, { type: 'image/png' });
 
-            // If the native share API supports sharing files, invoke it!
             if (navigator.canShare && navigator.canShare({ files: [file] })) {
               await navigator.share({
                 files: [file],
                 title: 'My Weezer Tier List',
               });
               setIsExporting(false);
-              return; // Exit early, the native share sheet handled it
+              return; 
             }
           } catch (shareErr) {
             console.error('Native sharing failed or was canceled', shareErr);
-            // Fall through to standard download if share fails
           }
         }
 
-        // STANDARD DESKTOP FALLBACK
         const link = document.createElement('a');
         link.download = filename;
         link.href = dataUrl;

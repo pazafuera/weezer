@@ -477,7 +477,13 @@ export default function FanStats({
             title="The Fan Club Tiers" 
             subtitle="Global Community Consensus"
             rankedSongs={communityStats.globalTierListRankings} 
-            rankedAlbums={communityStats.albumLeaderboard.map((a, idx) => ({ album: a.album, rank: idx + 1 }))}
+            
+            // WE NOW PASS THE EXACT ID TO FIX THE ARTWORK HERE TOO
+            rankedAlbums={communityStats.albumLeaderboard.map((a, idx) => ({ 
+              id: a.id || ALBUM_NAME_TO_ID[a.album] || 'unknown', 
+              album: a.album, 
+              rank: idx + 1 
+            }))}
           />
         </div>
 

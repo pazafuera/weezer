@@ -12,8 +12,8 @@ interface RankedSong {
   rank: number;
 }
 
-// NEW INTERFACE: Accepts explicit album rankings from the parent
 interface RankedAlbum {
+  id: string;
   album: string;
   rank: number;
 }
@@ -21,8 +21,8 @@ interface RankedAlbum {
 interface TierListChartProps {
   title: string;
   subtitle: string;
-  rankedSongs: RankedSong[];
-  rankedAlbums: RankedAlbum[]; // NEW PROP
+  rankedSongs?: RankedSong[];
+  rankedAlbums?: RankedAlbum[];
   username?: string;
 }
 
@@ -73,14 +73,20 @@ const ALBUM_TIERS = [
   { label: 'F', color: 'bg-[#BF7FFF]', text: 'text-purple-950', max: 99 },
 ];
 
-export default function TierListChart({ title, subtitle, rankedSongs, rankedAlbums, username }: TierListChartProps) {
+export default function TierListChart({ 
+  title, 
+  subtitle, 
+  rankedSongs = [], 
+  rankedAlbums = [], 
+  username 
+}: TierListChartProps) {
   const exportRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [viewMode, setViewMode] = useState<'songs' | 'albums'>('songs');
 
   const currentTiers = viewMode === 'songs' ? SONG_TIERS : ALBUM_TIERS;
 
-  // Process items using the parent's explicit rankings!
+  // Process items using the parent's explicit rankings
   const processedTiers = useMemo(() => {
     return currentTiers.map((tier, index) => {
       const prevMax = index === 0 ? 0 : currentTiers[index - 1].max;
@@ -93,7 +99,7 @@ export default function TierListChart({ title, subtitle, rankedSongs, rankedAlbu
       } else {
         items = rankedAlbums
           .filter((a) => a.rank > prevMax && a.rank <= tier.max)
-          .map((a) => ({ id: a.album, name: a.album, album: a.album, rank: a.rank }));
+          .map((a) => ({ id: a.id, name: a.album, album: a.album, rank: a.rank }));
       }
       return { ...tier, items };
     });
@@ -105,6 +111,8 @@ export default function TierListChart({ title, subtitle, rankedSongs, rankedAlbu
     
     setTimeout(async () => {
       try {
+        // iOS Safari sometimes renders blank on the first pass with foreignObjects. 
+        // We generate it once invisibly, then generate it again for safety.
         await toPng(exportRef.current!, { quality: 0.1, pixelRatio: 1 });
         
         const dataUrl = await toPng(exportRef.current!, {
@@ -115,6 +123,7 @@ export default function TierListChart({ title, subtitle, rankedSongs, rankedAlbu
         
         const filename = `${username ? `${username}-` : ''}weezer-${viewMode}-tiers.png`;
 
+        // CHECK FOR iOS / MOBILE DEVICE CAPABILITIES
         const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || 
                          (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
@@ -137,6 +146,7 @@ export default function TierListChart({ title, subtitle, rankedSongs, rankedAlbu
           }
         }
 
+        // STANDARD DESKTOP FALLBACK
         const link = document.createElement('a');
         link.download = filename;
         link.href = dataUrl;
@@ -155,10 +165,10 @@ export default function TierListChart({ title, subtitle, rankedSongs, rankedAlbu
       {processedTiers.map((tier) => (
         <div 
           key={tier.label} 
-          className="flex bg-black gap-0.5 sm:gap-1 min-h-[80px] w-full"
+          className={`grid ${isExportMode ? 'grid-cols-[6rem_1fr]' : 'grid-cols-[4rem_minmax(0,1fr)] sm:grid-cols-[6rem_minmax(0,1fr)]'} bg-black gap-0.5 sm:gap-1 min-h-[80px] w-full`}
         >
           {/* TIER BADGE */}
-          <div className={`w-14 sm:w-20 shrink-0 flex items-center justify-center ${tier.color}`}>
+          <div className={`w-full h-full flex items-center justify-center ${tier.color}`}>
             <span className={`text-2xl sm:text-4xl font-black ${tier.text}`}>
               {tier.label}
             </span>
@@ -179,7 +189,7 @@ export default function TierListChart({ title, subtitle, rankedSongs, rankedAlbu
                 </div>
               ) : (
                 tier.items.map((item) => {
-                  const resolvedId = ALBUM_NAME_TO_ID[item.album] || 'unknown';
+                  const resolvedId = viewMode === 'albums' ? item.id : (ALBUM_NAME_TO_ID[item.album] || 'unknown');
                   const theme = ALBUM_COLORS[item.album] || DEFAULT_COLOR;
 
                   // ALBUMS VIEW (Uses actual Album Artwork)

@@ -1887,11 +1887,12 @@ export default function Step4Wrapped({
         {/* TIER LIST VISUALIZATION SECTION */}
         <div>
           <TierListChart 
-            title="All Your Favorite Songss" 
-            subtitle={`Personal Tier List`}
+            title="All My Favorite Songs: The Weezer Song Ranking Project" 
+            subtitle={`${displayNameStr}'s Personal Tier List`}
             username={userProfile?.username}
             rankedSongs={personalTierListRankings} 
-            rankedAlbums={stats.rankedAlbums.map((a, idx) => ({ album: a.name, rank: idx + 1 }))} 
+            // V-- WE NOW PASS THE EXACT ID SO NO GUESSING HAPPENS --V
+            rankedAlbums={stats.rankedAlbums.map((a, idx) => ({ id: a.id, album: a.name, rank: idx + 1 }))} 
           />
         </div>
 

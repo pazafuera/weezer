@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { BucketType, BUCKET_CONFIG, FULL_SONG_POOL } from '../data/constants';
+import { countBucketedSongs } from '../context/WeezerContext';
 import { FlyingWIcon, AudioPreviewButton } from './SharedUI';
 
 export default function Step1Triage({
@@ -19,6 +20,10 @@ export default function Step1Triage({
   const sortedCount = Object.keys(triageMap).length;
   const progressPercent = Math.round((sortedCount / FULL_SONG_POOL.length) * 100);
   const isGutCheckComplete = sortedCount === FULL_SONG_POOL.length;
+  // Secondary partial-triage path: moving forward is allowed as soon as at
+  // least one song has an explicit, valid triage bucket.
+  const bucketedCount = countBucketedSongs(triageMap);
+  const hasPartialTriage = bucketedCount >= 1;
 
   const scrollToAlbum = (albumName: string) => {
     const el = document.getElementById(`album-${albumName.replace(/\s+/g, '-').toLowerCase()}`);
@@ -186,7 +191,7 @@ export default function Step1Triage({
       </div>
 
       {/* FLOATING ACTION BUTTON */}
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-auto">
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-auto flex flex-col items-center gap-2">
         {isGutCheckComplete ? (
           <button
             onClick={handleFinishTriage}
@@ -201,6 +206,14 @@ export default function Step1Triage({
             className="bg-slate-800/95 text-slate-400 font-extrabold text-xs sm:text-sm px-6 py-3.5 rounded-full border border-slate-700 cursor-not-allowed shadow-xl backdrop-blur-md whitespace-nowrap"
           >
             🔒 Categorize All Songs ({sortedCount}/{FULL_SONG_POOL.length})
+          </button>
+        )}
+        {hasPartialTriage && !isGutCheckComplete && (
+          <button
+            onClick={handleFinishTriage}
+            className="text-[11px] font-semibold text-slate-300/90 hover:text-white underline underline-offset-2 decoration-slate-500 bg-slate-950/60 rounded-full px-3 py-1 backdrop-blur-sm transition-colors cursor-pointer whitespace-nowrap"
+          >
+            Continue with {bucketedCount} of {FULL_SONG_POOL.length} bucketed →
           </button>
         )}
       </div>

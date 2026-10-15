@@ -67,16 +67,21 @@ export function resolveUrlStep(raw: string | null): AppStep | null {
  * no duplicated, slightly-different booleans elsewhere.
  *
  * Truth table (steps unlocked):
- * - zero progress / partial triage: triage only
- * - triage complete, no refined list: + rank_buckets (Refine Buckets)
- * - triage complete + real refined master list: + master (Master List), + wrapped (Sweater Thread)
+ * - zero progress: triage only
+ * - partial triage (>=1 song bucketed), no refined list: + rank_buckets (Refine Buckets)
+ * - partial triage + real refined master list: + master (Master List), + wrapped (Sweater Thread)
+ * - triage complete (all 206 bucketed): isTriageComplete = true (display/completionist flag)
  */
 export interface ProgressState {
   /** Gut Check fully sorted (see isTriageComplete). */
   isTriageComplete: boolean;
-  /** Refine Buckets unlocked: only after Gut Check completes. */
+  /** Number of songs with an explicit, valid triage bucket. */
+  triageBucketedCount: number;
+  /** Partial triage: at least one song explicitly bucketed. */
+  hasPartialTriage: boolean;
+  /** Refine Buckets unlocked: as soon as partial triage exists (>=1 bucketed song). */
   isRefineUnlocked: boolean;
-  /** Master List unlocked: Gut Check complete AND a real refined master list exists. */
+  /** Master List unlocked: partial triage AND a real refined master list exists. */
   isMasterUnlocked: boolean;
   /** Sweater Thread unlocked: same rule as Master List. */
   isWrappedUnlocked: boolean;
@@ -93,13 +98,17 @@ export function getProgressState(
   masterList: Song[]
 ): ProgressState {
   const triageComplete = isTriageComplete(triageMap);
+  const bucketedCount = countBucketedSongs(triageMap);
+  const hasPartialTriage = bucketedCount >= 1;
   const hasRefinedMaster =
-    triageComplete &&
+    hasPartialTriage &&
     masterList.length > 0 &&
     getRankedSongs(masterList, triageMap).length === masterList.length;
   return {
     isTriageComplete: triageComplete,
-    isRefineUnlocked: triageComplete,
+    triageBucketedCount: bucketedCount,
+    hasPartialTriage,
+    isRefineUnlocked: hasPartialTriage,
     isMasterUnlocked: hasRefinedMaster,
     isWrappedUnlocked: hasRefinedMaster,
   };
@@ -107,8 +116,8 @@ export function getProgressState(
 
 /**
  * Enforces the progression rule on a requested step. A request for a locked
- * step resolves to the earliest unfinished step (triage when Gut Check is
- * incomplete, else rank_buckets when no refined list exists). Requests for
+ * step resolves to the earliest unfinished step (triage when no song is
+ * bucketed yet, else rank_buckets when no refined list exists). Requests for
  * unlocked steps pass through unchanged.
  */
 export function resolveGuardedStep(
@@ -123,7 +132,7 @@ export function resolveGuardedStep(
     case 'master':
     case 'wrapped':
       if (progress.isMasterUnlocked) return requested;
-      return progress.isTriageComplete ? 'rank_buckets' : 'triage';
+      return progress.isRefineUnlocked ? 'rank_buckets' : 'triage';
     default:
       return requested;
   }
@@ -136,6 +145,22 @@ const VALID_TRIAGE_BUCKETS: readonly BucketType[] = [
   'skip',
   'trash',
 ];
+
+/**
+ * Number of songs in FULL_SONG_POOL with an explicit, valid triage bucket.
+ * Partial triage (>=1) is sufficient to unlock Refine Buckets; a full 206
+ * is only tracked by isTriageComplete for display/completionist purposes.
+ */
+export function countBucketedSongs(
+  triageMap: Record<string, BucketType>
+): number {
+  return FULL_SONG_POOL.reduce((count: number, song: Song) => {
+    const bucket: BucketType | undefined = triageMap[song.id];
+    return bucket !== undefined && VALID_TRIAGE_BUCKETS.indexOf(bucket) !== -1
+      ? count + 1
+      : count;
+  }, 0);
+}
 
 /**
  * Gut Check (triage) is complete when every song in FULL_SONG_POOL

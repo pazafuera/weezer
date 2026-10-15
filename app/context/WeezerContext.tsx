@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/utils/supabase';
 import { BucketType, Song, FULL_SONG_POOL } from '../data/constants';
-import { sanitizeMasterList } from '@/utils/rankingUtils';
+import { sanitizeMasterList, reconcileMasterList } from '@/utils/rankingUtils';
 
 
 export type AppStep =
@@ -70,6 +70,7 @@ interface WeezerContextType {
     newBucketRanks: Record<BucketType, Song[]>,
     updatedMap?: Record<string, BucketType>
   ) => void;
+  setSongBucket: (id: string, bucket: BucketType) => void;
   moveMasterSong: (index: number, direction: 'up' | 'down') => void;
   handleMagicFill: () => void;
 }
@@ -452,6 +453,14 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     syncRankingsToDatabase(activeMap, newMaster);
   };
 
+  const setSongBucket = (id: string, bucket: BucketType) => {
+    const map = { ...triageMap, [id]: bucket };
+    const reconciled = reconcileMasterList(masterList, map);
+    setTriageMap(map);
+    setMasterList(reconciled);
+    syncRankingsToDatabase(map, reconciled);
+  };
+
   const handleMagicFill = () => {
     const newMap: Record<string, BucketType> = {};
     FULL_SONG_POOL.forEach((song) => {
@@ -462,10 +471,10 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
       else if (rand < 0.9) newMap[song.id] = 'skip';
       else newMap[song.id] = 'trash';
     });
-    setTriageMap(newMap);
+    
     const derived = getDerivedBucketRanks(newMap, masterList);
-    setBucketRanks(derived);
-    syncRankingsToDatabase(newMap, masterList);
+    updateAndSyncBucketRanks(derived, newMap);
+    
     alert('Magic Fill Complete! 206 songs bucketed.');
   };
 
@@ -552,6 +561,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         refreshCommunityData,
         syncRankingsToDatabase,
         updateAndSyncBucketRanks,
+        setSongBucket,
         moveMasterSong,
         handleMagicFill,
       }}

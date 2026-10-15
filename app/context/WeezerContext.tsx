@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useEffect, useRef, ReactNod
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/utils/supabase';
 import { BucketType, Song, FULL_SONG_POOL } from '../data/constants';
-import { sanitizeMasterList, reconcileMasterList } from '@/utils/rankingUtils';
+import { sanitizeMasterList, reconcileMasterList, getRankedSongs } from '@/utils/rankingUtils';
 
 
 export type AppStep =
@@ -60,6 +60,73 @@ export function resolveUrlStep(raw: string | null): AppStep | null {
     (step) => step === raw
   );
   return known ?? null;
+}
+/**
+ * Unified progression-gating state. This is the ONE shared rule used by the
+ * dashboard, the nav menu (AppShell), navigateTo, and the ?step= URL guard —
+ * no duplicated, slightly-different booleans elsewhere.
+ *
+ * Truth table (steps unlocked):
+ * - zero progress / partial triage: triage only
+ * - triage complete, no refined list: + rank_buckets (Refine Buckets)
+ * - triage complete + real refined master list: + master (Master List), + wrapped (Sweater Thread)
+ */
+export interface ProgressState {
+  /** Gut Check fully sorted (see isTriageComplete). */
+  isTriageComplete: boolean;
+  /** Refine Buckets unlocked: only after Gut Check completes. */
+  isRefineUnlocked: boolean;
+  /** Master List unlocked: Gut Check complete AND a real refined master list exists. */
+  isMasterUnlocked: boolean;
+  /** Sweater Thread unlocked: same rule as Master List. */
+  isWrappedUnlocked: boolean;
+}
+
+/**
+ * Returns the unified progress state for the given ranking data. A real
+ * refined master list exists only when the master list is non-empty and
+ * every entry has a triage bucket — unranked leftovers never count as
+ * progress.
+ */
+export function getProgressState(
+  triageMap: Record<string, BucketType>,
+  masterList: Song[]
+): ProgressState {
+  const triageComplete = isTriageComplete(triageMap);
+  const hasRefinedMaster =
+    triageComplete &&
+    masterList.length > 0 &&
+    getRankedSongs(masterList, triageMap).length === masterList.length;
+  return {
+    isTriageComplete: triageComplete,
+    isRefineUnlocked: triageComplete,
+    isMasterUnlocked: hasRefinedMaster,
+    isWrappedUnlocked: hasRefinedMaster,
+  };
+}
+
+/**
+ * Enforces the progression rule on a requested step. A request for a locked
+ * step resolves to the earliest unfinished step (triage when Gut Check is
+ * incomplete, else rank_buckets when no refined list exists). Requests for
+ * unlocked steps pass through unchanged.
+ */
+export function resolveGuardedStep(
+  requested: AppStep,
+  triageMap: Record<string, BucketType>,
+  masterList: Song[]
+): AppStep {
+  const progress = getProgressState(triageMap, masterList);
+  switch (requested) {
+    case 'rank_buckets':
+      return progress.isRefineUnlocked ? requested : 'triage';
+    case 'master':
+    case 'wrapped':
+      if (progress.isMasterUnlocked) return requested;
+      return progress.isTriageComplete ? 'rank_buckets' : 'triage';
+    default:
+      return requested;
+  }
 }
 
 const VALID_TRIAGE_BUCKETS: readonly BucketType[] = [
@@ -326,15 +393,15 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    // A refine (?step=refine / ?step=rank_buckets) deep link must not
-    // bypass the flow: without a completed Gut Check it goes to triage.
-    if (resolved === 'rank_buckets' && !isTriageComplete(triageMap)) {
-      setStepState('triage');
-      replaceStepInUrl('triage');
-      return;
+    // A deep link must never bypass the visual locks: resolve it through the
+    // same progression guard as navigateTo. Corrective redirects use
+    // replaceState (never push) so the back button can't loop on a bad URL.
+    const guarded = resolveGuardedStep(resolved, triageMap, masterList);
+    if (guarded !== resolved) {
+      replaceStepInUrl(guarded);
     }
 
-    setStepState(resolved);
+    setStepState(guarded);
   }, [loadingUser, deepLinkIntent, triageMap, masterList, userId]);
 
   // Fetch community data once on initial startup
@@ -619,7 +686,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
       setInitialAuthMode(authMode);
     }
 
-    if (targetStep === 'rank_buckets') {
+    const guardedStep = resolveGuardedStep(targetStep, triageMap, masterList); if (guardedStep === 'rank_buckets') {
       setBucketRanks(getDerivedBucketRanks(triageMap, masterList));
       setRefineStageIdx(0);
 
@@ -629,15 +696,15 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
       }
     }
 
-    setStep(targetStep);
+    setStep(guardedStep);
 
     if (typeof window !== 'undefined') {
       // If navigating from a sub-page (e.g. /u/username), redirect back to root with step param
       if (window.location.pathname !== '/') {
-        router.push(`/?step=${targetStep}`);
+        router.push(`/?step=${guardedStep}`);
       } else {
         const url = new URL(window.location.href);
-        url.searchParams.set('step', targetStep);
+        url.searchParams.set('step', guardedStep);
         window.history.replaceState({}, '', url.toString());
       }
     }

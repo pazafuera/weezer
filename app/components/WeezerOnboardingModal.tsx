@@ -168,7 +168,7 @@ export const COUNTRY_OPTIONS = [
   { code: 'ZW', name: 'Zimbabwe' },
 ];
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabase';
 
 interface WeezerOnboardingModalProps {
@@ -216,6 +216,23 @@ export default function WeezerOnboardingModal({
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (isOpen) {
+      setAuthMethod('password');
+      setStepIndex(currentUserId ? 2 : 1);
+      setEmail('');
+      setPassword('');
+      setMagicSent(false);
+      setUsername('');
+      setDisplayName('');
+      setBirthYear('');
+      setCountry('US');
+      setStateCode('');
+      setLoading(false);
+      setErrorMsg(null);
+    }
+  }, [isOpen, currentUserId]);
+
   if (!isOpen) return null;
 
   // Step 1: Magic Link Flow
@@ -235,8 +252,8 @@ export default function WeezerOnboardingModal({
 
       if (error) throw error;
       setMagicSent(true);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Failed to send login link.');
+    } catch (err: unknown) {
+      setErrorMsg((err instanceof Error && err.message ? err.message : 'Failed to send login link.'));
     } finally {
       setLoading(false);
     }
@@ -331,8 +348,8 @@ export default function WeezerOnboardingModal({
       });
 
       onClose();
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Failed to complete signup.');
+    } catch (err: unknown) {
+      setErrorMsg((err instanceof Error && err.message ? err.message : 'Failed to complete signup.'));
     } finally {
       setLoading(false);
     }
@@ -402,13 +419,13 @@ export default function WeezerOnboardingModal({
               ) : (
                 <form onSubmit={handleMagicLink} className="space-y-3">
                   <div>
-                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-wider block mb-1">
+                    <label htmlFor="onboarding-email-magic" className="text-[10px] font-black uppercase text-slate-500 tracking-wider block mb-1">
                       Email Address
                     </label>
                     <input
                       type="email"
                       required
-                      placeholder="rivers@weezer.com"
+                      id="onboarding-email-magic" name="email" autoComplete="email" placeholder="you@example.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-[#0072CE]"
@@ -433,13 +450,13 @@ export default function WeezerOnboardingModal({
             ) : (
               <form onSubmit={handleProceedToProfileStep} className="space-y-3">
                 <div>
-                  <label className="text-[10px] font-black uppercase text-slate-500 tracking-wider block mb-1">
+                  <label htmlFor="onboarding-email-password" className="text-[10px] font-black uppercase text-slate-500 tracking-wider block mb-1">
                     Email Address
                   </label>
                   <input
                     type="email"
                     required
-                    placeholder="rivers@weezer.com"
+                    id="onboarding-email-password" name="email" autoComplete="email" placeholder="you@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-[#0072CE]"
@@ -504,7 +521,7 @@ export default function WeezerOnboardingModal({
                   <input
                     type="text"
                     required
-                    placeholder="rivers_cuomo"
+                    id="onboarding-username" name="username" autoComplete="username" placeholder="your_handle"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     className="w-full pl-8 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-[#0072CE]"
@@ -523,7 +540,7 @@ export default function WeezerOnboardingModal({
                 </div>
                 <input
                   type="text"
-                  placeholder="Rivers C."
+                  id="onboarding-display-name" name="displayName" autoComplete="nickname" placeholder="Display name"
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
                   className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-[#0072CE]"

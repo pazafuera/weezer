@@ -199,6 +199,20 @@ export default function Login() {
     }
   }, [initialAuthMode]);
 
+  // Reset signup-only fields (and any leftover message) whenever the user
+  // enters signup mode, so a fresh signup form is unmistakably blank.
+  // Keyed on [authMode] only: runs on mode-enter, never while typing.
+  useEffect(() => {
+    if (authMode === 'signup') {
+      setUsername('');
+      setDisplayName('');
+      setBirthYear('');
+      setCountry('US');
+      setStateCode('');
+      setMessage(null);
+    }
+  }, [authMode]);
+
   // Unified Profile State for Sign-up
   const [username, setUsername] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -291,10 +305,11 @@ export default function Login() {
           });
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { error_description?: string; message?: string } | null;
       setMessage({
         type: 'error',
-        text: error.error_description || error.message || 'An error occurred.',
+        text: err?.error_description || err?.message || 'An error occurred.',
       });
     } finally {
       setLoading(false);
@@ -390,9 +405,11 @@ export default function Login() {
               <input
                 id="email"
                 type="email"
+                name="email"
+                autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="buddy.holly@weezer.com"
+                placeholder="you@example.com"
                 required
                 className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#0072CE] focus:ring-2 focus:ring-blue-100 outline-none transition-all font-bold text-slate-900 text-base"
               />
@@ -410,6 +427,8 @@ export default function Login() {
                 <input
                   id="password"
                   type="password"
+                  name="password"
+                  autoComplete={authMode === 'login' ? 'current-password' : 'new-password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
@@ -428,7 +447,7 @@ export default function Login() {
                 </span>
 
                 <div>
-                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">
+                  <label htmlFor="login-username" className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">
                     Unique Username (Handle) *
                   </label>
                   <div className="relative">
@@ -438,7 +457,10 @@ export default function Login() {
                     <input
                       type="text"
                       required
-                      placeholder="rivers_cuomo"
+                      placeholder="your_handle"
+                      id="login-username"
+                      name="username"
+                      autoComplete="username"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
                       className="w-full pl-8 pr-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#0072CE] outline-none font-bold text-slate-900 text-base"
@@ -448,7 +470,7 @@ export default function Login() {
 
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider">
+                    <label htmlFor="login-display-name" className="block text-[10px] font-black text-slate-500 uppercase tracking-wider">
                       Display Name
                     </label>
                     <span className="text-[9px] font-bold text-slate-400">
@@ -457,7 +479,10 @@ export default function Login() {
                   </div>
                   <input
                     type="text"
-                    placeholder="Rivers C."
+                    placeholder="Display name"
+                    id="login-display-name"
+                    name="displayName"
+                    autoComplete="nickname"
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
                     className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#0072CE] outline-none font-bold text-slate-900 text-base"

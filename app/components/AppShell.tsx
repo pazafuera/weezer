@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useWeezer, AppStep } from '../context/WeezerContext';
+import { useWeezer, AppStep, getProgressState } from '../context/WeezerContext';
 import { FlyingWIcon } from './SharedUI';
 
 export default function AppShell({
@@ -53,20 +53,20 @@ export default function AppShell({
     }
   }, [step]);
 
-  // PROGRESS COMPLETION CHECKS
-  const isGutCheckDone = Boolean(triageMap && Object.keys(triageMap).length > 0);
-  const isRankOrderDone = Boolean(masterList && masterList.length > 0);
-  const hasNavigatedToRankings = isRankOrderDone;
+  // UNIFIED PROGRESSION STATE — one rule shared with dashboard, navigateTo, URL guard.
+  const progress = getProgressState(triageMap, masterList);
+
+
 
   // CALCULATE WHICH STEP GETS THE NEXT-STEP ARROW (→)
   let nextStepKey: AppStep | null = null;
-  if (!isGutCheckDone) {
+  if (!progress.isTriageComplete) {
     nextStepKey = 'triage';
-  } else if (isGutCheckDone && !isRankOrderDone) {
+  } else if (!progress.isMasterUnlocked) {
     nextStepKey = 'rank_buckets';
-  } else if (isGutCheckDone && isRankOrderDone && !hasViewedWrapped) {
+  } else if (!hasViewedWrapped) {
     nextStepKey = 'wrapped';
-  } else if (hasViewedWrapped) {
+  } else {
     nextStepKey = 'fan_stats';
   }
 
@@ -88,7 +88,7 @@ export default function AppShell({
     {
       label: 'How It Works',
       step: 'orientation',
-      hideIf: isGutCheckDone,
+      hideIf: Object.keys(triageMap).length > 0,
     },
     {
       label: 'Gut Check',
@@ -97,17 +97,17 @@ export default function AppShell({
     {
       label: 'Rank Order',
       step: 'rank_buckets',
-      disabled: !isGutCheckDone,
+      disabled: !progress.isRefineUnlocked,
     },
     {
       label: 'My Rankings',
       step: 'master',
-      disabled: !isRankOrderDone,
+      disabled: !progress.isMasterUnlocked,
     },
     {
       label: 'My Sweater Thread',
       step: 'wrapped',
-      disabled: !hasNavigatedToRankings,
+      disabled: !progress.isWrappedUnlocked,
     },
     {
       label: 'Global Rankings',

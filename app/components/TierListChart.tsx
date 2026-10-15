@@ -321,7 +321,7 @@ export default function TierListChart({
             {/* CALL TO ACTION BADGE */}
             <div className="text-left bg-slate-800/80 border border-slate-700 rounded-2xl p-5 shadow-lg shrink-0 w-[320px]">
               <p className="text-sm font-bold text-slate-300 leading-snug">
-                Make your own Weezer Song rankings list at <span className="text-[#0072CE] font-black">RankingWeezer.com</span> and connect with @usernames to compare your tastes side-by-side.
+                {'Make your own Weezer Song rankings list at '}<span className="text-[#0072CE] font-black">RankingWeezer.com</span>{' and connect with @usernames to compare your tastes side-by-side.'}
               </p>
             </div>
           </div>

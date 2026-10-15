@@ -88,7 +88,6 @@ export default function AppShell({
     {
       label: 'In The Garage',
       step: 'dashboard',
-      requiresAuth: true,
     },
     {
       label: 'How It Works',

@@ -714,11 +714,6 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     const guardedStep = resolveGuardedStep(targetStep, triageMap, masterList); if (guardedStep === 'rank_buckets') {
       setBucketRanks(getDerivedBucketRanks(triageMap, masterList));
       setRefineStageIdx(0);
-
-      // GUARD: If user has already completed/sorted their master list, do NOT auto-trigger head-to-head matchups
-      if (masterList && masterList.length > 0) {
-        setAutoStartMatchups(false);
-      }
     }
 
     setStep(guardedStep);

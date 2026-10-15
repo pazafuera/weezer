@@ -2,7 +2,7 @@
 
 import React, { useRef, useState, useMemo } from 'react';
 import { toPng } from 'html-to-image';
-import { ALBUM_NAME_TO_ID } from '../data/constants';
+import { ALBUM_NAME_TO_ID, BucketType } from '../data/constants';
 import { AlbumArtwork } from './SharedUI';
 
 interface RankedSong {
@@ -10,6 +10,7 @@ interface RankedSong {
   title: string;
   album: string;
   rank: number;
+  bucket?: BucketType;
 }
 
 interface RankedAlbum {
@@ -73,6 +74,17 @@ const ALBUM_TIERS = [
   { label: 'F', color: 'bg-[#BF7FFF]', text: 'text-purple-950', max: 99 },
 ];
 
+// Bucket -> tier mapping: every explicitly bucketed song appears in its
+// bucket's tier, even when the ranking is partial and the fixed rank cutoffs
+// above would leave the lower tiers empty.
+const BUCKET_TIER_LABEL: Record<BucketType, string> = {
+  banger: 'S',
+  slaps: 'A',
+  mid: 'B',
+  skip: 'C',
+  trash: 'F',
+};
+
 export default function TierListChart({ 
   title, 
   subtitle, 
@@ -94,7 +106,11 @@ export default function TierListChart({
 
       if (viewMode === 'songs') {
         items = rankedSongs
-          .filter((s) => s.rank > prevMax && s.rank <= tier.max)
+          .filter((s) =>
+            s.bucket !== undefined
+              ? BUCKET_TIER_LABEL[s.bucket] === tier.label
+              : s.rank > prevMax && s.rank <= tier.max
+          )
           .map((s) => ({ id: s.id, name: s.title, album: s.album, rank: s.rank }));
       } else {
         items = rankedAlbums

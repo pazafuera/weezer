@@ -147,14 +147,18 @@ export default function Step4Wrapped({
   );
 
   // USER TIER LIST FORMATTING
+  // The bucket is passed through so TierListChart can place every explicitly
+  // bucketed song in its bucket's tier (rank cutoffs alone leave lower tiers
+  // empty on partial rankings).
   const personalTierListRankings = useMemo(() => {
     return masterList.map((song, idx) => ({
       id: song.id,
       title: song.title,
       album: song.album,
       rank: idx + 1,
+      bucket: triageMap[song.id],
     }));
-  }, [masterList]);
+  }, [masterList, triageMap]);
 
   // EXTRACT FIRST NAME + LAST INITIAL
   const getFormattedName = () => {

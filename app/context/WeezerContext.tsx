@@ -4,6 +4,8 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/utils/supabase';
 import { BucketType, Song, FULL_SONG_POOL } from '../data/constants';
+import { sanitizeMasterList } from '@/utils/rankingUtils';
+
 
 export type AppStep =
   | 'splash'
@@ -17,7 +19,6 @@ export type AppStep =
   | 'friends'
   | 'login'
   | 'signup_success';
-
 export type AuthModeType = 'signup' | 'login' | 'magic';
 
 interface UserProfile {
@@ -89,7 +90,9 @@ const getDerivedBucketRanks = (
     slaps: combinedPool.filter((s) => map[s.id] === 'slaps'),
     mid: combinedPool.filter((s) => map[s.id] === 'mid'),
     skip: combinedPool.filter((s) => map[s.id] === 'skip'),
-    trash: combinedPool.filter((s) => map[s.id] === 'trash' || !map[s.id]),
+    // A song is only Trash when explicitly marked so; a missing triage
+    // entry means "unranked", never Trash.
+    trash: combinedPool.filter((s) => map[s.id] === 'trash'),
   };
 };
 
@@ -354,9 +357,9 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
             setTriageMap(loadedTriage);
           }
           if (rankData.master_list && Array.isArray(rankData.master_list)) {
-            loadedMaster = rankData.master_list.filter((s: Song) =>
-              validSongIds.has(s.id)
-            );
+            // Sanitize saved master list against the triage map: drop unranked
+            // leftovers from older saves; every ranked song keeps its position.
+            loadedMaster = sanitizeMasterList(rankData.master_list.filter((s: Song) => validSongIds.has(s.id)), loadedTriage);
             setMasterList(loadedMaster);
           }
 
@@ -379,14 +382,13 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         if (localState) {
           try {
             const parsed = JSON.parse(localState);
-            if (parsed.triageMap) setTriageMap(parsed.triageMap);
-            if (parsed.masterList) setMasterList(parsed.masterList);
-            setBucketRanks(
-              getDerivedBucketRanks(
-                parsed.triageMap || {},
-                parsed.masterList || []
-              )
-            );
+            const guestTriage: Record<string, BucketType> = parsed.triageMap || {};
+            // Sanitize saved master list against the triage map: drop unranked
+            // leftovers from older saves; every ranked song keeps its position.
+            const guestMaster = sanitizeMasterList(parsed.masterList || [], guestTriage);
+            setTriageMap(guestTriage);
+            setMasterList(guestMaster);
+            setBucketRanks(getDerivedBucketRanks(guestTriage, guestMaster));
 
             if (typeof window !== 'undefined') {
               const params = new URLSearchParams(window.location.search);

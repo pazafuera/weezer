@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useWeezer } from '../context/WeezerContext';
+import { useWeezer, getProgressState } from '../context/WeezerContext';
 import { BUCKET_CONFIG, FULL_SONG_POOL, BucketType, ALBUM_NAME_TO_ID } from '../data/constants';
 import { AlbumArtwork } from './SharedUI';
 import WeezerOnboardingModal from './WeezerOnboardingModal';
@@ -25,7 +25,7 @@ export default function StepDashboard() {
   const totalSongs = FULL_SONG_POOL.length; // 206
   const triageSortedCount = Object.keys(triageMap).length;
   const triagePct = Math.round((triageSortedCount / totalSongs) * 100);
-  const isTriageComplete = triageSortedCount >= totalSongs;
+  const progress = getProgressState(triageMap, masterList); const isTriageComplete = progress.isTriageComplete;
   const hasStartedTriage = triageSortedCount > 0;
 
   // Album Grouping for Catalog Completion
@@ -40,7 +40,7 @@ export default function StepDashboard() {
     {} as Record<BucketType, number>
   );
 
-  const isRefinedMasterComplete = masterList.length > 0 && isTriageComplete;
+  const isRefinedMasterComplete = progress.isMasterUnlocked;
 
   // Dynamic Triage CTA Text
   const getTriageCtaText = () => {
@@ -82,10 +82,10 @@ export default function StepDashboard() {
       desc: isRefinedMasterComplete ? 'Matchups completed' : 'Head-to-head matchups',
       isComplete: isRefinedMasterComplete,
       isCurrent: isTriageComplete && !isRefinedMasterComplete,
-      isDisabled: !isTriageComplete,
+      isDisabled: !progress.isRefineUnlocked,
       ctaText: isRefinedMasterComplete ? 'View →' : 'Start →',
       action: () => {
-        if (!isTriageComplete) return;
+        if (!progress.isRefineUnlocked) return;
         setAutoStartMatchups(true);
         setRefineStageIdx(0);
         navigateTo('rank_buckets');
@@ -97,10 +97,10 @@ export default function StepDashboard() {
       desc: 'Your Personalized Playlist',
       isComplete: isRefinedMasterComplete,
       isCurrent: false,
-      isDisabled: !isTriageComplete,
+      isDisabled: !progress.isMasterUnlocked,
       ctaText: 'View →',
       action: () => {
-        if (!isTriageComplete) return;
+        if (!progress.isMasterUnlocked) return;
         navigateTo('master');
       },
     },
@@ -110,10 +110,10 @@ export default function StepDashboard() {
       desc: 'Your Fan DNA',
       isComplete: isRefinedMasterComplete,
       isCurrent: isRefinedMasterComplete,
-      isDisabled: !isTriageComplete,
+      isDisabled: !progress.isWrappedUnlocked,
       ctaText: 'View →',
       action: () => {
-        if (!isTriageComplete) return;
+        if (!progress.isWrappedUnlocked) return;
         navigateTo('wrapped');
       },
     },

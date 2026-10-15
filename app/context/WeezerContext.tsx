@@ -166,23 +166,24 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   };
 
   // FETCH & CACHE COMMUNITY DATA IN BACKGROUND
+  // Pre-launch security: reads the anonymized aggregate via the
+  // get_community_rankings() SECURITY DEFINER function instead of
+  // selecting other users' rows directly (blocked by RLS).
   const refreshCommunityData = async () => {
     setLoadingCommunity(true);
     try {
-      const { data, error } = await supabase
-        .from('weezer_rankings')
-        .select('master_list, triage_map');
+      const { data, error } = await supabase.rpc('get_community_rankings');
 
       if (!error && data) {
         const cleanRankings: Song[][] = [];
         const cleanTriageMaps: Record<string, BucketType>[] = [];
 
-        data.forEach((row) => {
+        data.forEach((row: { master_list: unknown; triage_map: unknown }) => {
           if (Array.isArray(row.master_list) && row.master_list.length > 0) {
             cleanRankings.push(row.master_list);
           }
           if (row.triage_map && Object.keys(row.triage_map).length > 0) {
-            cleanTriageMaps.push(row.triage_map);
+            cleanTriageMaps.push(row.triage_map as Record<string, BucketType>);
           }
         });
 
@@ -249,7 +250,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
       const { data: friendshipsData } = await supabase
         .from('friendships')
         .select('*')
-        .or(`user_id.eq.${userId},friend_id.eq.${userId}`)
+        .or(`user_id.eq.userId,friendid.eq.{userId}`)
         .eq('status', 'accepted');
 
       if (friendshipsData) {
@@ -565,3 +566,5 @@ export const useWeezer = () => {
   }
   return context;
 };
+
+

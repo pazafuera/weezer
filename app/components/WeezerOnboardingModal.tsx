@@ -273,15 +273,15 @@ export default function WeezerOnboardingModal({
     setLoading(true);
 
     try {
-      // 1. Check if username is already taken
-      const { data: existingUser } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('username', cleanUsername)
-        .neq('id', currentUserId || '')
-        .maybeSingle();
+      // 1. Check if username is already taken via the is_username_available()
+      // SECURITY DEFINER function instead of selecting other users' profile
+      // rows directly (blocked by RLS). Returns true when available.
+      const { data: isAvailable } = await supabase.rpc(
+        'is_username_available',
+        { p_username: cleanUsername }
+      );
 
-      if (existingUser) {
+      if (isAvailable === false) {
         setErrorMsg('That username is taken. Please pick another.');
         setLoading(false);
         return;
@@ -627,3 +627,5 @@ export default function WeezerOnboardingModal({
     </div>
   );
 }
+
+

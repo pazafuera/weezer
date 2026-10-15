@@ -91,14 +91,15 @@ export default function Step4Wrapped({
 
     const fetchCommunityConsensus = async () => {
       try {
-        const { data } = await supabase
-          .from('weezer_rankings')
-          .select('master_list');
+        // Pre-launch security: anonymized aggregate via the
+        // get_community_rankings() SECURITY DEFINER function instead of
+        // selecting other users' rows directly (blocked by RLS).
+        const { data } = await supabase.rpc('get_community_rankings');
         if (data && data.length > 0) {
           const positions: Record<string, number[]> = {};
           FULL_SONG_POOL.forEach((s) => (positions[s.id] = []));
 
-          data.forEach((row) => {
+          data.forEach((row: { master_list: Song[] | null }) => {
             if (row.master_list && row.master_list.length > 0) {
               row.master_list.forEach((song: Song, idx: number) => {
                 if (positions[song.id]) positions[song.id].push(idx + 1);
@@ -2080,3 +2081,5 @@ function SmartShareModule({ stats, top10, userProfile }: any) {
     </div>
   );
 }
+
+

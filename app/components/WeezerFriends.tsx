@@ -59,82 +59,66 @@ export default function WeezerFriends() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) return;
-      const currentId = session.user.id;
 
-      // FETCH BOTH DIRECTIONS (Where user is sender OR recipient)
-      const { data: friendships, error: friendErr } = await supabase
-        .from('friendships')
-        .select('*')
-        .or(`user_id.eq.${currentId},friend_id.eq.${currentId}`);
+      // Pre-launch security: friend cards come from the get_my_friend_cards()
+      // SECURITY DEFINER function instead of selecting other users' profile
+      // and ranking rows directly (blocked by RLS). Returns one row per
+      // friendship the caller participates in:
+      // { friendship_id, id, username, display_name, status, direction, master_list }
+      const { data: cards, error: cardsErr } = await supabase.rpc(
+        'get_my_friend_cards'
+      );
 
-      if (friendErr) {
-        console.error('Error fetching friendships:', friendErr);
+      if (cardsErr) {
+        console.error('Error fetching friend cards:', cardsErr);
         setLoading(false);
         return;
       }
 
-      if (!friendships || friendships.length === 0) {
+      if (!cards || cards.length === 0) {
         setFriends([]);
         setIncomingRequests([]);
         setLoading(false);
         return;
       }
 
-      const relatedUserIds = friendships.map((f) =>
-        f.user_id === currentId ? f.friend_id : f.user_id
-      );
-
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, username, display_name')
-        .in('id', relatedUserIds);
-
-      if (!profiles) {
-        setLoading(false);
-        return;
-      }
-
-      const { data: rankings } = await supabase
-        .from('weezer_rankings')
-        .select('user_id, master_list')
-        .in('user_id', relatedUserIds);
-
-      const rankMap = new Map();
-      if (rankings) {
-        rankings.forEach((r) => {
-          if (r.master_list && r.master_list.length > 0) {
-            rankMap.set(r.user_id, r.master_list[0].title);
-          }
-        });
-      }
-
       const acceptedList: FriendProfile[] = [];
       const incomingList: FriendProfile[] = [];
 
-      friendships.forEach((f) => {
-        const otherId = f.user_id === currentId ? f.friend_id : f.user_id;
-        const profile = profiles.find((p) => p.id === otherId);
+      cards.forEach((c: any) => {
+        const topSong =
+          c.master_list && c.master_list.length > 0 && c.master_list[0].title
+            ? c.master_list[0].title
+            : 'Not ranked yet';
 
-        if (profile) {
-          const formatted: FriendProfile = {
-            id: profile.id,
-            username: profile.username,
-            display_name: profile.display_name || profile.username,
-            top_song: rankMap.get(profile.id) || 'Not ranked yet',
-            status: f.status || 'accepted',
-            friendshipId: f.id,
-          };
-
-          if (f.status === 'accepted' || !f.status) {
-            acceptedList.push(formatted);
-          } else if (f.status === 'pending') {
-            if (f.friend_id === currentId) {
-              formatted.status = 'pending_incoming';
-              incomingList.push(formatted);
-            } else {
-              formatted.status = 'pending_outgoing';
-              acceptedList.push(formatted);
-            }
+        if (c.status === 'accepted') {
+          acceptedList.push({
+            id: c.id,
+            username: c.username,
+            display_name: c.display_name || c.username,
+            top_song: topSong,
+            status: 'accepted',
+            friendshipId: c.friendship_id,
+          });
+        } else if (c.status === 'pending') {
+          if (c.direction === 'incoming') {
+            incomingList.push({
+              id: c.id,
+              username: c.username,
+              display_name: c.display_name || c.username,
+              top_song: topSong,
+              status: 'pending_incoming',
+              friendshipId: c.friendship_id,
+            });
+          } else {
+            acceptedList.push({
+              id: c.id,
+              username: c.username,
+              display_name: c.display_name || c.username,
+              top_song: topSong,
+              status: 'pending_outgoing',
+              friendshipId: c.friendship_id,
+            });
           }
         }
       });
@@ -158,11 +142,13 @@ export default function WeezerFriends() {
     const cleanUsername = searchUsername.toLowerCase().trim().replace('@', '');
 
     try {
-      const { data: targetProfile, error: profileErr } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('username', cleanUsername)
-        .maybeSingle();
+      // Pre-launch security: profile lookup by username goes through the
+      // find_profile_by_username() SECURITY DEFINER function instead of
+      // selecting other users' profile rows directly (blocked by RLS).
+      const { data: targetProfile, error: profileErr } = await supabase.rpc(
+        'find_profile_by_username',
+        { p_username: cleanUsername }
+      );
 
       if (profileErr || !targetProfile) {
         setErrorMsg("Couldn't find a user with that handle.");
@@ -411,3 +397,4 @@ export default function WeezerFriends() {
     </div>
   );
 }
+

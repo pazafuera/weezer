@@ -4,7 +4,8 @@ import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { supabase } from '@/utils/supabase';
 import { Song, BucketType, FULL_SONG_POOL, ALBUMS_BY_ID, ALBUM_NAME_TO_ID } from '../data/constants';
 import { FlyingWIcon, AlbumArtwork } from './SharedUI';
-import GenerationalTasteGrid from './GenerationalTasteGrid';
+// Temporarily disabled (pre-launch security): see GenerationalTasteGrid usage below.
+// import GenerationalTasteGrid from './GenerationalTasteGrid';
 import { useWeezer } from '../context/WeezerContext';
 import TierListChart from './TierListChart';
 
@@ -518,7 +519,7 @@ export default function FanStats({
                   {category.songs.map((m, songIdx) => {
                     const resolvedId = m.song.albumId || ALBUM_NAME_TO_ID[m.song.album] || "unknown";
                     return (
-                      <div key={`${m.id}-${songIdx}`} className="w-[260px] sm:w-[320px] shrink-0 snap-center bg-white border border-slate-200 p-5 rounded-3xl shadow-sm flex flex-col justify-between m-1">
+                      <div key={`m.id-{songIdx}`} className="w-[260px] sm:w-[320px] shrink-0 snap-center bg-white border border-slate-200 p-5 rounded-3xl shadow-sm flex flex-col justify-between m-1">
                         <div>
                           <div className="flex items-start gap-3 min-w-0 mb-3">
                             <AlbumArtwork albumId={resolvedId} className="w-12 h-12 rounded-lg shadow-sm border border-slate-100 shrink-0 object-cover" />
@@ -545,7 +546,10 @@ export default function FanStats({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-8 mt-10">
         
         {/* FULL WIDTH GENERATIONAL BREAKDOWN */}
-        <GenerationalTasteGrid />
+        {/* TEMPORARILY DISABLED (pre-launch security): GenerationalTasteGrid
+            downloads every user's birth year + ranking to the browser.
+            Re-enable after server-side aggregation lands. */}
+        {/* <GenerationalTasteGrid /> */}
 
         {/* ROW 3: FAN TRIBES & MICRO-INSIGHTS */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 pt-4">
@@ -716,3 +720,5 @@ export default function FanStats({
     </div>
   );
 }
+
+

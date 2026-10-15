@@ -123,30 +123,31 @@ export default function PublicProfilePage() {
     setLoading(true);
     setErrorMsg(null);
     try {
-      // 1. Fetch Target Profile
-      const { data: tProfile, error: tProfErr } = await supabase
-        .from('profiles')
-        .select('*')
-        .ilike('username', username)
-        .maybeSingle();
+      // 1. Fetch Target Fan via the get_public_fan() SECURITY DEFINER
+      // function instead of selecting another user's profile and ranking
+      // rows directly (blocked by RLS). Returns
+      // { id, username, display_name, master_list, triage_map }.
+      const { data: fan, error: fanErr } = await supabase.rpc(
+        'get_public_fan',
+        { p_username: username }
+      );
 
-      if (tProfErr || !tProfile) {
+      if (fanErr || !fan) {
         setErrorMsg("We couldn't find a Weezer fan with that username.");
         setLoading(false);
         return;
       }
+      const tProfile = {
+        id: fan.id,
+        username: fan.username,
+        display_name: fan.display_name,
+      };
       setTargetProfile(tProfile);
 
-      // 2. Fetch Target Rankings
-      const { data: tRanks } = await supabase
-        .from('weezer_rankings')
-        .select('master_list, triage_map')
-        .eq('user_id', tProfile.id)
-        .maybeSingle();
-
-      if (tRanks?.master_list) {
-        setTargetMaster(tRanks.master_list);
-        setTargetTriage(tRanks.triage_map || {});
+      // 2. Target rankings arrive inside the same get_public_fan() payload.
+      if (fan.master_list) {
+        setTargetMaster(fan.master_list);
+        setTargetTriage(fan.triage_map || {});
       }
 
       // 3. Fetch Visitor (Current Logged-In User)
@@ -174,31 +175,20 @@ export default function PublicProfilePage() {
           }
         }
 
-        // 4. Fetch Visitor's connected friends for Carousel Switcher
-        const { data: friendships } = await supabase
-          .from('friendships')
-          .select('*')
-          .or(`user_id.eq.${vId},friend_id.eq.${vId}`);
+        // 4. Fetch Visitor's connected friends for Carousel Switcher.
+        // Pre-launch security: friend cards come from the
+        // get_my_friend_cards() SECURITY DEFINER function instead of
+        // selecting other users' profile rows directly (blocked by RLS).
+        const { data: cards } = await supabase.rpc('get_my_friend_cards');
 
-        if (friendships && friendships.length > 0) {
-          const friendIds = friendships.map((f) =>
-            f.user_id === vId ? f.friend_id : f.user_id
+        if (cards && cards.length > 0) {
+          setAllFriends(
+            cards.map((c: any) => ({
+              id: c.id,
+              username: c.username,
+              display_name: c.display_name || c.username,
+            }))
           );
-
-          const { data: friendProfiles } = await supabase
-            .from('profiles')
-            .select('id, username, display_name')
-            .in('id', friendIds);
-
-          if (friendProfiles) {
-            setAllFriends(
-              friendProfiles.map((p) => ({
-                id: p.id,
-                username: p.username,
-                display_name: p.display_name || p.username,
-              }))
-            );
-          }
         }
       }
     } catch (err) {
@@ -610,3 +600,5 @@ export default function PublicProfilePage() {
     </AppShell>
   );
 }
+
+

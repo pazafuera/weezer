@@ -1,4 +1,4 @@
-import { BucketType, Song } from '@/app/data/constants';
+import { BucketType, FULL_SONG_POOL, Song } from '@/app/data/constants';
 
 /**
  * Ranking helpers.
@@ -55,4 +55,38 @@ export const sanitizeMasterList = (
     seen.add(song.id);
     return true;
   });
+};
+
+/** Bucket order used when appending triaged songs to the master list. */
+const BUCKET_ORDER: BucketType[] = ['banger', 'slaps', 'mid', 'skip', 'trash'];
+
+/**
+ * Reconcile a master list with the triage map after a triage assignment.
+ * Keeps every song already in the master list that still has a triage entry,
+ * in its existing order and de-duplicated; then appends every bucketed song
+ * missing from the master list, grouped by bucket (banger, slaps, mid, skip,
+ * trash — trash last), in FULL_SONG_POOL order within each bucket.
+ */
+export const reconcileMasterList = (
+  masterList: Song[],
+  triageMap: Record<string, BucketType>
+): Song[] => {
+  const seen = new Set<string>();
+  const reconciled: Song[] = [];
+
+  for (const song of masterList) {
+    if (!isRanked(triageMap, song.id) || seen.has(song.id)) continue;
+    seen.add(song.id);
+    reconciled.push(song);
+  }
+
+  for (const bucket of BUCKET_ORDER) {
+    for (const song of FULL_SONG_POOL) {
+      if (triageMap[song.id] !== bucket || seen.has(song.id)) continue;
+      seen.add(song.id);
+      reconciled.push(song);
+    }
+  }
+
+  return reconciled;
 };

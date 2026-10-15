@@ -233,9 +233,11 @@ export default function TierListChart({
         </div>
       ))}
     </div>
-  );
+  \);
 
-  return (
+  const subtitleLine = username ? `${subtitle} | @${username}` : subtitle;
+
+  return \(
     <div className="space-y-4 w-full overflow-hidden">
       
       {/* INJECT CUSTOM SCROLLBAR CSS FOR DESKTOP MOUSE USERS */}
@@ -290,7 +292,7 @@ export default function TierListChart({
             {title}
           </h2>
           <p className="text-xs sm:text-sm font-bold text-slate-400 mt-0.5 uppercase tracking-widest">
-            {subtitle} {username && `| @${username}`}
+            {subtitleLine}
           </p>
         </div>
 
@@ -312,9 +314,7 @@ export default function TierListChart({
                 The Weezer Song Ranking Project
               </h3>
               <p className="text-xl font-bold text-amber-400">
-                {username 
-                  ? `@${username}'s Personalized Weezer Song Tiers`
-                  : "The Weezer Fan Community's Weezer Song Tiers"}
+                {subtitleLine}
               </p>
             </div>
             

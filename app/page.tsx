@@ -22,10 +22,10 @@ export default function WeezerRankerPage() {
     step,
     setStep,
     triageMap,
-    setTriageMap,
+    
     bucketRanks,
     masterList,
-    syncRankingsToDatabase,
+    
     updateAndSyncBucketRanks,
     moveMasterSong,
     refineStageIdx,
@@ -33,6 +33,7 @@ export default function WeezerRankerPage() {
     autoStartMatchups,
     setAutoStartMatchups,
     navigateTo,
+    setSongBucket,
   } = useWeezer();
 
   if (loadingUser) {
@@ -66,11 +67,7 @@ export default function WeezerRankerPage() {
       {step === 'triage' && (
         <Step1Triage
           triageMap={triageMap}
-          handleSetBucket={(id, b) => {
-            const map = { ...triageMap, [id]: b };
-            setTriageMap(map);
-            syncRankingsToDatabase(map, masterList);
-          }}
+          handleSetBucket={(id, b) => setSongBucket(id, b)}
           handleFinishTriage={handleFinishTriage}
         />
       )}

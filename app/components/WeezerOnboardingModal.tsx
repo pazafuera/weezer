@@ -1,6 +1,6 @@
 'use client';
 
-const COUNTRY_OPTIONS = [
+export const COUNTRY_OPTIONS = [
   // Featured / Top Western Markets
   { code: 'US', name: 'United States' },
   { code: 'CA', name: 'Canada' },
@@ -183,7 +183,7 @@ interface WeezerOnboardingModalProps {
   currentUserId?: string | null;
 }
 
-const US_STATES = [
+export const US_STATES = [
   'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
   'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',
   'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
@@ -627,5 +627,3 @@ export default function WeezerOnboardingModal({
     </div>
   );
 }
-
-

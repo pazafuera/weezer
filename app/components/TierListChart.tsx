@@ -233,11 +233,11 @@ export default function TierListChart({
         </div>
       ))}
     </div>
-  \);
+  );
 
   const subtitleLine = username ? `${subtitle} | @${username}` : subtitle;
 
-  return \(
+  return (
     <div className="space-y-4 w-full overflow-hidden">
       
       {/* INJECT CUSTOM SCROLLBAR CSS FOR DESKTOP MOUSE USERS */}

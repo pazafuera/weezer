@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/utils/supabase';
 import { BucketType, Song, FULL_SONG_POOL } from '../data/constants';
@@ -20,6 +20,79 @@ export type AppStep =
   | 'login'
   | 'signup_success';
 export type AuthModeType = 'signup' | 'login' | 'magic';
+
+/**
+ * Every step name that page.tsx knows how to render.
+ */
+const KNOWN_APP_STEPS: readonly AppStep[] = [
+  'splash',
+  'orientation',
+  'dashboard',
+  'triage',
+  'rank_buckets',
+  'master',
+  'wrapped',
+  'fan_stats',
+  'friends',
+  'login',
+  'signup_success',
+];
+
+/**
+ * Backward-compatible aliases for retired step names.
+ * 'refine' was the previous name of the rank_buckets step.
+ */
+const STEP_ALIASES: Record<string, AppStep> = {
+  refine: 'rank_buckets',
+};
+
+/**
+ * Resolves a raw `?step=` URL value to a known AppStep.
+ * Returns the canonical step for known values and aliases, and null
+ * for anything else. Unknown values must never become app state —
+ * page.tsx renders nothing for them (blank screen).
+ */
+export function resolveUrlStep(raw: string | null): AppStep | null {
+  if (raw === null) return null;
+  const aliased: AppStep | undefined = STEP_ALIASES[raw];
+  if (aliased) return aliased;
+  const known: AppStep | undefined = KNOWN_APP_STEPS.find(
+    (step) => step === raw
+  );
+  return known ?? null;
+}
+
+const VALID_TRIAGE_BUCKETS: readonly BucketType[] = [
+  'banger',
+  'slaps',
+  'mid',
+  'skip',
+  'trash',
+];
+
+/**
+ * Gut Check (triage) is complete when every song in FULL_SONG_POOL
+ * has an explicit, valid triage bucket.
+ */
+export function isTriageComplete(
+  triageMap: Record<string, BucketType>
+): boolean {
+  return FULL_SONG_POOL.every((song) => {
+    const bucket: BucketType | undefined = triageMap[song.id];
+    return bucket !== undefined && VALID_TRIAGE_BUCKETS.indexOf(bucket) !== -1;
+  });
+}
+
+/**
+ * Rewrites the `step` query param in place via history.replaceState,
+ * so corrective redirects never pollute the back/forward stack.
+ */
+function replaceStepInUrl(step: AppStep): void {
+  if (typeof window === 'undefined') return;
+  const url = new URL(window.location.href);
+  url.searchParams.set('step', step);
+  window.history.replaceState({}, '', url.toString());
+}
 
 interface UserProfile {
   username?: string;
@@ -146,6 +219,14 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   const [refineStageIdx, setRefineStageIdx] = useState(0);
   const [autoStartMatchups, setAutoStartMatchups] = useState(false);
 
+  // Deep-link intent parsed from ?step= on initial load. It is applied
+  // (with prerequisite guards) only after user/ranking state has loaded.
+  const [deepLinkIntent, setDeepLinkIntent] = useState<{
+    raw: string | null;
+    resolved: AppStep | null;
+  } | null>(null);
+  const deepLinkConsumedRef = useRef(false);
+
   // Rankings State
   const [triageMap, setTriageMap] = useState<Record<string, BucketType>>({});
   const [bucketRanks, setBucketRanks] = useState<Record<BucketType, Song[]>>({
@@ -201,16 +282,60 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Sync step from URL parameter on initial load or refresh
+  // Parse the ?step= deep link on initial load or refresh. Aliases are
+  // canonicalized in the URL immediately (replaceState); the resolved step
+  // is applied after user/ranking state has loaded so guards see real data.
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const urlStep = params.get('step') as AppStep;
-      if (urlStep) {
-        setStepState(urlStep);
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const raw = params.get('step');
+    if (raw !== null) {
+      const resolved = resolveUrlStep(raw);
+      if (resolved !== null && resolved !== raw) {
+        replaceStepInUrl(resolved);
       }
+      setDeepLinkIntent({ raw, resolved });
+    } else {
+      setDeepLinkIntent({ raw: null, resolved: null });
     }
   }, []);
+
+  // Apply the ?step= deep link AFTER user/ranking state has loaded, so
+  // prerequisite guards see real data. Corrective redirects use
+  // replaceState (never push) so the back button can't loop on a bad URL.
+  useEffect(() => {
+    if (loadingUser || deepLinkConsumedRef.current || deepLinkIntent === null) {
+      return;
+    }
+    deepLinkConsumedRef.current = true;
+
+    const { raw, resolved } = deepLinkIntent;
+
+    // No ?step= param: the existing Smart Entry behavior inside
+    // initUserAndLoadRankings already applies.
+    if (raw === null) return;
+
+    // Unknown ?step= value: never leave a blank screen. Signed-in users
+    // with ranking progress land on the dashboard, everyone else on splash.
+    if (resolved === null) {
+      const hasProgress =
+        Object.keys(triageMap).length > 0 || masterList.length > 0;
+      const fallback: AppStep = userId && hasProgress ? 'dashboard' : 'splash';
+      setStepState(fallback);
+      replaceStepInUrl(fallback);
+      return;
+    }
+
+    // A refine (?step=refine / ?step=rank_buckets) deep link must not
+    // bypass the flow: without a completed Gut Check it goes to triage.
+    if (resolved === 'rank_buckets' && !isTriageComplete(triageMap)) {
+      setStepState('triage');
+      replaceStepInUrl('triage');
+      return;
+    }
+
+    setStepState(resolved);
+  }, [loadingUser, deepLinkIntent, triageMap, masterList, userId]);
 
   // Fetch community data once on initial startup
   useEffect(() => {
@@ -578,5 +703,4 @@ export const useWeezer = () => {
   }
   return context;
 };
-
 

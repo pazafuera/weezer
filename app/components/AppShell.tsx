@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useWeezer, AppStep, getProgressState } from '../context/WeezerContext';
 import { FlyingWIcon } from './SharedUI';
+import WeezerAccountDrawer from './WeezerAccountDrawer';
 
 export default function AppShell({
   children,
@@ -13,6 +14,10 @@ export default function AppShell({
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [hasViewedWrapped, setHasViewedWrapped] = useState(false);
+  const [accountDrawerOpen, setAccountDrawerOpen] = useState(false);
+
+  const openAccountDrawer = () => setAccountDrawerOpen(true);
+  const closeAccountDrawer = () => setAccountDrawerOpen(false);
 
   const {
     step,
@@ -162,6 +167,21 @@ export default function AppShell({
               </button>
             )}
 
+            {userId && (
+              <button
+                onClick={openAccountDrawer}
+                aria-label="Account & Profile"
+                title="Account & Profile"
+                className="w-9 h-9 lg:w-10 lg:h-10 flex items-center justify-center rounded-xl bg-white text-[#0072CE] font-black text-sm shadow-xs hover:bg-blue-50 transition-colors cursor-pointer"
+              >
+                {userProfile?.displayName
+                  ? userProfile.displayName.charAt(0).toUpperCase()
+                  : userProfile?.username
+                    ? userProfile.username.charAt(0).toUpperCase()
+                    : '👤'}
+              </button>
+            )}
+
             <button
               onClick={() => setMenuOpen(true)}
               className="w-9 h-9 lg:w-10 lg:h-10 flex items-center justify-center rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
@@ -264,6 +284,17 @@ export default function AppShell({
                       Sign Out
                     </button>
                   </div>
+
+                  <button
+                    onClick={() => {
+                      closeMenu();
+                      openAccountDrawer();
+                    }}
+                    className="mx-4 mt-1 mb-1 w-[calc(100%-2rem)] flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-black py-2.5 rounded-xl transition-colors cursor-pointer"
+                  >
+                    <span aria-hidden="true">👤</span>
+                    <span>Account & Profile</span>
+                  </button>
 
                   <div className="mx-4 my-3 p-3.5 bg-blue-50/50 border border-blue-200/80 rounded-2xl space-y-2">
                     <div className="flex items-center justify-between">
@@ -407,6 +438,16 @@ export default function AppShell({
           </div>
         </div>
       )}
+
+      {/* ACCOUNT & PROFILE DRAWER */}
+      <WeezerAccountDrawer
+        isOpen={accountDrawerOpen}
+        onClose={closeAccountDrawer}
+        userId={userId}
+        userProfile={userProfile}
+        onLogout={handleSignOut}
+        onOpenOnboarding={() => navigateTo('login', 'signup')}
+      />
     </div>
   );
 }

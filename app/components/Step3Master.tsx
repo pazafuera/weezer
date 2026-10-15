@@ -2,6 +2,7 @@
 import React from 'react';
 import { BucketType, Song, BUCKET_CONFIG } from '../data/constants';
 import { AudioPreviewButton, FlyingWIcon } from './SharedUI';
+import { getRankedSongs } from '@/utils/rankingUtils';
 
 export default function Step3Master({
   masterList, 
@@ -20,8 +21,12 @@ export default function Step3Master({
     if (typeof window !== 'undefined' && 'vibrate' in navigator) try { navigator.vibrate(duration); } catch (e) {}
   };
 
+  // Final Review only lists explicitly ranked songs. A song missing from the
+  // triage map is unranked — never infer a bucket (especially Trash) for it.
+  const rankedSongs = getRankedSongs(masterList, triageMap);
+
   // Find the index of the very last rankable song (so we can disable the down arrow on it)
-  const lastRankableIndex = masterList.map(s => triageMap[s.id]).findLastIndex(b => b === 'banger' || b === 'slaps');
+  const lastRankableIndex = rankedSongs.map(s => triageMap[s.id]).findLastIndex(b => b === 'banger' || b === 'slaps');
 
   return (
     <div className="space-y-6 pb-24">
@@ -51,8 +56,8 @@ export default function Step3Master({
 
       <div className="bg-white border border-slate-200 rounded-3xl p-3 sm:p-5 shadow-xs">
         <div className="space-y-1.5">
-          {masterList.map((song, idx) => {
-            const bucket = triageMap[song.id] || 'trash';
+          {rankedSongs.map((song, idx) => {
+            const bucket = triageMap[song.id];
             const isRankable = bucket === 'banger' || bucket === 'slaps';
             const cfg = BUCKET_CONFIG[bucket];
             

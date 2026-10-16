@@ -473,7 +473,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
       const { data: friendshipsData } = await supabase
         .from('friendships')
         .select('*')
-        .or(`user_id.eq.userId,friendid.eq.{userId}`)
+        .or(`user_id.eq.${userId},friend_id.eq.${userId}`)
         .eq('status', 'accepted');
 
       if (friendshipsData) {

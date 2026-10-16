@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { exportNodeAsPng } from './exportImage';
 import { Top10CardVisual } from './Top10Card';
@@ -99,6 +99,292 @@ function LibraryItem({
   );
 }
 
+/* ------------------------------------------------------------------ */
+/* Thumbnails variant (Sweater Thread): a grid of scaled previews with */
+/* short titles; tapping one opens the full-size card in a modal with  */
+/* the same single Download button.                                    */
+/* ------------------------------------------------------------------ */
+
+/** Natural width of the scrapbook card visuals (they render at
+ *  1080×1350, a 4:5 box). */
+const CARD_NATURAL_WIDTH = 1080;
+/** Fixed layout width used to thumbnail/modal the tier section, whose
+ *  content is fluid — matches the width it gets on the library page. */
+const TIER_NATURAL_WIDTH = 1024;
+
+/** Scale a fixed-natural-width visual down to fit its (responsive)
+ *  thumbnail box: measures the box and returns width / naturalWidth. */
+function useFitScale(naturalWidth: number) {
+  const boxRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(0);
+  useLayoutEffect(() => {
+    const el = boxRef.current;
+    if (!el) return;
+    const update = () => setScale(el.clientWidth / naturalWidth);
+    update();
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [naturalWidth]);
+  return { boxRef, scale };
+}
+
+/** Centered modal: dark backdrop (click to close), a panel capped at
+ *  92vh whose content scrolls, an ✕ button, and an optional pinned
+ *  footer (the Download bar). Esc closes; body scroll is locked while
+ *  open. */
+function CardModal({
+  title,
+  onClose,
+  footer,
+  children,
+}: {
+  title: string;
+  onClose: () => void;
+  footer?: ReactNode;
+  children: ReactNode;
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-3 sm:p-6"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
+    >
+      <div
+        className="relative flex max-h-[92vh] max-w-full flex-col overflow-hidden rounded-3xl bg-white shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close"
+          className="absolute right-3 top-3 z-20 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-slate-900/80 text-base font-black text-white transition hover:bg-slate-900"
+        >
+          ✕
+        </button>
+        <div className="overflow-auto p-4 sm:p-6">{children}</div>
+        {footer}
+      </div>
+    </div>
+  );
+}
+
+/** The clickable thumbnail: the real visual scaled to fit a 4:5 box
+ *  (visual subtree is pointer-events-none), short title underneath. */
+function ThumbnailButton({
+  shortTitle,
+  naturalWidth,
+  onOpen,
+  children,
+}: {
+  shortTitle: string;
+  naturalWidth: number;
+  onOpen: () => void;
+  children: ReactNode;
+}) {
+  const { boxRef, scale } = useFitScale(naturalWidth);
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      aria-haspopup="dialog"
+      className="group block w-full cursor-pointer text-left"
+    >
+      <div
+        ref={boxRef}
+        className="relative aspect-[4/5] overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 shadow-xs transition group-hover:border-slate-300"
+      >
+        <div
+          className="pointer-events-none absolute left-0 top-0"
+          style={{
+            width: naturalWidth,
+            transform: `scale(${scale})`,
+            transformOrigin: 'top left',
+            visibility: scale > 0 ? 'visible' : 'hidden',
+          }}
+        >
+          {children}
+        </div>
+      </div>
+      <p className="mt-2 text-center text-sm font-black text-slate-800">
+        {shortTitle}
+      </p>
+    </button>
+  );
+}
+
+/**
+ * One thumbnail-grid asset: thumbnail, a modal with the card at
+ * natural size, and the download — same pattern as LibraryItem: the
+ * download renders from a hidden full-size off-screen copy, never
+ * from the scaled thumbnail or the modal node.
+ */
+function ThumbnailItem({
+  shortTitle,
+  filename,
+  controls,
+  downloadDisabled,
+  children,
+}: {
+  shortTitle: string;
+  filename: string;
+  controls?: ReactNode;
+  downloadDisabled?: boolean;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  const exportRef = useRef<HTMLDivElement>(null);
+  const [busy, setBusy] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const download = async () => {
+    if (busy || downloadDisabled) return;
+    setBusy(true);
+    try {
+      await exportNodeAsPng(exportRef.current, filename, 'auto');
+      setSaved(true);
+      if (savedTimer.current) clearTimeout(savedTimer.current);
+      savedTimer.current = setTimeout(() => setSaved(false), 2500);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div>
+      <ThumbnailButton
+        shortTitle={shortTitle}
+        naturalWidth={CARD_NATURAL_WIDTH}
+        onOpen={() => setOpen(true)}
+      >
+        {children}
+      </ThumbnailButton>
+
+      {open && (
+        <CardModal
+          title={shortTitle}
+          onClose={() => setOpen(false)}
+          footer={
+            <div className="border-t border-slate-200 bg-white p-4">
+              <button
+                onClick={download}
+                disabled={busy || downloadDisabled}
+                className={`w-full text-white font-black text-xs py-3 px-3 rounded-xl transition cursor-pointer disabled:opacity-50 ${
+                  saved ? 'bg-emerald-500' : 'bg-[#0072CE] hover:bg-blue-600'
+                }`}
+              >
+                {busy ? 'Generating Image...' : saved ? '✓ Saved!' : '📸 Download'}
+              </button>
+            </div>
+          }
+        >
+          {controls && <div className="mb-4 max-w-sm">{controls}</div>}
+          <div className="mx-auto w-fit">{children}</div>
+        </CardModal>
+      )}
+
+      {/* Hidden full-size export copy (TierListChart pattern) */}
+      <div
+        className="absolute left-[-9999px] top-[-9999px] opacity-0 pointer-events-none"
+        aria-hidden="true"
+      >
+        <div ref={exportRef}>{children}</div>
+      </div>
+    </div>
+  );
+}
+
+/** Compatibility thumbnail item: same friend-selection state pattern as
+ *  CompatibilityLibraryItem — the picker lives in the modal above the
+ *  card, and the download stays disabled until a friend is chosen. */
+function CompatibilityThumbnailItem({
+  songs,
+  friends,
+  subtitle,
+}: {
+  songs: ShareSong[];
+  friends: FriendLike[];
+  subtitle?: string;
+}) {
+  const [selectedKey, setSelectedKey] = useState('');
+  const controls = (
+    <div>
+      <label className="mb-1 block text-[10px] font-black uppercase tracking-wider text-slate-400">
+        Compare with
+      </label>
+      <select
+        value={selectedKey}
+        onChange={(e) => setSelectedKey(e.target.value)}
+        className="w-full rounded-xl bg-white border border-slate-300 px-3 py-2.5 text-sm font-bold text-slate-900"
+      >
+        <option value="">Choose a friend…</option>
+        {friends.map((f, i) => (
+          <option key={friendKey(f, i)} value={friendKey(f, i)}>
+            {friendLabel(f)}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+  return (
+    <ThumbnailItem
+      shortTitle="Taste Match"
+      filename="weezer-taste-match.png"
+      controls={controls}
+      downloadDisabled={selectedKey === ''}
+    >
+      <TasteCompatibilityCardVisual
+        songs={songs}
+        friends={friends}
+        subtitle={subtitle}
+        selectedKey={selectedKey}
+      />
+    </ThumbnailItem>
+  );
+}
+
+/** Tier List thumbnail item: the tierSection node (chart + its own
+ *  Songs/Albums toggle + its own save button) is the visual — scaled
+ *  for the thumbnail, live at layout width inside the modal. The
+ *  chart's own download button is the modal's download control. */
+function TierThumbnailItem({ tierSection }: { tierSection: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div>
+      <ThumbnailButton
+        shortTitle="Tier List"
+        naturalWidth={TIER_NATURAL_WIDTH}
+        onOpen={() => setOpen(true)}
+      >
+        <div style={{ width: TIER_NATURAL_WIDTH }}>{tierSection}</div>
+      </ThumbnailButton>
+
+      {open && (
+        <CardModal title="Tier List" onClose={() => setOpen(false)}>
+          <div style={{ width: TIER_NATURAL_WIDTH }}>{tierSection}</div>
+        </CardModal>
+      )}
+    </div>
+  );
+}
+
 /** Compatibility item holds the friend selection so the preview and the
  *  export copy render the same match. The picker sits under the preview
  *  at natural size. */
@@ -155,16 +441,21 @@ export default function ShareablesGallery({
   friends,
   subtitle,
   tierSection,
+  variant = 'full',
 }: {
   /** Ranked songs only (already filtered to bucketed songs). */
   songs: ShareSong[];
   triageMap: Record<string, Bucket>;
   friends: FriendLike[];
   subtitle?: string;
-  /** Optional full-width section rendered under the card grid — the
-   *  Fan Club Tiers chart lives here when the gallery is used as the
-   *  standalone library page. */
+  /** Optional tier-list section. In the 'full' variant it renders as a
+   *  full-width section under the card grid (the standalone library
+   *  page); in 'thumbnails' it becomes the "Tier List" grid item. */
   tierSection?: ReactNode;
+  /** 'full' (default): large previews with inline Download buttons —
+   *  the library page. 'thumbnails': a compact thumbnail grid that
+   *  opens each card full-size in a modal — the Sweater Thread. */
+  variant?: 'full' | 'thumbnails';
 }) {
   if (songs.length === 0) {
     return (
@@ -173,6 +464,23 @@ export default function ShareablesGallery({
         <p className="mt-1 text-sm font-semibold text-slate-400">
           Bucket and rank some songs first — your cards will appear here.
         </p>
+      </div>
+    );
+  }
+  if (variant === 'thumbnails') {
+    return (
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+        <ThumbnailItem shortTitle="Top 10 Songs" filename="my-weezer-top-10.png">
+          <Top10CardVisual songs={songs} subtitle={subtitle} />
+        </ThumbnailItem>
+        <ThumbnailItem shortTitle="Fan Tribe" filename="my-weezer-tribe.png">
+          <TribeBadgeCardVisual songs={songs} triageMap={triageMap} subtitle={subtitle} />
+        </ThumbnailItem>
+        <ThumbnailItem shortTitle="Era DNA" filename="my-weezer-era-dna.png">
+          <EraDnaCardVisual songs={songs} subtitle={subtitle} />
+        </ThumbnailItem>
+        <CompatibilityThumbnailItem songs={songs} friends={friends} subtitle={subtitle} />
+        {tierSection ? <TierThumbnailItem tierSection={tierSection} /> : null}
       </div>
     );
   }

@@ -12,6 +12,7 @@ import {
   ALBUM_NAME_TO_ID,
 } from '../data/constants';
 import { FlyingWIcon, AlbumArtwork } from './SharedUI';
+import TierListChart from './TierListChart';
 import { encodeShareData } from '@/utils/shareHelper';
 import { ShareablesGallery } from './shareables';
 import {
@@ -20,6 +21,16 @@ import {
   normalizeUserVector,
   scoreArchetypes,
 } from '../lib/archetypes';
+
+// Bucket scores for the Fan Club Tiers album derivation below
+// (mirrors StepShareables).
+const TIER_BUCKET_POINTS: Record<string, number> = {
+  banger: 5,
+  slaps: 4,
+  mid: 3,
+  skip: 2,
+  trash: 1,
+};
 
 // STATISTICAL HELPER: Kendall's Tau (Rank Agreement)
 function calculateKendallTau(
@@ -228,9 +239,6 @@ export default function Step4Wrapped({
     [explicitlyRankedSongs]
   );
 
-  // (The Fan Club Tiers chart moved to the Shareables library — see
-  // StepShareables, which derives the same tier inputs from context.)
-
   // EXTRACT FIRST NAME + LAST INITIAL
   const getFormattedName = () => {
     if (!userProfile?.displayName) return 'A Fan';
@@ -242,6 +250,93 @@ export default function Step4Wrapped({
   };
 
   const displayNameStr = getFormattedName();
+
+  // FAN CLUB TIERS — derived exactly as StepShareables derives them
+  // (same inputs: songs carry their triage bucket through so explicitly
+  // bucketed songs land in their bucket's tier; album ranks use the
+  // shrinkage-adjusted bucket-score average, K = 5 toward the global
+  // mean). The Thread's thumbnail gallery shows the chart as its
+  // "Tier List" item.
+  // Only real buckets feed the cards — an 'unknown' mark is not a rating.
+  const rankedSongs = masterList.filter((s) => isRealBucket(triageMap[s.id]));
+
+  const tierRankings = useMemo(
+    () =>
+      masterList.map((song, idx) => {
+        const bucket = triageMap[song.id];
+        return {
+          id: song.id,
+          title: song.title,
+          album: song.album,
+          rank: idx + 1,
+          // TierListChart's bucket is BucketType-only; unknowns (which
+          // can't be in the master list anyway) map to undefined.
+          bucket: isRealBucket(bucket) ? bucket : undefined,
+        };
+      }),
+    [masterList, triageMap]
+  );
+
+  const tierRankedAlbums = useMemo(() => {
+    const albumScores: Record<
+      string,
+      { id: string; name: string; total: number; count: number }
+    > = {};
+    let totalScore = 0;
+    let totalCount = 0;
+    FULL_SONG_POOL.forEach((s) => {
+      const bucket = triageMap[s.id];
+      if (!bucket) return;
+      const score = TIER_BUCKET_POINTS[bucket];
+      if (score === undefined) return;
+      totalScore += score;
+      totalCount++;
+      const resolvedId = s.albumId || ALBUM_NAME_TO_ID[s.album] || 'unknown';
+      if (!albumScores[resolvedId]) {
+        albumScores[resolvedId] = {
+          id: resolvedId,
+          name: ALBUMS_BY_ID[resolvedId]?.name || s.album,
+          total: 0,
+          count: 0,
+        };
+      }
+      albumScores[resolvedId].total += score;
+      albumScores[resolvedId].count += 1;
+    });
+    const priorMean = totalCount > 0 ? totalScore / totalCount : 3;
+    const SHRINKAGE_K = 5;
+    return Object.values(albumScores)
+      .map((a) => {
+        const rawMean = a.total / a.count;
+        const adjusted =
+          (a.count / (a.count + SHRINKAGE_K)) * rawMean +
+          (SHRINKAGE_K / (a.count + SHRINKAGE_K)) * priorMean;
+        return { id: a.id, album: a.name, rank: 0, score: adjusted };
+      })
+      .sort((x, y) => y.score - x.score)
+      .map((a, idx) => ({ id: a.id, album: a.album, rank: idx + 1 }));
+  }, [triageMap]);
+
+  const tierSection =
+    rankedSongs.length > 0 ? (
+      <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs">
+        <div className="mb-4">
+          <h3 className="font-black text-lg text-slate-950 leading-tight">
+            Fan Club Tiers
+          </h3>
+          <p className="text-xs font-semibold text-slate-400 mt-0.5">
+            Your full tier list — songs or albums.
+          </p>
+        </div>
+        <TierListChart
+          title="All My Favorite Songs: The Weezer Song Ranking Project"
+          subtitle={`${displayNameStr}'s Personal Tier List`}
+          username={userProfile?.username}
+          rankedSongs={tierRankings}
+          rankedAlbums={tierRankedAlbums}
+        />
+      </div>
+    ) : null;
 
   // EXPLICIT RANK MAPS
   const userRankMap = useMemo(() => {
@@ -1823,19 +1918,6 @@ export default function Step4Wrapped({
           </div>
         </div>
 
-        {/* TIER LIST MOVED TO THE SHAREABLES LIBRARY */}
-        <div className="rounded-3xl border border-slate-700 bg-slate-800/60 p-6 text-center">
-          <p className="text-sm font-bold text-slate-300">
-            Your Fan Club Tiers chart has a new home.
-          </p>
-          <a
-            href="/?step=shareables"
-            className="mt-2 inline-block font-black text-sky-300 underline decoration-sky-300/40 underline-offset-4 hover:text-sky-200"
-          >
-            Find it in the Shareables library →
-          </a>
-        </div>
-
         {/* 12. SMART SHARE MODULE */}
         <div className="max-w-xl mx-auto">
           <SmartShareModule
@@ -1849,13 +1931,17 @@ export default function Step4Wrapped({
             that actually has masterList/triageMap/friendsList in scope.
             (It used to sit at the bottom of SmartShareModule, where those
             names don't exist — that was the "masterList is not defined"
-            crash that took down the whole Sweater Thread.) */}
+            crash that took down the whole Sweater Thread.)
+            Thumbnail variant: compact grid, each card (including the
+            Fan Club Tiers chart) opens full-size in a modal. */}
         <div className="mt-10">
           <ShareablesGallery
-            songs={masterList.filter((s) => isRealBucket(triageMap[s.id]))}
+            songs={rankedSongs}
             triageMap={triageMap}
             friends={friendsList ?? []}
             subtitle={userProfile?.username ? `@${userProfile.username}` : undefined}
+            tierSection={tierSection}
+            variant="thumbnails"
           />
         </div>
       </main>

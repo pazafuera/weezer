@@ -1,13 +1,14 @@
 'use client';
 
 import { forwardRef } from 'react';
-import { DownloadPngButton, ShareableVisual, useShareableDownload } from './ShareCardShell';
+import { SaveImageButton, ShareableVisual, useShareableDownload } from './ShareCardShell';
 
 /** Minimal song shape — structural subset of the app's Song type. */
 export type ShareSong = {
   id: string;
   title: string;
   album: string;
+  /** Tailwind bg class from the song data, e.g. 'bg-[#0072CE]'. */
   albumColor: string;
   year: number;
   isBSide?: boolean;
@@ -23,7 +24,7 @@ export const Top10CardVisual = forwardRef<
   return (
     <ShareableVisual ref={ref} title="My Weezer Top 10" subtitle={subtitle}>
       {top.length === 0 ? (
-        <p className="py-16 text-center text-2xl text-slate-400">
+        <p className="py-16 text-center text-2xl font-bold text-slate-400">
           Rank some songs to reveal your Top 10.
         </p>
       ) : (
@@ -31,16 +32,17 @@ export const Top10CardVisual = forwardRef<
           {top.map((s, i) => (
             <li
               key={s.id}
-              className="flex items-center gap-5 rounded-xl bg-slate-900/70 px-5 py-3"
+              className="flex items-center gap-5 rounded-xl bg-slate-900 border border-slate-800 px-5 py-3"
             >
-              <span className="w-12 shrink-0 text-4xl font-black text-amber-400">{i + 1}</span>
+              <span className="w-12 shrink-0 text-4xl font-black text-white">{i + 1}</span>
               <span
-                className="h-12 w-2 shrink-0 rounded-full"
-                style={{ backgroundColor: s.albumColor || '#64748b' }}
+                className={`h-12 w-3 shrink-0 rounded-full ${s.albumColor || 'bg-slate-700'}`}
               />
               <div className="min-w-0">
-                <p className="truncate text-2xl font-bold">{s.title}</p>
-                <p className="truncate text-lg text-slate-400">
+                <p className="truncate text-2xl font-black uppercase tracking-tight text-white">
+                  {s.title}
+                </p>
+                <p className="truncate text-lg font-bold text-slate-400">
                   {s.album}
                   {s.year ? ` · ${s.year}` : ''}
                 </p>
@@ -65,7 +67,7 @@ export default function Top10Card({
     <div>
       <Top10CardVisual ref={ref} songs={songs} subtitle={subtitle} />
       <div className="mt-4">
-        <DownloadPngButton onClick={download} label={busy ? 'Rendering…' : 'Download PNG'} />
+        <SaveImageButton onClick={download} busy={busy} />
       </div>
     </div>
   );

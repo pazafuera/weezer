@@ -1,7 +1,7 @@
 'use client';
 
 import { forwardRef } from 'react';
-import { DownloadPngButton, ShareableVisual, useShareableDownload } from './ShareCardShell';
+import { SaveImageButton, ShareableVisual, useShareableDownload } from './ShareCardShell';
 import type { Bucket, ShareSong } from './Top10Card';
 
 export type Tribe = { name: string; blurb: string; stat: string };
@@ -89,19 +89,19 @@ export const TribeBadgeCardVisual = forwardRef<
   return (
     <ShareableVisual ref={ref} title="My Fan Tribe" subtitle={subtitle}>
       {tribe ? (
-        <div className="flex flex-col items-center py-10 text-center">
-          <div className="flex h-48 w-48 items-center justify-center rounded-full bg-amber-400 text-black">
-            <span className="px-6 text-3xl font-black uppercase leading-tight">
+        <div className="flex flex-col items-center py-8 text-center">
+          <div className="flex h-52 w-52 items-center justify-center rounded-full bg-[#0072CE] shadow-lg">
+            <span className="px-6 text-4xl font-black uppercase leading-tight text-white">
               {tribe.name}
             </span>
           </div>
-          <p className="mt-8 max-w-2xl text-2xl text-slate-300">{tribe.blurb}</p>
-          <p className="mt-4 rounded-full bg-slate-800 px-6 py-2 text-lg font-bold text-amber-300">
+          <p className="mt-8 max-w-2xl text-2xl font-bold text-slate-300">{tribe.blurb}</p>
+          <p className="mt-5 rounded-full bg-slate-800 border border-slate-700 px-6 py-2 text-lg font-black text-amber-400">
             {tribe.stat}
           </p>
         </div>
       ) : (
-        <p className="py-16 text-center text-2xl text-slate-400">
+        <p className="py-16 text-center text-2xl font-bold text-slate-400">
           Rank some songs to earn your tribe badge.
         </p>
       )}
@@ -123,7 +123,7 @@ export default function TribeBadgeCard({
     <div>
       <TribeBadgeCardVisual ref={ref} songs={songs} triageMap={triageMap} subtitle={subtitle} />
       <div className="mt-4">
-        <DownloadPngButton onClick={download} label={busy ? 'Rendering…' : 'Download PNG'} />
+        <SaveImageButton onClick={download} busy={busy} />
       </div>
     </div>
   );

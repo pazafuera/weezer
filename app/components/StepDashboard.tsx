@@ -485,6 +485,23 @@ export default function StepDashboard() {
               </span>
             </button>
           </div>
+
+          {/* SHAREABLES ASSET LIBRARY CARD */}
+          <button
+            type="button"
+            onClick={() => navigateTo('shareables')}
+            className="w-full p-5 rounded-3xl text-left transition-all flex items-center justify-between gap-4 border-2 border-slate-800 bg-slate-900 hover:bg-slate-950 text-white cursor-pointer group shadow-sm"
+          >
+            <div>
+              <h3 className="font-black text-base sm:text-lg leading-tight">Shareables</h3>
+              <p className="text-xs font-semibold text-slate-400 mt-1">
+                Your asset library — view, save & share your ranking cards
+              </p>
+            </div>
+            <span className="text-xs font-black text-amber-400 group-hover:underline shrink-0">
+              Open Library →
+            </span>
+          </button>
         </div>
 
         {/* STAGES 2 & 3 (TRIAGE DONE): UNIFIED MODULE PUSHED LOWER ON PAGE */}

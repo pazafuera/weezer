@@ -1,7 +1,7 @@
 'use client';
 
 import { forwardRef } from 'react';
-import { DownloadPngButton, ShareableVisual, useShareableDownload } from './ShareCardShell';
+import { SaveImageButton, ShareableVisual, useShareableDownload } from './ShareCardShell';
 import type { ShareSong } from './Top10Card';
 
 export const ERAS = [
@@ -27,28 +27,29 @@ export const EraDnaCardVisual = forwardRef<
     <ShareableVisual
       ref={ref}
       title="My Era DNA"
-      subtitle={subtitle ?? 'Where your taste lives across Weezer history'}
+      subtitle={subtitle}
     >
       {total === 0 ? (
-        <p className="py-16 text-center text-2xl text-slate-400">
+        <p className="py-16 text-center text-2xl font-bold text-slate-400">
           Rank some songs to map your Era DNA.
         </p>
       ) : (
-        <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-6">
           {dist.map((d) => {
             const pct = Math.round((d.count / total) * 100);
             const isTop = d.key === top.key && d.count > 0;
             return (
               <div key={d.key}>
-                <div className="mb-1 flex items-baseline justify-between">
-                  <p className="text-xl font-bold">
-                    {d.name} <span className="font-normal text-slate-500">· {d.label}</span>
+                <div className="mb-1.5 flex items-baseline justify-between">
+                  <p className="text-xl font-black text-white">
+                    {d.name}{' '}
+                    <span className="font-bold text-slate-500">· {d.label}</span>
                   </p>
-                  <p className="text-xl font-black text-amber-400">{pct}%</p>
+                  <p className="text-xl font-black text-white">{pct}%</p>
                 </div>
-                <div className="h-5 overflow-hidden rounded-full bg-slate-800">
+                <div className="h-6 overflow-hidden rounded-full bg-slate-800">
                   <div
-                    className={`h-full rounded-full ${isTop ? 'bg-amber-400' : 'bg-slate-600'}`}
+                    className={`h-full rounded-full ${isTop ? 'bg-amber-400' : 'bg-[#0072CE]'}`}
                     style={{ width: `${pct}%` }}
                   />
                 </div>
@@ -56,8 +57,9 @@ export const EraDnaCardVisual = forwardRef<
             );
           })}
           {top.count > 0 && (
-            <p className="mt-2 text-center text-2xl">
-              Your dominant era: <span className="font-black text-amber-400">{top.name}</span>
+            <p className="mt-2 text-center text-2xl font-bold text-slate-300">
+              Your dominant era:{' '}
+              <span className="font-black text-amber-400">{top.name}</span>
             </p>
           )}
         </div>
@@ -78,7 +80,7 @@ export default function EraDnaCard({
     <div>
       <EraDnaCardVisual ref={ref} songs={songs} subtitle={subtitle} />
       <div className="mt-4">
-        <DownloadPngButton onClick={download} label={busy ? 'Rendering…' : 'Download PNG'} />
+        <SaveImageButton onClick={download} busy={busy} />
       </div>
     </div>
   );

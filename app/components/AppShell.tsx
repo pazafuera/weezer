@@ -114,6 +114,10 @@ export default function AppShell({
       disabled: !progress.isWrappedUnlocked,
     },
     {
+      label: 'Shareables',
+      step: 'shareables',
+    },
+    {
       label: 'Global Rankings',
       step: 'fan_stats',
     },

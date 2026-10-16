@@ -11,6 +11,7 @@ import Step1Triage from './components/Step1Triage';
 import Step2Refine from './components/Step2Refine';
 import Step3Master from './components/Step3Master';
 import Step4Wrapped from './components/Step4Wrapped';
+import StepShareables from './components/StepShareables';
 import FanStats from './components/FanStats';
 import WeezerFriends from './components/WeezerFriends';
 import StepSignupSuccess from './components/StepSignupSuccess';
@@ -113,6 +114,8 @@ export default function WeezerRankerPage() {
           }}
         />
       )}
+
+      {step === 'shareables' && <StepShareables />}
 
       {step === 'fan_stats' && <FanStats userMasterList={masterList} />}
 

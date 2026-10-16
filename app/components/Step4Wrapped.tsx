@@ -13,6 +13,7 @@ import {
 import { FlyingWIcon, AlbumArtwork } from './SharedUI';
 import { encodeShareData } from '@/utils/shareHelper';
 import TierListChart from './TierListChart';
+import { ShareablesGallery } from './shareables';
 
 // STATISTICAL HELPER: Kendall's Tau (Rank Agreement)
 function calculateKendallTau(
@@ -68,7 +69,7 @@ export default function Step4Wrapped({
   ) => void;
   globalConsensus?: string[];
 }) {
-  const { userProfile } = useWeezer();
+  const { userProfile, friendsList } = useWeezer();
   const [activeArchIndex, setActiveArchIndex] = useState(0);
   const [activeEraIndex, setActiveEraIndex] = useState(0);
   const [showAllAlbums, setShowAllAlbums] = useState(false);
@@ -2082,6 +2083,16 @@ function SmartShareModule({ stats, top10, userProfile }: any) {
           </div>
         </div>
       )}
+
+      {/* SHAREABLES ASSET LIBRARY */}
+      <div className="mt-10">
+        <ShareablesGallery
+          songs={masterList.filter((s) => triageMap[s.id])}
+          triageMap={triageMap}
+          friends={friendsList ?? []}
+          subtitle={userProfile?.username ? `@${userProfile.username}` : undefined}
+        />
+      </div>
     </div>
   );
 }

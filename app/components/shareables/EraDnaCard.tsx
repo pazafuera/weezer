@@ -1,7 +1,7 @@
 'use client';
 
 import { forwardRef } from 'react';
-import { SaveImageButton, ScrapbookVisual, useShareableDownload } from './ShareCardShell';
+import { FlyingW, SaveImageButton, ScrapbookVisual, distinctAlbumIds, useShareableDownload } from './ShareCardShell';
 import { handFont, markerFont } from './fonts';
 import type { ShareSong } from './Top10Card';
 
@@ -32,10 +32,14 @@ export const EraDnaCardVisual = forwardRef<
   const total = dist.reduce((a, d) => a + d.count, 0);
   const top = dist.reduce((a, d) => (d.count > a.count ? d : a), dist[0]);
   const topPct = total > 0 ? Math.round((top.count / total) * 100) : 0;
+  const artIds = distinctAlbumIds([
+    ...songs.filter((s) => (s.year || 0) > 0 && top.test(s.year)),
+    ...songs,
+  ]);
 
   return (
-    <ScrapbookVisual ref={ref} subtitle={subtitle}>
-      <div className="absolute inset-x-[76px] bottom-[176px] top-[140px]">
+    <ScrapbookVisual ref={ref} subtitle={subtitle} artAlbumIds={artIds}>
+      <div className="absolute bottom-[190px] left-[184px] right-[60px] top-[140px]">
         {total === 0 ? (
           <p
             className={`pt-64 text-center text-[54px] text-slate-700 ${handFont.className}`}
@@ -44,11 +48,14 @@ export const EraDnaCardVisual = forwardRef<
           </p>
         ) : (
           <>
-            <p
-              className={`text-[46px] tracking-wide text-slate-800 ${markerFont.className}`}
-            >
-              MY ERA DNA
-            </p>
+            <div className="flex items-start justify-between gap-6">
+              <p
+                className={`text-[46px] tracking-wide text-slate-800 ${markerFont.className}`}
+              >
+                MY ERA DNA
+              </p>
+              <FlyingW className="mt-1 w-[92px] shrink-0 -rotate-3 text-slate-800" />
+            </div>
             <h2
               className={`mt-4 text-[118px] leading-[0.95] text-slate-900 ${markerFont.className}`}
             >

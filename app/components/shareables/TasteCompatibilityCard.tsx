@@ -2,9 +2,10 @@
 
 import { forwardRef, useState } from 'react';
 import {
+  FlyingW,
   SaveImageButton,
   ScrapbookVisual,
-  Stamp,
+  distinctAlbumIds,
   useShareableDownload,
 } from './ShareCardShell';
 import { handFont, markerFont } from './fonts';
@@ -79,15 +80,22 @@ export const TasteCompatibilityCardVisual = forwardRef<
       ? Math.round((shared.length / myTopIds.length) * 100)
       : null;
   const tier = score !== null ? tierFor(score) : null;
+  const sharedSongs = shared
+    .map((id) => byId.get(id))
+    .filter((s): s is ShareSong => !!s);
+  const artIds = distinctAlbumIds([...sharedSongs, ...songs]);
 
   return (
-    <ScrapbookVisual ref={ref} subtitle={subtitle}>
-      <div className="absolute inset-x-[76px] bottom-[176px] top-[140px]">
-        <p
-          className={`text-[56px] leading-none tracking-wide text-slate-900 ${markerFont.className}`}
-        >
-          TASTE COMPATIBILITY
-        </p>
+    <ScrapbookVisual ref={ref} subtitle={subtitle} artAlbumIds={artIds}>
+      <div className="absolute bottom-[190px] left-[184px] right-[60px] top-[140px]">
+        <div className="flex items-start justify-between gap-6">
+          <p
+            className={`text-[56px] leading-none tracking-wide text-slate-900 ${markerFont.className}`}
+          >
+            TASTE COMPATIBILITY
+          </p>
+          <FlyingW className="mt-1 w-[80px] shrink-0 -rotate-3 text-slate-800" />
+        </div>
 
         {friends.length === 0 ? (
           <p
@@ -149,11 +157,12 @@ export const TasteCompatibilityCardVisual = forwardRef<
                   >
                     taste match with {friendLabel(friend)}
                   </p>
-                  <div className="mt-6">
-                    <Stamp color={tier.ink} rotate={-2}>
-                      {tier.label}
-                    </Stamp>
-                  </div>
+                  <p
+                    className={`mt-6 -rotate-2 text-[58px] leading-none ${markerFont.className}`}
+                    style={{ color: tier.ink }}
+                  >
+                    {tier.label.toUpperCase()}
+                  </p>
                 </div>
 
                 {shared.length > 0 && (

@@ -8,11 +8,10 @@ import type { ExportMode } from './exportImage';
 import { handFont, markerFont } from './fonts';
 
 /* ------------------------------------------------------------------ */
-/* Scrapbook kit — shared visual language for the v3 shareable cards:  */
-/* cream paper, tape, brush banners, rubber stamps, Polaroids,         */
-/* handwritten (Caveat) annotations and marker (Permanent Marker)      */
-/* display type. Cards render at a fixed 1080x1350 (4:5) — the        */
-/* tallest Instagram/Facebook feed crop.                               */
+/* Scrapbook kit — shared visual language for the shareable cards:     */
+/* cream paper, album-cover collage along the left edge, tape, brush   */
+/* banners, Polaroids, handwritten (Caveat) notes and marker           */
+/* (Permanent Marker) display type. Cards render at 1080x1350 (4:5).   */
 /* ------------------------------------------------------------------ */
 
 const NOISE_BG =
@@ -20,6 +19,21 @@ const NOISE_BG =
 
 const TAPE_CLIP =
   'polygon(2% 6%, 98% 0%, 100% 88%, 97% 100%, 3% 95%, 0% 14%)';
+
+/** The site's own Flying W graphic (same path as SharedUI's FlyingWIcon). */
+export function FlyingW({
+  className = '',
+  style,
+}: {
+  className?: string;
+  style?: CSSProperties;
+}) {
+  return (
+    <svg viewBox="0 0 1000 550" className={className} style={style} fill="currentColor" aria-hidden="true">
+      <path d="M 0,0 L 240,0 L 330,260 L 500,150 L 670,260 L 760,0 L 1000,0 L 1000,65 L 870,65 L 870,125 L 960,125 L 960,190 L 760,190 L 630,540 L 500,310 L 370,540 L 240,190 L 40,190 L 40,125 L 130,125 L 130,65 L 0,65 Z" />
+    </svg>
+  );
+}
 
 export function Tape({
   className = '',
@@ -69,41 +83,6 @@ export function BrushStroke({
   );
 }
 
-/** Rubber-stamp label: rotated, double-ring ink border, marker type. */
-export function Stamp({
-  children,
-  color = '#b3352b',
-  rotate = -6,
-  className = '',
-  style,
-}: {
-  children: ReactNode;
-  color?: string;
-  rotate?: number;
-  className?: string;
-  style?: CSSProperties;
-}) {
-  return (
-    <span
-      className={`inline-block rounded-lg px-4 py-1 uppercase ${markerFont.className} ${className}`}
-      style={{
-        color,
-        border: `4px solid ${color}`,
-        outline: `2px solid ${color}`,
-        outlineOffset: '3px',
-        transform: `rotate(${rotate}deg)`,
-        opacity: 0.92,
-        fontSize: '30px',
-        letterSpacing: '0.04em',
-        backgroundColor: 'rgba(255,255,255,0.25)',
-        ...style,
-      }}
-    >
-      {children}
-    </span>
-  );
-}
-
 /** Taped Polaroid of an album cover. */
 export function Polaroid({
   albumId,
@@ -145,40 +124,36 @@ export function Polaroid({
   );
 }
 
-export function DoodleStar({
-  className = '',
-  style,
-}: {
-  className?: string;
-  style?: CSSProperties;
-}) {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 100 100" className={className} style={style}>
-      <path
-        d="M50 6 L61 38 L95 38 L67 58 L77 92 L50 70 L23 92 L33 58 L5 38 L39 38 Z"
-        fill="none"
-        stroke="#92400e"
-        strokeWidth="5"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
 export function albumCoverSrc(albumId?: string): string {
   return (albumId && ALBUMS_BY_ID[albumId]?.cover) || '/albums/fallback.jpg';
 }
 
+/** Distinct album ids from a song list, in order — feeds the collage edge. */
+export function distinctAlbumIds(
+  songs: Array<{ albumId?: string }>,
+  max = 5,
+): string[] {
+  const out: string[] = [];
+  for (const s of songs) {
+    if (s.albumId && !out.includes(s.albumId)) out.push(s.albumId);
+    if (out.length >= max) break;
+  }
+  return out;
+}
+
+const STRIP_ROTATIONS = [-7, 5, -4, 6, -5];
+
 /**
- * The scrapbook frame every v3 card renders inside: cream paper with
- * grain and coffee rings, punched binder holes down the left edge, a
- * tape banner with the domain up top, a username sticker, and the black
- * brush CTA along the bottom. Content goes in the middle ~1000px.
+ * The scrapbook frame every card renders inside: cream paper with
+ * grain and coffee rings, the user's own album covers collaged down
+ * the left edge, a tape banner with the domain up top, a username
+ * sticker, the project masthead, and the brush CTA along the bottom.
+ * Card content sits right of the collage strip.
  */
 export const ScrapbookVisual = forwardRef<
   HTMLDivElement,
-  { subtitle?: string; children: ReactNode }
->(function ScrapbookVisual({ subtitle, children }, ref) {
+  { subtitle?: string; artAlbumIds?: string[]; children: ReactNode }
+>(function ScrapbookVisual({ subtitle, artAlbumIds, children }, ref) {
   return (
     <div
       ref={ref}
@@ -199,18 +174,32 @@ export const ScrapbookVisual = forwardRef<
         aria-hidden="true"
         className="pointer-events-none absolute -left-24 bottom-80 h-52 w-52 rounded-full border-[8px] border-[#b98a4a]/10"
       />
-      {/* binder holes */}
-      <div
-        aria-hidden="true"
-        className="absolute bottom-10 left-5 top-40 flex flex-col justify-between"
-      >
-        {Array.from({ length: 7 }).map((_, i) => (
-          <div
-            key={i}
-            className="h-5 w-5 rounded-full bg-[#ddd0ab] shadow-[inset_0_2px_4px_rgba(90,70,20,0.45)]"
-          />
-        ))}
-      </div>
+
+      {/* album-cover collage down the left edge */}
+      {artAlbumIds && artAlbumIds.length > 0 && (
+        <div
+          aria-hidden="true"
+          className="absolute bottom-[150px] left-[-30px] top-[120px] z-0 flex w-[215px] flex-col items-center"
+        >
+          {artAlbumIds.slice(0, 5).map((id, i) => (
+            <div
+              key={`${id}-${i}`}
+              className="relative -mb-8 w-[176px] bg-white p-1.5 shadow-[0_10px_22px_rgba(60,45,10,0.35)]"
+              style={{ transform: `rotate(${STRIP_ROTATIONS[i % 5]}deg)` }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={albumCoverSrc(id)}
+                alt=""
+                className="aspect-square w-full object-cover"
+              />
+              {i % 2 === 0 && (
+                <Tape className="absolute -top-4 left-1/2 z-10 h-7 w-24 -translate-x-1/2 -rotate-6" />
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* top tape banner */}
       <div className="absolute left-12 top-9 z-20 -rotate-2">
@@ -235,14 +224,22 @@ export const ScrapbookVisual = forwardRef<
 
       {children}
 
+      {/* project masthead */}
+      <div className="absolute inset-x-12 bottom-[140px] z-20 flex items-center justify-center gap-3">
+        <FlyingW className="h-[22px] w-[40px] text-slate-700" />
+        <span className="text-[19px] font-black uppercase tracking-[0.22em] text-slate-600">
+          All My Favorite Songs · The Weezer Song Ranking Project
+        </span>
+      </div>
+
       {/* bottom brush CTA */}
       <div className="absolute inset-x-12 bottom-9 z-20">
         <div className="relative flex h-[96px] items-center justify-center">
           <BrushStroke color="#141414" className="absolute inset-0 h-full w-full" />
           <span
-            className={`relative text-[38px] tracking-wide text-white ${markerFont.className}`}
+            className={`relative text-[36px] tracking-wide text-white ${markerFont.className}`}
           >
-            MAKE YOURS AT RANKINGWEEZER.COM
+            SETTLE THE DEBATE AT RANKINGWEEZER.COM
           </span>
         </div>
       </div>

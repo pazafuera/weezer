@@ -2,10 +2,10 @@ export {
   ScrapbookVisual,
   Tape,
   BrushStroke,
-  Stamp,
+  FlyingW,
   Polaroid,
-  DoodleStar,
   albumCoverSrc,
+  distinctAlbumIds,
   SaveImageButton,
   useShareableDownload,
 } from './ShareCardShell';

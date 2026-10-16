@@ -3,10 +3,11 @@
 import { forwardRef } from 'react';
 import { ALBUMS_BY_ID } from '../../data/constants';
 import {
+  FlyingW,
   Polaroid,
   SaveImageButton,
   ScrapbookVisual,
-  Stamp,
+  distinctAlbumIds,
   useShareableDownload,
 } from './ShareCardShell';
 import { handFont, markerFont } from './fonts';
@@ -122,13 +123,17 @@ export const TribeBadgeCardVisual = forwardRef<
   const ink = (tribe && TRIBE_INK[tribe.name]) || '#141414';
   const words = tribe ? tribe.name.toUpperCase().split(' ') : [];
   const longest = words.reduce((a, w) => Math.max(a, w.length), 0);
-  const nameSize = longest <= 5 ? 176 : longest <= 8 ? 148 : 118;
+  const nameSize = longest <= 5 ? 178 : longest <= 8 ? 150 : 120;
   const domAlbumId = dominantAlbumId(songs);
   const domAlbum = domAlbumId ? ALBUMS_BY_ID[domAlbumId] : undefined;
+  const topSongs = songs.filter(
+    (s) => triageMap[s.id] === 'banger' || triageMap[s.id] === 'slaps',
+  );
+  const artIds = distinctAlbumIds([...topSongs, ...songs]);
 
   return (
-    <ScrapbookVisual ref={ref} subtitle={subtitle}>
-      <div className="absolute inset-x-[76px] bottom-[176px] top-[140px]">
+    <ScrapbookVisual ref={ref} subtitle={subtitle} artAlbumIds={artIds}>
+      <div className="absolute bottom-[190px] left-[184px] right-[60px] top-[140px]">
         {!tribe ? (
           <p
             className={`pt-64 text-center text-[54px] text-slate-700 ${handFont.className}`}
@@ -143,44 +148,38 @@ export const TribeBadgeCardVisual = forwardRef<
               MY FAN TRIBE
             </p>
 
-            {/* The tribe name as a big rubber stamp */}
-            <div className="mt-12 flex justify-center">
-              <div
-                className="-rotate-3 rounded-3xl px-12 py-8 text-center"
-                style={{
-                  border: `10px solid ${ink}`,
-                  outline: `3px solid ${ink}`,
-                  outlineOffset: '6px',
-                  color: ink,
-                  backgroundColor: 'rgba(255,255,255,0.3)',
-                }}
-              >
-                {words.map((w) => (
-                  <div
-                    key={w}
-                    className={`leading-[0.95] ${markerFont.className}`}
-                    style={{ fontSize: nameSize }}
-                  >
-                    {w}
-                  </div>
-                ))}
-              </div>
+            <div className="mt-8 flex justify-center">
+              <FlyingW className="w-[124px]" style={{ color: ink }} />
+            </div>
+
+            {/* The tribe name in huge marker type, tribe ink */}
+            <div className="mt-6 -rotate-2 text-center" style={{ color: ink }}>
+              {words.map((w) => (
+                <div
+                  key={w}
+                  className={`leading-[0.95] ${markerFont.className}`}
+                  style={{ fontSize: nameSize }}
+                >
+                  {w}
+                </div>
+              ))}
             </div>
 
             <p
-              className={`mx-auto mt-12 max-w-[780px] text-center text-[48px] leading-tight text-slate-800 ${handFont.className}`}
+              className={`mx-auto mt-12 max-w-[760px] text-center text-[48px] leading-tight text-slate-800 ${handFont.className}`}
             >
               {tribe.blurb}
             </p>
 
-            <div className="mt-10 flex justify-center">
-              <Stamp color={ink} rotate={-2}>
-                {tribe.stat}
-              </Stamp>
-            </div>
+            <p
+              className={`mt-8 text-center text-[44px] leading-tight ${handFont.className}`}
+              style={{ color: ink }}
+            >
+              {tribe.stat}
+            </p>
 
             <p
-              className={`absolute bottom-[36px] left-2 w-[380px] -rotate-2 text-[38px] leading-tight text-slate-700 ${handFont.className}`}
+              className={`absolute bottom-[36px] left-2 w-[360px] -rotate-2 text-[38px] leading-tight text-slate-700 ${handFont.className}`}
             >
               Certified by science.*
               <br />
@@ -192,7 +191,7 @@ export const TribeBadgeCardVisual = forwardRef<
                 albumId={domAlbumId}
                 caption={`${domAlbum.name} — patient zero`}
                 rotate={5}
-                className="absolute bottom-[6px] right-2 w-[248px]"
+                className="absolute bottom-[6px] right-2 w-[228px]"
               />
             )}
           </>

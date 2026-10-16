@@ -4,6 +4,8 @@ import { forwardRef } from 'react';
 import { BrushStroke, FlyingW, SaveImageButton, ScrapbookVisual, distinctAlbumIds, useShareableDownload } from './ShareCardShell';
 import { handFont, markerFont } from './fonts';
 import type { ShareSong } from './Top10Card';
+import { FULL_SONG_POOL } from '../../data/constants';
+import { MIN_QUALIFYING_RATINGS } from '../../lib/fanStatsMethodology';
 
 export const ERAS = [
   { key: 'blue', label: '1994–1996', name: 'The Blue Era', color: '#d97706', test: (y: number) => y >= 1994 && y <= 1996 },
@@ -25,13 +27,39 @@ export const EraDnaCardVisual = forwardRef<
   HTMLDivElement,
   { songs: ShareSong[]; subtitle?: string }
 >(function EraDnaCardVisual({ songs, subtitle }, ref) {
+  // ERA DISTRIBUTION. `songs` is the user's RATED songs only (real
+  // buckets — 'unknown' marks and unrated songs never reach this card).
+  //
+  // With a real sample (>= MIN_QUALIFYING_RATINGS rated songs), each
+  // era's weight is its rated count BLENDED with coverage: the count is
+  // discounted by how much of the era's catalog the user actually
+  // knows — weight = count × (0.5 + 0.5 × count/catalog). Songs the
+  // user doesn't know count as absence, so the profile shifts toward
+  // the eras their fandom covers: rating 20 of 31 Blue-era songs and
+  // nothing else still reads as ~100% Blue Era, while a fan who rated
+  // everything keeps the plain count distribution (coverage is 1.0 in
+  // every era, so the discount vanishes). Below the sample floor, fall
+  // back to the plain share of rated songs so a brand-new fan's card
+  // isn't mostly absence.
+  const ratedTotal = songs.length;
+  const useCoverage = ratedTotal >= MIN_QUALIFYING_RATINGS;
   const dist = ERAS.map((e) => {
     const count = songs.filter((s) => (s.year || 0) > 0 && e.test(s.year)).length;
-    return { ...e, count };
+    const catalog = FULL_SONG_POOL.filter(
+      (s) => (s.year || 0) > 0 && e.test(s.year)
+    ).length;
+    const coverage = catalog > 0 ? count / catalog : 0;
+    const weight = useCoverage ? count * (0.5 + 0.5 * coverage) : count;
+    return { ...e, count, weight };
   });
-  const total = dist.reduce((a, d) => a + d.count, 0);
-  const top = dist.reduce((a, d) => (d.count > a.count ? d : a), dist[0]);
-  const topPct = total > 0 ? Math.round((top.count / total) * 100) : 0;
+  const totalWeight = dist.reduce((a, d) => a + d.weight, 0);
+  const withPct = dist.map((d) => ({
+    ...d,
+    pct: totalWeight > 0 ? Math.round((d.weight / totalWeight) * 100) : 0,
+  }));
+  const total = ratedTotal;
+  const top = withPct.reduce((a, d) => (d.weight > a.weight ? d : a), withPct[0]);
+  const topPct = top.pct;
   const artIds = distinctAlbumIds([
     ...songs.filter((s) => (s.year || 0) > 0 && top.test(s.year)),
     ...songs,
@@ -77,8 +105,8 @@ export const EraDnaCardVisual = forwardRef<
             </div>
 
             <div className="mt-9">
-              {dist.map((d, i) => {
-                const pct = Math.round((d.count / total) * 100);
+              {withPct.map((d, i) => {
+                const pct = d.pct;
                 return (
                   <div
                     key={d.key}

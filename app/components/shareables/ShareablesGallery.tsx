@@ -149,12 +149,17 @@ export default function ShareablesGallery({
   triageMap,
   friends,
   subtitle,
+  tierSection,
 }: {
   /** Ranked songs only (already filtered to bucketed songs). */
   songs: ShareSong[];
   triageMap: Record<string, Bucket>;
   friends: FriendLike[];
   subtitle?: string;
+  /** Optional full-width section rendered under the card grid — the
+   *  Fan Club Tiers chart lives here when the gallery is used as the
+   *  standalone library page. */
+  tierSection?: ReactNode;
 }) {
   if (songs.length === 0) {
     return (
@@ -167,29 +172,32 @@ export default function ShareablesGallery({
     );
   }
   return (
-    <div className="grid gap-6 md:grid-cols-2">
-      <LibraryItem
-        title="Top 10 Songs"
-        description="Your ranked top 10 as a shareable graphic."
-        filename="my-weezer-top-10.png"
-      >
-        <Top10CardVisual songs={songs} subtitle={subtitle} />
-      </LibraryItem>
-      <LibraryItem
-        title="Fan Tribe Badge"
-        description="Which Weezer tribe do you belong to?"
-        filename="my-weezer-tribe.png"
-      >
-        <TribeBadgeCardVisual songs={songs} triageMap={triageMap} subtitle={subtitle} />
-      </LibraryItem>
-      <LibraryItem
-        title="Era DNA"
-        description="Where your taste lives across Weezer history."
-        filename="my-weezer-era-dna.png"
-      >
-        <EraDnaCardVisual songs={songs} subtitle={subtitle} />
-      </LibraryItem>
-      <CompatibilityLibraryItem songs={songs} friends={friends} subtitle={subtitle} />
+    <div>
+      <div className="grid gap-6 md:grid-cols-2">
+        <LibraryItem
+          title="Top 10 Songs"
+          description="Your ranked top 10 as a shareable graphic."
+          filename="my-weezer-top-10.png"
+        >
+          <Top10CardVisual songs={songs} subtitle={subtitle} />
+        </LibraryItem>
+        <LibraryItem
+          title="Fan Tribe Badge"
+          description="Which Weezer tribe do you belong to?"
+          filename="my-weezer-tribe.png"
+        >
+          <TribeBadgeCardVisual songs={songs} triageMap={triageMap} subtitle={subtitle} />
+        </LibraryItem>
+        <LibraryItem
+          title="Era DNA"
+          description="Where your taste lives across Weezer history."
+          filename="my-weezer-era-dna.png"
+        >
+          <EraDnaCardVisual songs={songs} subtitle={subtitle} />
+        </LibraryItem>
+        <CompatibilityLibraryItem songs={songs} friends={friends} subtitle={subtitle} />
+      </div>
+      {tierSection}
     </div>
   );
 }

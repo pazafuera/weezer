@@ -12,7 +12,6 @@ import {
 } from '../data/constants';
 import { FlyingWIcon, AlbumArtwork } from './SharedUI';
 import { encodeShareData } from '@/utils/shareHelper';
-import TierListChart from './TierListChart';
 import { ShareablesGallery } from './shareables';
 
 // STATISTICAL HELPER: Kendall's Tau (Rank Agreement)
@@ -147,19 +146,8 @@ export default function Step4Wrapped({
     [explicitlyRankedSongs]
   );
 
-  // USER TIER LIST FORMATTING
-  // The bucket is passed through so TierListChart can place every explicitly
-  // bucketed song in its bucket's tier (rank cutoffs alone leave lower tiers
-  // empty on partial rankings).
-  const personalTierListRankings = useMemo(() => {
-    return masterList.map((song, idx) => ({
-      id: song.id,
-      title: song.title,
-      album: song.album,
-      rank: idx + 1,
-      bucket: triageMap[song.id],
-    }));
-  }, [masterList, triageMap]);
+  // (The Fan Club Tiers chart moved to the Shareables library — see
+  // StepShareables, which derives the same tier inputs from context.)
 
   // EXTRACT FIRST NAME + LAST INITIAL
   const getFormattedName = () => {
@@ -1890,16 +1878,17 @@ export default function Step4Wrapped({
           </div>
         </div>
 
-        {/* TIER LIST VISUALIZATION SECTION */}
-        <div>
-          <TierListChart 
-            title="All My Favorite Songs: The Weezer Song Ranking Project" 
-            subtitle={`${displayNameStr}'s Personal Tier List`}
-            username={userProfile?.username}
-            rankedSongs={personalTierListRankings} 
-            // V-- WE NOW PASS THE EXACT ID SO NO GUESSING HAPPENS --V
-            rankedAlbums={stats.rankedAlbums.map((a, idx) => ({ id: a.id, album: a.name, rank: idx + 1 }))} 
-          />
+        {/* TIER LIST MOVED TO THE SHAREABLES LIBRARY */}
+        <div className="rounded-3xl border border-slate-700 bg-slate-800/60 p-6 text-center">
+          <p className="text-sm font-bold text-slate-300">
+            Your Fan Club Tiers chart has a new home.
+          </p>
+          <a
+            href="/?step=shareables"
+            className="mt-2 inline-block font-black text-sky-300 underline decoration-sky-300/40 underline-offset-4 hover:text-sky-200"
+          >
+            Find it in the Shareables library →
+          </a>
         </div>
 
         {/* 12. SMART SHARE MODULE */}

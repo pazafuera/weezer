@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/utils/supabase';
 import { useWeezer } from '../context/WeezerContext';
 import { COUNTRY_OPTIONS, US_STATES } from './WeezerOnboardingModal';
+import Link from 'next/link';
 
 interface WeezerAccountDrawerProps {
   isOpen: boolean;
@@ -852,6 +853,16 @@ export default function WeezerAccountDrawer({
             >
               Sign Out
             </button>
+              {/* LEGAL LINKS */}
+              <div className="flex items-center justify-center gap-2 pt-3 text-[11px] text-slate-400">
+                <Link href="/privacy" className="hover:text-slate-600 transition-colors">
+                  Privacy Policy
+                </Link>
+                <span aria-hidden="true">·</span>
+                <Link href="/terms" className="hover:text-slate-600 transition-colors">
+                  Terms of Use
+                </Link>
+              </div>
           </div>
         )}
       </div>

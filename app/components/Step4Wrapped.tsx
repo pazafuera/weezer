@@ -1783,6 +1783,20 @@ export default function Step4Wrapped({
             userProfile={userProfile}
           />
         </div>
+
+        {/* SHAREABLES ASSET LIBRARY — rendered here, in the component
+            that actually has masterList/triageMap/friendsList in scope.
+            (It used to sit at the bottom of SmartShareModule, where those
+            names don't exist — that was the "masterList is not defined"
+            crash that took down the whole Sweater Thread.) */}
+        <div className="mt-10">
+          <ShareablesGallery
+            songs={masterList.filter((s) => triageMap[s.id])}
+            triageMap={triageMap}
+            friends={friendsList ?? []}
+            subtitle={userProfile?.username ? `@${userProfile.username}` : undefined}
+          />
+        </div>
       </main>
     </div>
   );
@@ -1957,15 +1971,6 @@ function SmartShareModule({ stats, top10, userProfile }: any) {
         </div>
       )}
 
-      {/* SHAREABLES ASSET LIBRARY */}
-      <div className="mt-10">
-        <ShareablesGallery
-          songs={masterList.filter((s) => triageMap[s.id])}
-          triageMap={triageMap}
-          friends={friendsList ?? []}
-          subtitle={userProfile?.username ? `@${userProfile.username}` : undefined}
-        />
-      </div>
     </div>
   );
 }

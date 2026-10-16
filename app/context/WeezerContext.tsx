@@ -280,6 +280,24 @@ export const migrateGuestRankingsToUser = async (newUserId: string) => {
       (masterList && masterList.length > 0);
 
     if (hasProgress) {
+      // NEVER overwrite rankings the account already has. Guest picks
+      // only migrate into an account that has none yet — otherwise,
+      // logging in from a browser holding leftover guest picks would
+      // erase the account's real saved rankings. (Bit us Oct 16, 2026:
+      // temp test picks replaced a real account's rankings at login.)
+      const { data: existing } = await supabase
+        .from('weezer_rankings')
+        .select('triage_map, master_list')
+        .eq('user_id', newUserId)
+        .maybeSingle();
+
+      const accountHasProgress =
+        (existing?.triage_map &&
+          Object.keys(existing.triage_map).length > 0) ||
+        (existing?.master_list && existing.master_list.length > 0);
+
+      if (accountHasProgress) return;
+
       await supabase.from('weezer_rankings').upsert(
         {
           user_id: newUserId,

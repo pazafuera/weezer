@@ -111,6 +111,14 @@ export const SONG_TYPE = {
  *  of all fans before its lift over its album can be highlighted. */
 export const LONE_BANGER_MIN_FAN_SHARE = 0.1;
 
+/** Divisiveness eligibility: a song needs at least this many qualified
+ *  ratings AND ratings from more than this share of qualified fans
+ *  before it can appear on a most-divisive list. A song whose ratings
+ *  have zero variance (everyone agrees) is never "divisive", however
+ *  the formula scores it. */
+export const MIN_DIVISIVE_RATINGS = 20;
+export const MIN_DIVISIVE_REACH = 0.1;
+
 export type FanTribeKey = 'haters' | 'modernists' | 'purists' | 'cult' | 'chaos';
 
 /**

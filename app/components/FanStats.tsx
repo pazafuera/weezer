@@ -15,6 +15,8 @@ import {
   METHODOLOGY_PLAIN_RULES,
   METHODOLOGY_VERSION,
   MIN_DISPLAY_SAMPLE,
+  MIN_DIVISIVE_RATINGS,
+  MIN_DIVISIVE_REACH,
   MIN_QUALIFYING_RATINGS,
   POLARIZATION_FACTOR,
   SONG_TYPE,
@@ -280,7 +282,21 @@ export default function FanStats({
 
     // FAN AWARDS: Filter logic prevents duplicates
     const mostLoved = combinedMetrics.sort((a, b) => b.mean - a.mean)[0];
-    const mostDivisive = combinedMetrics.filter(m => m.id !== mostLoved?.id).sort((a, b) => b.controversy - a.controversy)[0];
+    // Divisiveness needs a real sample and real disagreement: enough
+    // qualified ratings, enough reach, and non-zero variance — a song
+    // everyone agrees on is never "divisive" (methodology module).
+    const divisiveTop = combinedMetrics
+      .filter(
+        (m) =>
+          m.id !== mostLoved?.id &&
+          m.count >= MIN_DIVISIVE_RATINGS &&
+          m.count > totalFans * MIN_DIVISIVE_REACH &&
+          m.sd > 0 &&
+          m.controversy > 0
+      )
+      .sort((a, b) => b.controversy - a.controversy)
+      .slice(0, 5);
+    const mostDivisive = divisiveTop[0];
     const hiddenGem = combinedMetrics.filter(m => m.reach <= 0.6 && m.id !== mostLoved?.id && m.id !== mostDivisive?.id).sort((a, b) => a.avgPct - b.avgPct)[0] || combinedMetrics.filter(m => m.id !== mostLoved?.id && m.id !== mostDivisive?.id).sort((a, b) => a.reach - b.reach)[0]; 
     const mostRejected = combinedMetrics.filter(m => m.id !== mostLoved?.id && m.id !== mostDivisive?.id && m.id !== hiddenGem?.id).sort((a, b) => b.pTrash - a.pTrash)[0];
     
@@ -331,7 +347,7 @@ export default function FanStats({
       enoughForPercentages: totalFans >= MIN_DISPLAY_SAMPLE,
       hasDebateData: totalWarWeight > 0,
       bluePct, pinkPct, tribes,
-      mostLoved, mostDivisive, hiddenGem, mostRejected,
+      mostLoved, mostDivisive, divisiveTop, hiddenGem, mostRejected,
       anatomyCategories, topConsensus, albumLeaderboard, loneBangers, 
       genClassicistSong, genModernistSong, tasteTwin,
       globalTierListRankings // Passing down the Tier List array
@@ -432,12 +448,21 @@ export default function FanStats({
                 <p className="text-xs font-medium text-slate-400 mt-3 leading-snug">Highest ratio of positive ratings with the lowest disagreement.</p>
               </div>
 
-              <div className="bg-slate-800/80 p-5 rounded-2xl border border-slate-700/50 flex flex-col justify-between">
-                <div>
-                  <span className="text-[10px] font-black uppercase text-rose-500 block mb-1">Most Divisive</span>
-                  <h3 className="text-xl lg:text-2xl font-black text-white text-balance leading-tight">{communityStats.mostDivisive?.song?.title}</h3>
-                </div>
-                <p className="text-xs font-medium text-slate-400 mt-3 leading-snug">The sharpest divide between 'Banger' and 'Trash' votes.</p>
+              <div className="bg-slate-800/80 p-5 rounded-2xl border border-slate-700/50">
+                <span className="text-[10px] font-black uppercase text-rose-500 block mb-1">Most Divisive — Top 5</span>
+                {communityStats.divisiveTop.length > 0 ? (
+                  <ul className="mt-2 space-y-2">
+                    {communityStats.divisiveTop.map((m) => (
+                      <li key={m.id} className="flex items-baseline justify-between gap-3">
+                        <span className="text-sm font-black text-white leading-tight truncate">{m.song.title}</span>
+                        <span className="text-[10px] font-bold text-slate-400 shrink-0">Divisive among {m.count} ratings</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-xs font-medium text-slate-400 mt-2 leading-snug">No song has enough split ratings yet to call it divisive.</p>
+                )}
+                <p className="text-xs font-medium text-slate-400 mt-3 leading-snug">The sharpest divide between &apos;Banger&apos; and &apos;Trash&apos; votes.</p>
               </div>
 
               <div className="bg-slate-800/80 p-5 rounded-2xl border border-slate-700/50 flex flex-col justify-between">

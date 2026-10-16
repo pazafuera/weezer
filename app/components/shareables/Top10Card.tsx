@@ -1,7 +1,7 @@
 'use client';
 
 import { forwardRef } from 'react';
-import { ALBUMS_BY_ID } from '../../lib/constants';
+import { ALBUMS_BY_ID } from '../../data/constants';
 import {
   BrushStroke,
   DoodleStar,

@@ -2,7 +2,7 @@
 
 import { forwardRef, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
-import { ALBUMS_BY_ID } from '../../lib/constants';
+import { ALBUMS_BY_ID } from '../../data/constants';
 import { exportNodeAsPng } from './exportImage';
 import type { ExportMode } from './exportImage';
 import { handFont, markerFont } from './fonts';

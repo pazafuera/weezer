@@ -14,10 +14,13 @@ import {
   LONE_BANGER_MIN_FAN_SHARE,
   METHODOLOGY_PLAIN_RULES,
   METHODOLOGY_VERSION,
+  MIN_DISPLAY_SAMPLE,
+  MIN_QUALIFYING_RATINGS,
   POLARIZATION_FACTOR,
   SONG_TYPE,
   classifyFanTribe,
   debateWeight,
+  isQualifiedSubmission,
   leansClassicist,
 } from '../lib/fanStatsMethodology';
 
@@ -82,7 +85,18 @@ export default function FanStats({
 
   const communityStats = useMemo(() => {
     if (communityTriageMaps.length === 0) return null;
-    const totalFans = communityTriageMaps.length;
+    // Statistical honesty: only qualified submissions count toward
+    // community stats — at least MIN_QUALIFYING_RATINGS explicit, valid
+    // ratings (methodology module). Master lists qualify on their own
+    // explicit length for the consensus metrics.
+    const qualifiedMaps = communityTriageMaps.filter((m) =>
+      isQualifiedSubmission(m)
+    );
+    const qualifiedLists = communityMasterLists.filter(
+      (l) => l.length >= MIN_QUALIFYING_RATINGS
+    );
+    const totalFans = qualifiedMaps.length;
+    const submissionsReceived = communityTriageMaps.length;
     const points: Record<BucketType, number> = { banger: 5, slaps: 4, mid: 3, skip: 2, trash: 1 };
 
     const songL1: Record<string, { total: number; count: number; buckets: Record<BucketType, number>; scores: number[] }> = {};
@@ -99,7 +113,7 @@ export default function FanStats({
       songL1[s.id] = { total: 0, count: 0, buckets: { banger: 0, slaps: 0, mid: 0, skip: 0, trash: 0 }, scores: [] };
     });
 
-    communityTriageMaps.forEach(map => {
+    qualifiedMaps.forEach(map => {
       let blueSum = 0, blueCount = 0;
       let pinkSum = 0, pinkCount = 0;
       let classicSum = 0, classicCount = 0;
@@ -149,16 +163,16 @@ export default function FanStats({
     });
 
     const totalWarWeight = blueTotalWeight + pinkTotalWeight;
-    const bluePct = totalWarWeight > 0 ? Math.round((blueTotalWeight / totalWarWeight) * 100) : 50;
+    const bluePct = totalWarWeight > 0 ? Math.round((blueTotalWeight / totalWarWeight) * 100) : 0;
     const pinkPct = 100 - bluePct;
 
     const tTotal = Object.values(tribeCounts).reduce((a, b) => a + b, 0) || 1;
     const tribes = [
-      { name: "Blue Album Purists", pct: Math.round((tribeCounts.purists / tTotal) * 100), sacred: "Buddy Holly", heresy: "Beverly Hills", stroke: "#0072CE", desc: "Favor the clean, power-pop perfection of the 1994 debut above all else." },
-      { name: "Pinkerton Cult", pct: Math.round((tribeCounts.cult / tTotal) * 100), sacred: "El Scorcho", heresy: "Island in the Sun", stroke: "#334155", desc: "Deep devotion to the raw, abrasive, and emotional 1996 sophomore record." },
-      { name: "Modern Defenders", pct: Math.round((tribeCounts.modernists / tTotal) * 100), sacred: "California Kids", heresy: "Hash Pipe", stroke: "#10b981", desc: "Champions of post-2010 releases like White, OK Human, and SZNZ." },
-      { name: "Harsh Critics", pct: Math.round((tribeCounts.haters / tTotal) * 100), sacred: "Say It Ain't So", heresy: "Most of the catalog", stroke: "#f43f5e", desc: "Extremely difficult to please, handing out 'Trash' and 'Skip' ratings liberally." },
-      { name: "Chaos Agents", pct: Math.round((tribeCounts.chaos / tTotal) * 100), sacred: "Pork and Beans", heresy: "Consensus", stroke: "#8b5cf6", desc: "Wildly unpredictable tastes that actively defy the overall fan consensus." },
+      { name: "Blue Album Purists", pct: Math.round((tribeCounts.purists / tTotal) * 100), count: tribeCounts.purists, sacred: "Buddy Holly", heresy: "Beverly Hills", stroke: "#0072CE", desc: "Favor the clean, power-pop perfection of the 1994 debut above all else." },
+      { name: "Pinkerton Cult", pct: Math.round((tribeCounts.cult / tTotal) * 100), count: tribeCounts.cult, sacred: "El Scorcho", heresy: "Island in the Sun", stroke: "#334155", desc: "Deep devotion to the raw, abrasive, and emotional 1996 sophomore record." },
+      { name: "Modern Defenders", pct: Math.round((tribeCounts.modernists / tTotal) * 100), count: tribeCounts.modernists, sacred: "California Kids", heresy: "Hash Pipe", stroke: "#10b981", desc: "Champions of post-2010 releases like White, OK Human, and SZNZ." },
+      { name: "Harsh Critics", pct: Math.round((tribeCounts.haters / tTotal) * 100), count: tribeCounts.haters, sacred: "Say It Ain't So", heresy: "Most of the catalog", stroke: "#f43f5e", desc: "Extremely difficult to please, handing out 'Trash' and 'Skip' ratings liberally." },
+      { name: "Chaos Agents", pct: Math.round((tribeCounts.chaos / tTotal) * 100), count: tribeCounts.chaos, sacred: "Pork and Beans", heresy: "Consensus", stroke: "#8b5cf6", desc: "Wildly unpredictable tastes that actively defy the overall fan consensus." },
     ].sort((a, b) => b.pct - a.pct);
 
     const globalPriorMean = Object.values(songL1).reduce((acc, s) => acc + s.total, 0) / Math.max(1, Object.values(songL1).reduce((acc, s) => acc + s.count, 0));
@@ -246,7 +260,7 @@ export default function FanStats({
     const songL2: Record<string, { percentiles: number[]; count: number }> = {};
     FULL_SONG_POOL.forEach(s => songL2[s.id] = { percentiles: [], count: 0 });
 
-    communityMasterLists.forEach(list => {
+    qualifiedLists.forEach(list => {
       if (list.length < 2) return;
       list.forEach((song, idx) => {
         const pct = ((idx + 0.5) / list.length) * 100; 
@@ -259,7 +273,7 @@ export default function FanStats({
 
     const combinedMetrics = l1Metrics.map(l1 => {
       const l2 = songL2[l1.id];
-      const reach = l2.count / Math.max(1, communityMasterLists.length);
+      const reach = l2.count / Math.max(1, qualifiedLists.length);
       const avgPct = l2.count > 0 ? l2.percentiles.reduce((a,b) => a+b, 0) / l2.count : 100;
       return { ...l1, reach, avgPct, song: FULL_SONG_POOL.find(s => s.id === l1.id)! };
     }).filter(m => m.song && m.count > totalFans * 0.1);
@@ -286,7 +300,7 @@ export default function FanStats({
     let tasteTwin = null;
     if (topConsensus.length > 0) {
       const targetSong = topConsensus[0].song;
-      const lovers = communityTriageMaps.filter(m => m[targetSong.id] === 'banger' || m[targetSong.id] === 'slaps');
+      const lovers = qualifiedMaps.filter(m => m[targetSong.id] === 'banger' || m[targetSong.id] === 'slaps');
       const coCounts: Record<string, number> = {};
       lovers.forEach(m => {
         Object.entries(m).forEach(([id, bucket]) => {
@@ -312,8 +326,11 @@ export default function FanStats({
       { id: 'hated', title: "Universally Disliked", desc: "Overwhelmingly skipped or trashed.", color: "text-slate-600", badgeBg: "bg-slate-500/10 border-slate-500/30", songs: dislikedSongs }
     ].filter(cat => cat.songs.length > 0);
 
-    return { 
-      totalFans, bluePct, pinkPct, tribes, 
+    return {
+      totalFans, submissionsReceived,
+      enoughForPercentages: totalFans >= MIN_DISPLAY_SAMPLE,
+      hasDebateData: totalWarWeight > 0,
+      bluePct, pinkPct, tribes,
       mostLoved, mostDivisive, hiddenGem, mostRejected,
       anatomyCategories, topConsensus, albumLeaderboard, loneBangers, 
       genClassicistSong, genModernistSong, tasteTwin,
@@ -323,10 +340,21 @@ export default function FanStats({
 
   // Show a soft inline loader ONLY if data hasn't finished its first initial fetch yet
   if (!communityStats || communityStats.totalFans === 0) {
+    if (communityTriageMaps.length > 0) {
+      return (
+        <div className="py-20 text-center space-y-3 px-4">
+          <p className="text-sm font-bold text-slate-500 max-w-md mx-auto leading-relaxed">
+            Not enough qualified rankings yet. A submission needs at least{' '}
+            {MIN_QUALIFYING_RATINGS} rated songs before it counts toward
+            community stats — rank a few more songs and check back.
+          </p>
+        </div>
+      );
+    }
     return (
       <div className="py-20 text-center space-y-3">
         <div className="w-8 h-8 border-4 border-[#0072CE] border-t-transparent rounded-full animate-spin mx-auto" />
-        <p className="text-sm font-bold text-slate-500">Aggregating Global Fan Data...</p>
+        <p className="text-sm font-bold text-slate-500">Aggregating Fan Data...</p>
       </div>
     );
   }
@@ -366,9 +394,10 @@ export default function FanStats({
             <div className="relative z-10 mb-6">
               <span className="text-[10px] font-black uppercase tracking-widest text-[#0072CE] block mb-1">The Divide</span>
               <h2 className="text-3xl font-black text-slate-950 tracking-tight leading-tight">Blue vs. Pinkerton</h2>
-              <p className="text-xs text-slate-500 mt-2 max-w-xs mx-auto text-balance">Based on every rating across the entire fanbase.</p>
+              <p className="text-xs text-slate-500 mt-2 max-w-xs mx-auto text-balance">Based on qualified rankings from participating fans.</p>
             </div>
 
+            {communityStats.enoughForPercentages && communityStats.hasDebateData ? (
             <div className="relative z-10 flex items-center justify-center">
               <div className="flex-1 text-center pr-2">
                 <div className="text-5xl lg:text-6xl font-black text-[#0072CE] tracking-tighter">{communityStats.bluePct}%</div>
@@ -380,6 +409,12 @@ export default function FanStats({
                 <h4 className="text-[10px] lg:text-xs font-black uppercase tracking-widest mt-1 text-slate-500">Pinkerton</h4>
               </div>
             </div>
+            ) : (
+            <p className="relative z-10 text-sm font-bold text-slate-500 max-w-xs mx-auto leading-relaxed">
+              Not enough data for a reliable percentage yet — based on{' '}
+              {communityStats.totalFans} qualified fan rankings so far.
+            </p>
+            )}
           </div>
 
           {/* FAN AWARDS (2/3 Width on Desktop) */}
@@ -419,7 +454,9 @@ export default function FanStats({
                   <h3 className="text-xl lg:text-2xl font-black text-white text-balance leading-tight">{communityStats.mostRejected?.song?.title}</h3>
                 </div>
                 <p className="text-xs font-medium text-slate-400 mt-3 leading-snug">
-                  {communityStats.mostRejected?.pTrash ? Math.round(communityStats.mostRejected.pTrash * 100) : 0}% of the entire fanbase put this in Trash.
+                  {communityStats.enoughForPercentages && communityStats.mostRejected?.pTrash
+                    ? `${Math.round(communityStats.mostRejected.pTrash * 100)}% of participating fans put this in Trash.`
+                    : 'Put in Trash by more participating fans than any other song.'}
                 </p>
               </div>
             </div>
@@ -434,6 +471,7 @@ export default function FanStats({
             <div className="text-center sm:text-left mb-6 border-b border-slate-100 pb-4">
               <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 block mb-1">Consensus</span>
               <h2 className="text-3xl sm:text-4xl font-black text-slate-950 tracking-tight leading-tight">Global Top 10</h2>
+              <p className="text-[11px] font-bold text-slate-400 mt-1.5">Based on {communityStats.totalFans} qualified fan rankings</p>
             </div>
             
             <div className="space-y-4 flex-1">
@@ -569,6 +607,11 @@ export default function FanStats({
               <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1">Voting Behavior</span>
               <h2 className="text-3xl font-black text-slate-900 tracking-tight leading-tight">Fan Tribes</h2>
               <p className="text-xs font-medium text-slate-500 mt-2">Where users fall based on their voting patterns.</p>
+              {!communityStats.enoughForPercentages && (
+                <p className="text-[11px] font-bold text-slate-400 mt-1">
+                  Percentages unlock at {MIN_DISPLAY_SAMPLE} qualified rankings — showing counts for now ({communityStats.totalFans} qualified).
+                </p>
+              )}
             </div>
 
             <div className="space-y-3">
@@ -593,7 +636,7 @@ export default function FanStats({
                       )}
                     </div>
                     {/* SMALLER PERCENTAGE FONT */}
-                    <span className="text-xl font-black text-[#0072CE] leading-none shrink-0">{tribe.pct}%</span>
+                    <span className="text-xl font-black text-[#0072CE] leading-none shrink-0">{communityStats.enoughForPercentages ? `${tribe.pct}%` : `${tribe.count} fans`}</span>
                   </div>
                   
                   <div className="grid grid-cols-2 gap-4 border-t border-slate-200 pt-3">

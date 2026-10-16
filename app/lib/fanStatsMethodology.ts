@@ -11,7 +11,45 @@
  * METHODOLOGY_VERSION and note the change instead of silently retuning.
  */
 
+import { FULL_SONG_POOL } from '../data/constants';
+
 export const METHODOLOGY_VERSION = '1.0';
+
+/**
+ * Community-statistics eligibility (statistical honesty rules):
+ * a submission counts toward community stats only if it carries at
+ * least MIN_QUALIFYING_RATINGS explicit, valid ratings — a known song
+ * id from FULL_SONG_POOL with a real bucket value. Missing songs are
+ * never counted, and never treated as Trash.
+ */
+export const MIN_QUALIFYING_RATINGS = 10;
+
+/** Below this many qualified submissions, population percentages
+ *  (tribe shares, Blue/Pinkerton splits, demographic shares) are
+ *  hidden — counts show instead, with an "not enough data" note.
+ *  Never substitute a fake 0% or 50% fallback. */
+export const MIN_DISPLAY_SAMPLE = 50;
+
+const VALID_SONG_IDS = new Set(FULL_SONG_POOL.map((s) => s.id));
+const VALID_BUCKETS = new Set(['banger', 'slaps', 'mid', 'skip', 'trash']);
+
+/** How many explicit, valid ratings one triage map carries. */
+export function countQualifiedRatings(
+  triageMap: Record<string, string | undefined>,
+): number {
+  let n = 0;
+  for (const [id, bucket] of Object.entries(triageMap)) {
+    if (bucket && VALID_SONG_IDS.has(id) && VALID_BUCKETS.has(bucket)) n++;
+  }
+  return n;
+}
+
+/** True when a submission qualifies for community statistics. */
+export function isQualifiedSubmission(
+  triageMap: Record<string, string | undefined>,
+): boolean {
+  return countQualifiedRatings(triageMap) >= MIN_QUALIFYING_RATINGS;
+}
 
 /** A fan whose average bucket score falls below this is a "Harsh Critic".
  *  Bucket scores run 1 (Trash) to 5 (Banger). */

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useLayoutEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { BucketType, BUCKET_CONFIG, FULL_SONG_POOL, SINGLE_SONG_IDS, Song } from '../data/constants';
 import {
   countBucketedSongs,
@@ -8,8 +8,9 @@ import {
   TriageValue,
 } from '../context/WeezerContext';
 import { FlyingWIcon, AudioPreviewButton } from './SharedUI';
+import Step1Deck from './Step1Deck';
 
-interface TriageSection {
+export interface TriageSection {
   /** DOM id of the section (album sections keep the album-<slug> form
    *  the dashboard's hot-links target). */
   key: string;
@@ -33,6 +34,29 @@ export default function Step1Triage({
   handleFinishTriage: () => void;
 }) {
   const [hideSorted, setHideSorted] = useState(false);
+
+  // Deck | List view toggle. Deck is the default; the choice persists
+  // in localStorage so it survives step navigation and remounts. Read
+  // after mount (not in the initializer) to keep first paint identical
+  // to the server render. Both views read/write the same triageMap
+  // through the same handlers, so switching never loses state.
+  const [viewMode, setViewMode] = useState<'deck' | 'list'>('deck');
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem('weezer-triage-view-mode');
+      if (saved === 'list' || saved === 'deck') setViewMode(saved);
+    } catch {
+      /* localStorage unavailable — deck default stands */
+    }
+  }, []);
+  const changeViewMode = (mode: 'deck' | 'list') => {
+    setViewMode(mode);
+    try {
+      window.localStorage.setItem('weezer-triage-view-mode', mode);
+    } catch {
+      /* persistence is best-effort */
+    }
+  };
 
   const albumsGrouped = Array.from(new Set(FULL_SONG_POOL.map((s) => s.album)));
   // Categorized = bucketed + "Don't Know It" marks. The progress bar and
@@ -111,6 +135,11 @@ export default function Step1Triage({
       .filter((sec) => sec.songs.length > 0),
   ];
 
+  // The flat recognition-first display order, derived from the very
+  // sections the list renders below. Deck mode walks this exact list,
+  // so the two views can never disagree about song order.
+  const orderedSongs: Song[] = sections.flatMap((section) => section.songs);
+
   // Keep the user's place across a bucket tap. A tap re-renders the
   // whole list, and with "Hide Sorted" on the tapped row (and any album
   // section it empties) unmounts, shrinking the document and shifting /
@@ -157,7 +186,9 @@ export default function Step1Triage({
   };
 
   return (
-    <div className="space-y-6 pb-44">
+    <div className={`space-y-6 ${viewMode === 'list' ? 'pb-44' : 'pb-16'}`}>
+      {viewMode === 'list' && (
+      <>
       {/* STICKY PROGRESS & ALBUM QUICK-JUMP BAR (EXPANDED FOR DESKTOP) */}
       <div className="sticky top-[56px] lg:top-[64px] z-40 bg-slate-50/95 backdrop-blur-md border-b border-slate-200 py-3 px-4 shadow-xs -mx-4 sm:-mx-6 lg:-mx-8 -mt-4 sm:-mt-6 lg:-mt-8 mb-6 space-y-3">
         <div className="max-w-5xl lg:max-w-6xl mx-auto space-y-2">
@@ -221,6 +252,8 @@ export default function Step1Triage({
           </div>
         </div>
       </div>
+      </>
+      )}
 
       {/* HEADER */}
       <div className="text-center space-y-2 px-4 mb-8">
@@ -233,8 +266,36 @@ export default function Step1Triage({
         <p className="text-xs font-semibold text-slate-400 max-w-sm mx-auto leading-snug">
           Haven&apos;t heard a song? Tap Don&apos;t Know It — it won&apos;t count as a rating.
         </p>
+        {/* DECK | LIST TOGGLE — both views share the same triageMap */}
+        <div className="pt-2">
+          <div className="inline-flex bg-white border border-slate-300 rounded-full p-1 shadow-xs">
+            {(['deck', 'list'] as const).map((mode) => (
+              <button
+                key={mode}
+                onClick={() => changeViewMode(mode)}
+                className={`px-4 py-1.5 rounded-full text-xs font-black capitalize transition-all cursor-pointer ${
+                  viewMode === mode
+                    ? 'bg-[#0072CE] text-white shadow-sm'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                {mode}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
+      {viewMode === 'deck' ? (
+        <Step1Deck
+          triageMap={triageMap}
+          orderedSongs={orderedSongs}
+          sections={sections}
+          handleSetBucket={handleSetBucket}
+          handleFinishTriage={handleFinishTriage}
+        />
+      ) : (
+      <>
       {/* SONG SECTIONS (Blue → Pinkerton → Singles → remaining albums) */}
       <div className="space-y-8">
         {sections.map((section) => {
@@ -375,6 +436,8 @@ export default function Step1Triage({
           </button>
         )}
       </div>
+      </>
+      )}
     </div>
   );
 }

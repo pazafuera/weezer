@@ -28,12 +28,16 @@ function LibraryItem({
   description,
   filename,
   controls,
+  downloadDisabled,
   children,
 }: {
   title: string;
   description: string;
   filename: string;
   controls?: ReactNode;
+  /** When true, the card is showing an empty/placeholder state and
+   *  there is nothing worth downloading yet. */
+  downloadDisabled?: boolean;
   children: ReactNode;
 }) {
   const exportRef = useRef<HTMLDivElement>(null);
@@ -42,7 +46,7 @@ function LibraryItem({
   const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const download = async () => {
-    if (busy) return;
+    if (busy || downloadDisabled) return;
     setBusy(true);
     try {
       await exportNodeAsPng(exportRef.current, filename, 'auto');
@@ -76,7 +80,7 @@ function LibraryItem({
 
       <button
         onClick={download}
-        disabled={busy}
+        disabled={busy || downloadDisabled}
         className={`w-full text-white font-black text-xs py-3 px-3 rounded-xl transition cursor-pointer disabled:opacity-50 ${
           saved ? 'bg-emerald-500' : 'bg-[#0072CE] hover:bg-blue-600'
         }`}
@@ -133,6 +137,7 @@ function CompatibilityLibraryItem({
       description="Your taste match score vs. a friend."
       filename="weezer-taste-match.png"
       controls={controls}
+      downloadDisabled={selectedKey === ''}
     >
       <TasteCompatibilityCardVisual
         songs={songs}

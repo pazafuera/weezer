@@ -302,14 +302,16 @@ export const ScrapbookVisual = forwardRef<
 export function SaveImageButton({
   onClick,
   busy,
+  disabled,
 }: {
   onClick: () => void;
   busy?: boolean;
+  disabled?: boolean;
 }) {
   return (
     <button
       onClick={onClick}
-      disabled={busy}
+      disabled={busy || disabled}
       className="w-full bg-[#0072CE] hover:bg-blue-600 text-white font-black py-3.5 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
     >
       <span>{busy ? 'Generating Image...' : '📸 Download Image'}</span>

@@ -2,7 +2,8 @@
 
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { supabase } from '@/utils/supabase';
-import { useWeezer } from '../context/WeezerContext';
+import { useWeezer, isRealBucket } from '../context/WeezerContext';
+import type { TriageValue } from '../context/WeezerContext';
 import {
   Song,
   BucketType,
@@ -61,6 +62,81 @@ function calculateKendallTau(
   };
 }
 
+type RankComparison = {
+  song: Song;
+  userRank: number;
+  communityRank: number;
+  userPercentile: number;
+  communityPercentile: number;
+  difference: number;
+  absoluteDifference: number;
+};
+
+type RankClash = {
+  song: Song;
+  uRank: number;
+  cRank: number;
+  difference: number;
+  cPercentile: number;
+} | null;
+
+/**
+ * THE single derivation of the Betrayal / Hidden Gem clash cards.
+ * Both cards come from here and nowhere else, fed by the one
+ * rankedComparisons memo — every render of the Sweater Thread agrees
+ * because there is exactly one source. (An earlier "inconsistency"
+ * report traced to the community consensus itself arriving
+ * asynchronously and changing between snapshots, not to a second
+ * derivation — none exists in the codebase.)
+ */
+function deriveRankClashes(comparisons: RankComparison[]): {
+  biggestBetrayal: RankClash;
+  hiddenGem: RankClash;
+} {
+  let biggestBetrayal: RankClash = null;
+  let hiddenGem: RankClash = null;
+
+  if (comparisons.length > 0) {
+    const betrayalCandidates = comparisons
+      .filter((c) => c.difference > 0)
+      .sort((a, b) => b.difference - a.difference);
+
+    if (betrayalCandidates[0]) {
+      const candidate = betrayalCandidates[0];
+      biggestBetrayal = {
+        song: candidate.song,
+        uRank: candidate.userRank,
+        cRank: candidate.communityRank,
+        difference: candidate.difference,
+        cPercentile: Math.round(candidate.communityPercentile * 100),
+      };
+    }
+
+    const hiddenGemCandidates = comparisons
+      .filter(
+        (c) =>
+          c.userRank <= 20 &&
+          c.difference < 0 &&
+          !c.song.title.includes('Beverly Hills') &&
+          !c.song.title.includes('Island in the Sun')
+      )
+      .sort((a, b) => a.difference - b.difference);
+
+    if (hiddenGemCandidates[0]) {
+      const candidate = hiddenGemCandidates[0];
+      hiddenGem = {
+        song: candidate.song,
+        uRank: candidate.userRank,
+        cRank: candidate.communityRank,
+        difference: candidate.difference,
+        cPercentile: Math.round(candidate.communityPercentile * 100),
+      };
+    }
+  }
+
+  return { biggestBetrayal, hiddenGem };
+}
+
 export default function Step4Wrapped({
   masterList,
   triageMap,
@@ -68,7 +144,7 @@ export default function Step4Wrapped({
   globalConsensus: propGlobalConsensus = [],
 }: {
   masterList: Song[];
-  triageMap: Record<string, BucketType>;
+  triageMap: Record<string, TriageValue>;
   setStep: (
     s: 'master' | 'triage' | 'rank_buckets' | 'wrapped' | 'fan_stats'
   ) => void;
@@ -269,7 +345,10 @@ export default function Step4Wrapped({
 
     FULL_SONG_POOL.forEach((s) => {
       const bucket = triageMap[s.id];
-      if (!bucket) return;
+      // 'unknown' ("Don't Know It") is not a rating: skip it before the
+      // points lookup, where it would read undefined and poison every
+      // total in this memo with NaN.
+      if (!bucket || bucket === 'unknown') return;
 
       const score = points[bucket];
       totalTriageScore += score;
@@ -367,62 +446,8 @@ export default function Step4Wrapped({
 
     const listeningAge = Math.round(14 + (currentYear - sentimentWeightedYear));
 
-    // USER ↔ COMMUNITY CLASHES
-    let biggestBetrayal: {
-      song: Song;
-      uRank: number;
-      cRank: number;
-      difference: number;
-      cPercentile: number;
-    } | null = null;
-
-    let hiddenGem: {
-      song: Song;
-      uRank: number;
-      cRank: number;
-      difference: number;
-      cPercentile: number;
-    } | null = null;
-
-    if (rankedComparisons.length > 0) {
-      const betrayalCandidates = rankedComparisons
-        .filter((c) => c.difference > 0)
-        .sort((a, b) => b.difference - a.difference);
-
-      if (betrayalCandidates[0]) {
-        const candidate = betrayalCandidates[0];
-
-        biggestBetrayal = {
-          song: candidate.song,
-          uRank: candidate.userRank,
-          cRank: candidate.communityRank,
-          difference: candidate.difference,
-          cPercentile: Math.round(candidate.communityPercentile * 100),
-        };
-      }
-
-      const hiddenGemCandidates = rankedComparisons
-        .filter(
-          (c) =>
-            c.userRank <= 20 &&
-            c.difference < 0 &&
-            !c.song.title.includes('Beverly Hills') &&
-            !c.song.title.includes('Island in the Sun')
-        )
-        .sort((a, b) => a.difference - b.difference);
-
-      if (hiddenGemCandidates[0]) {
-        const candidate = hiddenGemCandidates[0];
-
-        hiddenGem = {
-          song: candidate.song,
-          uRank: candidate.userRank,
-          cRank: candidate.communityRank,
-          difference: candidate.difference,
-          cPercentile: Math.round(candidate.communityPercentile * 100),
-        };
-      }
-    }
+    // USER ↔ COMMUNITY CLASHES — single derivation (deriveRankClashes)
+    const { biggestBetrayal, hiddenGem } = deriveRankClashes(rankedComparisons);
 
     // EXPLICIT RANKING ANALYTICS
     const allEras = [
@@ -757,8 +782,32 @@ export default function Step4Wrapped({
       },
     ];
 
+    // THE ROAST — kind, data-driven, and only when it's true. "Known"
+    // means real buckets only (totalValidSongs already excludes
+    // 'unknown' marks). Casual fans get a shareable identity here,
+    // not a failure state; deep catalog knowledge gets no roast.
+    const knownCount = totalValidSongs;
+    const knownBluePinkCount =
+      (blueAlbum?.count ?? 0) + (pinkAlbum?.count ?? 0);
+    let roastLine: string | null = null;
+    if (
+      knownCount > 0 &&
+      knownBluePinkCount / knownCount >= 0.7 &&
+      knownCount / FULL_SONG_POOL.length < 0.85
+    ) {
+      roastLine =
+        'Your Weezer knowledge starts in 1994 and ends in 1996. The other albums are just rumors to you.';
+    } else if (
+      knownCount > 0 &&
+      knownCount / FULL_SONG_POOL.length < 0.4
+    ) {
+      roastLine =
+        "You've got the hits down cold. The deep cuts are still out there — they've waited 20 years, they can wait a little longer.";
+    }
+
     return {
       rankedAlbums,
+      roastLine,
       allEras,
       sortedEras,
       listeningAge,
@@ -1557,6 +1606,18 @@ export default function Step4Wrapped({
           ) : null}
         </div>
 
+        {/* THE ROAST (only renders when a roast condition is true) */}
+        {stats.roastLine && (
+          <div className="bg-amber-50 border border-amber-200 rounded-3xl p-6 sm:p-8 shadow-sm text-center">
+            <span className="text-[10px] font-black uppercase tracking-widest text-amber-600 block mb-2">
+              The Roast
+            </span>
+            <p className="text-lg sm:text-xl font-black text-slate-900 leading-snug max-w-xl mx-auto">
+              {stats.roastLine}
+            </p>
+          </div>
+        )}
+
         {/* 8. RANK CLASHES */}
         {(stats.biggestBetrayal || stats.hiddenGem) && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
@@ -1791,7 +1852,7 @@ export default function Step4Wrapped({
             crash that took down the whole Sweater Thread.) */}
         <div className="mt-10">
           <ShareablesGallery
-            songs={masterList.filter((s) => triageMap[s.id])}
+            songs={masterList.filter((s) => isRealBucket(triageMap[s.id]))}
             triageMap={triageMap}
             friends={friendsList ?? []}
             subtitle={userProfile?.username ? `@${userProfile.username}` : undefined}

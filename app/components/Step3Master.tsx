@@ -3,6 +3,7 @@ import React from 'react';
 import { BucketType, Song, BUCKET_CONFIG } from '../data/constants';
 import { AudioPreviewButton, FlyingWIcon } from './SharedUI';
 import { getRankedSongs } from '@/utils/rankingUtils';
+import type { TriageValue } from '../context/WeezerContext';
 
 export default function Step3Master({
   masterList, 
@@ -12,7 +13,7 @@ export default function Step3Master({
   onBack
 }: {
   masterList: Song[]; 
-  triageMap: Record<string, BucketType>; 
+  triageMap: Record<string, TriageValue>; 
   moveMasterSong: (idx: number, dir: 'up'|'down') => void; 
   setStep: (s: 'wrapped') => void;
   onBack: () => void;
@@ -27,6 +28,19 @@ export default function Step3Master({
 
   // Find the index of the very last rankable song (so we can disable the down arrow on it)
   const lastRankableIndex = rankedSongs.map(s => triageMap[s.id]).findLastIndex(b => b === 'banger' || b === 'slaps');
+
+  // Displayed rank numbers count ONLY the rankable songs (Banger/Slaps —
+  // the songs that actually carry a master-list rank), in order. Using
+  // the row index instead leaked inflated numbers deep into the list
+  // whenever unrankable songs sat above a rankable one (e.g. after a
+  // song was promoted to Banger from a lower section in triage).
+  const rankNumberById = new Map<string, number>();
+  rankedSongs.forEach((s) => {
+    const b = triageMap[s.id];
+    if (b === 'banger' || b === 'slaps') {
+      rankNumberById.set(s.id, rankNumberById.size + 1);
+    }
+  });
 
   return (
     <div className="space-y-6 pb-24">
@@ -58,6 +72,9 @@ export default function Step3Master({
         <div className="space-y-1.5">
           {rankedSongs.map((song, idx) => {
             const bucket = triageMap[song.id];
+            // rankedSongs only holds real buckets (getRankedSongs), so
+            // 'unknown'/missing can't occur — narrow for the config lookup.
+            if (bucket === undefined || bucket === 'unknown') return null;
             const isRankable = bucket === 'banger' || bucket === 'slaps';
             const cfg = BUCKET_CONFIG[bucket];
             
@@ -68,7 +85,7 @@ export default function Step3Master({
                   {/* ONLY SHOW RANK NUMBERS FOR TOP TWO BUCKETS */}
                   {isRankable ? (
                     <span className="w-7 h-7 bg-[#0072CE] text-white font-black text-[11px] rounded-lg flex items-center justify-center shrink-0 shadow-2xs">
-                      #{idx + 1}
+                      #{rankNumberById.get(song.id)}
                     </span>
                   ) : (
                     <span className="w-7 h-7 bg-slate-200 text-slate-400 font-black text-[11px] rounded-lg flex items-center justify-center shrink-0 shadow-2xs opacity-50">

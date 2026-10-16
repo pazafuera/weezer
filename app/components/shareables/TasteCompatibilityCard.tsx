@@ -231,7 +231,11 @@ export default function TasteCompatibilityCard({
         interactive
       />
       <div className="mt-4">
-        <SaveImageButton onClick={download} busy={busy} />
+        <SaveImageButton
+          onClick={download}
+          busy={busy}
+          disabled={selectedKey === ''}
+        />
       </div>
     </div>
   );

@@ -6,7 +6,8 @@ import { Song, BucketType, FULL_SONG_POOL, ALBUMS_BY_ID, ALBUM_NAME_TO_ID } from
 import { FlyingWIcon, AlbumArtwork } from './SharedUI';
 // Temporarily disabled (pre-launch security): see GenerationalTasteGrid usage below.
 // import GenerationalTasteGrid from './GenerationalTasteGrid';
-import { useWeezer } from '../context/WeezerContext';
+import { useWeezer, isRealBucket } from '../context/WeezerContext';
+import type { TriageValue } from '../context/WeezerContext';
 import TierListChart from './TierListChart';
 import {
   ALBUM_SHRINKAGE_K,
@@ -108,8 +109,8 @@ export default function FanStats({
     let pinkTotalWeight = 0;
     let tribeCounts = { purists: 0, cult: 0, modernists: 0, haters: 0, chaos: 0 };
     
-    const classicistMaps: Record<string, BucketType>[] = [];
-    const modernistMaps: Record<string, BucketType>[] = [];
+    const classicistMaps: Record<string, TriageValue>[] = [];
+    const modernistMaps: Record<string, TriageValue>[] = [];
 
     FULL_SONG_POOL.forEach(s => {
       songL1[s.id] = { total: 0, count: 0, buckets: { banger: 0, slaps: 0, mid: 0, skip: 0, trash: 0 }, scores: [] };
@@ -124,8 +125,8 @@ export default function FanStats({
 
       FULL_SONG_POOL.forEach(s => {
         const bucket = map[s.id];
-        if (!bucket) return;
-        
+        if (!bucket || bucket === 'unknown') return;
+
         const score = points[bucket];
         songL1[s.id].total += score;
         songL1[s.id].count += 1;
@@ -246,8 +247,18 @@ export default function FanStats({
       let maxProModernDelta = -999;
 
       FULL_SONG_POOL.forEach(s => {
-        const cScores = classicistMaps.map(m => points[m[s.id]] || 0).filter(v => v > 0);
-        const mScores = modernistMaps.map(m => points[m[s.id]] || 0).filter(v => v > 0);
+        const cScores = classicistMaps
+          .map((m) => {
+            const v = m[s.id];
+            return isRealBucket(v) ? points[v] : 0;
+          })
+          .filter(v => v > 0);
+        const mScores = modernistMaps
+          .map((m) => {
+            const v = m[s.id];
+            return isRealBucket(v) ? points[v] : 0;
+          })
+          .filter(v => v > 0);
         if (cScores.length > 5 && mScores.length > 5) {
           const cMean = cScores.reduce((a,b)=>a+b,0) / cScores.length;
           const mMean = mScores.reduce((a,b)=>a+b,0) / mScores.length;
@@ -360,9 +371,7 @@ export default function FanStats({
       return (
         <div className="py-20 text-center space-y-3 px-4">
           <p className="text-sm font-bold text-slate-500 max-w-md mx-auto leading-relaxed">
-            Not enough qualified rankings yet. A submission needs at least{' '}
-            {MIN_QUALIFYING_RATINGS} rated songs before it counts toward
-            community stats — rank a few more songs and check back.
+            Not enough qualified rankings yet. A submission needs at least {MIN_QUALIFYING_RATINGS} rated songs before it counts toward community stats — rank a few more songs and check back.
           </p>
         </div>
       );
@@ -427,8 +436,7 @@ export default function FanStats({
             </div>
             ) : (
             <p className="relative z-10 text-sm font-bold text-slate-500 max-w-xs mx-auto leading-relaxed">
-              Not enough data for a reliable percentage yet — based on{' '}
-              {communityStats.totalFans} qualified fan rankings so far.
+              Not enough data for a reliable percentage yet — based on {communityStats.totalFans} qualified fan rankings so far.
             </p>
             )}
           </div>

@@ -631,6 +631,58 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     }
   }
 
+  // Debounced database sync (performance): triage and ranking clicks
+  // can fire many saves per second. localStorage still writes
+  // immediately on every change; the Supabase upsert waits ~1s for a
+  // pause and always sends the LATEST state. A flush on tab hide/close
+  // sends any pending write right away, so a fast exit doesn't lose
+  // the last change.
+  const pendingSyncRef = useRef<{
+    map: Record<string, BucketType>;
+    master: Song[];
+  } | null>(null);
+  const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const flushSyncToDatabase = async () => {
+    if (syncTimerRef.current) {
+      clearTimeout(syncTimerRef.current);
+      syncTimerRef.current = null;
+    }
+    const pending = pendingSyncRef.current;
+    pendingSyncRef.current = null;
+    if (!pending || !userId) return;
+    try {
+      await supabase.from('weezer_rankings').upsert(
+        {
+          user_id: userId,
+          triage_map: pending.map,
+          master_list: pending.master,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id' }
+      );
+    } catch (err) {
+      console.error('Error syncing rankings:', err);
+    }
+  };
+  const flushSyncRef = useRef(flushSyncToDatabase);
+  flushSyncRef.current = flushSyncToDatabase;
+
+  useEffect(() => {
+    const flush = () => {
+      void flushSyncRef.current();
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') flush();
+    };
+    window.addEventListener('pagehide', flush);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('pagehide', flush);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, []);
+
   const syncRankingsToDatabase = async (
     map: Record<string, BucketType>,
     master: Song[]
@@ -640,19 +692,11 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
       JSON.stringify({ triageMap: map, masterList: master })
     );
     if (!userId) return;
-    try {
-      await supabase.from('weezer_rankings').upsert(
-        {
-          user_id: userId,
-          triage_map: map,
-          master_list: master,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'user_id' }
-      );
-    } catch (err) {
-      console.error('Error syncing rankings:', err);
-    }
+    pendingSyncRef.current = { map, master };
+    if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+    syncTimerRef.current = setTimeout(() => {
+      void flushSyncRef.current();
+    }, 1000);
   };
 
   const updateAndSyncBucketRanks = (

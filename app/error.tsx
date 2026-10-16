@@ -5,6 +5,10 @@
  * the app and nothing is recorded anywhere. The error is logged with its
  * digest (visible in Vercel's function/edge logs) and the user gets a
  * friendly recovery path instead of a dead page.
+ *
+ * The message is shown on the page deliberately: this is a small fan
+ * project in active testing, and a readable message turns every tester
+ * into a bug reporter. Revisit before public launch.
  */
 export default function Error({
   error,
@@ -24,10 +28,19 @@ export default function Error({
           Something went wrong on this page. Your rankings are saved as you
           go, so try again — if it keeps happening, note the code below.
         </p>
-        {error?.digest && (
-          <p className="text-[11px] font-bold text-slate-400 mb-6">
-            Error code: {error.digest}
-          </p>
+        {(error?.message || error?.digest) && (
+          <div className="text-left bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 mb-6 overflow-x-auto">
+            {error?.message && (
+              <p className="text-[11px] font-mono font-bold text-rose-600 break-words">
+                {error.message}
+              </p>
+            )}
+            {error?.digest && (
+              <p className="text-[11px] font-bold text-slate-400 mt-1">
+                Error code: {error.digest}
+              </p>
+            )}
+          </div>
         )}
         <button
           onClick={reset}

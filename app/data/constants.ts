@@ -1564,6 +1564,54 @@ export const WEEZER_CANON: Song[] = [
 
 export const FULL_SONG_POOL = [...WEEZER_CANON, ...B_SIDES_CANON];
 
+/**
+ * Canonical singles from the post-Pinkerton catalog, in catalog-title
+ * spelling. Triage surfaces these right after Blue and Pinkerton so a
+ * casual fan meets the songs they recognize first (recognition-first
+ * order). Blue/Pinkerton singles are not listed — those albums already
+ * lead the triage order in full.
+ *
+ * Owner's list had 27 titles; 26 matched this catalog. 'Africa' is not
+ * in the catalog (the Teal Album covers aren't part of the pool), and
+ * "(If You're Wondering If I Want You To) I Want You" is stored under
+ * its full catalog title, "...I Want You To".
+ */
+export const SINGLES_TITLES: string[] = [
+  'Hash Pipe',
+  'Island in the Sun',
+  'Dope Nose',
+  "Keep Fishin'",
+  'Beverly Hills',
+  'Perfect Situation',
+  'We Are All on Drugs',
+  'Pork and Beans',
+  'Troublemaker',
+  "(If You're Wondering If I Want You To) I Want You To",
+  "I'm Your Daddy",
+  'Memories',
+  'Back to the Shack',
+  'Cleopatra',
+  'Thank God for Girls',
+  'Do You Wanna Get High?',
+  'King of the World',
+  'Feels Like Summer',
+  'Happy Hour',
+  "Can't Knock the Hustle",
+  'High as a Kite',
+  'Living in L.A.',
+  'Hero',
+  'All My Favorite Songs',
+  'I Need Some of That',
+  'Records',
+];
+
+/** Ids of catalog songs that are singles (see SINGLES_TITLES). */
+export const SINGLE_SONG_IDS: ReadonlySet<string> = new Set(
+  FULL_SONG_POOL.filter((s) =>
+    SINGLES_TITLES.some((t) => t.toLowerCase() === s.title.toLowerCase())
+  ).map((s) => s.id)
+);
+
 // --------------------------------------------------------
 // ASSET ARCHITECTURE: LOCAL DETERMINISTIC ALBUM REGISTRY
 // --------------------------------------------------------

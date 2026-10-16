@@ -1,12 +1,15 @@
 'use client';
 
 import { forwardRef } from 'react';
+import { ALBUMS_BY_ID } from '../../data/constants';
 import {
   BrushStroke,
   FlyingW,
   SaveImageButton,
   ScrapbookVisual,
+  Tape,
   distinctAlbumIds,
+  resolveAlbumId,
   useShareableDownload,
 } from './ShareCardShell';
 import { handFont, markerFont } from './fonts';
@@ -26,17 +29,20 @@ export type ShareSong = {
   albumId?: string;
 };
 
-/** Compact album tag for the right edge of a list row, e.g. "Blue '94". */
+/** Compact album tag for the right edge of a list row, e.g. "Blue '94".
+ *  Resolves the canonical album via the app's name bridge so tags stay
+ *  short even though song data carries full album names. */
 function albumTag(song: ShareSong): string {
-  const name = song.album.replace(/\s*\(.*?\)\s*/g, '').trim();
-  const short = name
-    .replace(/^Weezer\s*/i, '')
+  const id = resolveAlbumId(song);
+  const canonical = (id && ALBUMS_BY_ID[id]?.name) || song.album;
+  const short = canonical
     .replace(/^The\s+/i, '')
+    .replace(/\s+Album$/i, '')
     .split(' ')
     .slice(0, 2)
     .join(' ');
   const yr = `'${String(song.year).slice(2)}`;
-  return `${short || name} ${yr}`.toUpperCase();
+  return `${short} ${yr}`.toUpperCase();
 }
 
 const ROW_H = 70;
@@ -67,9 +73,9 @@ export const Top10CardVisual = forwardRef<
               />
             </div>
           </div>
-          <div className="flex w-[300px] flex-col items-end pt-2">
+          <div className="flex w-[310px] flex-col items-end pt-2">
             <FlyingW className="w-[118px] -rotate-3 text-[#0072CE]" />
-            <p className={`mt-4 text-right text-[30px] leading-tight text-slate-600 ${handFont.className}`}>
+            <p className={`mt-4 text-right text-[27px] leading-tight text-slate-600 ${handFont.className}`}>
               {top.length} songs. {albumCount} album{albumCount === 1 ? '' : 's'}. 1
               perfect list?
             </p>
@@ -81,8 +87,10 @@ export const Top10CardVisual = forwardRef<
           </div>
         </div>
 
-        {/* list on a sheet of notebook paper */}
+        {/* list on a sheet of notebook paper, taped to the page */}
         <div className="relative mt-7 rotate-[-0.4deg] rounded-[4px] bg-[#fdfaf0] px-8 pb-4 pt-5 shadow-[0_20px_40px_rgba(60,45,10,0.28)]">
+          <Tape className="absolute -top-4 left-10 z-10 h-8 w-28 -rotate-6" />
+          <Tape className="absolute -top-4 right-10 z-10 h-8 w-28 rotate-3" />
           {top.map((song, i) => (
             <div
               key={song.id}
@@ -115,10 +123,6 @@ export const Top10CardVisual = forwardRef<
           )}
         </div>
 
-        {/* debate prompt */}
-        <p className={`mt-7 -rotate-1 text-[36px] text-slate-700 ${handFont.className}`}>
-          the debate rages on — where's yours?
-        </p>
       </div>
     </ScrapbookVisual>
   );

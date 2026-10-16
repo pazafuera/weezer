@@ -2,7 +2,7 @@
 
 import { forwardRef, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
-import { ALBUMS_BY_ID } from '../../data/constants';
+import { ALBUMS_BY_ID, ALBUM_NAME_TO_ID } from '../../data/constants';
 import { exportNodeAsPng } from './exportImage';
 import type { ExportMode } from './exportImage';
 import { handFont, markerFont } from './fonts';
@@ -128,14 +128,27 @@ export function albumCoverSrc(albumId?: string): string {
   return (albumId && ALBUMS_BY_ID[albumId]?.cover) || '/albums/fallback.jpg';
 }
 
-/** Distinct album ids from a song list, in order — feeds the collage edge. */
+/** The app's songs often carry only an album NAME — resolve the strict
+ *  album id through the same bridge the app itself uses everywhere. */
+export function resolveAlbumId(song: {
+  albumId?: string;
+  album?: string;
+}): string | undefined {
+  if (song.albumId) return song.albumId;
+  if (song.album) return ALBUM_NAME_TO_ID[song.album];
+  return undefined;
+}
+
+/** Distinct resolved album ids from a song list, in order — feeds the
+ *  collage edge. */
 export function distinctAlbumIds(
-  songs: Array<{ albumId?: string }>,
+  songs: Array<{ albumId?: string; album?: string }>,
   max = 5,
 ): string[] {
   const out: string[] = [];
   for (const s of songs) {
-    if (s.albumId && !out.includes(s.albumId)) out.push(s.albumId);
+    const id = resolveAlbumId(s);
+    if (id && !out.includes(id)) out.push(id);
     if (out.length >= max) break;
   }
   return out;
@@ -163,7 +176,16 @@ export const ScrapbookVisual = forwardRef<
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 mix-blend-multiply"
-        style={{ backgroundImage: `url("${NOISE_BG}")`, opacity: 0.05 }}
+        style={{ backgroundImage: `url("${NOISE_BG}")`, opacity: 0.085 }}
+      />
+      {/* soft Weezer-blue wash behind the header */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            'radial-gradient(640px 340px at 32% 2%, rgba(0,114,206,0.13), transparent 70%)',
+        }}
       />
       {/* coffee rings */}
       <div
@@ -184,7 +206,7 @@ export const ScrapbookVisual = forwardRef<
           {artAlbumIds.slice(0, 5).map((id, i) => (
             <div
               key={`${id}-${i}`}
-              className="relative -mb-8 w-[176px] bg-white p-1.5 shadow-[0_10px_22px_rgba(60,45,10,0.35)]"
+              className="relative -mb-8 w-[196px] bg-white p-1.5 shadow-[0_10px_22px_rgba(60,45,10,0.35)]"
               style={{ transform: `rotate(${STRIP_ROTATIONS[i % 5]}deg)` }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}

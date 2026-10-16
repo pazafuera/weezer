@@ -8,6 +8,7 @@ import {
   SaveImageButton,
   ScrapbookVisual,
   distinctAlbumIds,
+  resolveAlbumId,
   useShareableDownload,
 } from './ShareCardShell';
 import { handFont, markerFont } from './fonts';
@@ -102,7 +103,8 @@ const TRIBE_INK: Record<string, string> = {
 function dominantAlbumId(songs: ShareSong[]): string | undefined {
   const counts = new Map<string, number>();
   for (const s of songs) {
-    if (s.albumId) counts.set(s.albumId, (counts.get(s.albumId) ?? 0) + 1);
+    const id = resolveAlbumId(s);
+    if (id) counts.set(id, (counts.get(id) ?? 0) + 1);
   }
   let best: string | undefined;
   let bestCount = 0;
@@ -112,7 +114,7 @@ function dominantAlbumId(songs: ShareSong[]): string | undefined {
       bestCount = c;
     }
   }
-  return best ?? songs[0]?.albumId;
+  return best ?? (songs[0] ? resolveAlbumId(songs[0]) : undefined);
 }
 
 export const TribeBadgeCardVisual = forwardRef<

@@ -6,6 +6,7 @@ export {
   Polaroid,
   albumCoverSrc,
   distinctAlbumIds,
+  resolveAlbumId,
   SaveImageButton,
   useShareableDownload,
 } from './ShareCardShell';

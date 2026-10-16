@@ -6,19 +6,38 @@ import { BucketType, FULL_SONG_POOL, Song } from '@/app/data/constants';
  * A song is only ever Trash when the user explicitly placed it in the Trash
  * bucket. A missing triage_map entry means the song was never ranked —
  * never infer Trash (or any other bucket) from it.
+ *
+ * A triage_map value of 'unknown' ("Don't Know It") is also NOT a ranking:
+ * the user said they can't judge the song, so it is excluded from the
+ * master list, bucket derivations, and every score — exactly like a
+ * missing entry, but remembered so the UI can show it as dealt with.
  */
+
+/** The five real buckets a triage value can hold (anything else — a
+ *  missing entry or 'unknown' — is not a ranking). */
+const REAL_BUCKETS: readonly BucketType[] = [
+  'banger',
+  'slaps',
+  'mid',
+  'skip',
+  'trash',
+];
 
 /** True only when the user explicitly triaged this song as Trash. */
 export const isExplicitTrash = (
-  triageMap: Record<string, BucketType>,
+  triageMap: Record<string, BucketType | 'unknown'>,
   songId: string
 ): boolean => triageMap[songId] === 'trash';
 
-/** True when the user has placed this song in any triage bucket. */
+/** True when the user has placed this song in one of the five real
+ *  triage buckets. 'unknown' ("Don't Know It") does not count. */
 export const isRanked = (
-  triageMap: Record<string, BucketType>,
+  triageMap: Record<string, BucketType | 'unknown'>,
   songId: string
-): boolean => triageMap[songId] !== undefined;
+): boolean => {
+  const value = triageMap[songId];
+  return value !== undefined && REAL_BUCKETS.indexOf(value as BucketType) !== -1;
+};
 
 /**
  * Songs from a master list that the user explicitly ranked, in master-list
@@ -26,7 +45,7 @@ export const isRanked = (
  */
 export const getRankedSongs = (
   masterList: Song[],
-  triageMap: Record<string, BucketType>
+  triageMap: Record<string, BucketType | 'unknown'>
 ): Song[] => masterList.filter((song) => isRanked(triageMap, song.id));
 
 /**
@@ -36,7 +55,7 @@ export const getRankedSongs = (
  */
 export const getUnrankedSongs = (
   masterList: Song[],
-  triageMap: Record<string, BucketType>
+  triageMap: Record<string, BucketType | 'unknown'>
 ): Song[] => masterList.filter((song) => !isRanked(triageMap, song.id));
 
 /**
@@ -47,7 +66,7 @@ export const getUnrankedSongs = (
  */
 export const sanitizeMasterList = (
   masterList: Song[],
-  triageMap: Record<string, BucketType>
+  triageMap: Record<string, BucketType | 'unknown'>
 ): Song[] => {
   const seen = new Set<string>();
   return masterList.filter((song) => {
@@ -69,7 +88,7 @@ const BUCKET_ORDER: BucketType[] = ['banger', 'slaps', 'mid', 'skip', 'trash'];
  */
 export const reconcileMasterList = (
   masterList: Song[],
-  triageMap: Record<string, BucketType>
+  triageMap: Record<string, BucketType | 'unknown'>
 ): Song[] => {
   const seen = new Set<string>();
   const reconciled: Song[] = [];

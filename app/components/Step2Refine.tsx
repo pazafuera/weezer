@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useRef, useEffect } from 'react';
 import { BucketType, Song, BUCKET_CONFIG, BUCKET_TRANSITIONS } from '../data/constants';
+import type { TriageValue } from '../context/WeezerContext';
 import { FlyingWIcon, AudioPreviewButton } from './SharedUI';
 import Step1_5Matchups from './Step1_5Matchups';
 
@@ -22,8 +23,8 @@ export default function Step2Refine({
   initialStageIdx = 0,
 }: {
   bucketRanks: Record<BucketType, Song[]>;
-  triageMap: Record<string, BucketType>;
-  onUpdateRanks: (newRanks: Record<BucketType, Song[]>, newMap?: Record<string, BucketType>) => void;
+  triageMap: Record<string, TriageValue>;
+  onUpdateRanks: (newRanks: Record<BucketType, Song[]>, newMap?: Record<string, TriageValue>) => void;
   handleFinishBucketRanking: () => void;
   onBackToTriage: () => void;
   autoStartMatchups: boolean;

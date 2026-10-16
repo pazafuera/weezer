@@ -26,7 +26,12 @@ export function computeTribe(
   songs: ShareSong[],
   triageMap: Record<string, Bucket>,
 ): Tribe | null {
-  const ranked = songs.filter((s) => triageMap[s.id]);
+  // 'unknown' ("Don't Know It") songs are not ranked and never count
+  // toward tribe denominators.
+  const ranked = songs.filter((s) => {
+    const b = triageMap[s.id];
+    return b !== undefined && b !== 'unknown';
+  });
   if (ranked.length === 0) return null;
   const top = ranked.filter(
     (s) => triageMap[s.id] === 'banger' || triageMap[s.id] === 'slaps',

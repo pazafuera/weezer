@@ -23,6 +23,18 @@ export type AppStep =
 export type AuthModeType = 'signup' | 'login' | 'magic';
 
 /**
+ * One triage entry: one of the five real buckets, or 'unknown' when the
+ * user tapped "Don't Know It" for a song they can't judge. 'unknown'
+ * lives in the same map so the song renders as dealt-with in triage,
+ * but it is NOT a rating: it is excluded from the master list, matchup
+ * pools, bucket scores, rating counts, and community submissions (see
+ * isRealBucket / countBucketedSongs). The ONE place unknowns carry
+ * weight is era coverage (Era DNA): not knowing an era's songs is real
+ * evidence your fandom isn't there.
+ */
+export type TriageValue = BucketType | 'unknown';
+
+/**
  * Every step name that page.tsx knows how to render.
  */
 const KNOWN_APP_STEPS: readonly AppStep[] = [
@@ -96,7 +108,7 @@ export interface ProgressState {
  * progress.
  */
 export function getProgressState(
-  triageMap: Record<string, BucketType>,
+  triageMap: Record<string, TriageValue>,
   masterList: Song[]
 ): ProgressState {
   const triageComplete = isTriageComplete(triageMap);
@@ -124,7 +136,7 @@ export function getProgressState(
  */
 export function resolveGuardedStep(
   requested: AppStep,
-  triageMap: Record<string, BucketType>,
+  triageMap: Record<string, TriageValue>,
   masterList: Song[]
 ): AppStep {
   const progress = getProgressState(triageMap, masterList);
@@ -148,17 +160,43 @@ const VALID_TRIAGE_BUCKETS: readonly BucketType[] = [
   'trash',
 ];
 
+/** True when a triage value is one of the five real buckets (not a
+ *  missing entry, not 'unknown'). */
+export function isRealBucket(
+  value: TriageValue | undefined
+): value is BucketType {
+  return (
+    value !== undefined &&
+    VALID_TRIAGE_BUCKETS.indexOf(value as BucketType) !== -1
+  );
+}
+
 /**
  * Number of songs in FULL_SONG_POOL with an explicit, valid triage bucket.
  * Partial triage (>=1) is sufficient to unlock Refine Buckets; a full 206
  * is only tracked by isTriageComplete for display/completionist purposes.
+ * 'unknown' entries never count here — they are not ratings.
  */
 export function countBucketedSongs(
-  triageMap: Record<string, BucketType>
+  triageMap: Record<string, TriageValue>
 ): number {
   return FULL_SONG_POOL.reduce((count: number, song: Song) => {
-    const bucket: BucketType | undefined = triageMap[song.id];
-    return bucket !== undefined && VALID_TRIAGE_BUCKETS.indexOf(bucket) !== -1
+    return isRealBucket(triageMap[song.id]) ? count + 1 : count;
+  }, 0);
+}
+
+/**
+ * Number of songs in FULL_SONG_POOL the user has dealt with in triage:
+ * a real bucket OR a "Don't Know It" mark. This is the counter behind
+ * the triage screen's "Categorize All Songs (n/206)" lock — a song the
+ * user honestly can't judge still counts as categorized.
+ */
+export function countCategorizedSongs(
+  triageMap: Record<string, TriageValue>
+): number {
+  return FULL_SONG_POOL.reduce((count: number, song: Song) => {
+    const value: TriageValue | undefined = triageMap[song.id];
+    return value !== undefined && (value === 'unknown' || isRealBucket(value))
       ? count + 1
       : count;
   }, 0);
@@ -166,15 +204,15 @@ export function countBucketedSongs(
 
 /**
  * Gut Check (triage) is complete when every song in FULL_SONG_POOL
- * has an explicit, valid triage bucket.
+ * has an explicit, valid triage bucket. ('unknown' marks do not make
+ * triage "complete" — this stays the completionist flag for a full
+ * 206-song bucketing; the triage screen's own lock uses
+ * countCategorizedSongs.)
  */
 export function isTriageComplete(
-  triageMap: Record<string, BucketType>
+  triageMap: Record<string, TriageValue>
 ): boolean {
-  return FULL_SONG_POOL.every((song) => {
-    const bucket: BucketType | undefined = triageMap[song.id];
-    return bucket !== undefined && VALID_TRIAGE_BUCKETS.indexOf(bucket) !== -1;
-  });
+  return FULL_SONG_POOL.every((song) => isRealBucket(triageMap[song.id]));
 }
 
 /**
@@ -220,24 +258,24 @@ interface WeezerContextType {
   refreshFriends: () => Promise<void>;
 
   // Ranking State
-  triageMap: Record<string, BucketType>;
-  setTriageMap: (map: Record<string, BucketType>) => void;
+  triageMap: Record<string, TriageValue>;
+  setTriageMap: (map: Record<string, TriageValue>) => void;
   bucketRanks: Record<BucketType, Song[]>;
   masterList: Song[];
 
   // Cached Community Data State (Fix B)
   communityMasterLists: Song[][];
-  communityTriageMaps: Record<string, BucketType>[];
+  communityTriageMaps: Record<string, TriageValue>[];
   loadingCommunity: boolean;
   refreshCommunityData: () => Promise<void>;
 
   // Actions
-  syncRankingsToDatabase: (map: Record<string, BucketType>, master: Song[]) => Promise<void>;
+  syncRankingsToDatabase: (map: Record<string, TriageValue>, master: Song[]) => Promise<void>;
   updateAndSyncBucketRanks: (
     newBucketRanks: Record<BucketType, Song[]>,
-    updatedMap?: Record<string, BucketType>
+    updatedMap?: Record<string, TriageValue>
   ) => void;
-  setSongBucket: (id: string, bucket: BucketType) => void;
+  setSongBucket: (id: string, bucket: TriageValue) => void;
   moveMasterSong: (index: number, direction: 'up' | 'down') => void;
   handleMagicFill: () => void;
 }
@@ -245,7 +283,7 @@ interface WeezerContextType {
 const WeezerContext = createContext<WeezerContextType | undefined>(undefined);
 
 const getDerivedBucketRanks = (
-  map: Record<string, BucketType>,
+  map: Record<string, TriageValue>,
   master: Song[]
 ) => {
   const poolToUse = master.length > 0 ? master : FULL_SONG_POOL;
@@ -291,9 +329,18 @@ export const migrateGuestRankingsToUser = async (newUserId: string) => {
         .eq('user_id', newUserId)
         .maybeSingle();
 
+      // Only REAL buckets count as existing rankings here: an account
+      // whose triage_map holds nothing but 'unknown' ("Don't Know It")
+      // marks has no ratings to protect, so guest picks may still
+      // migrate in.
+      const accountTriageMap = existing?.triage_map as
+        | Record<string, unknown>
+        | undefined;
       const accountHasProgress =
-        (existing?.triage_map &&
-          Object.keys(existing.triage_map).length > 0) ||
+        (accountTriageMap &&
+          Object.values(accountTriageMap).some((value) =>
+            isRealBucket(value as TriageValue | undefined)
+          )) ||
         (existing?.master_list && existing.master_list.length > 0);
 
       if (accountHasProgress) return;
@@ -340,7 +387,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   const deepLinkConsumedRef = useRef(false);
 
   // Rankings State
-  const [triageMap, setTriageMap] = useState<Record<string, BucketType>>({});
+  const [triageMap, setTriageMap] = useState<Record<string, TriageValue>>({});
   const [bucketRanks, setBucketRanks] = useState<Record<BucketType, Song[]>>({
     banger: [],
     slaps: [],
@@ -352,7 +399,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
 
   // Cached Community Data State (Fix B)
   const [communityMasterLists, setCommunityMasterLists] = useState<Song[][]>([]);
-  const [communityTriageMaps, setCommunityTriageMaps] = useState<Record<string, BucketType>[]>([]);
+  const [communityTriageMaps, setCommunityTriageMaps] = useState<Record<string, TriageValue>[]>([]);
   const [loadingCommunity, setLoadingCommunity] = useState<boolean>(false);
 
   const setStep = (newStep: AppStep) => {
@@ -373,14 +420,14 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
 
       if (!error && data) {
         const cleanRankings: Song[][] = [];
-        const cleanTriageMaps: Record<string, BucketType>[] = [];
+        const cleanTriageMaps: Record<string, TriageValue>[] = [];
 
         data.forEach((row: { master_list: unknown; triage_map: unknown }) => {
           if (Array.isArray(row.master_list) && row.master_list.length > 0) {
             cleanRankings.push(row.master_list);
           }
           if (row.triage_map && Object.keys(row.triage_map).length > 0) {
-            cleanTriageMaps.push(row.triage_map as Record<string, BucketType>);
+            cleanTriageMaps.push(row.triage_map as Record<string, TriageValue>);
           }
         });
 
@@ -585,7 +632,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
           .maybeSingle();
 
         if (rankData) {
-          let loadedTriage: Record<string, BucketType> = {};
+          let loadedTriage: Record<string, TriageValue> = {};
           let loadedMaster: Song[] = [];
 
           if (rankData.triage_map) {
@@ -620,7 +667,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         if (localState) {
           try {
             const parsed = JSON.parse(localState);
-            const guestTriage: Record<string, BucketType> = parsed.triageMap || {};
+            const guestTriage: Record<string, TriageValue> = parsed.triageMap || {};
             // Sanitize saved master list against the triage map: drop unranked
             // leftovers from older saves; every ranked song keeps its position.
             const guestMaster = sanitizeMasterList(parsed.masterList || [], guestTriage);
@@ -656,7 +703,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   // sends any pending write right away, so a fast exit doesn't lose
   // the last change.
   const pendingSyncRef = useRef<{
-    map: Record<string, BucketType>;
+    map: Record<string, TriageValue>;
     master: Song[];
   } | null>(null);
   const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -702,7 +749,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const syncRankingsToDatabase = async (
-    map: Record<string, BucketType>,
+    map: Record<string, TriageValue>,
     master: Song[]
   ) => {
     localStorage.setItem(
@@ -719,7 +766,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
 
   const updateAndSyncBucketRanks = (
     newBucketRanks: Record<BucketType, Song[]>,
-    updatedMap?: Record<string, BucketType>
+    updatedMap?: Record<string, TriageValue>
   ) => {
     setBucketRanks(newBucketRanks);
     const activeMap = updatedMap || triageMap;
@@ -734,7 +781,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     syncRankingsToDatabase(activeMap, newMaster);
   };
 
-  const setSongBucket = (id: string, bucket: BucketType) => {
+  const setSongBucket = (id: string, bucket: TriageValue) => {
     const map = { ...triageMap, [id]: bucket };
     const reconciled = reconcileMasterList(masterList, map);
     setTriageMap(map);
@@ -743,7 +790,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const handleMagicFill = () => {
-    const newMap: Record<string, BucketType> = {};
+    const newMap: Record<string, TriageValue> = {};
     FULL_SONG_POOL.forEach((song) => {
       const rand = Math.random();
       if (rand < 0.15) newMap[song.id] = 'banger';

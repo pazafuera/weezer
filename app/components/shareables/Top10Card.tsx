@@ -14,8 +14,10 @@ import {
 } from './ShareCardShell';
 import { handFont, markerFont } from './fonts';
 
-/** Triage buckets, matching the app's BucketType. */
-export type Bucket = 'banger' | 'slaps' | 'mid' | 'skip' | 'trash';
+/** Triage values: the app's BucketType plus the 'unknown'
+ *  ("Don't Know It") mark, so the context's triage map can be passed
+ *  straight in. Card logic only ever matches the five real buckets. */
+export type Bucket = 'banger' | 'slaps' | 'mid' | 'skip' | 'trash' | 'unknown';
 
 /** Minimal song shape — structural subset of the app's Song type. */
 export type ShareSong = {

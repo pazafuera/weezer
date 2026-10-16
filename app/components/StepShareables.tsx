@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { useWeezer } from '../context/WeezerContext';
+import { useWeezer, isRealBucket } from '../context/WeezerContext';
 import { ALBUMS_BY_ID, ALBUM_NAME_TO_ID, FULL_SONG_POOL } from '../data/constants';
 import TierListChart from './TierListChart';
 import { ShareablesGallery } from './shareables';
@@ -27,18 +27,24 @@ const BUCKET_POINTS: Record<string, number> = {
  */
 export default function StepShareables() {
   const { masterList, triageMap, friendsList, userProfile } = useWeezer();
-  const ranked = masterList.filter((s) => triageMap[s.id]);
+  // Only real buckets feed the cards — an 'unknown' mark is not a rating.
+  const ranked = masterList.filter((s) => isRealBucket(triageMap[s.id]));
   const subtitle = userProfile?.username ? `@${userProfile.username}` : undefined;
 
   const tierRankings = useMemo(
     () =>
-      masterList.map((song, idx) => ({
-        id: song.id,
-        title: song.title,
-        album: song.album,
-        rank: idx + 1,
-        bucket: triageMap[song.id],
-      })),
+      masterList.map((song, idx) => {
+        const bucket = triageMap[song.id];
+        return {
+          id: song.id,
+          title: song.title,
+          album: song.album,
+          rank: idx + 1,
+          // TierListChart's bucket is BucketType-only; unknowns (which
+          // can't be in the master list anyway) map to undefined.
+          bucket: isRealBucket(bucket) ? bucket : undefined,
+        };
+      }),
     [masterList, triageMap]
   );
 

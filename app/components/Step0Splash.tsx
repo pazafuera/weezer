@@ -144,6 +144,11 @@ export default function Step0Splash() {
           Start Ranking as a Guest
         </button>
 
+        <p className="text-xs font-semibold text-slate-500 leading-snug pt-1">
+          Rank the songs you know — 25 songs gets you your Wrapped in
+          about 5 minutes. The full 206 takes most fans 20–30.
+        </p>
+
         <p className="text-[11px] font-bold text-slate-400 pt-1">
           Already have an account?{' '}
           <button

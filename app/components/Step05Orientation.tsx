@@ -125,6 +125,13 @@ export default function Step05Orientation() {
         </p>
       </div>
 
+      {/* DON'T KNOW IT NOTE */}
+      <p className="text-xs sm:text-sm font-semibold text-slate-500 leading-relaxed text-center max-w-md mx-auto">
+        Don&apos;t know a song? Mark it Don&apos;t Know It. No shame — it
+        just won&apos;t be rated. Most fans bucket the songs they know,
+        grab their Wrapped, then come back for the deep cuts.
+      </p>
+
       {/* CONTINUATION CTAS */}
       <div className="pt-2 space-y-2.5">
         <button

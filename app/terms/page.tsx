@@ -23,7 +23,7 @@ export default function TermsPage() {
           Terms of Use
         </h1>
         <p className="text-xs font-bold text-slate-400">
-          Last updated: October 2026 · Draft pending final review
+          Last updated: October 2026
         </p>
 
         <section className="bg-white rounded-3xl border border-slate-200 p-6 space-y-3 text-sm leading-relaxed font-medium text-slate-600">

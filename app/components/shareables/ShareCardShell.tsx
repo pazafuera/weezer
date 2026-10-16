@@ -35,6 +35,33 @@ export function FlyingW({
   );
 }
 
+/** Amber lightning-bolt doodle (vector, stretched tall like the mock). */
+export function BoltDoodle({
+  className = '',
+  style,
+}: {
+  className?: string;
+  style?: CSSProperties;
+}) {
+  return (
+    <svg
+      viewBox="0 0 100 100"
+      preserveAspectRatio="none"
+      className={className}
+      style={style}
+      aria-hidden="true"
+    >
+      <path
+        d="M55 2 L98 2 L72 38 L97 38 L28 98 L42 58 L15 58 Z"
+        fill="#d97706"
+        stroke="#d97706"
+        strokeWidth="7"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function Tape({
   className = '',
   style,
@@ -166,7 +193,7 @@ const STRIP_ROTATIONS = [-7, 5, -4, 6, -5];
 export const ScrapbookVisual = forwardRef<
   HTMLDivElement,
   { subtitle?: string; artAlbumIds?: string[]; children: ReactNode }
->(function ScrapbookVisual({ subtitle, artAlbumIds, children }, ref) {
+>(function ScrapbookVisual({ artAlbumIds, children }, ref) {
   return (
     <div
       ref={ref}
@@ -197,34 +224,45 @@ export const ScrapbookVisual = forwardRef<
         className="pointer-events-none absolute -left-24 bottom-80 h-52 w-52 rounded-full border-[8px] border-[#b98a4a]/10"
       />
 
-      {/* album-cover collage down the left edge */}
+      {/* album-cover cascade down the left edge — big overlapping
+          tiles spanning the content's full height */}
       {artAlbumIds && artAlbumIds.length > 0 && (
         <div
           aria-hidden="true"
-          className="absolute bottom-[150px] left-[-30px] top-[120px] z-0 flex w-[215px] flex-col items-center"
+          className="absolute left-[-37px] top-[360px] z-0 h-[825px] w-[242px]"
         >
-          {artAlbumIds.slice(0, 5).map((id, i) => (
-            <div
-              key={`${id}-${i}`}
-              className="relative -mb-8 w-[196px] bg-white p-1.5 shadow-[0_10px_22px_rgba(60,45,10,0.35)]"
-              style={{ transform: `rotate(${STRIP_ROTATIONS[i % 5]}deg)` }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={albumCoverSrc(id)}
-                alt=""
-                className="aspect-square w-full object-cover"
-              />
-              {i % 2 === 0 && (
-                <Tape className="absolute -top-4 left-1/2 z-10 h-7 w-24 -translate-x-1/2 -rotate-6" />
-              )}
-            </div>
-          ))}
+          {artAlbumIds.slice(0, 5).map((id, i, arr) => {
+            const n = arr.length;
+            const top = n === 1 ? 290 : (i / (n - 1)) * (825 - 242);
+            return (
+              <div
+                key={`${id}-${i}`}
+                className="absolute left-1/2 w-[242px] bg-white p-1.5 shadow-[0_10px_22px_rgba(60,45,10,0.35)]"
+                style={{
+                  top,
+                  transform: `translateX(-50%) rotate(${STRIP_ROTATIONS[i % 5]}deg)`,
+                }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={albumCoverSrc(id)}
+                  alt=""
+                  className="aspect-square w-full object-cover"
+                />
+                {i % 2 === 0 && (
+                  <Tape className="absolute -top-4 left-1/2 z-10 h-7 w-24 -translate-x-1/2 -rotate-6" />
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 
-      {/* top tape banner */}
-      <div className="absolute left-12 top-9 z-20 -rotate-2">
+      {/* bolt doodle in the top-left margin */}
+      <BoltDoodle className="absolute left-[24px] top-[168px] z-0 h-[108px] w-[76px] rotate-[12deg] opacity-60" />
+
+      {/* top tape banner — centered over the headline block */}
+      <div className="absolute left-[196px] top-[30px] z-20 -rotate-2">
         <div className="relative flex h-[64px] w-[440px] items-center justify-center">
           <Tape className="absolute inset-0" />
           <span
@@ -235,21 +273,12 @@ export const ScrapbookVisual = forwardRef<
         </div>
       </div>
 
-      {/* username sticker */}
-      {subtitle && (
-        <div className="absolute right-12 top-10 z-20 rotate-3 rounded-md bg-white/90 px-4 py-1.5 shadow-md">
-          <span className={`text-[30px] leading-none text-slate-700 ${handFont.className}`}>
-            {subtitle}
-          </span>
-        </div>
-      )}
-
       {children}
 
       {/* project masthead */}
-      <div className="absolute inset-x-12 bottom-[140px] z-20 flex items-center justify-center gap-3">
-        <FlyingW className="h-[22px] w-[40px] text-slate-700" />
-        <span className="text-[19px] font-black uppercase tracking-[0.22em] text-slate-600">
+      <div className="absolute inset-x-12 bottom-[140px] z-20 flex items-center justify-center gap-[14px]">
+        <FlyingW className="h-[26px] w-[48px] text-slate-700" />
+        <span className="text-[22px] font-black uppercase tracking-[0.22em] text-slate-600">
           All My Favorite Songs · The Weezer Song Ranking Project
         </span>
       </div>
@@ -261,7 +290,7 @@ export const ScrapbookVisual = forwardRef<
           <span
             className={`relative text-[36px] tracking-wide text-white ${markerFont.className}`}
           >
-            SETTLE THE DEBATE AT RANKINGWEEZER.COM
+            JOIN THE DEBATE AT RANKINGWEEZER.COM
           </span>
         </div>
       </div>

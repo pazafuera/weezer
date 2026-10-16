@@ -29,9 +29,9 @@ export type ShareSong = {
   albumId?: string;
 };
 
-/** Compact album tag for the right edge of a list row, e.g. "Blue '94".
- *  Resolves the canonical album via the app's name bridge so tags stay
- *  short even though song data carries full album names. */
+/** Compact album tag for the right edge of a list row, e.g. "Blue".
+ *  Resolves the canonical album via the app's name bridge. No year,
+ *  no truncation — the tag is short by construction. */
 function albumTag(song: ShareSong): string {
   const id = resolveAlbumId(song);
   const canonical = (id && ALBUMS_BY_ID[id]?.name) || song.album;
@@ -41,54 +41,46 @@ function albumTag(song: ShareSong): string {
     .split(' ')
     .slice(0, 2)
     .join(' ');
-  const yr = `'${String(song.year).slice(2)}`;
-  return `${short} ${yr}`.toUpperCase();
+  return short.toUpperCase();
 }
 
-const ROW_H = 70;
+const ROW_H = 76;
 
 export const Top10CardVisual = forwardRef<
   HTMLDivElement,
   { songs: ShareSong[]; subtitle?: string }
 >(function Top10CardVisual({ songs, subtitle }, ref) {
   const top = songs.slice(0, 10);
-  const albumCount = new Set(top.map((s) => s.album)).size;
 
   return (
     <ScrapbookVisual ref={ref} subtitle={subtitle} artAlbumIds={distinctAlbumIds(top)}>
       <div className="absolute bottom-[190px] left-[184px] right-[60px] top-[128px]">
-        {/* header */}
-        <div className="flex items-start justify-between gap-6">
-          <div>
-            <div className={`text-[76px] leading-[0.95] text-slate-900 ${markerFont.className}`}>
-              MY WEEZER
+        {/* header — title block left, big tilted W + challenge bubble right */}
+        <div className="relative h-[228px]">
+          <div className="absolute left-0 top-[-24px]">
+            <div className={`text-[76px] leading-[1.0] text-slate-900 ${markerFont.className}`}>
+              My Top 10
             </div>
-            <div className="relative inline-block">
-              <span className={`relative z-10 text-[76px] leading-[0.95] text-slate-900 ${markerFont.className}`}>
-                TOP 10
+            <div className="relative mt-1 inline-block">
+              <span className={`relative z-10 text-[76px] leading-[1.0] text-slate-900 ${markerFont.className}`}>
+                Weezer Songs
               </span>
               <BrushStroke
                 color="#fbbf24"
-                className="absolute -bottom-1 left-0 z-0 h-[26px] w-full"
+                className="absolute -bottom-2 left-0 z-0 h-[22px] w-full"
               />
             </div>
           </div>
-          <div className="flex w-[310px] flex-col items-end pt-2">
-            <FlyingW className="w-[118px] -rotate-3 text-[#0072CE]" />
-            <p className={`mt-4 text-right text-[27px] leading-tight text-slate-600 ${handFont.className}`}>
-              {top.length} songs. {albumCount} album{albumCount === 1 ? '' : 's'}. 1
-              perfect list?
-            </p>
-            <div className="relative mt-4 max-w-[290px] rotate-1 rounded-2xl rounded-br-sm bg-white px-4 py-2 shadow-md">
-              <span className={`text-[27px] leading-tight text-slate-800 ${handFont.className}`}>
-                Rate my taste (or roast it)!
-              </span>
-            </div>
+          <FlyingW className="absolute right-0 top-[-16px] h-[105px] w-[190px] rotate-[8deg] text-[#0072CE]" />
+          <div className="absolute right-0 top-[148px] rotate-1 rounded-2xl rounded-br-sm bg-white px-5 py-2.5 shadow-lg">
+            <span className={`whitespace-nowrap text-[33px] leading-none text-slate-800 ${handFont.className}`}>
+              Undone by my rankings? Getchoo a list of your own.
+            </span>
           </div>
         </div>
 
         {/* list on a sheet of notebook paper, taped to the page */}
-        <div className="relative mt-7 rotate-[-0.4deg] rounded-[4px] bg-[#fdfaf0] px-8 pb-4 pt-5 shadow-[0_20px_40px_rgba(60,45,10,0.28)]">
+        <div className="relative mt-5 rotate-[-0.4deg] rounded-[4px] bg-[#fdfaf0] px-8 pb-3 pt-5 shadow-[0_20px_40px_rgba(60,45,10,0.28)]">
           <Tape className="absolute -top-4 left-10 z-10 h-8 w-28 -rotate-6" />
           <Tape className="absolute -top-4 right-10 z-10 h-8 w-28 rotate-3" />
           {top.map((song, i) => (
@@ -102,7 +94,7 @@ export const Top10CardVisual = forwardRef<
               >
                 {i + 1}
               </span>
-              <span className="min-w-0 flex-1 truncate text-[32px] font-black uppercase tracking-tight text-slate-900">
+              <span className="min-w-0 flex-1 text-[30px] font-extrabold uppercase leading-[1.05] tracking-tight text-slate-900">
                 {song.title}
               </span>
               {song.isBSide && (
@@ -110,8 +102,7 @@ export const Top10CardVisual = forwardRef<
                   B-Side
                 </span>
               )}
-              <span className={`h-5 w-5 shrink-0 rounded-full ${song.albumColor}`} />
-              <span className="w-[168px] shrink-0 truncate text-[21px] font-bold uppercase tracking-wider text-slate-500">
+              <span className="w-[150px] shrink-0 text-right text-[20px] font-bold uppercase tracking-wider text-slate-500">
                 {albumTag(song)}
               </span>
             </div>

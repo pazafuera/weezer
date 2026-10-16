@@ -729,7 +729,7 @@ export default function Step4Wrapped({
         right: 'Modern',
         value: timelineVal,
         color: 'bg-[#0072CE]',
-        desc: 'Relative sentiment toward classic versus modern songs.',
+        desc: 'How your average ratings split between classic-era and modern-era songs.',
       },
       {
         label: 'Sonic Vibe',
@@ -737,7 +737,7 @@ export default function Step4Wrapped({
         right: 'Polished Pop',
         value: sonicVibeVal,
         color: 'bg-purple-500',
-        desc: 'Your preference between confessional rock and slick radio pop.',
+        desc: "How your ratings split between the Blue Album's polish and Pinkerton's rawness.",
       },
       {
         label: 'Track Depth',
@@ -745,7 +745,7 @@ export default function Step4Wrapped({
         right: 'Deep Cuts',
         value: Math.round(deepCutRatio * 100),
         color: 'bg-amber-500',
-        desc: 'The concentration of B-sides and non-singles in your explicitly ranked tracks.',
+        desc: 'How much of what you ranked is B-sides and deep cuts rather than the big singles.',
       },
       {
         label: 'Fandom Strictness',
@@ -753,7 +753,7 @@ export default function Step4Wrapped({
         right: 'Critic',
         value: Math.round(haterPercent * 100),
         color: 'bg-slate-700',
-        desc: 'The percentage of the total catalog you marked as Trash.',
+        desc: 'The share of the songs you rated that you put in Trash.',
       },
     ];
 
@@ -1442,7 +1442,8 @@ export default function Step4Wrapped({
 
               <p className="text-xs font-bold text-center text-slate-500 leading-relaxed mb-8">
                 How differently you order the songs you ranked compared to the
-                community.
+                community consensus order. Higher means your order departs
+                more from the crowd&apos;s.
               </p>
 
               {stats.independenceIndex !== null ? (
@@ -1501,6 +1502,12 @@ export default function Step4Wrapped({
                 Years Old
               </span>
             </div>
+
+            <p className="text-[11px] font-bold text-indigo-300/90 text-center max-w-sm leading-relaxed mb-6 -mt-2">
+              A playful estimate: we weight the release years of the songs
+              you rated by how much you loved them, then translate that era
+              into an age. It describes the vintage of your taste — not you.
+            </p>
 
             {ageComment && (
               <div className="bg-indigo-950/80 border border-indigo-700/60 rounded-2xl p-4 max-w-sm text-center">

@@ -379,7 +379,7 @@ export default function FanStats({
             The Fan <br /><span className="text-[#0072CE]">Club</span>
           </h1>
           <p className="text-base font-bold text-slate-600 max-w-sm mx-auto leading-relaxed">
-            206 songs. Thousands of opinions. The definitive consensus.
+            206 songs. Ranked by the fans who showed up — here&apos;s where participating fans land.
           </p>
         </div>
 
@@ -470,8 +470,8 @@ export default function FanStats({
           <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm h-full flex flex-col">
             <div className="text-center sm:text-left mb-6 border-b border-slate-100 pb-4">
               <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 block mb-1">Consensus</span>
-              <h2 className="text-3xl sm:text-4xl font-black text-slate-950 tracking-tight leading-tight">Global Top 10</h2>
-              <p className="text-[11px] font-bold text-slate-400 mt-1.5">Based on {communityStats.totalFans} qualified fan rankings</p>
+              <h2 className="text-3xl sm:text-4xl font-black text-slate-950 tracking-tight leading-tight">Community Top 10</h2>
+              <p className="text-[11px] font-bold text-slate-400 mt-1.5">Among participating fans · based on {communityStats.totalFans} qualified fan rankings</p>
             </div>
             
             <div className="space-y-4 flex-1">
@@ -523,7 +523,7 @@ export default function FanStats({
         <div className="pt-8 sm:pt-10">
           <TierListChart 
             title="The Fan Club Tiers" 
-            subtitle="Global Community Consensus"
+            subtitle="Community Consensus — Among Participating Fans"
             rankedSongs={communityStats.globalTierListRankings} 
             
             // WE NOW PASS THE EXACT ID TO FIX THE ARTWORK HERE TOO

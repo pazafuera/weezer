@@ -8,6 +8,18 @@ import { FlyingWIcon, AlbumArtwork } from './SharedUI';
 // import GenerationalTasteGrid from './GenerationalTasteGrid';
 import { useWeezer } from '../context/WeezerContext';
 import TierListChart from './TierListChart';
+import {
+  ALBUM_SHRINKAGE_K,
+  CONTROVERSY_POLARIZATION_WEIGHT,
+  LONE_BANGER_MIN_FAN_SHARE,
+  METHODOLOGY_PLAIN_RULES,
+  METHODOLOGY_VERSION,
+  POLARIZATION_FACTOR,
+  SONG_TYPE,
+  classifyFanTribe,
+  debateWeight,
+  leansClassicist,
+} from '../lib/fanStatsMethodology';
 
 // Reusable 5-Bar Distribution Component
 const DistributionBars = ({ pBanger, pSlaps, pMid, pSkip, pTrash }: { pBanger: number, pSlaps: number, pMid: number, pSkip: number, pTrash: number }) => (
@@ -121,21 +133,19 @@ export default function FanStats({
       const blueMean = blueCount > 0 ? blueSum / blueCount : 0;
       const pinkMean = pinkCount > 0 ? pinkSum / pinkCount : 0;
       const delta = blueMean - pinkMean;
-      const weight = Math.pow(Math.abs(delta), 1.5); 
+      const weight = debateWeight(delta);
       if (delta > 0) blueTotalWeight += weight;
       else if (delta < 0) pinkTotalWeight += weight;
 
       const classicMean = classicCount > 0 ? classicSum / classicCount : 0;
       const modernMean = modernCount > 0 ? modernSum / modernCount : 0;
-      if (classicMean > modernMean + 1.0) classicistMaps.push(map);
+      if (leansClassicist(classicMean, modernMean)) classicistMaps.push(map);
       else if (modernMean > classicMean) modernistMaps.push(map);
 
       const userMean = userCount > 0 ? userTotal / userCount : 3;
-      if (userMean < 2.2) tribeCounts.haters++;
-      else if (modernMean > 3.8 && delta < 1 && delta > -1) tribeCounts.modernists++;
-      else if (delta > 0.3) tribeCounts.purists++;
-      else if (delta < -0.3) tribeCounts.cult++;
-      else tribeCounts.chaos++;
+      tribeCounts[
+        classifyFanTribe({ userMean, modernMean, bluePinkertonDelta: delta })
+      ]++;
     });
 
     const totalWarWeight = blueTotalWeight + pinkTotalWeight;
@@ -152,10 +162,9 @@ export default function FanStats({
     ].sort((a, b) => b.pct - a.pct);
 
     const globalPriorMean = Object.values(songL1).reduce((acc, s) => acc + s.total, 0) / Math.max(1, Object.values(songL1).reduce((acc, s) => acc + s.count, 0));
-    const SHRINKAGE_K = 5;
     const albumLeaderboard = Object.entries(albumL1).map(([id, data]) => {
       const rawMean = data.total / data.count;
-      const score = ((data.count / (data.count + SHRINKAGE_K)) * rawMean) + ((SHRINKAGE_K / (data.count + SHRINKAGE_K)) * globalPriorMean);
+      const score = ((data.count / (data.count + ALBUM_SHRINKAGE_K)) * rawMean) + ((ALBUM_SHRINKAGE_K / (data.count + ALBUM_SHRINKAGE_K)) * globalPriorMean);
       return { id, album: data.name, score, rawMean, count: data.count };
     }).sort((a, b) => b.score - a.score);
 
@@ -172,20 +181,20 @@ export default function FanStats({
       const pSkip = data.buckets.skip / data.count;
       const pTrash = data.buckets.trash / data.count;
       
-      const polarization = 4 * pBanger * pTrash; 
-      const controversy = sd * (1 + 0.5 * polarization);
+      const polarization = POLARIZATION_FACTOR * pBanger * pTrash;
+      const controversy = sd * (1 + CONTROVERSY_POLARIZATION_WEIGHT * polarization);
 
       let type = "Universally Disliked";
       let typeLabel = "UNIVERSALLY DISLIKED";
       let typeColor = "text-slate-500 bg-slate-100";
       
-      if ((pBanger + pSlaps) > 0.65 && pTrash < 0.1) {
+      if ((pBanger + pSlaps) > SONG_TYPE.lovedPositiveShare && pTrash < SONG_TYPE.lovedMaxTrashShare) {
         type = "Universally Loved"; typeLabel = "UNIVERSALLY LOVED"; typeColor = "text-amber-900 bg-amber-400";
-      } else if (pBanger > 0.2 && pTrash > 0.2 && pMid < 0.25) {
+      } else if (pBanger > SONG_TYPE.dividedMinBangerShare && pTrash > SONG_TYPE.dividedMinTrashShare && pMid < SONG_TYPE.dividedMaxMidShare) {
         type = "Deeply Divided"; typeLabel = "DEEPLY DIVIDED"; typeColor = "text-white bg-rose-500";
-      } else if (pBanger < 0.2 && (pSlaps + pMid) > 0.55 && pTrash < 0.15) {
+      } else if (pBanger < SONG_TYPE.safeMaxBangerShare && (pSlaps + pMid) > SONG_TYPE.safePositiveShare && pTrash < SONG_TYPE.safeMaxTrashShare) {
         type = "Safe Bets"; typeLabel = "SAFE BETS"; typeColor = "text-blue-900 bg-blue-300";
-      } else if (pBanger > 0.05 && pBanger < 0.25 && (pSkip + pTrash) > 0.4) {
+      } else if (pBanger > SONG_TYPE.gemMinBangerShare && pBanger < SONG_TYPE.gemMaxBangerShare && (pSkip + pTrash) > SONG_TYPE.gemMinNegativeShare) {
         type = "Hidden Gems"; typeLabel = "HIDDEN GEMS"; typeColor = "text-indigo-900 bg-indigo-300";
       }
 
@@ -202,7 +211,7 @@ export default function FanStats({
       let bestSongMetric = null;
       let maxLift = -999;
       albumSongs.forEach(sm => {
-        if (sm.count > totalFans * 0.1) {
+        if (sm.count > totalFans * LONE_BANGER_MIN_FAN_SHARE) {
           const lift = sm.mean - a.rawMean;
           if (lift > maxLift) { maxLift = lift; bestSongMetric = sm; }
         }
@@ -716,6 +725,20 @@ export default function FanStats({
 
           </div>
         </div>
+        <details className="mt-10 rounded-2xl border border-slate-200 bg-white p-5">
+          <summary className="cursor-pointer text-sm font-black uppercase tracking-wider text-slate-700">
+            How this is calculated
+          </summary>
+          <ul className="mt-3 list-disc space-y-1.5 pl-5 text-sm font-medium text-slate-500">
+            {METHODOLOGY_PLAIN_RULES.map((rule) => (
+              <li key={rule.slice(0, 24)}>{rule}</li>
+            ))}
+          </ul>
+          <p className="mt-3 text-xs font-bold text-slate-400">
+            Methodology v{METHODOLOGY_VERSION} — tribes and labels are for fun.
+          </p>
+        </details>
+
       </div>
     </div>
   );

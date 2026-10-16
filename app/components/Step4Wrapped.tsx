@@ -13,6 +13,12 @@ import {
 import { FlyingWIcon, AlbumArtwork } from './SharedUI';
 import { encodeShareData } from '@/utils/shareHelper';
 import { ShareablesGallery } from './shareables';
+import {
+  ARCHETYPE_MODEL_VERSION,
+  ARCHETYPE_VIBES,
+  normalizeUserVector,
+  scoreArchetypes,
+} from '../lib/archetypes';
 
 // STATISTICAL HELPER: Kendall's Tau (Rank Agreement)
 function calculateKendallTau(
@@ -681,155 +687,21 @@ export default function Step4Wrapped({
       debateDescriptor = "You see a lot in little ol' 3-chord me.";
     else debateDescriptor = "You don't wanna be an old man anymore.";
 
-    // ARCHETYPES
-    const normClassic = Math.max(0, Math.min(1, (classicAverage - 1) / 4));
-    const normModern = Math.max(0, Math.min(1, (modernAverage - 1) / 4));
-    const normDeepCut = Math.max(0, Math.min(1, deepCutRatio));
-    const normPositivity = Math.max(0, Math.min(1, globalPositivity));
-    const normChaos = Math.max(0, Math.min(1, hotTakeScore / 100));
+    // ARCHETYPES — frozen model v1.0 lives in app/lib/archetypes.ts.
+    // Do not retune here; a model change ships as a new version there.
+    const userVector = normalizeUserVector({
+      classicAverage,
+      modernAverage,
+      deepCutRatio,
+      globalPositivity,
+      hotTakeScore,
+    });
 
-    const userVector = {
-      classic: normClassic,
-      modern: normModern,
-      deepCut: normDeepCut,
-      positivity: normPositivity,
-      chaos: normChaos,
-    };
+    const scoredArchetypes = scoreArchetypes(userVector);
 
-    const centroids = [
-      {
-        id: 'scientist',
-        name: 'Weezer Scientist',
-        emoji: '🧪',
-        desc: 'You have a meticulously balanced, logic-driven appreciation across all eras.',
-        color: 'text-emerald-600',
-        vector: {
-          classic: 0.5,
-          modern: 0.5,
-          deepCut: 0.5,
-          positivity: 0.8,
-          chaos: 0.2,
-        },
-      },
-      {
-        id: '90s',
-        name: '1990s Elitist',
-        emoji: '📼',
-        desc: "If Matt Sharp didn't play bass on it, you barely consider it Weezer.",
-        color: 'text-[#0072CE]',
-        vector: {
-          classic: 0.9,
-          modern: 0.0,
-          deepCut: 0.4,
-          positivity: 0.3,
-          chaos: 0.6,
-        },
-      },
-      {
-        id: 'vault',
-        name: 'Cuomo Vault Scholar',
-        emoji: '🧠',
-        desc: 'You ignore radio hits to excavate unreleased synth demos and emotional B-sides.',
-        color: 'text-[#8C6239]',
-        vector: {
-          classic: 0.6,
-          modern: 0.3,
-          deepCut: 0.9,
-          positivity: 0.6,
-          chaos: 0.8,
-        },
-      },
-      {
-        id: 'critic',
-        name: 'Ruthless Critic',
-        emoji: '💀',
-        desc: 'You love Weezer so fiercely that you hate 75% of everything Rivers Cuomo has ever recorded.',
-        color: 'text-red-600',
-        vector: {
-          classic: 0.4,
-          modern: 0.1,
-          deepCut: 0.3,
-          positivity: 0.0,
-          chaos: 0.9,
-        },
-      },
-      {
-        id: 'revisionist',
-        name: 'Post-Classic Revisionist',
-        emoji: '🚀',
-        desc: 'You boldly recognize that White, OK Human, and SZNZ contain absolute modern masterpieces.',
-        color: 'text-amber-500',
-        vector: {
-          classic: 0.2,
-          modern: 0.9,
-          deepCut: 0.4,
-          positivity: 0.8,
-          chaos: 0.7,
-        },
-      },
-      {
-        id: 'blueblood',
-        name: 'Blue Blood Classicist',
-        emoji: '🔵',
-        desc: 'Infectious hooks, mainstream perfection, and clean 1994 nostalgia drive your rankings.',
-        color: 'text-[#0072CE]',
-        vector: {
-          classic: 0.8,
-          modern: 0.2,
-          deepCut: 0.1,
-          positivity: 0.9,
-          chaos: 0.3,
-        },
-      },
-      {
-        id: 'chaos',
-        name: 'Chaos Agent',
-        emoji: '🎲',
-        desc: 'Your rankings defy all conventional Weezer logic. You operate entirely on your own terms.',
-        color: 'text-purple-600',
-        vector: {
-          classic: 0.5,
-          modern: 0.5,
-          deepCut: 0.5,
-          positivity: 0.5,
-          chaos: 1.0,
-        },
-      },
-    ];
-
-    const scoredArchetypes = centroids
-      .map((arc) => {
-        const dist = Math.sqrt(
-          Math.pow(userVector.classic - arc.vector.classic, 2) +
-            Math.pow(userVector.modern - arc.vector.modern, 2) +
-            Math.pow(userVector.deepCut - arc.vector.deepCut, 2) +
-            Math.pow(userVector.positivity - arc.vector.positivity, 2) +
-            Math.pow(userVector.chaos - arc.vector.chaos, 2)
-        );
-
-        const matchPct = Math.max(0, Math.round(Math.exp(-1.5 * dist) * 100));
-
-        return {
-          ...arc,
-          score: matchPct,
-        };
-      })
-      .sort((a, b) => b.score - a.score);
-
-    // VIBE ENCAPSULATED - LOCAL MAPPING
     const primaryArchetype = scoredArchetypes[0]?.id || 'scientist';
 
-    const archetypeVibes: Record<string, string> = {
-      '90s': '/img/vibes/grownassman.gif',
-      blueblood: '/img/vibes/rivers-buddyholly.webp',
-      vault: '/img/vibes/snuggie.gif',
-      critic: '/img/vibes/sayitaintso.gif',
-      revisionist: '/img/vibes/snl-beverlyhills.gif',
-      scientist: '/img/vibes/rivers-sweater.gif',
-      chaos: '/img/vibes/canoli.gif',
-    };
-
-    let finalGif = archetypeVibes[primaryArchetype] || archetypeVibes['scientist'];
+    let finalGif = ARCHETYPE_VIBES[primaryArchetype] || ARCHETYPE_VIBES['scientist'];
     const topSongTitle = top10[0]?.title || '';
 
     if (topSongTitle === 'Island in the Sun') {
@@ -1073,9 +945,14 @@ export default function Step4Wrapped({
         {/* 2. ARCHETYPES CAROUSEL */}
         <div>
           <div className="flex items-center justify-between mb-4 px-2">
-            <h3 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight truncate">
-              Fandom Archetype
-            </h3>
+            <div>
+              <h3 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight truncate">
+                Fandom Archetype
+              </h3>
+              <p className="text-[11px] font-bold text-slate-400 mt-0.5">
+                For fun — archetype model v{ARCHETYPE_MODEL_VERSION}
+              </p>
+            </div>
 
             {/* Desktop Carousel Arrows */}
             <div className="hidden lg:flex items-center gap-2">

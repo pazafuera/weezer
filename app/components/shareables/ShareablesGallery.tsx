@@ -3,70 +3,51 @@
 import { useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { exportNodeAsPng } from './exportImage';
-import type { ExportMode } from './exportImage';
 import { Top10CardVisual } from './Top10Card';
 import type { Bucket, ShareSong } from './Top10Card';
 import { TribeBadgeCardVisual } from './TribeBadgeCard';
 import { EraDnaCardVisual } from './EraDnaCard';
-import { TasteCompatibilityCardVisual } from './TasteCompatibilityCard';
+import { TasteCompatibilityCardVisual, friendKey, friendLabel } from './TasteCompatibilityCard';
 import type { FriendLike } from './TasteCompatibilityCard';
 
 /**
- * One asset in the library: a scaled preview, View / Save / Share actions,
- * a full-size modal view, and a hidden full-size export copy.
+ * One asset in the library: a scaled preview, an optional control row
+ * (e.g. the compatibility card's friend picker), and a single Download
+ * button — the tier card's one-button pattern (native share sheet on
+ * mobile, file download on desktop).
  *
- * Exports ALWAYS render from the hidden off-screen copy (the TierListChart
- * pattern) — never from the CSS-scaled preview — so PNGs come out at the
- * card's natural 1024px size, fully framed.
+ * Exports ALWAYS render from a hidden full-size off-screen copy (the
+ * TierListChart pattern) — never from the CSS-scaled preview — so PNGs
+ * come out at the card's natural 1024px size, fully framed.
  *
- * `children` is a render prop: (interactive) => visual. Static copies
- * (preview + export) get interactive=false; the modal copy gets true so
- * interactive cards (friend picker) work there. Any state a card needs
- * lives in the wrapping item component so all copies stay in sync.
+ * `children` renders the card's visual; any state a card needs lives in
+ * the wrapping item component so preview and export copies stay in sync.
  */
 function LibraryItem({
   title,
   description,
   filename,
+  controls,
   children,
 }: {
   title: string;
   description: string;
   filename: string;
-  children: (interactive: boolean) => ReactNode;
+  controls?: ReactNode;
+  children: ReactNode;
 }) {
   const exportRef = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState(false);
-  const [viewOpen, setViewOpen] = useState(false);
 
-  const runExport = async (mode: ExportMode) => {
+  const download = async () => {
     if (busy) return;
     setBusy(true);
     try {
-      await exportNodeAsPng(exportRef.current, filename, mode);
+      await exportNodeAsPng(exportRef.current, filename, 'auto');
     } finally {
       setBusy(false);
     }
   };
-
-  const actionButtons = (
-    <>
-      <button
-        onClick={() => runExport('save')}
-        disabled={busy}
-        className="flex-1 bg-[#0072CE] hover:bg-blue-600 text-white font-black text-xs py-2.5 px-3 rounded-xl transition cursor-pointer disabled:opacity-50"
-      >
-        {busy ? 'Working…' : '📸 Save'}
-      </button>
-      <button
-        onClick={() => runExport('share')}
-        disabled={busy}
-        className="flex-1 bg-slate-900 hover:bg-slate-800 text-white font-black text-xs py-2.5 px-3 rounded-xl transition cursor-pointer disabled:opacity-50"
-      >
-        Share
-      </button>
-    </>
-  );
 
   return (
     <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs space-y-4">
@@ -76,7 +57,7 @@ function LibraryItem({
           className="pointer-events-none absolute left-0 top-0"
           style={{ width: 1024, transform: 'scale(0.32)', transformOrigin: 'top left' }}
         >
-          {children(false)}
+          {children}
         </div>
       </div>
 
@@ -85,55 +66,30 @@ function LibraryItem({
         <p className="text-xs font-semibold text-slate-400 mt-0.5">{description}</p>
       </div>
 
-      <div className="flex gap-2">
-        <button
-          onClick={() => setViewOpen(true)}
-          className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-black text-xs py-2.5 px-3 rounded-xl transition cursor-pointer"
-        >
-          View
-        </button>
-        {actionButtons}
-      </div>
+      {controls}
+
+      <button
+        onClick={download}
+        disabled={busy}
+        className="w-full bg-[#0072CE] hover:bg-blue-600 text-white font-black text-xs py-3 px-3 rounded-xl transition cursor-pointer disabled:opacity-50"
+      >
+        {busy ? 'Generating Image...' : '📸 Download'}
+      </button>
 
       {/* Hidden full-size export copy (TierListChart pattern) */}
       <div
         className="absolute left-[-9999px] top-[-9999px] opacity-0 pointer-events-none"
         aria-hidden="true"
       >
-        <div ref={exportRef}>{children(false)}</div>
+        <div ref={exportRef}>{children}</div>
       </div>
-
-      {/* Full-size view modal */}
-      {viewOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/60 p-4"
-          onClick={() => setViewOpen(false)}
-        >
-          <div
-            className="my-8 w-full max-w-5xl rounded-3xl bg-white p-4 shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="font-black text-slate-950">{title}</h3>
-              <button
-                onClick={() => setViewOpen(false)}
-                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 font-black cursor-pointer"
-                aria-label="Close"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="overflow-x-auto rounded-2xl">{children(true)}</div>
-            <div className="mt-3 flex gap-2">{actionButtons}</div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
 
-/** Compatibility item holds the friend selection so preview, modal, and
- *  export copies all render the same match. */
+/** Compatibility item holds the friend selection so the preview and the
+ *  export copy render the same match. The picker sits under the preview
+ *  at natural size. */
 function CompatibilityLibraryItem({
   songs,
   friends,
@@ -144,22 +100,38 @@ function CompatibilityLibraryItem({
   subtitle?: string;
 }) {
   const [selectedKey, setSelectedKey] = useState('');
+  const controls = (
+    <div>
+      <label className="mb-1 block text-[10px] font-black uppercase tracking-wider text-slate-400">
+        Compare with
+      </label>
+      <select
+        value={selectedKey}
+        onChange={(e) => setSelectedKey(e.target.value)}
+        className="w-full rounded-xl bg-white border border-slate-300 px-3 py-2.5 text-sm font-bold text-slate-900"
+      >
+        <option value="">Choose a friend…</option>
+        {friends.map((f, i) => (
+          <option key={friendKey(f, i)} value={friendKey(f, i)}>
+            {friendLabel(f)}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
   return (
     <LibraryItem
       title="Taste Compatibility"
       description="Your taste match score vs. a friend."
       filename="weezer-taste-match.png"
+      controls={controls}
     >
-      {(interactive) => (
-        <TasteCompatibilityCardVisual
-          songs={songs}
-          friends={friends}
-          subtitle={subtitle}
-          selectedKey={selectedKey}
-          onSelectChange={interactive ? setSelectedKey : undefined}
-          interactive={interactive}
-        />
-      )}
+      <TasteCompatibilityCardVisual
+        songs={songs}
+        friends={friends}
+        subtitle={subtitle}
+        selectedKey={selectedKey}
+      />
     </LibraryItem>
   );
 }
@@ -193,23 +165,21 @@ export default function ShareablesGallery({
         description="Your ranked top 10 as a shareable graphic."
         filename="my-weezer-top-10.png"
       >
-        {() => <Top10CardVisual songs={songs} subtitle={subtitle} />}
+        <Top10CardVisual songs={songs} subtitle={subtitle} />
       </LibraryItem>
       <LibraryItem
         title="Fan Tribe Badge"
         description="Which Weezer tribe do you belong to?"
         filename="my-weezer-tribe.png"
       >
-        {() => (
-          <TribeBadgeCardVisual songs={songs} triageMap={triageMap} subtitle={subtitle} />
-        )}
+        <TribeBadgeCardVisual songs={songs} triageMap={triageMap} subtitle={subtitle} />
       </LibraryItem>
       <LibraryItem
         title="Era DNA"
         description="Where your taste lives across Weezer history."
         filename="my-weezer-era-dna.png"
       >
-        {() => <EraDnaCardVisual songs={songs} subtitle={subtitle} />}
+        <EraDnaCardVisual songs={songs} subtitle={subtitle} />
       </LibraryItem>
       <CompatibilityLibraryItem songs={songs} friends={friends} subtitle={subtitle} />
     </div>

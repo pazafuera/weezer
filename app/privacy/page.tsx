@@ -27,7 +27,7 @@ export default function PrivacyPage() {
           Privacy Policy
         </h1>
         <p className="text-xs font-bold text-slate-400">
-          Last updated: October 2026 · Draft pending final review
+          Last updated: October 2026
         </p>
 
         <section className="bg-white rounded-3xl border border-slate-200 p-6 space-y-3 text-sm leading-relaxed font-medium text-slate-600">
@@ -95,8 +95,14 @@ export default function PrivacyPage() {
           <p>
             You can edit your username and display name any time from
             Account &amp; Profile in the app. To delete your account and its
-            data, contact us and we&rsquo;ll remove your profile, rankings,
-            and friendships. [CONTACT EMAIL — to be confirmed before launch.]
+            data, contact us at{' '}
+            <a
+              href="mailto:onlyinprivacy@rankingweezer.com"
+              className="font-bold text-[#0072CE]"
+            >
+              onlyinprivacy@rankingweezer.com
+            </a>{' '}
+            and we&rsquo;ll remove your profile, rankings, and friendships.
           </p>
           <p>
             We keep your data while your account exists. Server logs are

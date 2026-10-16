@@ -1,7 +1,7 @@
 'use client';
 
 import { forwardRef } from 'react';
-import { FlyingW, SaveImageButton, ScrapbookVisual, distinctAlbumIds, useShareableDownload } from './ShareCardShell';
+import { BrushStroke, FlyingW, SaveImageButton, ScrapbookVisual, distinctAlbumIds, useShareableDownload } from './ShareCardShell';
 import { handFont, markerFont } from './fonts';
 import type { ShareSong } from './Top10Card';
 
@@ -49,12 +49,18 @@ export const EraDnaCardVisual = forwardRef<
         ) : (
           <>
             <div className="flex items-start justify-between gap-6">
-              <p
-                className={`text-[46px] tracking-wide text-slate-800 ${markerFont.className}`}
-              >
-                MY ERA DNA
+              <p className="relative inline-block">
+                <span
+                  className={`relative z-10 text-[46px] tracking-wide text-slate-800 ${markerFont.className}`}
+                >
+                  MY ERA DNA
+                </span>
+                <BrushStroke
+                  color="#fbbf24"
+                  className="absolute -bottom-2 left-0 z-0 h-[18px] w-full"
+                />
               </p>
-              <FlyingW className="mt-1 w-[92px] shrink-0 -rotate-3 text-slate-800" />
+              <FlyingW className="w-[150px] shrink-0 rotate-[8deg] text-[#0072CE]" />
             </div>
             <h2
               className={`mt-4 text-[118px] leading-[0.95] text-slate-900 ${markerFont.className}`}
@@ -62,11 +68,13 @@ export const EraDnaCardVisual = forwardRef<
               YOU ARE {topPct}%{' '}
               <span style={{ color: top.color }}>{top.name.toUpperCase()}</span>
             </h2>
-            <p
-              className={`mt-4 -rotate-1 text-[44px] text-slate-700 ${handFont.className}`}
-            >
-              {ERA_QUIPS[top.key]}
-            </p>
+            <div className="mt-5 inline-block -rotate-1 rounded-2xl rounded-bl-sm bg-white px-5 py-2.5 shadow-lg">
+              <span
+                className={`text-[42px] leading-none text-slate-800 ${handFont.className}`}
+              >
+                {ERA_QUIPS[top.key]}
+              </span>
+            </div>
 
             <div className="mt-9">
               {dist.map((d, i) => {

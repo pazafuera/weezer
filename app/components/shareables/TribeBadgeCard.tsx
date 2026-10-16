@@ -3,6 +3,7 @@
 import { forwardRef } from 'react';
 import { ALBUMS_BY_ID } from '../../data/constants';
 import {
+  BrushStroke,
   FlyingW,
   Polaroid,
   SaveImageButton,
@@ -144,18 +145,26 @@ export const TribeBadgeCardVisual = forwardRef<
           </p>
         ) : (
           <>
-            <p
-              className={`text-center text-[46px] tracking-wide text-slate-800 ${markerFont.className}`}
-            >
-              MY FAN TRIBE
-            </p>
-
-            <div className="mt-8 flex justify-center">
-              <FlyingW className="w-[124px]" style={{ color: ink }} />
+            <div className="relative">
+              <p className="relative inline-block">
+                <span
+                  className={`relative z-10 text-[46px] tracking-wide text-slate-800 ${markerFont.className}`}
+                >
+                  MY FAN TRIBE
+                </span>
+                <BrushStroke
+                  color="#fbbf24"
+                  className="absolute -bottom-2 left-0 z-0 h-[18px] w-full"
+                />
+              </p>
+              <FlyingW
+                className="absolute right-0 top-[-12px] w-[150px] rotate-[8deg]"
+                style={{ color: ink }}
+              />
             </div>
 
             {/* The tribe name in huge marker type, tribe ink */}
-            <div className="mt-6 -rotate-2 text-center" style={{ color: ink }}>
+            <div className="mt-16 -rotate-2 text-center" style={{ color: ink }}>
               {words.map((w) => (
                 <div
                   key={w}
@@ -180,13 +189,15 @@ export const TribeBadgeCardVisual = forwardRef<
               {tribe.stat}
             </p>
 
-            <p
-              className={`absolute bottom-[36px] left-2 w-[360px] -rotate-2 text-[38px] leading-tight text-slate-700 ${handFont.className}`}
-            >
-              Certified by science.*
-              <br />
-              <span className="text-[28px] text-slate-500">*not science</span>
-            </p>
+            <div className="absolute bottom-[36px] left-2 -rotate-2 rounded-2xl rounded-bl-sm bg-white px-5 py-3 shadow-lg">
+              <p
+                className={`text-[36px] leading-tight text-slate-700 ${handFont.className}`}
+              >
+                Certified by science.*
+                <br />
+                <span className="text-[27px] text-slate-500">*not science</span>
+              </p>
+            </div>
 
             {domAlbum && (
               <Polaroid

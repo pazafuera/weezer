@@ -2,6 +2,7 @@
 
 import { forwardRef, useState } from 'react';
 import {
+  BrushStroke,
   FlyingW,
   SaveImageButton,
   ScrapbookVisual,
@@ -89,12 +90,18 @@ export const TasteCompatibilityCardVisual = forwardRef<
     <ScrapbookVisual ref={ref} subtitle={subtitle} artAlbumIds={artIds}>
       <div className="absolute bottom-[190px] left-[184px] right-[60px] top-[140px]">
         <div className="flex items-start justify-between gap-6">
-          <p
-            className={`text-[56px] leading-none tracking-wide text-slate-900 ${markerFont.className}`}
-          >
-            TASTE COMPATIBILITY
+          <p className="relative inline-block">
+            <span
+              className={`relative z-10 text-[56px] leading-none tracking-wide text-slate-900 ${markerFont.className}`}
+            >
+              TASTE COMPATIBILITY
+            </span>
+            <BrushStroke
+              color="#fbbf24"
+              className="absolute -bottom-2 left-0 z-0 h-[20px] w-full"
+            />
           </p>
-          <FlyingW className="mt-1 w-[80px] shrink-0 -rotate-3 text-slate-800" />
+          <FlyingW className="w-[150px] shrink-0 rotate-[8deg] text-[#0072CE]" />
         </div>
 
         {friends.length === 0 ? (

@@ -13,7 +13,8 @@ function isMobileDevice(): boolean {
  * Render a DOM node to PNG and save/share it.
  * Mirrors TierListChart's proven export flow on this site: a brief settle,
  * an invisible warmup render (iOS Safari foreignObject quirk), then the
- * real render at pixelRatio 2 on the export card's #0f172a background.
+ * real render at pixelRatio 2. The background matches the scrapbook
+ * cards' cream paper so any edge blends in.
  *
  * mode:
  * - 'save'  → always download the PNG file.
@@ -40,7 +41,7 @@ export async function exportNodeAsPng(
   const dataUrl = await toPng(node, {
     quality: 1.0,
     pixelRatio: 2,
-    backgroundColor: '#0f172a',
+    backgroundColor: '#f1e8d0',
   });
 
   const wantShare = mode === 'share' || (mode === 'auto' && isMobileDevice());

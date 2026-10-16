@@ -1,4 +1,15 @@
-export { ShareableVisual, SaveImageButton, useShareableDownload } from './ShareCardShell';
+export {
+  ScrapbookVisual,
+  Tape,
+  BrushStroke,
+  Stamp,
+  Polaroid,
+  DoodleStar,
+  albumCoverSrc,
+  SaveImageButton,
+  useShareableDownload,
+} from './ShareCardShell';
+export { markerFont, handFont } from './fonts';
 export { exportNodeAsPng } from './exportImage';
 export type { ExportMode } from './exportImage';
 export { default as Top10Card, Top10CardVisual } from './Top10Card';

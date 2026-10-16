@@ -18,7 +18,7 @@ import type { FriendLike } from './TasteCompatibilityCard';
  *
  * Exports ALWAYS render from a hidden full-size off-screen copy (the
  * TierListChart pattern) — never from the CSS-scaled preview — so PNGs
- * come out at the card's natural 1024px size, fully framed.
+ * come out at the card's natural 1080px size, fully framed.
  *
  * `children` renders the card's visual; any state a card needs lives in
  * the wrapping item component so preview and export copies stay in sync.
@@ -38,12 +38,18 @@ function LibraryItem({
 }) {
   const exportRef = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const download = async () => {
     if (busy) return;
     setBusy(true);
     try {
       await exportNodeAsPng(exportRef.current, filename, 'auto');
+      // Confirm the save right on the button the user just tapped.
+      setSaved(true);
+      if (savedTimer.current) clearTimeout(savedTimer.current);
+      savedTimer.current = setTimeout(() => setSaved(false), 2500);
     } finally {
       setBusy(false);
     }
@@ -52,10 +58,10 @@ function LibraryItem({
   return (
     <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs space-y-4">
       {/* Scaled preview (visual only — exports never use this node) */}
-      <div className="relative h-[240px] overflow-hidden rounded-2xl bg-slate-100 border border-slate-200">
+      <div className="relative h-[400px] overflow-hidden rounded-2xl bg-slate-100 border border-slate-200">
         <div
           className="pointer-events-none absolute left-0 top-0"
-          style={{ width: 1024, transform: 'scale(0.32)', transformOrigin: 'top left' }}
+          style={{ width: 1080, transform: 'scale(0.296)', transformOrigin: 'top left' }}
         >
           {children}
         </div>
@@ -71,9 +77,11 @@ function LibraryItem({
       <button
         onClick={download}
         disabled={busy}
-        className="w-full bg-[#0072CE] hover:bg-blue-600 text-white font-black text-xs py-3 px-3 rounded-xl transition cursor-pointer disabled:opacity-50"
+        className={`w-full text-white font-black text-xs py-3 px-3 rounded-xl transition cursor-pointer disabled:opacity-50 ${
+          saved ? 'bg-emerald-500' : 'bg-[#0072CE] hover:bg-blue-600'
+        }`}
       >
-        {busy ? 'Generating Image...' : '📸 Download'}
+        {busy ? 'Generating Image...' : saved ? '✓ Saved!' : '📸 Download'}
       </button>
 
       {/* Hidden full-size export copy (TierListChart pattern) */}

@@ -47,6 +47,20 @@ import type { TriageSection } from './Step1Triage';
  * sorted song; a slate "Not Sorted" stamp for a passed one —
  * see below).
  *
+ * HIDE SORTED (owner, Oct 16): the progress area carries the
+ * list view's Hide Sorted checkbox. OFF (default), navigation
+ * is exactly the plain browsing above. ON, navigation only
+ * ever lands on UNSORTED cards: forward swipes, the
+ * sorting advance, and jumps resolve to the nearest unsorted
+ * card in that direction (a jump to a fully sorted section
+ * does nothing), back swipes / the U key resolve to the
+ * nearest unsorted card behind, and toggling it ON while
+ * sitting on a sorted card hops ahead to the next unsorted
+ * one (or to the end card when none are ahead). Sorting and
+ * passing are unaffected — Hide Sorted is purely a lens on
+ * navigation. (resolveForwardTarget / resolveBackTarget are
+ * the single definition; the round's report lists every rule.)
+ *
  * SWIPE = PURE NAVIGATION (owner correction, Oct 16): a swipe NEVER
  * writes a rating. Sorting a song as Skip is a judgment; swiping
  * past a song is not sorting it at all — the same Tier 1 principle
@@ -88,8 +102,10 @@ import type { TriageSection } from './Step1Triage';
 // songs in about 5 minutes" — Step0Splash). There is no separate
 // code constant for it; the deck counts bucketed songs toward that
 // same 25, which is also the Sweater Thread's real unlock
-// condition — it gates the milestone card's "Peek at my Thread"
-// button and the end card's Thread button. Actual step gating is
+// condition — it gates the end card's "Start ranking" button.
+// (Milestone cards used to carry a finish button too; the owner
+// removed it — it led to the ranking step, not the Thread, so
+// offering it there was misleading.) Actual step gating is
 // unchanged and still runs through handleFinishTriage.
 const THREAD_SHORT_PATH_GOAL = 25;
 
@@ -114,7 +130,7 @@ interface DeckMilestone {
 const MILESTONES: DeckMilestone[] = [
   {
     threshold: 46,
-    headline: "That's every song a casual fan knows.",
+    headline: "You've made it through Blue, Pinkerton, and the singles.",
     body: "You've unlocked the Sweater Thread — your results: your Top 10, your fan tribe, your Era DNA.",
     compel: `The deep cuts are where it gets interesting — ${
       TOTAL_SONGS - 46
@@ -211,13 +227,19 @@ function DeckCardShell({
    * draggable (see the swipe block in Step1Deck). The backing
    * layers stay put — only the front card follows the pointer,
    * complete with its directional stamp (centered over the album
-   * art) and edge chevrons. Milestone/completion shells render
+   * art). (The old persistent edge chevrons are gone — owner:
+   * they looked tappable but did nothing. A one-time nudge
+   * animation on the session's first song card teaches the slide
+   * instead — see `nudgeX`/`nudging` and the NUDGE block in
+   * Step1Deck.) Milestone/completion shells render
    * without it, so they can never be dragged. `phase`/`exitX`
    * drive the exit and flip animations (see the ANIMATION block
    * in Step1Deck).
    */
   swipe?: {
     dragX: number;
+    nudgeX: number;
+    nudging: boolean;
     isDragging: boolean;
     cardRef: React.RefObject<HTMLDivElement>;
     onPointerDown: (e: React.PointerEvent<HTMLDivElement>) => void;
@@ -239,7 +261,9 @@ function DeckCardShell({
     swipe === undefined || swipe.phase === 'idle'
       ? swipe === undefined
         ? undefined
-        : `translateX(${swipe.dragX}px) rotate(${swipe.dragX * 0.03}deg)`
+        : `translateX(${swipe.dragX + swipe.nudgeX}px) rotate(${
+            (swipe.dragX + swipe.nudgeX) * 0.03
+          }deg)`
       : swipe.phase === 'exit'
       ? `translateX(${swipe.exitX}px) rotate(${swipe.dragX * 0.03}deg)`
       : swipe.phase === 'flip-out'
@@ -254,6 +278,8 @@ function DeckCardShell({
       ? `transform ${FLIP_OUT_MS}ms ease-in`
       : swipe.phase === 'flip-in'
       ? `transform ${FLIP_IN_MS}ms ease-out`
+      : swipe.nudging
+      ? 'transform 300ms ease-in-out'
       : 'transform 200ms ease';
   return (
     <div className="relative w-full h-[392px] [perspective:1200px]">
@@ -280,22 +306,6 @@ function DeckCardShell({
           }}
           className="relative h-full rounded-[28px] bg-[#d9eafa] border border-slate-200 shadow-xl select-none"
         >
-          {/* Persistent drag hint: chevrons at the card's side
-              edges, vertical center — sized up and set on white
-              discs so they read clearly against the tinted face
-              (owner polish: more pronounced). */}
-          <span
-            aria-hidden="true"
-            className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/80 shadow-sm text-3xl font-black leading-none text-slate-500"
-          >
-            ‹
-          </span>
-          <span
-            aria-hidden="true"
-            className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/80 shadow-sm text-3xl font-black leading-none text-slate-500"
-          >
-            ›
-          </span>
           {/* Directional stamps: all three are CENTERED OVER THE
               ALBUM ART (owner: the old corner stamps rotated
               off-screen first and were hard to see). top-[84px] is
@@ -344,6 +354,67 @@ function DeckCardShell({
   );
 }
 
+/**
+ * The milestone card's award seal — an inline-SVG prize rosette:
+ * a scalloped amber medallion ringed in brand blue, two ribbon
+ * tails below it, and the Flying W centered in the medallion.
+ * No external assets. The W's path data is copied from
+ * FlyingWIcon in SharedUI.tsx (viewBox 0 0 1000 550) and scaled
+ * into place — FlyingWIcon itself renders a standalone <svg>,
+ * which can't be embedded inside this one. The seal renders
+ * absolutely positioned so it straddles the card's top edge.
+ */
+function MilestoneRibbon() {
+  // Twelve scallop bumps around the medallion's rim.
+  const scallops = Array.from({ length: 12 }, (_, i) => {
+    const angle = (i * Math.PI) / 6;
+    return {
+      cx: 60 + 31 * Math.cos(angle),
+      cy: 46 + 31 * Math.sin(angle),
+    };
+  });
+  return (
+    <svg
+      viewBox="0 0 120 128"
+      className="h-[88px] w-[88px] drop-shadow-md"
+      aria-hidden="true"
+    >
+      {/* Ribbon tails — behind the medallion, notched ends. */}
+      <polygon points="42,66 60,74 52,122 43,110 34,120" fill="#0072CE" />
+      <polygon points="78,66 60,74 68,122 77,110 86,120" fill="#005fae" />
+      {/* Scalloped rim. */}
+      {scallops.map((s, i) => (
+        <circle key={i} cx={s.cx} cy={s.cy} r="8.5" fill="#f59e0b" />
+      ))}
+      {/* Medallion face with the brand-blue ring. */}
+      <circle cx="60" cy="46" r="32" fill="#fbbf24" />
+      <circle
+        cx="60"
+        cy="46"
+        r="32"
+        fill="none"
+        stroke="#0072CE"
+        strokeWidth="3.5"
+      />
+      <circle
+        cx="60"
+        cy="46"
+        r="25.5"
+        fill="none"
+        stroke="#ffffff"
+        strokeOpacity="0.65"
+        strokeWidth="1.5"
+      />
+      {/* Flying W (path data copied from FlyingWIcon, SharedUI). */}
+      <path
+        d="M 0,0 L 240,0 L 330,260 L 500,150 L 670,260 L 760,0 L 1000,0 L 1000,65 L 870,65 L 870,125 L 960,125 L 960,190 L 760,190 L 630,540 L 500,310 L 370,540 L 240,190 L 40,190 L 40,125 L 130,125 L 130,65 L 0,65 Z"
+        fill="#0072CE"
+        transform="translate(41 36.5) scale(0.038)"
+      />
+    </svg>
+  );
+}
+
 export default function Step1Deck({
   triageMap,
   orderedSongs,
@@ -378,6 +449,67 @@ export default function Step1Deck({
   const [milestonesFired, setMilestonesFired] = useState<
     ReadonlySet<number>
   >(() => new Set());
+  // HIDE SORTED — the list view's control, deck semantics
+  // (session state, default OFF). OFF: navigation is exactly the
+  // plain position±1 browsing above. ON: navigation only ever
+  // lands on UNSORTED cards (no triageMap entry — a bucket OR a
+  // Don't Know It mark both count as sorted). Every navigation
+  // path resolves its target through resolveForwardTarget /
+  // resolveBackTarget below; the full rule set is documented in
+  // the report for this round.
+  const [hideSorted, setHideSorted] = useState(false);
+
+  // NUDGE — the swipe teacher that replaced the edge chevrons.
+  // Once per session, shortly after the deck first shows a song
+  // card, the card slides a few px left, a touch right, and
+  // settles — a physical "this slides" hint with no added copy.
+  // Any earlier interaction cancels it for the session (the user
+  // has clearly found the controls), and it never runs during a
+  // drag, flip or exit.
+  const [nudgeX, setNudgeX] = useState(0);
+  const [nudging, setNudging] = useState(false);
+  const nudgeDoneRef = useRef(false);
+  const nudgeArmedRef = useRef(false);
+  const nudgeTimersRef = useRef<number[]>([]);
+  const userInteractedRef = useRef(false);
+  const phaseRef = useRef<CardAnimPhase>('idle');
+
+  const markNudgeDone = () => {
+    if (nudgeDoneRef.current) return;
+    nudgeDoneRef.current = true;
+    try {
+      window.sessionStorage.setItem('weezer-deck-nudged', '1');
+    } catch {
+      /* sessionStorage unavailable — the ref still covers this mount */
+    }
+  };
+  const cancelNudge = () => {
+    nudgeTimersRef.current.forEach((id) => window.clearTimeout(id));
+    nudgeTimersRef.current = [];
+    setNudging(false);
+    setNudgeX(0);
+  };
+  // Any deliberate interaction retires the nudge for the session:
+  // the user found the controls without the hint. Called at the
+  // top of the pointer, sort, jump and keyboard handlers; the
+  // arming effect (further down, where the song state is known)
+  // does the actual scheduling.
+  const noteUserInteraction = () => {
+    userInteractedRef.current = true;
+    if (nudging) cancelNudge();
+    markNudgeDone();
+  };
+
+  // The nudge fires at most once per session.
+  useEffect(() => {
+    try {
+      if (window.sessionStorage.getItem('weezer-deck-nudged')) {
+        nudgeDoneRef.current = true;
+      }
+    } catch {
+      /* sessionStorage unavailable — in-memory refs still apply */
+    }
+  }, []);
 
   // The fired set survives toggling to the list and back (which
   // remounts the deck), so it lives in sessionStorage.
@@ -409,13 +541,6 @@ export default function Step1Deck({
   const deckLength = orderedSongs.length;
   const progressPercent = Math.round((categorizedCount / total) * 100);
   const isComplete = categorizedCount === total;
-  // Progress-line suffix: distance to the next milestone, or to
-  // the finish once every milestone is behind the user. (No
-  // results-step nickname here — new users don't know it yet;
-  // the milestone cards introduce the Thread by name.)
-  const nextMilestone = MILESTONES.find(
-    (m) => m.threshold > categorizedCount
-  );
 
   const firstUncatIdx = orderedSongs.findIndex(
     (s) => triageMap[s.id] === undefined
@@ -435,11 +560,79 @@ export default function Step1Deck({
     0
   );
 
+  // NAVIGATION TARGETS — every movement resolves through these
+  // two, so Hide Sorted has exactly one definition of "forward"
+  // and "back":
+  //   forward from idx: OFF → idx+1. ON → the first unsorted card
+  //     after idx, or the end card (deckLength) when none remain
+  //     ahead. `map` lets act() resolve against the prospective
+  //     map (the song being sorted counts as sorted).
+  //   back from `from`: OFF → from−1 (from the end card, the last
+  //     song). ON → the nearest unsorted card before `from` (from
+  //     the end card, the last unsorted). −1 = nowhere to go
+  //     (snap back / no-op).
+  const resolveForwardTarget = (
+    idx: number,
+    map: Record<string, TriageValue> = triageMap
+  ): number => {
+    if (!hideSorted) return idx + 1;
+    for (let i = idx + 1; i < deckLength; i++) {
+      if (map[orderedSongs[i].id] === undefined) return i;
+    }
+    return deckLength;
+  };
+  const resolveBackTarget = (from: number): number => {
+    if (!hideSorted) return from > 0 ? from - 1 : -1;
+    for (let i = Math.min(from, deckLength) - 1; i >= 0; i--) {
+      if (triageMap[orderedSongs[i].id] === undefined) return i;
+    }
+    return -1;
+  };
+  const backTarget = resolveBackTarget(effectivePosition);
+  const hasBack = backTarget !== -1;
+
+  // Toggling Hide Sorted ON while the current card is sorted
+  // moves immediately to the next unsorted card ahead; if none
+  // are ahead, the end card takes over (it offers review of
+  // what's behind; if nothing is unsorted at all, the completion
+  // card renders regardless of position). Toggling ON at the end
+  // card stays there. Toggling OFF stays on the current card —
+  // except at the end card, which steps back to the last song.
+  const toggleHideSorted = (on: boolean) => {
+    setHideSorted(on);
+    if (on) {
+      if (atEnd) return;
+      const idx = effectivePosition;
+      if (idx < deckLength && triageMap[orderedSongs[idx].id] === undefined) {
+        return; // already on an unsorted card
+      }
+      // (resolveForwardTarget still sees the pre-toggle
+      // hideSorted value inside this handler, so scan directly.)
+      let next = deckLength;
+      for (let i = idx + 1; i < deckLength; i++) {
+        if (triageMap[orderedSongs[i].id] === undefined) {
+          next = i;
+          break;
+        }
+      }
+      setPosition(next);
+    } else if (atEnd && deckLength > 0) {
+      setPosition(deckLength - 1);
+    }
+  };
+
   const act = (value: TriageValue) => {
     if (!currentSong || milestonePending) return;
     const song = currentSong;
     const idx = effectivePosition;
     handleSetBucket(song.id, value);
+
+    // The prospective map — the context update hasn't rendered
+    // yet, but sorting/navigation math needs the post-sort world.
+    const prospective: Record<string, TriageValue> = {
+      ...triageMap,
+      [song.id]: value,
+    };
 
     // Sorting a passed song clears its passed mark — it has a
     // verdict now.
@@ -450,21 +643,19 @@ export default function Step1Deck({
       return next;
     });
 
-    // Advance to the NEXT card — plain position+1, sorted or not.
-    // (At the last card this lands on the end-of-deck card, or the
-    // completion card if that was the final unsorted song.)
-    setPosition(idx + 1);
+    // Advance: OFF, the plain next card (position+1, sorted or
+    // not); ON (Hide Sorted), the next UNSORTED card — resolving
+    // against the prospective map so the just-sorted song counts
+    // as sorted. Running off the end lands on the end-of-deck
+    // card (or the completion card, if that was the final
+    // unsorted song).
+    setPosition(resolveForwardTarget(idx, prospective));
 
-    // Milestone: this sort crosses a threshold. Computed against
-    // the prospective map — the context update hasn't rendered
-    // yet. A sort moves the count by at most one, so at most one
-    // threshold can cross; each fires at most once per session.
-    // (Landing on `total` shows the completion card instead —
-    // milestones never fire there.)
-    const prospective: Record<string, TriageValue> = {
-      ...triageMap,
-      [song.id]: value,
-    };
+    // Milestone: this sort crosses a threshold (against the same
+    // prospective map). A sort moves the count by at most one, so
+    // at most one threshold can cross; each fires at most once
+    // per session. (Landing on `total` shows the completion card
+    // instead — milestones never fire there.)
     const newCategorized = countCategorizedSongs(prospective);
     if (newCategorized < total) {
       const crossed = MILESTONES.find(
@@ -492,11 +683,12 @@ export default function Step1Deck({
     }
   };
 
-  // Step back one card. From the end card this returns to the last
-  // song; at position 0 it's a no-op.
+  // Step back one card. From the end card this returns to the
+  // last song (OFF) or the last unsorted card (Hide Sorted ON);
+  // with nowhere to go it's a no-op.
   const goBack = () => {
-    if (effectivePosition > 0) {
-      setPosition(effectivePosition - 1);
+    if (backTarget !== -1) {
+      setPosition(backTarget);
     }
   };
 
@@ -542,6 +734,9 @@ export default function Step1Deck({
   // the flip completes (cleared in the same timer that returns
   // the phase to 'idle').
   const [flipTarget, setFlipTarget] = useState<TriageValue | null>(null);
+  // Mirrored for the nudge's fire-time check (its timer closes
+  // over stale state otherwise).
+  phaseRef.current = phase;
   const timersRef = useRef<number[]>([]);
   const schedule = (fn: () => void, ms: number) => {
     const id = window.setTimeout(fn, ms);
@@ -577,6 +772,7 @@ export default function Step1Deck({
   // flip so it shows its committed state, then resets.
   const flipAct = (value: TriageValue) => {
     if (phase !== 'idle' || !currentSong || milestonePending) return;
+    noteUserInteraction();
     setFlipTarget(value);
     setPhase('flip-out');
     schedule(() => {
@@ -599,6 +795,7 @@ export default function Step1Deck({
   }, [effectivePosition, milestonePending, isComplete]);
 
   const handleCardPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    noteUserInteraction();
     if (phase !== 'idle') return;
     if (e.button !== 0 && e.pointerType === 'mouse') return;
     // Never steal a drag that starts on the preview button or any
@@ -660,10 +857,12 @@ export default function Step1Deck({
     const dx = dragX;
     if (atEnd) {
       // END CARD — it can't be swiped forward (there's nothing
-      // past it); a committed right swipe flies back to the last
-      // song. Anything else springs back.
-      if (dx >= threshold) {
-        exitTo(1, () => setPosition(deckLength - 1));
+      // past it); a committed right swipe flies back to the
+      // resolved back target (the last song, or under Hide
+      // Sorted the last unsorted card). Anything else springs
+      // back.
+      if (dx >= threshold && backTarget !== -1) {
+        exitTo(1, () => setPosition(backTarget));
       } else {
         setDragX(0);
       }
@@ -676,13 +875,16 @@ export default function Step1Deck({
     if (dx <= -threshold) {
       // Swipe left = next card — but NOT yet: the card first
       // flies off-screen (exitTo), and the position changes only
-      // as it lands. Pure navigation: no setter is called. If
+      // as it lands. Pure navigation: no setter is called. The
+      // target resolves through Hide Sorted (OFF: the plain next
+      // card; ON: the next unsorted card, or the end card). If
       // the song being left has no verdict, mark it passed (the
       // NOT SORTED stamp rode the card out) so it wears the stamp
       // on revisit and counts on the end card.
       const song = currentSong;
       const idx = effectivePosition;
       const wasUnsorted = triageMap[song.id] === undefined;
+      const target = resolveForwardTarget(idx);
       exitTo(-1, () => {
         if (wasUnsorted) {
           setPassedIds((prev) => {
@@ -692,13 +894,14 @@ export default function Step1Deck({
             return next;
           });
         }
-        setPosition(idx + 1);
+        setPosition(target);
       });
     } else if (dx >= threshold) {
-      // Swipe right = one card back, with the same fly-off. At
-      // position 0 there's nowhere to fly to: plain snap-back.
-      if (effectivePosition > 0) {
-        exitTo(1, () => setPosition(effectivePosition - 1));
+      // Swipe right = one card back, with the same fly-off. With
+      // nowhere to go (position 0, or under Hide Sorted no
+      // unsorted card behind): plain snap-back.
+      if (backTarget !== -1) {
+        exitTo(1, () => setPosition(backTarget));
       } else {
         setDragX(0);
       }
@@ -712,8 +915,8 @@ export default function Step1Deck({
   // Stamp state, derived from the live drag distance. Forward on
   // an unsorted song shows NOT SORTED (nothing is being recorded —
   // the song is only being passed); forward on a sorted song
-  // shows NEXT; back shows BACK whenever there's a card to go
-  // back to (from the end card, always).
+  // shows NEXT; back shows BACK whenever the resolved back
+  // target exists (see resolveBackTarget).
   const stampKind: 'notsorted' | 'next' | 'back' | null =
     dragX <= -STAMP_FADE_PX
       ? !atEnd && currentSong && triageMap[currentSong.id] === undefined
@@ -721,7 +924,7 @@ export default function Step1Deck({
         : !atEnd
         ? 'next'
         : null
-      : dragX >= STAMP_FADE_PX && effectivePosition > 0
+      : dragX >= STAMP_FADE_PX && hasBack
       ? 'back'
       : null;
   const stampOpacity = Math.min(
@@ -733,13 +936,34 @@ export default function Step1Deck({
     // A jump mid-animation would fight the pending navigation for
     // the position — the window is a few hundred ms; ignore it.
     if (phase !== 'idle') return;
+    noteUserInteraction();
     const section = sections.find((s) => s.key === sectionKey);
     if (!section || section.songs.length === 0) return;
-    // Plain first song of the section — the deck is a browser, so
-    // a jump lands on the section's start whether or not its
-    // songs are sorted yet.
-    const idx = orderedSongs.findIndex((s) => s.id === section.songs[0].id);
-    if (idx === -1) return;
+    const startIdx = orderedSongs.findIndex(
+      (s) => s.id === section.songs[0].id
+    );
+    if (startIdx === -1) return;
+    let idx = startIdx;
+    if (hideSorted) {
+      // Under Hide Sorted the jump lands on the section's first
+      // UNSORTED song; a fully sorted section is a no-op.
+      const sectionIds = new Set(section.songs.map((s) => s.id));
+      idx = -1;
+      for (
+        let i = startIdx;
+        i < deckLength && sectionIds.has(orderedSongs[i].id);
+        i++
+      ) {
+        if (triageMap[orderedSongs[i].id] === undefined) {
+          idx = i;
+          break;
+        }
+      }
+      if (idx === -1) return;
+    }
+    // Plain first song of the section otherwise — the deck is a
+    // browser, so a jump lands on the section's start whether or
+    // not its songs are sorted yet.
     setMilestonePending(null);
     setPosition(idx);
   };
@@ -771,6 +995,7 @@ export default function Step1Deck({
       }
       if (milestonePending || isComplete) return;
       if (phase !== 'idle') return;
+      noteUserInteraction();
       if (e.key >= '1' && e.key <= '5') {
         flipAct(BUCKET_ORDER[Number(e.key) - 1]);
       } else if (e.key === 'u' || e.key === 'U') {
@@ -828,6 +1053,53 @@ export default function Step1Deck({
 
   const inSongState = !milestonePending && !isComplete && !!currentSong;
 
+  // NUDGE — arm once, the first time a song card is on screen
+  // (if the session opens on a milestone/end/completion card,
+  // this waits for the first actual song card). ~600ms later the
+  // card eases −18px, +8px, then settles to 0 over ~900ms total,
+  // driven through the shell's transform (nudgeX) with its
+  // ease-in-out transition. Fire-time guards: any earlier user
+  // interaction retires it (noteUserInteraction), and it never
+  // runs mid-drag or mid-animation.
+  useEffect(() => {
+    if (!inSongState || nudgeDoneRef.current || nudgeArmedRef.current) {
+      return;
+    }
+    nudgeArmedRef.current = true;
+    const startId = window.setTimeout(() => {
+      if (
+        userInteractedRef.current ||
+        phaseRef.current !== 'idle' ||
+        dragRef.current !== null
+      ) {
+        markNudgeDone();
+        return;
+      }
+      setNudging(true);
+      setNudgeX(-18);
+      nudgeTimersRef.current.push(
+        window.setTimeout(() => setNudgeX(8), 320)
+      );
+      nudgeTimersRef.current.push(
+        window.setTimeout(() => setNudgeX(0), 620)
+      );
+      nudgeTimersRef.current.push(
+        window.setTimeout(() => {
+          setNudging(false);
+          markNudgeDone();
+        }, 940)
+      );
+    }, 600);
+    nudgeTimersRef.current.push(startId);
+  }, [inSongState]);
+
+  useEffect(() => {
+    const timers = nudgeTimersRef.current;
+    return () => {
+      timers.forEach((id) => window.clearTimeout(id));
+    };
+  }, []);
+
   // Title size steps down as titles get longer, so a long title wraps
   // to two lines at a readable size instead of eating the card.
   const titleLength = currentSong?.title.length ?? 0;
@@ -881,6 +1153,8 @@ export default function Step1Deck({
   // and end card).
   const swipeProps = {
     dragX,
+    nudgeX,
+    nudging,
     isDragging,
     cardRef,
     onPointerDown: handleCardPointerDown,
@@ -896,37 +1170,53 @@ export default function Step1Deck({
     <div className="flex-1 min-h-0 flex flex-col w-full max-w-[560px] mx-auto px-4">
       {/* COMPACT PROGRESS — one line + a slim bar. Same counts as the
           list header (categorizedCount / bucketedCount), so the two
-          views always agree; the deck's old full counters block and
-          Flying-W bar are replaced by this. */}
+          views always agree. Right of the count sits the list
+          view's Hide Sorted checkbox (owner: it replaces the old
+          milestone-distance suffix — the milestone cards pace the
+          deck now, the line just reports progress). */}
       <div className="shrink-0 pt-2 space-y-1.5">
-        <div className="flex items-baseline justify-between gap-2 text-[11px] font-black text-slate-700">
+        <div className="flex items-center justify-between gap-2 text-[11px] font-black text-slate-700">
           <span className="uppercase tracking-wider">
             <strong className="text-[#0072CE] text-xs">
               {categorizedCount}
             </strong>{' '}
             of {total} sorted
-            {nextMilestone ? (
-              <span className="normal-case tracking-normal font-bold text-slate-500">
-                {' '}
-                · {nextMilestone.threshold - categorizedCount} to the
-                next milestone
-              </span>
-            ) : categorizedCount < total ? (
-              <span className="normal-case tracking-normal font-bold text-slate-500">
-                {' '}
-                · {total - categorizedCount} to the finish
-              </span>
-            ) : null}
           </span>
-          <span className="text-[#0072CE] text-xs shrink-0">
-            {progressPercent}%
-          </span>
+          <div className="flex items-center gap-3 shrink-0">
+            <label className="flex items-center gap-1.5 cursor-pointer text-[11px] font-extrabold text-slate-600 select-none normal-case tracking-normal">
+              <input
+                type="checkbox"
+                checked={hideSorted}
+                onChange={(e) => toggleHideSorted(e.target.checked)}
+                className="rounded border-slate-300 text-[#0072CE] focus:ring-[#0072CE] w-3.5 h-3.5 cursor-pointer"
+              />
+              <span>Hide sorted</span>
+            </label>
+            <span className="text-[#0072CE] text-xs">
+              {progressPercent}%
+            </span>
+          </div>
         </div>
-        <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
+        {/* The Flying W rides the fill's edge — the same treatment
+            as the list view's bar (Step1Triage): a w-8 h-5 marker
+            centered on the fill edge, its left % clamped to 2–98
+            so it never hangs off either end. The vertical margin
+            gives the mark room over the slim bar. */}
+        <div className="relative w-full h-1.5 my-2.5">
+          <div className="absolute inset-0 bg-slate-200 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-[#0072CE] rounded-full transition-all duration-300"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
           <div
-            className="h-full bg-[#0072CE] rounded-full transition-all duration-300"
-            style={{ width: `${progressPercent}%` }}
-          />
+            className="absolute top-1/2 -translate-y-1/2 transition-all duration-300 z-10 text-[#0072CE] w-8 h-5 ml-[-16px] pointer-events-none"
+            style={{
+              left: `${Math.min(98, Math.max(2, progressPercent))}%`,
+            }}
+          >
+            <FlyingWIcon className="w-full h-full drop-shadow-sm" />
+          </div>
         </div>
       </div>
 
@@ -942,39 +1232,35 @@ export default function Step1Deck({
              swipeable (no swipe prop, like the completion card);
              the tray hides while it shows (inSongState is false)
              and the footer toggle pill below keeps Deck/List
-             reachable. "Peek at my Thread" is the same
-             handleFinishTriage the old checkpoint offered, gated
-             on the Thread's real unlock (25 bucketed songs). */
+             reachable. ONE action only (owner): an earlier build
+             also offered a finish button, but its handler goes to
+             the ranking step, not the Thread — offering it here
+             was misleading, so it's gone. The award seal
+             (MilestoneRibbon) straddles the card's top edge in
+             place of the old "Milestone" eyebrow text. */
           <DeckCardShell>
-            <div className="h-full flex flex-col items-center justify-center text-center p-6 sm:p-8 space-y-4">
-              <div className="text-[11px] font-black uppercase tracking-[0.25em] text-[#0072CE]">
-                Milestone
+            <div className="relative h-full">
+              <div className="absolute left-1/2 -translate-x-1/2 -top-8 z-10 pointer-events-none">
+                <MilestoneRibbon />
               </div>
-              <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-950">
-                {milestonePending.headline}
-              </h2>
-              <p className="text-sm font-bold text-slate-500 leading-snug max-w-sm mx-auto">
-                {milestonePending.body}
-              </p>
-              <p className="text-sm font-bold text-slate-400 leading-snug max-w-sm mx-auto">
-                {milestonePending.compel}
-              </p>
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-1">
-                <button
-                  onClick={dismissMilestone}
-                  className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm px-6 py-3.5 rounded-full shadow-md transition transform hover:scale-105 cursor-pointer border-2 border-amber-200 whitespace-nowrap"
-                >
-                  Keep sorting
-                </button>
-                {bucketedCount >= THREAD_SHORT_PATH_GOAL && (
+              <div className="h-full flex flex-col items-center justify-center text-center p-6 sm:p-8 space-y-3">
+                <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-950">
+                  {milestonePending.headline}
+                </h2>
+                <p className="text-sm font-bold text-slate-500 leading-snug max-w-sm mx-auto">
+                  {milestonePending.body}
+                </p>
+                <p className="text-sm font-bold text-slate-400 leading-snug max-w-sm mx-auto">
+                  {milestonePending.compel}
+                </p>
+                <div className="pt-1">
                   <button
-                    onClick={handleFinishTriage}
-                    className="text-sm font-extrabold text-slate-600 bg-white border border-slate-300 rounded-full px-6 py-3.5 hover:bg-slate-100 transition-all cursor-pointer flex items-center gap-2.5 whitespace-nowrap"
+                    onClick={dismissMilestone}
+                    className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm px-6 py-3.5 rounded-full shadow-md transition transform hover:scale-105 cursor-pointer border-2 border-amber-200 whitespace-nowrap"
                   >
-                    <FlyingWIcon className="w-6 h-4 text-slate-950" />
-                    <span>Peek at my Thread</span>
+                    Keep sorting
                   </button>
-                )}
+                </div>
               </div>
             </div>
           </DeckCardShell>
@@ -1053,7 +1339,7 @@ export default function Step1Deck({
                     className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm px-6 py-3.5 rounded-full shadow-md transition transform hover:scale-105 cursor-pointer border-2 border-amber-200 flex items-center gap-2.5 whitespace-nowrap"
                   >
                     <FlyingWIcon className="w-6 h-4 text-slate-950" />
-                    <span>Peek at my Thread</span>
+                    <span>Start ranking</span>
                   </button>
                 )}
               </div>

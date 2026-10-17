@@ -373,17 +373,23 @@ function buildSectionMilestone(
   };
 }
 
-// TUTORIAL — the five coach-mark steps (owner's beats and
-// order): the deck, the preview, the sort buttons, swiping,
-// Don't Know It. Copy is the owner's voice — short, plain,
-// no cheese, and the Thread is only ever called the Sweater
-// Thread. Each step names its highlight target by the
-// data-tutorial attribute the render puts on that element
-// (the card shell, the preview button's wrapper in the card,
-// the tray container, the Don't Know It button) and the
-// corner radius its ring wears. The seen flag is localStorage
-// — NOT sessionStorage — because once means once, across
-// sessions.
+// TUTORIAL — the eight coach-mark steps (owner's beats and
+// order, revised Oct 17): the deck, the preview, one step per
+// bucket tile (each with the bucket's purpose — the buckets
+// are taught here now, not on the orientation page), and
+// swiping. Don't Know It is NOT taught: if you don't know a
+// song, the tour's answer is the swipe. Copy is the owner's
+// voice — short, plain, no cheese, and the Thread is only
+// ever called the Sweater Thread. Each step names its
+// highlight target by the data-tutorial attribute the render
+// puts on that element (the card shell, the preview button's
+// wrapper in the card, the five bucket tiles in the tray),
+// the corner radius its ring wears, and whether its callout
+// sheet anchors to the top or bottom of the viewport — so
+// the sheet never covers the element it is explaining (the
+// preview button and the tiles sit low, so their sheets
+// ride on top). The seen flag is localStorage — NOT
+// sessionStorage — because once means once, across sessions.
 const TUTORIAL_SEEN_KEY = 'weezer-deck-tutorial-seen-v1';
 
 // TUTORIAL REPLAY — the header "?" button (AppShell) can ask
@@ -395,11 +401,19 @@ const TUTORIAL_SEEN_KEY = 'weezer-deck-tutorial-seen-v1';
 const TUTORIAL_FORCE_KEY = 'weezer-deck-tutorial-force';
 const TUTORIAL_REPLAY_EVENT = 'weezer:replay-tutorial';
 
-type TutorialTargetKey = 'card' | 'preview' | 'tray' | 'unknown';
+type TutorialTargetKey =
+  | 'card'
+  | 'preview'
+  | 'bucket-banger'
+  | 'bucket-slaps'
+  | 'bucket-mid'
+  | 'bucket-skip'
+  | 'bucket-trash';
 
 interface TutorialStepDef {
   target: TutorialTargetKey;
   radius: number;
+  placement: 'top' | 'bottom';
   headline: string;
   line: string;
 }
@@ -408,40 +422,67 @@ const TUTORIAL_STEPS: TutorialStepDef[] = [
   {
     target: 'card',
     radius: 30,
+    placement: 'bottom',
     headline: 'One song at a time.',
     line: "This is the deck. You'll work through the whole Weezer catalog right here.",
   },
   {
     target: 'preview',
     radius: 36,
+    placement: 'top',
     headline: 'Hear it first.',
     line: 'Tap the play button to preview the song.',
   },
   {
-    target: 'tray',
-    radius: 26,
+    target: 'bucket-banger',
+    radius: 20,
+    placement: 'top',
     headline: 'Sort it.',
-    line: 'Tap a bucket to call it — Banger, Slaps, Mid, Skip, or Trash.',
+    line: 'Tap a bucket to call the song. Banger — an all-timer, the best of the best.',
+  },
+  {
+    target: 'bucket-slaps',
+    radius: 20,
+    placement: 'top',
+    headline: 'Slaps',
+    line: 'Great song — just not elite.',
+  },
+  {
+    target: 'bucket-mid',
+    radius: 20,
+    placement: 'top',
+    headline: 'Mid',
+    line: 'Fine. Forgettable.',
+  },
+  {
+    target: 'bucket-skip',
+    radius: 20,
+    placement: 'top',
+    headline: 'Skip',
+    line: 'You rarely reach for it.',
+  },
+  {
+    target: 'bucket-trash',
+    radius: 20,
+    placement: 'top',
+    headline: 'Trash',
+    line: 'Never again. Keep it away.',
   },
   {
     target: 'card',
     radius: 30,
+    placement: 'bottom',
     headline: "Don't know it? Swipe.",
     line: "Swipe left to move on — the song stays unsorted, it doesn't count as a Skip. Swipe right anytime to go back, review, or change a sort.",
-  },
-  {
-    target: 'unknown',
-    radius: 14,
-    headline: 'Never heard it at all?',
-    line: "Tap Don't Know It. It marks the song as unknown — it never counts as a rating.",
   },
 ];
 
 // The measured highlight box (target rect relative to the
 // deck root, padded 4px a side — see measureTutorial). The
-// callout needs no measured placement: it is a bottom sheet
-// fixed to the viewport (see the render), so it is reachable
-// no matter how tall the deck root grows past the fold.
+// callout needs no measured placement: it is a sheet fixed
+// to the viewport, anchored to the top or bottom per step
+// (see the render), so it is reachable no matter how tall
+// the deck root grows past the fold.
 interface TutorialRect {
   top: number;
   left: number;
@@ -1540,6 +1581,7 @@ export default function Step1Deck({
     return (
       <button
         key={bucket}
+        data-tutorial={`bucket-${bucket}`}
         onClick={() => flipAct(bucket)}
         className={`flex-1 flex flex-col items-center justify-center gap-0.5 rounded-2xl border py-3 [@media(max-height:740px)]:py-2 shadow-sm transition-all cursor-pointer ${
           isCommitted
@@ -2219,7 +2261,6 @@ export default function Step1Deck({
               disposition, not a pass. */}
           <div className="text-center pt-1.5">
             <button
-              data-tutorial="unknown"
               onClick={() => flipAct('unknown')}
               className={`text-sm px-4 py-1 rounded-full transition-all cursor-pointer ${
                 flipTarget === 'unknown'
@@ -2327,8 +2368,8 @@ export default function Step1Deck({
           giant box-shadow and is pointer-events-none itself;
           before the first measure lands, a flat dim covers the
           root instead. The callout is the exception to the
-          root-relative layout: it is a bottom sheet FIXED to
-          the viewport (no ancestor of it creates a containing
+          root-relative layout: it is a sheet FIXED to the
+          viewport (no ancestor of it creates a containing
           block — verified: deck root, Step1Triage root, main
           and AppShell root carry no transform / filter /
           backdrop-filter / will-change / perspective, and the
@@ -2336,9 +2377,14 @@ export default function Step1Deck({
           its buttons are always inside the visible area, above
           Safari's toolbar — the old root-measured placement
           could park it below the fold on phones, visible but
-          unreachable. It uses the deck's vocabulary: white
-          card, brand-blue step eyebrow, amber primary. Neither
-          element shifts the deck's layout. */}
+          unreachable. Each step anchors the sheet to the top
+          or the bottom of the viewport (TUTORIAL_STEPS'
+          placement), away from the element it explains — a
+          bottom-only sheet covered the low-sitting preview
+          button and tray tiles (owner report, Oct 17). It
+          uses the deck's vocabulary: white card, brand-blue
+          step eyebrow, amber primary. Neither element shifts
+          the deck's layout. */}
       {tutorialStep !== null && (
         <div
           className="absolute inset-0 z-50 [touch-action:none]"
@@ -2367,9 +2413,11 @@ export default function Step1Deck({
           )}
           <div
             className="fixed left-3 right-3 mx-auto w-auto max-w-[400px] bg-white rounded-3xl border border-slate-200 shadow-2xl p-5"
-            style={{
-              bottom: 'calc(12px + env(safe-area-inset-bottom, 0px))',
-            }}
+            style={
+              TUTORIAL_STEPS[tutorialStep].placement === 'top'
+                ? { top: 'calc(12px + env(safe-area-inset-top, 0px))' }
+                : { bottom: 'calc(12px + env(safe-area-inset-bottom, 0px))' }
+            }
           >
             <p className="text-[11px] font-black uppercase tracking-wider text-[#0072CE]">
               Step {tutorialStep + 1} of {TUTORIAL_STEPS.length}

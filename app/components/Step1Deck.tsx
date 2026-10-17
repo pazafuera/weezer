@@ -424,6 +424,9 @@ export default function Step1Deck({
   handleSetBucket,
   handleFinishTriage,
   onSwitchToList,
+  isGuest,
+  onCreateAccount,
+  onOpenGarage,
 }: {
   triageMap: Record<string, TriageValue>;
   orderedSongs: Song[];
@@ -431,6 +434,17 @@ export default function Step1Deck({
   handleSetBucket: (id: string, bucket: TriageValue) => void;
   handleFinishTriage: () => void;
   onSwitchToList: () => void;
+  /** Auth/navigation plumbing (page.tsx → Step1Triage → here).
+   *  PLUMBING ONLY for now: these are consumed by the milestone
+   *  action stack in the next build (guest Save prompt, Garage
+   *  off-ramp on milestone / end / completion cards — milestone-
+   *  flows design memo, §4 Commit 2–3). Nothing renders from them
+   *  yet, so this component's output is unchanged. Required (not
+   *  optional) because the single render path above always
+   *  supplies them. */
+  isGuest: boolean;
+  onCreateAccount: () => void;
+  onOpenGarage: () => void;
 }) {
   // NAVIGATION — a plain position index into orderedSongs, not a
   // funnel. Null = "not yet navigated": the deck then shows the

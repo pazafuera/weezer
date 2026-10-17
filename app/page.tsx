@@ -35,6 +35,7 @@ export default function WeezerRankerPage() {
     setAutoStartMatchups,
     navigateTo,
     setSongBucket,
+    userId,
   } = useWeezer();
 
   if (loadingUser) {
@@ -53,6 +54,12 @@ export default function WeezerRankerPage() {
     navigateTo('rank_buckets');
   };
 
+  // Guest = no signed-in session (the one auth signal every component
+  // branches on). Computed here and drilled into the deck so its
+  // milestone / end / completion cards can offer account creation and
+  // the Garage off-ramp (milestone-flows design memo, §1.3).
+  const isGuest = userId === null;
+
   return (
     <AppShell fullWidth={step === 'wrapped'}>
       {step === 'splash' && <Step0Splash />}
@@ -70,6 +77,9 @@ export default function WeezerRankerPage() {
           triageMap={triageMap}
           handleSetBucket={(id, b) => setSongBucket(id, b)}
           handleFinishTriage={handleFinishTriage}
+          isGuest={isGuest}
+          onCreateAccount={() => navigateTo('login', 'signup')}
+          onOpenGarage={() => navigateTo('dashboard')}
         />
       )}
 

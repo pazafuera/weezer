@@ -28,10 +28,18 @@ export default function Step1Triage({
   triageMap,
   handleSetBucket,
   handleFinishTriage,
+  isGuest,
+  onCreateAccount,
+  onOpenGarage,
 }: {
   triageMap: Record<string, TriageValue>;
   handleSetBucket: (id: string, bucket: TriageValue) => void;
   handleFinishTriage: () => void;
+  /** Auth/navigation plumbing for the deck's milestone cards
+   *  (computed in page.tsx; forwarded untouched to Step1Deck). */
+  isGuest: boolean;
+  onCreateAccount: () => void;
+  onOpenGarage: () => void;
 }) {
   const [hideSorted, setHideSorted] = useState(false);
 
@@ -321,6 +329,9 @@ export default function Step1Triage({
           handleSetBucket={handleSetBucket}
           handleFinishTriage={handleFinishTriage}
           onSwitchToList={() => changeViewMode('list')}
+          isGuest={isGuest}
+          onCreateAccount={onCreateAccount}
+          onOpenGarage={onOpenGarage}
         />
       ) : (
       <>

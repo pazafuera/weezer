@@ -114,6 +114,21 @@ import type { TriageSection } from './Step1Triage';
  * quiet guest line above its button row, its "create a free
  * account" a text-weight link inside the sentence — Review
  * the unsorted and Start ranking keep the visual lead there.
+ *
+ * TUTORIAL (owner direction, Oct 17): a first-run coach-mark
+ * tour over the REAL deck — no separate page, no practice
+ * cards. Five steps in the owner's order: the deck itself,
+ * the song preview, the sort buttons, swiping (passing a
+ * song is NOT a Skip, and swiping back reviews or changes a
+ * sort), and Don't Know It. It shows at most once, ever, for
+ * a FRESH sorter (nothing categorized yet), over a normal
+ * song card only — the seen flag is localStorage, so it
+ * survives sessions; finishing OR skipping sets it. While it
+ * is open it owns the deck root (an overlay intercepts every
+ * pointer event; Esc counts as a skip), and it retires the
+ * swipe nudge for the session — the tour teaches swiping
+ * itself. See the TUTORIAL block below for steps and copy,
+ * and the decision effect for the show rules.
  */
 
 // The short-path promise the site's own splash copy makes ("25
@@ -358,6 +373,77 @@ function buildSectionMilestone(
   };
 }
 
+// TUTORIAL — the five coach-mark steps (owner's beats and
+// order): the deck, the preview, the sort buttons, swiping,
+// Don't Know It. Copy is the owner's voice — short, plain,
+// no cheese, and the Thread is only ever called the Sweater
+// Thread. Each step names its highlight target by the
+// data-tutorial attribute the render puts on that element
+// (the card shell, the preview button's wrapper in the card,
+// the tray container, the Don't Know It button) and the
+// corner radius its ring wears. The seen flag is localStorage
+// — NOT sessionStorage — because once means once, across
+// sessions.
+const TUTORIAL_SEEN_KEY = 'weezer-deck-tutorial-seen-v1';
+
+type TutorialTargetKey = 'card' | 'preview' | 'tray' | 'unknown';
+
+interface TutorialStepDef {
+  target: TutorialTargetKey;
+  radius: number;
+  headline: string;
+  line: string;
+}
+
+const TUTORIAL_STEPS: TutorialStepDef[] = [
+  {
+    target: 'card',
+    radius: 30,
+    headline: 'One song at a time.',
+    line: "This is the deck. You'll work through the whole Weezer catalog right here.",
+  },
+  {
+    target: 'preview',
+    radius: 36,
+    headline: 'Hear it first.',
+    line: 'Tap the play button to preview the song.',
+  },
+  {
+    target: 'tray',
+    radius: 26,
+    headline: 'Sort it.',
+    line: 'Tap a bucket to call it — Banger, Slaps, Mid, Skip, or Trash.',
+  },
+  {
+    target: 'card',
+    radius: 30,
+    headline: "Don't know it? Swipe.",
+    line: "Swipe left to move on — the song stays unsorted, it doesn't count as a Skip. Swipe right anytime to go back, review, or change a sort.",
+  },
+  {
+    target: 'unknown',
+    radius: 14,
+    headline: 'Never heard it at all?',
+    line: "Tap Don't Know It. It marks the song as unknown — it never counts as a rating.",
+  },
+];
+
+// The measured highlight box (target rect relative to the
+// deck root, padded 4px a side — see measureTutorial) and the
+// measured callout placement.
+interface TutorialRect {
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+}
+
+interface TutorialCalloutPos {
+  top: number;
+  left: number;
+  width: number;
+}
+
 const BUCKET_ORDER: BucketType[] = ['banger', 'slaps', 'mid', 'skip', 'trash'];
 
 // Swipe: dragging the card horizontally browses the deck — left
@@ -491,6 +577,7 @@ function DeckCardShell({
       : 'transform 200ms ease';
   return (
     <div
+      data-tutorial="card"
       className={`relative w-full ${
         adaptive ? 'min-h-[392px]' : 'h-[392px]'
       } [perspective:1200px]`}
@@ -768,6 +855,44 @@ export default function Step1Deck({
   const nudgeTimersRef = useRef<number[]>([]);
   const userInteractedRef = useRef(false);
   const phaseRef = useRef<CardAnimPhase>('idle');
+
+  // TUTORIAL — the open step's index, or null when the tour
+  // isn't showing; the measured highlight/callout geometry
+  // (refs mirror the state so the measure pass can skip no-op
+  // updates); and the root/callout refs the geometry reads.
+  // The show decision itself lives further down, next to the
+  // nudge it has to retire (see the TUTORIAL decision effect).
+  const [tutorialStep, setTutorialStep] = useState<number | null>(null);
+  const [tutorialRect, setTutorialRect] = useState<TutorialRect | null>(
+    null
+  );
+  const [tutorialCallout, setTutorialCallout] =
+    useState<TutorialCalloutPos | null>(null);
+  const deckRootRef = useRef<HTMLDivElement>(null);
+  const calloutRef = useRef<HTMLDivElement>(null);
+  const tutorialRectRef = useRef<TutorialRect | null>(null);
+  const tutorialCalloutRef = useRef<TutorialCalloutPos | null>(null);
+  const tutorialDecidedRef = useRef(false);
+  const tutorialArmedRef = useRef(false);
+
+  const markTutorialSeen = () => {
+    try {
+      window.localStorage.setItem(TUTORIAL_SEEN_KEY, '1');
+    } catch {
+      /* localStorage unavailable — the tour may re-offer next visit */
+    }
+  };
+  // Finishing and skipping are the same exit: the flag is set
+  // either way (once means once) and the geometry resets so a
+  // (never expected) reopen measures fresh.
+  const closeTutorial = () => {
+    markTutorialSeen();
+    setTutorialStep(null);
+    setTutorialRect(null);
+    setTutorialCallout(null);
+    tutorialRectRef.current = null;
+    tutorialCalloutRef.current = null;
+  };
 
   const markNudgeDone = () => {
     if (nudgeDoneRef.current) return;
@@ -1356,7 +1481,7 @@ export default function Step1Deck({
   // Keyboard: 1–5 pick the buckets in displayed order (sort the
   // current card, with the flip), U steps back one card. Ignored
   // while typing in a form field or when a modal state
-  // (milestone / completion) owns the screen.
+  // (milestone / completion / the tutorial) owns the screen.
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey || e.altKey) return;
@@ -1370,7 +1495,7 @@ export default function Step1Deck({
       ) {
         return;
       }
-      if (milestonePending || isComplete) return;
+      if (milestonePending || isComplete || tutorialStep !== null) return;
       if (phase !== 'idle') return;
       noteUserInteraction();
       if (e.key >= '1' && e.key <= '5') {
@@ -1430,6 +1555,182 @@ export default function Step1Deck({
 
   const inSongState = !milestonePending && !isComplete && !!currentSong;
 
+  // TUTORIAL — the show decision. Like the nudge below, it
+  // settles on a short timer and judges the world at FIRE
+  // time (read through a ref mirror): the triage map can
+  // hydrate a beat after mount, and the fresh-sorter check
+  // must see the loaded map, not the empty first render.
+  // Rules, in order:
+  //   seen flag already set → never show.
+  //   categorizedCount > 0  → not a fresh sorter: set the seen
+  //     flag (a permanent skip, so this check stays cheap
+  //     forever) and never show.
+  //   a non-song card is up (milestone / end / completion) →
+  //     never this session; the flag is left alone.
+  //   the user already interacted → they beat the tour to it:
+  //     never this session, flag left alone (swipes alone
+  //     don't categorize anything — they may still be fresh
+  //     on a later visit).
+  //   otherwise → open at step 1, and retire the nudge for the
+  //     session (the tour teaches swiping itself): cancel any
+  //     armed nudge timers and mark it done.
+  const tutorialStateRef = useRef({ inSong: false, categorized: 0 });
+  tutorialStateRef.current = {
+    inSong: inSongState,
+    categorized: categorizedCount,
+  };
+  useEffect(() => {
+    if (tutorialDecidedRef.current || tutorialArmedRef.current) {
+      return;
+    }
+    tutorialArmedRef.current = true;
+    const id = window.setTimeout(() => {
+      tutorialDecidedRef.current = true;
+      let seen = false;
+      try {
+        seen = window.localStorage.getItem(TUTORIAL_SEEN_KEY) === '1';
+      } catch {
+        /* localStorage unavailable — treat as unseen */
+      }
+      if (seen) return;
+      const s = tutorialStateRef.current;
+      if (s.categorized > 0) {
+        markTutorialSeen();
+        return;
+      }
+      if (!s.inSong) return;
+      if (userInteractedRef.current) return;
+      markNudgeDone();
+      cancelNudge();
+      setTutorialStep(0);
+    }, 350);
+    return () => window.clearTimeout(id);
+    // Mount-only arming: the fire-time checks read refs, so the
+    // closure never goes stale.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // TUTORIAL — geometry. Measure the step's target (found by
+  // its data-tutorial attribute) against the deck root, pad
+  // the box 4px a side for the ring, and place the callout:
+  // below the target when it fits inside the root, above when
+  // it fits there, otherwise on the roomier side clamped
+  // inside the root; horizontally centered on the target and
+  // clamped to the root's margins. The callout's height is its
+  // own measured offsetHeight (190 until it has rendered), so
+  // a step change re-places with the previous step's height
+  // and then corrects itself on the follow-up passes below.
+  // State updates are skipped when nothing moved, so the
+  // scroll/resize listeners can't loop.
+  const measureTutorial = () => {
+    if (tutorialStep === null) return;
+    const root = deckRootRef.current;
+    if (!root) return;
+    const step = TUTORIAL_STEPS[tutorialStep];
+    const el = root.querySelector<HTMLElement>(
+      `[data-tutorial="${step.target}"]`
+    );
+    if (!el) return;
+    const rootRect = root.getBoundingClientRect();
+    const t = el.getBoundingClientRect();
+    const rect: TutorialRect = {
+      top: t.top - rootRect.top - 4,
+      left: t.left - rootRect.left - 4,
+      width: t.width + 8,
+      height: t.height + 8,
+    };
+    const prevRect = tutorialRectRef.current;
+    if (
+      !prevRect ||
+      Math.abs(prevRect.top - rect.top) > 0.5 ||
+      Math.abs(prevRect.left - rect.left) > 0.5 ||
+      Math.abs(prevRect.width - rect.width) > 0.5 ||
+      Math.abs(prevRect.height - rect.height) > 0.5
+    ) {
+      tutorialRectRef.current = rect;
+      setTutorialRect(rect);
+    }
+    const margin = 12;
+    const gap = 12;
+    const calloutW = Math.min(rootRect.width - margin * 2, 352);
+    const calloutH = calloutRef.current?.offsetHeight ?? 190;
+    let top: number;
+    const belowTop = rect.top + rect.height + gap;
+    if (belowTop + calloutH <= rootRect.height - 8) {
+      top = belowTop;
+    } else if (rect.top - gap - calloutH >= 8) {
+      top = rect.top - gap - calloutH;
+    } else {
+      const roomBelow = rootRect.height - (rect.top + rect.height);
+      const roomAbove = rect.top;
+      top =
+        roomBelow >= roomAbove ? belowTop : rect.top - gap - calloutH;
+      top = Math.max(8, Math.min(top, rootRect.height - calloutH - 8));
+    }
+    const center = rect.left + rect.width / 2;
+    const left = Math.max(
+      margin,
+      Math.min(center - calloutW / 2, rootRect.width - calloutW - margin)
+    );
+    const callout: TutorialCalloutPos = { top, left, width: calloutW };
+    const prevCallout = tutorialCalloutRef.current;
+    if (
+      !prevCallout ||
+      Math.abs(prevCallout.top - callout.top) > 0.5 ||
+      Math.abs(prevCallout.left - callout.left) > 0.5 ||
+      Math.abs(prevCallout.width - callout.width) > 0.5
+    ) {
+      tutorialCalloutRef.current = callout;
+      setTutorialCallout(callout);
+    }
+  };
+
+  // While the tour is open: measure on open and on every step
+  // change, follow resize/scroll, and take two settling passes
+  // (the callout's real height lands after its first paint,
+  // and its move transition ends ~300ms in).
+  useEffect(() => {
+    if (tutorialStep === null) return;
+    measureTutorial();
+    const onChange = () => measureTutorial();
+    window.addEventListener('resize', onChange);
+    window.addEventListener('scroll', onChange, true);
+    const t1 = window.setTimeout(measureTutorial, 60);
+    const t2 = window.setTimeout(measureTutorial, 340);
+    return () => {
+      window.removeEventListener('resize', onChange);
+      window.removeEventListener('scroll', onChange, true);
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
+    // measureTutorial closes over the step that just changed;
+    // re-binding per step is the point.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tutorialStep]);
+
+  // Esc closes the tour — a skip, so closeTutorial sets the
+  // seen flag exactly as the Skip link and the final button do.
+  useEffect(() => {
+    if (tutorialStep === null) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeTutorial();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+    // closeTutorial only touches setters and localStorage;
+    // re-binding on step change is enough.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tutorialStep]);
+
+  const advanceTutorial = () => {
+    if (tutorialStep === null) return;
+    if (tutorialStep >= TUTORIAL_STEPS.length - 1) {
+      closeTutorial();
+    } else {
+      setTutorialStep(tutorialStep + 1);
+    }
+  };
+
   // NUDGE — arm once, the first time a song card is on screen
   // (if the session opens on a milestone/end/completion card,
   // this waits for the first actual song card). ~600ms later the
@@ -1439,7 +1740,12 @@ export default function Step1Deck({
   // interaction retires it (noteUserInteraction), and it never
   // runs mid-drag or mid-animation.
   useEffect(() => {
-    if (!inSongState || nudgeDoneRef.current || nudgeArmedRef.current) {
+    if (
+      !inSongState ||
+      tutorialStep !== null ||
+      nudgeDoneRef.current ||
+      nudgeArmedRef.current
+    ) {
       return;
     }
     nudgeArmedRef.current = true;
@@ -1468,7 +1774,7 @@ export default function Step1Deck({
       );
     }, 600);
     nudgeTimersRef.current.push(startId);
-  }, [inSongState]);
+  }, [inSongState, tutorialStep]);
 
   useEffect(() => {
     const timers = nudgeTimersRef.current;
@@ -1544,7 +1850,10 @@ export default function Step1Deck({
   };
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col w-full max-w-[560px] mx-auto px-4">
+    <div
+      ref={deckRootRef}
+      className="relative flex-1 min-h-0 flex flex-col w-full max-w-[560px] mx-auto px-4"
+    >
       {/* COMPACT PROGRESS — one line + a slim bar. Same counts as the
           list header (categorizedCount / bucketedCount), so the two
           views always agree. Right of the count sits the list
@@ -1815,8 +2124,12 @@ export default function Step1Deck({
               </p>
               {/* The list rows' preview button, exact same component
                   and styling — only bigger (large = 64px), pinned in
-                  the card's last slot. */}
-              <AudioPreviewButton title={currentSong.title} large />
+                  the card's last slot. The wrapper carries the
+                  tutorial's target attribute — the tour measures
+                  it to ring the button (see the TUTORIAL block). */}
+              <div data-tutorial="preview">
+                <AudioPreviewButton title={currentSong.title} large />
+              </div>
             </div>
           </DeckCardShell>
         )}
@@ -1831,7 +2144,10 @@ export default function Step1Deck({
           back one card. */}
       {inSongState && (
         <div className="shrink-0">
-          <div className="bg-slate-100 border border-slate-200/60 rounded-3xl shadow-sm p-3 [@media(max-height:740px)]:p-2.5">
+          <div
+            data-tutorial="tray"
+            className="bg-slate-100 border border-slate-200/60 rounded-3xl shadow-sm p-3 [@media(max-height:740px)]:p-2.5"
+          >
             <div className="flex gap-1.5 sm:gap-2">
               {BUCKET_ORDER.map(renderBucketButton)}
             </div>
@@ -1843,6 +2159,7 @@ export default function Step1Deck({
               disposition, not a pass. */}
           <div className="text-center pt-1.5">
             <button
+              data-tutorial="unknown"
               onClick={() => flipAct('unknown')}
               className={`text-sm px-4 py-1 rounded-full transition-all cursor-pointer ${
                 flipTarget === 'unknown'
@@ -1936,6 +2253,97 @@ export default function Step1Deck({
             >
               List
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* TUTORIAL — the coach-mark overlay (see the TUTORIAL
+          blocks up top). It lives INSIDE the deck root and
+          covers it entirely, so every pointer event lands on
+          it and the deck beneath is inert; its own buttons are
+          the only live controls, and [touch-action:none] keeps
+          a backdrop drag from scrolling the page under it. The
+          highlight ring punches its hole in the dim with a
+          giant box-shadow and is pointer-events-none itself;
+          before the first measure lands, a flat dim covers the
+          root instead. The callout uses the deck's vocabulary:
+          white card, brand-blue step eyebrow, amber primary.
+          Neither element shifts the deck's layout — both are
+          absolutely positioned over it. */}
+      {tutorialStep !== null && (
+        <div
+          className="absolute inset-0 z-50 [touch-action:none]"
+          role="dialog"
+          aria-modal="true"
+          aria-label="How the deck works"
+        >
+          {tutorialRect ? (
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute border-[3px] border-amber-400 transition-all duration-300"
+              style={{
+                top: tutorialRect.top,
+                left: tutorialRect.left,
+                width: tutorialRect.width,
+                height: tutorialRect.height,
+                borderRadius: TUTORIAL_STEPS[tutorialStep].radius,
+                boxShadow: '0 0 0 9999px rgba(15, 23, 42, 0.62)',
+              }}
+            />
+          ) : (
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 bg-slate-900/60"
+            />
+          )}
+          <div
+            ref={calloutRef}
+            className="absolute bg-white rounded-3xl border border-slate-200 shadow-2xl p-5 transition-all duration-300"
+            style={
+              tutorialCallout
+                ? {
+                    top: tutorialCallout.top,
+                    left: tutorialCallout.left,
+                    width: tutorialCallout.width,
+                  }
+                : { left: 12, right: 12, bottom: 12 }
+            }
+          >
+            <p className="text-[11px] font-black uppercase tracking-wider text-[#0072CE]">
+              Step {tutorialStep + 1} of {TUTORIAL_STEPS.length}
+            </p>
+            <h3 className="text-lg font-black tracking-tight text-slate-950 mt-1">
+              {TUTORIAL_STEPS[tutorialStep].headline}
+            </h3>
+            <p className="text-sm font-semibold text-slate-500 leading-snug mt-1">
+              {TUTORIAL_STEPS[tutorialStep].line}
+            </p>
+            <div className="flex items-center justify-between gap-3 mt-4">
+              <button
+                onClick={closeTutorial}
+                className="text-sm font-bold text-slate-400 hover:text-slate-600 transition cursor-pointer py-1"
+              >
+                Skip tutorial
+              </button>
+              <div className="flex items-center gap-2">
+                {tutorialStep > 0 && (
+                  <button
+                    onClick={() => setTutorialStep(tutorialStep - 1)}
+                    className="text-sm font-extrabold text-slate-600 bg-white border border-slate-300 rounded-full px-5 py-2.5 hover:bg-slate-100 transition-all cursor-pointer"
+                  >
+                    Back
+                  </button>
+                )}
+                <button
+                  onClick={advanceTutorial}
+                  className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm px-5 py-2.5 rounded-full shadow-md transition transform hover:scale-105 cursor-pointer border-2 border-amber-200 whitespace-nowrap"
+                >
+                  {tutorialStep >= TUTORIAL_STEPS.length - 1
+                    ? 'Start sorting'
+                    : 'Next'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

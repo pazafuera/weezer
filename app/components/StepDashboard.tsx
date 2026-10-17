@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useWeezer, getProgressState } from '../context/WeezerContext';
+import { useWeezer, getProgressState, countBucketedSongs } from '../context/WeezerContext';
 import { BUCKET_CONFIG, FULL_SONG_POOL, BucketType, ALBUM_NAME_TO_ID } from '../data/constants';
 import { AlbumArtwork } from './SharedUI';
 import WeezerOnboardingModal from './WeezerOnboardingModal';
@@ -41,6 +41,22 @@ export default function StepDashboard() {
   );
 
   const isRefinedMasterComplete = progress.isMasterUnlocked;
+
+  // Garage session module (Overnight 5): categorized = triageMap keys
+  // (same count as UnifiedCatalogProgressModule); bucketed = real buckets
+  // only, via the context counter — the two counts are never conflated.
+  const bucketedCount = countBucketedSongs(triageMap);
+  const remainingCount = totalSongs - triageSortedCount;
+  const showGuestSaveHero = userId === null && triageSortedCount >= 1;
+  const showRefineCallout = bucketedCount >= 25 && !progress.isWrappedUnlocked;
+
+  // The Garage's existing refine action — same calls as the stage-2 hero
+  // and the Refine Buckets card in the What's Next grid.
+  const handleStartRefining = () => {
+    setAutoStartMatchups(true);
+    setRefineStageIdx(0);
+    navigateTo('rank_buckets');
+  };
 
   // Dynamic Triage CTA Text
   const getTriageCtaText = () => {
@@ -282,8 +298,64 @@ export default function StepDashboard() {
           )}
         </div>
 
-        {/* PROFILE COMPLETION BANNER (FOR GUESTS / NO USERNAME SET) */}
-        {!userProfile?.username && (
+        {/* GUEST SAVE HERO (GUESTS WITH PROGRESS ONLY) */}
+        {showGuestSaveHero && (
+          <div className="bg-gradient-to-br from-[#0072CE] to-blue-700 text-white rounded-3xl p-5 shadow-md border border-blue-600 space-y-3">
+            <div className="space-y-1">
+              <h2 className="text-lg sm:text-xl font-black tracking-tight leading-tight">
+                Save your progress
+              </h2>
+              <p className="text-xs sm:text-sm text-blue-100 font-medium leading-relaxed">
+                {triageSortedCount} songs sorted. Create a free account so they&apos;re yours on any device.
+              </p>
+            </div>
+            <button
+              onClick={() => navigateTo('login', 'signup')}
+              className="w-full sm:w-auto bg-amber-400 hover:bg-amber-300 active:scale-95 text-slate-950 font-black text-xs sm:text-sm px-6 py-3.5 rounded-2xl transition-all shadow-md cursor-pointer"
+            >
+              Create free account, save progress
+            </button>
+          </div>
+        )}
+
+        {/* SESSION MODULE: RESUME SORTING / REFINE CALLOUT */}
+        <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs space-y-3">
+          <p className="text-sm sm:text-base font-black text-slate-950 tracking-tight">
+            {triageSortedCount} of {totalSongs} sorted — {remainingCount} to go.
+          </p>
+
+          {showRefineCallout ? (
+            <>
+              <p className="text-xs sm:text-sm font-medium text-slate-500 leading-relaxed">
+                Enough sorted to refine — run the matchups and your Thread can be compiled.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <button
+                  onClick={handleStartRefining}
+                  className="w-full sm:w-auto bg-[#0072CE] hover:bg-blue-700 active:scale-95 text-white font-black text-xs sm:text-sm px-5 py-3 rounded-2xl transition-all shadow-md cursor-pointer"
+                >
+                  Start refining
+                </button>
+                <button
+                  onClick={() => navigateTo('triage')}
+                  className="w-full sm:w-auto bg-white border-2 border-slate-200 hover:border-slate-300 active:scale-95 text-slate-700 font-black text-xs sm:text-sm px-5 py-3 rounded-2xl transition-all cursor-pointer"
+                >
+                  Resume sorting
+                </button>
+              </div>
+            </>
+          ) : (
+            <button
+              onClick={() => navigateTo('triage')}
+              className="w-full sm:w-auto bg-[#0072CE] hover:bg-blue-700 active:scale-95 text-white font-black text-xs sm:text-sm px-5 py-3 rounded-2xl transition-all shadow-md cursor-pointer"
+            >
+              {triageSortedCount === 0 ? 'Start sorting' : 'Resume sorting'}
+            </button>
+          )}
+        </div>
+
+        {/* PROFILE COMPLETION BANNER (SIGNED-IN, NO USERNAME SET) */}
+        {userId && !userProfile?.username && (
           <div className="bg-amber-50 border-2 border-amber-300/80 rounded-3xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
             <div className="space-y-1">
               <h3 className="font-extrabold text-amber-950 text-sm sm:text-base">

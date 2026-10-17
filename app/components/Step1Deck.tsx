@@ -98,6 +98,18 @@ import type { TriageSection } from './Step1Triage';
  * toggles), only a sort can fire one — never navigation — and
  * nothing fires retroactively when the deck is entered already
  * past a threshold.
+ *
+ * END + COMPLETION STACKS (Overnight 4, memo §2 scenarios
+ * 9–11, decision §3.5): the completion card is the
+ * highest-intent moment in the app — a guest's whole 206-song
+ * effort sits in this browser's localStorage — so a guest
+ * gets the guest line and the Save button as the card's
+ * PRIMARY action there, ahead of "Next Step: Refine Buckets",
+ * with the Garage link under it; signed-in users just gain
+ * the Garage link. The end-of-deck card stays lighter: one
+ * quiet guest line above its button row, its "create a free
+ * account" a text-weight link inside the sentence — Review
+ * the unsorted and Start ranking keep the visual lead there.
  */
 
 // The short-path promise the site's own splash copy makes ("25
@@ -458,6 +470,25 @@ function MilestoneRibbon() {
 }
 
 /**
+ * The guest line — the honesty anchor of every guest action
+ * stack (memo §3.9): guest progress lives in localStorage, in
+ * this browser only, until an account saves it. One promise,
+ * made the same way everywhere, so the wording is a single
+ * shared component: the milestone stack and the completion
+ * card (Overnight 4) both render it. (Build 3 inlined it in
+ * renderMilestoneActions; factored out when the completion
+ * card became the second consumer.)
+ */
+function GuestProgressLine() {
+  return (
+    <p className="text-sm font-bold text-slate-500 leading-snug">
+      You&apos;re sorting as a guest — this progress lives only in
+      this browser.
+    </p>
+  );
+}
+
+/**
  * The milestone action stack's Save button — the guest
  * conversion action (milestone-flows memo, §2 scenarios 1–2):
  * create a free account to SAVE the progress made so far. The
@@ -466,9 +497,9 @@ function MilestoneRibbon() {
  * account's win and these picks are not added (memo §1.6).
  * Deliberately the strongest button on the milestone card —
  * same amber treatment as "Keep sorting" in its primary form.
- * A standalone component so the end/completion cards (next
- * build) reuse the exact button instead of drifting. The label
- * is the tightened "Create free account, save progress"
+ * A standalone component, reused verbatim by the completion
+ * card (Overnight 4) so the guest primary never drifts. The
+ * label is the tightened "Create free account, save progress"
  * (Overnight 3.5): the original wording wrapped to two lines
  * at phone width, and this is the longest variant measured to
  * fit one line at 375px — see REPORT.md for the measurement.
@@ -487,8 +518,8 @@ function SaveProgressButton({ onClick }: { onClick: () => void }) {
 /**
  * The milestone action stack's quiet off-ramp to the Garage
  * (memo §2): a text-weight link, deliberately weaker than every
- * button above it — it's the break, not a destination. Shared
- * with SaveProgressButton for the end/completion cards.
+ * button above it — it's the break, not a destination. The same
+ * link closes the completion card's stack (Overnight 4).
  */
 function GarageBreakLink({ onClick }: { onClick: () => void }) {
   return (
@@ -519,11 +550,11 @@ export default function Step1Deck({
   handleFinishTriage: () => void;
   onSwitchToList: () => void;
   /** Auth/navigation plumbing (page.tsx → Step1Triage → here),
-   *  consumed by the milestone action stack below (guest Save
-   *  prompt + Garage off-ramp — milestone-flows design memo,
-   *  §2 scenarios 1–4; the end/completion cards reuse the same
-   *  props in the next build). Required (not optional) because
-   *  the single render path above always supplies them. */
+   *  consumed by the milestone action stack and the end /
+   *  completion card stacks below (guest Save prompts + Garage
+   *  off-ramp — milestone-flows design memo, §2 scenarios 1–4
+   *  and 9–11). Required (not optional) because the single
+   *  render path above always supplies them. */
   isGuest: boolean;
   onCreateAccount: () => void;
   onOpenGarage: () => void;
@@ -1094,12 +1125,7 @@ export default function Step1Deck({
   const refineEligible = bucketedCount >= THREAD_SHORT_PATH_GOAL;
   const renderMilestoneActions = () => (
     <div className="w-full max-w-sm flex flex-col items-center gap-1.5">
-      {isGuest && (
-        <p className="text-sm font-bold text-slate-500 leading-snug">
-          You&apos;re sorting as a guest — this progress lives only in
-          this browser.
-        </p>
-      )}
+      {isGuest && <GuestProgressLine />}
       {isGuest && <SaveProgressButton onClick={onCreateAccount} />}
       <button
         onClick={dismissMilestone}
@@ -1425,7 +1451,16 @@ export default function Step1Deck({
           /* COMPLETION — every song categorized (the same count the
              list's "Categorize All Songs" lock runs on). Takes
              precedence over the end card: a fully sorted deck has
-             nothing left to review. */
+             nothing left to review. The action stack (memo §2
+             scenarios 9–10, decision §3.5): this is the
+             highest-intent moment in the app, so a GUEST gets the
+             guest line and the Save button as the card's PRIMARY
+             action — ahead of "Next Step: Refine Buckets", which
+             stays exactly as it was — because a guest who refines
+             without saving can still lose everything; the quiet
+             Garage link closes the stack for everyone. Signed-in
+             users see no Save and no guest line, just the added
+             Garage link under the Refine button. */
           <DeckCardShell adaptive>
             <div className="min-h-[392px] flex flex-col items-center justify-center text-center p-6 sm:p-8 space-y-5">
               <div className="text-4xl">🏆</div>
@@ -1436,6 +1471,8 @@ export default function Step1Deck({
                 Every song has a verdict. Time to refine the buckets and see
                 where they land.
               </p>
+              {isGuest && <GuestProgressLine />}
+              {isGuest && <SaveProgressButton onClick={onCreateAccount} />}
               <button
                 onClick={handleFinishTriage}
                 className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm sm:text-base px-8 py-4 rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.35)] transition transform hover:scale-105 cursor-pointer border-2 border-amber-200 inline-flex items-center gap-2.5 whitespace-nowrap"
@@ -1443,6 +1480,7 @@ export default function Step1Deck({
                 <FlyingWIcon className="w-6 h-4 text-slate-950" />
                 <span>Next Step: Refine Buckets</span>
               </button>
+              <GarageBreakLink onClick={onOpenGarage} />
             </div>
           </DeckCardShell>
         ) : atEnd ? (
@@ -1450,7 +1488,12 @@ export default function Step1Deck({
              draggable so a right swipe flies back to the last song;
              it can't be swiped forward. Passed-but-unsorted songs
              get their count and a review jump; a fully sorted deck
-             never lands here (the completion card above wins). */
+             never lands here (the completion card above wins).
+             A GUEST also gets one quiet save line above the button
+             row (memo §2 scenario 11) — text-weight, not a button,
+             so Review the unsorted / Start ranking keep the visual
+             lead; its "create a free account" is the tappable link
+             inside the sentence. Signed-in users see no line. */
           <DeckCardShell swipe={swipeProps} adaptive>
             <div className="min-h-[392px] flex flex-col items-center justify-center text-center p-6 sm:p-8 space-y-5">
               <div className="text-4xl">🎴</div>
@@ -1481,6 +1524,18 @@ export default function Step1Deck({
                 <p className="text-sm font-bold text-slate-500 leading-snug max-w-sm mx-auto">
                   You&apos;ve seen every card. Swipe back through any of
                   them to change a verdict.
+                </p>
+              )}
+              {isGuest && (
+                <p className="text-sm font-bold text-slate-500 leading-snug max-w-sm mx-auto">
+                  Sorting as a guest —{' '}
+                  <button
+                    onClick={onCreateAccount}
+                    className="font-extrabold text-[#0072CE] hover:text-[#005fae] underline underline-offset-2 transition cursor-pointer"
+                  >
+                    create a free account
+                  </button>{' '}
+                  to save your progress.
                 </p>
               )}
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-1">

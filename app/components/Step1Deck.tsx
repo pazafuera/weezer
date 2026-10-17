@@ -103,10 +103,16 @@ import type { TriageSection } from './Step1Triage';
 // code constant for it; the deck counts bucketed songs toward that
 // same 25, which is also the Sweater Thread's real unlock
 // condition — it gates the end card's "Start ranking" button.
-// (Milestone cards used to carry a finish button too; the owner
-// removed it — it led to the ranking step, not the Thread, so
-// offering it there was misleading.) Actual step gating is
-// unchanged and still runs through handleFinishTriage.
+// It also gates the milestone card's "Refine →" offer (see
+// renderMilestoneActions): 25 is a PROMOTION threshold — when
+// the deck starts pushing Refine — not the step's real unlock,
+// which stays at 1 bucket downstream (design memo §3.4). An
+// earlier milestone finish button was removed as misleading
+// (it was offered ungated and read as a trip to the Thread);
+// the Refine offer that replaced it is honestly labeled — it
+// goes to ranking, the step that produces the master list the
+// Thread is compiled from. Actual step gating is unchanged
+// and still runs through handleFinishTriage.
 const THREAD_SHORT_PATH_GOAL = 25;
 
 // MILESTONES — sorted-count thresholds (categorizedCount:
@@ -132,9 +138,13 @@ const MILESTONES: DeckMilestone[] = [
     threshold: 46,
     headline: "You've made it through Blue, Pinkerton, and the singles.",
     body: "You've unlocked the Sweater Thread — your results: your Top 10, your fan tribe, your Era DNA.",
+    // Compel trimmed for the 392px fit once the milestone action
+    // stack landed (Overnight 3): the "your Thread gets sharper"
+    // beat was dropped here — it survives verbatim as the 103
+    // milestone's compel. Before/after quoted in REPORT.md.
     compel: `The deep cuts are where it gets interesting — ${
       TOTAL_SONGS - 46
-    } songs still out there, and your Thread gets sharper with every one.`,
+    } songs still out there.`,
   },
   {
     threshold: 75,
@@ -417,6 +427,46 @@ function MilestoneRibbon() {
   );
 }
 
+/**
+ * The milestone action stack's Save button — the guest
+ * conversion action (milestone-flows memo, §2 scenarios 1–2):
+ * create a free account to SAVE the progress made so far. The
+ * copy promises saving, never merging (memo §3.9): if the
+ * account already has rankings, the migration guard lets the
+ * account's win and these picks are not added (memo §1.6).
+ * Deliberately the strongest button on the milestone card —
+ * same amber treatment as "Keep sorting" in its primary form.
+ * A standalone component so the end/completion cards (next
+ * build) reuse the exact button instead of drifting.
+ */
+function SaveProgressButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="w-full bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm px-4 py-3.5 rounded-full shadow-md transition transform hover:scale-105 cursor-pointer border-2 border-amber-200"
+    >
+      Create a free account to save your progress
+    </button>
+  );
+}
+
+/**
+ * The milestone action stack's quiet off-ramp to the Garage
+ * (memo §2): a text-weight link, deliberately weaker than every
+ * button above it — it's the break, not a destination. Shared
+ * with SaveProgressButton for the end/completion cards.
+ */
+function GarageBreakLink({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="text-sm font-bold text-slate-400 hover:text-slate-600 transition cursor-pointer py-1"
+    >
+      Take a break — the Garage
+    </button>
+  );
+}
+
 export default function Step1Deck({
   triageMap,
   orderedSongs,
@@ -434,14 +484,12 @@ export default function Step1Deck({
   handleSetBucket: (id: string, bucket: TriageValue) => void;
   handleFinishTriage: () => void;
   onSwitchToList: () => void;
-  /** Auth/navigation plumbing (page.tsx → Step1Triage → here).
-   *  PLUMBING ONLY for now: these are consumed by the milestone
-   *  action stack in the next build (guest Save prompt, Garage
-   *  off-ramp on milestone / end / completion cards — milestone-
-   *  flows design memo, §4 Commit 2–3). Nothing renders from them
-   *  yet, so this component's output is unchanged. Required (not
-   *  optional) because the single render path above always
-   *  supplies them. */
+  /** Auth/navigation plumbing (page.tsx → Step1Triage → here),
+   *  consumed by the milestone action stack below (guest Save
+   *  prompt + Garage off-ramp — milestone-flows design memo,
+   *  §2 scenarios 1–4; the end/completion cards reuse the same
+   *  props in the next build). Required (not optional) because
+   *  the single render path above always supplies them. */
   isGuest: boolean;
   onCreateAccount: () => void;
   onOpenGarage: () => void;
@@ -992,6 +1040,60 @@ export default function Step1Deck({
     setMilestonePending(null);
   };
 
+  // MILESTONE ACTION STACK (milestone-flows memo, §2 scenarios
+  // 1–4, decisions §3.1–3.2). What renders under the milestone
+  // copy depends on who is sorting and whether they've RATED
+  // enough to refine:
+  //   guest:      guest line · Save (primary) · Keep sorting ·
+  //               [Refine] · Garage link
+  //   signed-in:  Keep sorting (primary) · [Refine] · Garage link
+  // Eligibility runs on bucketedCount (real buckets only) against
+  // THREAD_SHORT_PATH_GOAL — the milestone itself fired on
+  // categorizedCount; the two counters never mix (memo §1.5,
+  // scenario 19: a milestone earned mostly on Don't Know It
+  // marks gets the celebration and the Save offer, but no
+  // Refine). Refine calls handleFinishTriage — it goes to
+  // ranking, the step that produces the master list the Thread
+  // is compiled from, and its explainer says exactly that
+  // (shortened form; see REPORT.md Overnight 3 for the fit math
+  // that required it).
+  const refineEligible = bucketedCount >= THREAD_SHORT_PATH_GOAL;
+  const renderMilestoneActions = () => (
+    <div className="w-full max-w-sm flex flex-col items-center gap-1.5">
+      {isGuest && (
+        <p className="text-sm font-bold text-slate-500 leading-snug">
+          You&apos;re sorting as a guest — this progress lives only in
+          this browser.
+        </p>
+      )}
+      {isGuest && <SaveProgressButton onClick={onCreateAccount} />}
+      <button
+        onClick={dismissMilestone}
+        className={
+          isGuest
+            ? 'w-full text-sm font-extrabold text-slate-600 bg-white border border-slate-300 rounded-full px-6 py-3.5 hover:bg-slate-100 transition-all cursor-pointer whitespace-nowrap'
+            : 'w-full bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm px-6 py-3.5 rounded-full shadow-md transition transform hover:scale-105 cursor-pointer border-2 border-amber-200 whitespace-nowrap'
+        }
+      >
+        Keep sorting
+      </button>
+      {refineEligible && (
+        <div className="flex flex-col items-center gap-1">
+          <p className="text-xs font-bold text-slate-400 leading-snug">
+            You&apos;ve rated 25+ songs — enough to refine.
+          </p>
+          <button
+            onClick={handleFinishTriage}
+            className="bg-[#0072CE] hover:bg-[#005fae] text-white font-black text-sm px-6 py-3.5 rounded-full shadow-md transition transform hover:scale-105 cursor-pointer whitespace-nowrap"
+          >
+            Refine →
+          </button>
+        </div>
+      )}
+      <GarageBreakLink onClick={onOpenGarage} />
+    </div>
+  );
+
   // Keyboard: 1–5 pick the buckets in displayed order (sort the
   // current card, with the flip), U steps back one card. Ignored
   // while typing in a form field or when a modal state
@@ -1250,19 +1352,23 @@ export default function Step1Deck({
              swipeable (no swipe prop, like the completion card);
              the tray hides while it shows (inSongState is false)
              and the footer toggle pill below keeps Deck/List
-             reachable. ONE action only (owner): an earlier build
-             also offered a finish button, but its handler goes to
-             the ranking step, not the Thread — offering it here
-             was misleading, so it's gone. The award seal
-             (MilestoneRibbon) sits IN-FLOW at the top of the stack
-             in place of the old "Milestone" eyebrow text (owner:
-             the old build straddled it over the card's top edge,
-             where it hovered over the progress line above — now
-             it lives inside the card, and its height is paid for
-             by the tightened stack: py-4/sm:py-5 padding and
-             space-y-2/sm:space-y-3 gaps). */
+             reachable. The award seal (MilestoneRibbon) sits
+             IN-FLOW at the top of the stack in place of the old
+             "Milestone" eyebrow text (owner: the old build
+             straddled it over the card's top edge, where it
+             hovered over the progress line above — now it lives
+             inside the card). Below the copy sits the ACTION
+             STACK (renderMilestoneActions, memo §2 scenarios
+             1–4): a guest gets the save-your-progress line and
+             the primary Save button, everyone gets Keep sorting
+             and the quiet Garage off-ramp, and anyone at 25+
+             real buckets also gets the Refine offer. The stack
+             is why this container's spacing tightened again
+             (py-3/sm:py-4, space-y-1.5/sm:space-y-2) — the
+             392px fit math, including the one state that still
+             doesn't fit, is in REPORT.md (Overnight 3). */
           <DeckCardShell>
-            <div className="h-full flex flex-col items-center justify-center text-center px-6 py-4 sm:px-8 sm:py-5 space-y-2 sm:space-y-3">
+            <div className="h-full flex flex-col items-center justify-center text-center px-6 py-3 sm:px-8 sm:py-4 space-y-1.5 sm:space-y-2">
               <MilestoneRibbon />
               <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-950">
                 {milestonePending.headline}
@@ -1273,14 +1379,7 @@ export default function Step1Deck({
               <p className="text-sm font-bold text-slate-400 leading-snug max-w-sm mx-auto">
                 {milestonePending.compel}
               </p>
-              <div>
-                <button
-                  onClick={dismissMilestone}
-                  className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm px-6 py-3.5 rounded-full shadow-md transition transform hover:scale-105 cursor-pointer border-2 border-amber-200 whitespace-nowrap"
-                >
-                  Keep sorting
-                </button>
-              </div>
+              {renderMilestoneActions()}
             </div>
           </DeckCardShell>
         ) : isComplete ? (

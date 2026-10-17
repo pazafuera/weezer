@@ -2,14 +2,7 @@
 
 import React, { useEffect } from 'react';
 import { useWeezer } from '../context/WeezerContext';
-import { BUCKET_CONFIG, BucketType } from '../data/constants';
-
-interface OrientationBucket {
-  key: BucketType;
-  title: string;
-  sub: string;
-  desc: string;
-}
+import BucketGuide from './BucketGuide';
 
 // The overall process, shown before the buckets (owner direction, Oct 17):
 // orient on the journey first — sort, refine, Thread — then on the buckets.
@@ -28,39 +21,6 @@ const PROCESS_STEPS: { title: string; desc: string }[] = [
   },
 ];
 
-const ORIENTATION_BUCKETS: OrientationBucket[] = [
-  {
-    key: 'banger',
-    title: 'Banger',
-    sub: 'God-Tier / S-Tier',
-    desc: 'Pure magic that defines your entire experience with Weezer.',
-  },
-  {
-    key: 'slaps',
-    title: 'Lowkey Slaps',
-    sub: 'Great / A-Tier',
-    desc: 'Awesome jams, but they would not make your iPod if it could only hold 25 total tracks.',
-  },
-  {
-    key: 'mid',
-    title: 'Mid',
-    sub: 'Solid / B-Tier',
-    desc: 'Enjoyable listens and fun album cuts, but never in your everyday rotation.',
-  },
-  {
-    key: 'skip',
-    title: 'Skip',
-    sub: 'Meh / C-Tier',
-    desc: 'Tracks you don’t hate, but secretly skip when no one is watching.',
-  },
-  {
-    key: 'trash',
-    title: 'Trash',
-    sub: 'Bottom-Tier / D-Tier',
-    desc: 'Songs you kinda wish Rivers had never written.',
-  },
-];
-
 export default function Step05Orientation() {
   const { navigateTo } = useWeezer();
 
@@ -69,7 +29,18 @@ export default function Step05Orientation() {
   }, []);
 
   return (
-    <div className="space-y-6 pb-24 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-2xl mx-auto px-4">
+    // SCROLL REGION (iOS fix, Oct 17): this page is ~1,900px of plain
+    // document flow inside AppShell's min-h-screen flex column, whose
+    // flex-1 <main> sizes the step area from the viewport. On iOS
+    // Safari the page's overflow never became scrollable page area —
+    // the page painted past the fold but would not scroll, leaving
+    // both CTAs unreachable (owner report). Giving this root its own
+    // full-height scroll region makes scrolling independent of the
+    // document: content flows inside it with safe-area-aware bottom
+    // padding so the CTAs can always be scrolled clear of Safari's
+    // bottom toolbar. Scoped to orientation only — the shared shell
+    // and every other step are untouched.
+    <div className="h-full overflow-y-auto space-y-6 pb-[calc(6rem+env(safe-area-inset-bottom,0px))] animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-2xl mx-auto px-4">
       {/* BACK BUTTON */}
       <div className="pt-4 flex items-center justify-start">
         <button
@@ -124,43 +95,9 @@ export default function Step05Orientation() {
         </h2>
       </div>
 
-      {/* BUCKET CARDS */}
-      <div className="space-y-4">
-        {ORIENTATION_BUCKETS.map(({ key, title, sub, desc }) => {
-          const cfg = BUCKET_CONFIG[key];
-          return (
-            <div
-              key={key}
-              className="bg-white border border-slate-200/90 rounded-3xl p-5 sm:p-6 shadow-sm hover:border-blue-300 transition-all space-y-3"
-            >
-              {/* TOP ROW: ICON + LARGE BUCKET TITLE */}
-              <div className="flex items-center gap-3.5">
-                <div
-                  className={`w-14 h-14 rounded-2xl border flex items-center justify-center text-3xl shrink-0 shadow-sm ${cfg.badgeBg}`}
-                >
-                  {cfg.emoji}
-                </div>
-
-                <div className="flex flex-col min-w-0">
-                  <h2 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight leading-none">
-                    {title}
-                  </h2>
-                  <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-widest text-slate-400 mt-1">
-                    {sub}
-                  </span>
-                </div>
-              </div>
-
-              {/* CARD BODY: DESCRIPTION */}
-              <div className="pt-1 border-t border-slate-100">
-                <p className="text-xs sm:text-sm font-medium text-slate-600 leading-relaxed">
-                  {desc}
-                </p>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      {/* BUCKET GUIDE — the real sort buttons, taught (owner,
+          Oct 17): replaces the old text-only category cards. */}
+      <BucketGuide />
 
       {/* PRO TIP */}
       <div className="bg-amber-50/80 border border-amber-200/80 rounded-2xl p-3 w-full text-amber-950">
@@ -169,12 +106,8 @@ export default function Step05Orientation() {
         </p>
       </div>
 
-      {/* DON'T KNOW IT NOTE */}
-      <p className="text-xs sm:text-sm font-semibold text-slate-500 leading-relaxed text-center max-w-md mx-auto">
-        Don&apos;t know a song? Mark it Don&apos;t Know It. No shame — it
-        just won&apos;t be rated. Most fans bucket the songs they know,
-        grab their Sweater Thread, then come back for the deep cuts.
-      </p>
+      {/* The old Don't Know It note is gone: BucketGuide's sixth
+          entry now covers it (never heard it, not a rating). */}
 
       {/* CONTINUATION CTAS */}
       <div className="pt-2 space-y-2.5">

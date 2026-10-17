@@ -2,14 +2,14 @@
 
 import React, { useEffect } from 'react';
 import { useWeezer } from '../context/WeezerContext';
-import BucketGuide from './BucketGuide';
 
-// The overall process, shown before the buckets (owner direction, Oct 17):
-// orient on the journey first — sort, refine, Thread — then on the buckets.
+// The overall process (owner direction, Oct 17): orient on the
+// journey — sort, refine, Thread. The buckets themselves are
+// taught in the deck tutorial, not here (owner, Oct 17).
 const PROCESS_STEPS: { title: string; desc: string }[] = [
   {
     title: 'Sort',
-    desc: "Go through the songs and bucket the ones you know. Never heard it? Mark it Don't Know It and move on.",
+    desc: 'Go through the songs and bucket the ones you know. Never heard it? Just move on — you can come back to it.',
   },
   {
     title: 'Refine',
@@ -88,16 +88,10 @@ export default function Step05Orientation() {
         </div>
       </div>
 
-      {/* SECTION HEADER */}
-      <div className="space-y-2.5 text-center pt-2">
-        <h2 className="text-base sm:text-xl font-black text-slate-950 tracking-tight">
-          Then, every song you know goes in a bucket.
-        </h2>
-      </div>
-
-      {/* BUCKET GUIDE — the real sort buttons, taught (owner,
-          Oct 17): replaces the old text-only category cards. */}
-      <BucketGuide />
+      {/* The bucket buttons are no longer taught here — the
+          deck tutorial teaches each bucket at the real tiles
+          (owner, Oct 17). BucketGuide still lives in the app
+          for the "?" help sheet's bucket definitions. */}
 
       {/* PRO TIP */}
       <div className="bg-amber-50/80 border border-amber-200/80 rounded-2xl p-3 w-full text-amber-950">
@@ -105,9 +99,6 @@ export default function Step05Orientation() {
           💡 <span className="font-black">Pro Tip:</span> Go with your gut! You'll fine-tune exact rankings later.
         </p>
       </div>
-
-      {/* The old Don't Know It note is gone: BucketGuide's sixth
-          entry now covers it (never heard it, not a rating). */}
 
       {/* CONTINUATION CTAS */}
       <div className="pt-2 space-y-2.5">

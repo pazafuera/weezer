@@ -598,6 +598,7 @@ function DeckCardShell({
   children,
   swipe,
   adaptive,
+  swaying,
 }: {
   children: React.ReactNode;
   /**
@@ -639,6 +640,19 @@ function DeckCardShell({
     phase: CardAnimPhase;
     exitX: number;
   };
+  /**
+   * The tutorial's final step only ("Don't know it? Swipe."):
+   * the shell root wears the `deck-tutorial-sway` keyframe
+   * animation (globals.css) and the whole stack gently slides
+   * side to side, demonstrating that the deck swipes both
+   * ways. The root carries no transform of its own — the
+   * drag / nudge / flip transforms all live on the front card
+   * inside it — so the sway composes with that machinery
+   * instead of fighting it. The parent passes this only while
+   * the tour sits on its last step, so the animation is
+   * state-toggled and can never leak into normal deck use.
+   */
+  swaying?: boolean;
 }) {
   // The front card's transform/transition are phase-driven: it
   // follows the pointer while dragging, springs back over 200ms on
@@ -675,7 +689,7 @@ function DeckCardShell({
       data-tutorial="card"
       className={`relative w-full ${
         adaptive ? 'min-h-[392px]' : 'h-[392px]'
-      } [perspective:1200px]`}
+      } [perspective:1200px]${swaying ? ' deck-tutorial-sway' : ''}`}
     >
       <div
         aria-hidden="true"
@@ -2124,13 +2138,18 @@ export default function Step1Deck({
   // adjacent sheet position (null while the step is a bottom
   // step, and until the first measure lands on an adjacent
   // step — the sheet renders as the bottom sheet meanwhile);
-  // and the bucket the step's tap zone demos (bucket steps
-  // only, null everywhere else).
+  // the bucket the step's tap zone demos (bucket steps only,
+  // null everywhere else); and whether the tour sits on its
+  // final step, which turns on the card's sway (see
+  // DeckCardShell's `swaying` prop).
   const tutorialDef =
     tutorialStep !== null ? TUTORIAL_STEPS[tutorialStep] : null;
   const tutorialAdjacentPos =
     tutorialDef?.placement === 'adjacent' ? tutorialSheetPos : null;
   const tutorialDemoBucket = tutorialDef?.bucket ?? null;
+  const tutorialSwaying =
+    tutorialStep !== null &&
+    tutorialStep === TUTORIAL_STEPS.length - 1;
 
   return (
     <div
@@ -2365,7 +2384,7 @@ export default function Step1Deck({
              over the album art (see staticStamp above) — it adds
              no layout height and never competes with the progress
              line above the card. */
-          <DeckCardShell swipe={swipeProps}>
+          <DeckCardShell swipe={swipeProps} swaying={tutorialSwaying}>
             <div className="relative h-full flex flex-col items-center text-center px-5 py-5 gap-3">
               {/* STATIC STAMP — same anchor as the drag stamps
                   (the art slot's center: py-5 + half of h-32 =

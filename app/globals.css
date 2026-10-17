@@ -25,3 +25,41 @@ body {
     )
     rgb(var(--background-start-rgb));
 }
+
+/* Deck tutorial, final step ("Don't know it? Swipe."): the
+   card shell gently sways side to side to show the deck
+   slides both ways. Toggled purely by tutorial step state in
+   Step1Deck (DeckCardShell's `swaying` prop). The shell root
+   carries no transform of its own — the front card's drag /
+   nudge / flip transforms all live on a child — so this
+   animation composes with them instead of fighting them.
+   The codebase's other motion is state-driven inline
+   transitions; a looping demonstration is the one thing
+   those can't express, so it lives here as keyframes. */
+@keyframes deck-tutorial-sway {
+  0% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-16px);
+  }
+  50% {
+    transform: translateX(0);
+  }
+  75% {
+    transform: translateX(16px);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+.deck-tutorial-sway {
+  animation: deck-tutorial-sway 2.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .deck-tutorial-sway {
+    animation: none;
+  }
+}

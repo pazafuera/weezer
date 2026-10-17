@@ -384,12 +384,17 @@ function buildSectionMilestone(
 // highlight target by the data-tutorial attribute the render
 // puts on that element (the card shell, the preview button's
 // wrapper in the card, the five bucket tiles in the tray),
-// the corner radius its ring wears, and whether its callout
-// sheet anchors to the top or bottom of the viewport — so
-// the sheet never covers the element it is explaining (the
-// preview button and the tiles sit low, so their sheets
-// ride on top). The seen flag is localStorage — NOT
-// sessionStorage — because once means once, across sessions.
+// the corner radius its ring wears, and where its callout
+// sheet sits. Steps 1 and 8 ride the bottom sheet. Steps 2–7
+// place ADJACENT to their target (see measureTutorial): the
+// top/bottom anchoring put the sheet inches away from the
+// element it pointed at (owner report, Oct 17), so the sheet
+// now hovers just above the target — below it only when
+// above doesn't fit. The bucket steps also carry their
+// bucket: the ringed tile is tappable during its step and
+// runs a no-write rehearsal of a real sort (see DEMO).
+// The seen flag is localStorage — NOT sessionStorage —
+// because once means once, across sessions.
 const TUTORIAL_SEEN_KEY = 'weezer-deck-tutorial-seen-v1';
 
 // TUTORIAL REPLAY — the header "?" button (AppShell) can ask
@@ -413,7 +418,10 @@ type TutorialTargetKey =
 interface TutorialStepDef {
   target: TutorialTargetKey;
   radius: number;
-  placement: 'top' | 'bottom';
+  placement: 'adjacent' | 'bottom';
+  /** Bucket steps only: the tile this step rings is live —
+   *  tapping it plays the demo sort for this bucket. */
+  bucket?: BucketType;
   headline: string;
   line: string;
 }
@@ -429,42 +437,47 @@ const TUTORIAL_STEPS: TutorialStepDef[] = [
   {
     target: 'preview',
     radius: 36,
-    placement: 'top',
+    placement: 'adjacent',
     headline: 'Hear it first.',
     line: 'Tap the play button to preview the song.',
   },
   {
     target: 'bucket-banger',
     radius: 20,
-    placement: 'top',
+    placement: 'adjacent',
+    bucket: 'banger',
     headline: 'Sort it.',
-    line: 'Tap a bucket to call the song. Banger — an all-timer, the best of the best.',
+    line: 'Tap a bucket to call the song — try it: tap Banger and watch. Banger — an all-timer, the best of the best.',
   },
   {
     target: 'bucket-slaps',
     radius: 20,
-    placement: 'top',
+    placement: 'adjacent',
+    bucket: 'slaps',
     headline: 'Slaps',
     line: 'Great song — just not elite.',
   },
   {
     target: 'bucket-mid',
     radius: 20,
-    placement: 'top',
+    placement: 'adjacent',
+    bucket: 'mid',
     headline: 'Mid',
     line: 'Fine. Forgettable.',
   },
   {
     target: 'bucket-skip',
     radius: 20,
-    placement: 'top',
+    placement: 'adjacent',
+    bucket: 'skip',
     headline: 'Skip',
     line: 'You rarely reach for it.',
   },
   {
     target: 'bucket-trash',
     radius: 20,
-    placement: 'top',
+    placement: 'adjacent',
+    bucket: 'trash',
     headline: 'Trash',
     line: 'Never again. Keep it away.',
   },
@@ -479,16 +492,49 @@ const TUTORIAL_STEPS: TutorialStepDef[] = [
 
 // The measured highlight box (target rect relative to the
 // deck root, padded 4px a side — see measureTutorial). The
-// callout needs no measured placement: it is a sheet fixed
-// to the viewport, anchored to the top or bottom per step
-// (see the render), so it is reachable no matter how tall
-// the deck root grows past the fold.
+// ring is positioned inside the overlay root, so root-
+// relative is right for it — the callout sheet is NOT (see
+// TutorialSheetPos).
 interface TutorialRect {
   top: number;
   left: number;
   width: number;
   height: number;
 }
+
+// The ADJACENT sheet's position, in VIEWPORT coordinates for
+// a position:fixed element — measured from the target's own
+// getBoundingClientRect(), never by subtracting the deck
+// root's rect (that root-relative math was the v1 bug that
+// parked the sheet off-screen). Null until the first measure
+// lands; the sheet renders as the bottom sheet until then,
+// so it is always reachable.
+interface TutorialSheetPos {
+  top: number;
+  left: number;
+  width: number;
+}
+
+// env(safe-area-inset-*) has no direct JS read; a throwaway
+// probe element with the insets as padding is the reliable
+// way to learn them in pixels. Returns 0s anywhere the
+// probe can't run.
+const readSafeAreaInsets = (): { top: number; bottom: number } => {
+  try {
+    const probe = document.createElement('div');
+    probe.style.cssText =
+      'position:fixed;left:0;top:0;width:0;visibility:hidden;pointer-events:none;' +
+      'padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);';
+    document.body.appendChild(probe);
+    const cs = window.getComputedStyle(probe);
+    const top = parseFloat(cs.paddingTop) || 0;
+    const bottom = parseFloat(cs.paddingBottom) || 0;
+    probe.remove();
+    return { top, bottom };
+  } catch {
+    return { top: 0, bottom: 0 };
+  }
+};
 
 const BUCKET_ORDER: BucketType[] = ['banger', 'slaps', 'mid', 'skip', 'trash'];
 
@@ -511,6 +557,9 @@ const EXIT_MS = 260;
 const FLIP_OUT_MS = 240;
 const FLIP_IN_MS = 240;
 const SNAP_MS = 40;
+// Tutorial demo: how long the rehearsal stamp sits on the
+// card before the demo flip starts (stamp + flip ≈ 900ms).
+const DEMO_STAMP_MS = 360;
 
 /**
  * Card animation phases. 'idle' covers both resting and actively
@@ -905,16 +954,35 @@ export default function Step1Deck({
   // TUTORIAL — the open step's index, or null when the tour
   // isn't showing; the measured highlight geometry (a ref
   // mirrors the state so the measure pass can skip no-op
-  // updates); and the root ref the geometry reads. The
-  // callout is viewport-fixed and needs no state at all.
+  // updates); and the root ref the geometry reads. Adjacent
+  // steps also carry a measured sheet position (viewport
+  // coordinates; a ref mirrors it for the same no-op skip),
+  // and the sheet element gets a ref so the measure pass can
+  // read its real height. DEMO state: the bucket whose
+  // rehearsal sort is on the card (its stamp shows), and
+  // whether a rehearsal is mid-flight (locks the tap zone
+  // and the sheet's buttons until it lands) — a ref mirrors
+  // the lock for the timer/guard closures.
   // The show decision itself lives further down, next to the
   // nudge it has to retire (see the TUTORIAL decision effect).
   const [tutorialStep, setTutorialStep] = useState<number | null>(null);
   const [tutorialRect, setTutorialRect] = useState<TutorialRect | null>(
     null
   );
+  const [tutorialSheetPos, setTutorialSheetPos] =
+    useState<TutorialSheetPos | null>(null);
   const deckRootRef = useRef<HTMLDivElement>(null);
   const tutorialRectRef = useRef<TutorialRect | null>(null);
+  const tutorialSheetPosRef = useRef<TutorialSheetPos | null>(null);
+  const tutorialSheetRef = useRef<HTMLDivElement>(null);
+  const [demoBucket, setDemoBucket] = useState<BucketType | null>(null);
+  const [demoPlaying, setDemoPlaying] = useState(false);
+  const demoPlayingRef = useRef(false);
+  // Mirrored for the demo's timers, which must judge the step
+  // that's open when they FIRE (an Esc mid-demo closes the
+  // tour; the landing timer must not reopen it).
+  const tutorialStepRef = useRef<number | null>(null);
+  tutorialStepRef.current = tutorialStep;
   const tutorialDecidedRef = useRef(false);
   const tutorialArmedRef = useRef(false);
   // Replay bookkeeping: whether the tour currently open was
@@ -944,6 +1012,8 @@ export default function Step1Deck({
     setTutorialStep(null);
     setTutorialRect(null);
     tutorialRectRef.current = null;
+    setTutorialSheetPos(null);
+    tutorialSheetPosRef.current = null;
   };
 
   const markNudgeDone = () => {
@@ -1747,16 +1817,21 @@ export default function Step1Deck({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // TUTORIAL — geometry. Measure the step's target (found by
-  // its data-tutorial attribute) against the deck root and pad
-  // the box 4px a side for the ring. Only the ring is
-  // measured: the callout is a viewport-fixed bottom sheet
-  // (see the render), so its reachability never depends on
-  // root geometry — the old root-relative callout placement
-  // could park it below the fold on phones, where the deck
-  // root is taller than the visible viewport. State updates
-  // are skipped when nothing moved, so the scroll/resize
-  // listeners can't loop.
+  // TUTORIAL — geometry. Two measurements per pass. The RING:
+  // the step's target (found by its data-tutorial attribute)
+  // measured against the deck root, padded 4px a side — the
+  // ring lives inside the overlay root, so root-relative is
+  // correct for it. The SHEET, on adjacent steps only: the
+  // target's own viewport rect (getBoundingClientRect is
+  // viewport-relative already — no root subtraction; doing
+  // this root-relative was the v1 bug) plus the sheet's real
+  // height, resolved to a hover just above the target (below
+  // it if above would crowd the top safe area, clamped
+  // inside the visual viewport if neither fits whole). The
+  // five bucket tiles share the tray row, so their sheets all
+  // land just above the tray and stay roughly put while the
+  // ring walks tile to tile. State updates are skipped when
+  // nothing moved, so the scroll/resize listeners can't loop.
   const measureTutorial = () => {
     if (tutorialStep === null) return;
     const root = deckRootRef.current;
@@ -1784,6 +1859,40 @@ export default function Step1Deck({
     ) {
       tutorialRectRef.current = rect;
       setTutorialRect(rect);
+    }
+    if (step.placement !== 'adjacent') return;
+    const sheetH = tutorialSheetRef.current?.offsetHeight ?? 190;
+    const vw = window.visualViewport?.width ?? window.innerWidth;
+    const vh = window.visualViewport?.height ?? window.innerHeight;
+    const safe = readSafeAreaInsets();
+    const width = Math.min(vw - 24, 400);
+    const centerX = t.left + t.width / 2;
+    const left = Math.max(
+      12,
+      Math.min(centerX - width / 2, vw - 12 - width)
+    );
+    const minTop = 12 + safe.top;
+    const maxTop = Math.max(minTop, vh - 12 - safe.bottom - sheetH);
+    const aboveTop = t.top - 12 - sheetH;
+    const belowTop = t.bottom + 12;
+    let top: number;
+    if (aboveTop >= minTop) {
+      top = aboveTop;
+    } else if (belowTop <= maxTop) {
+      top = belowTop;
+    } else {
+      top = Math.max(minTop, Math.min(aboveTop, maxTop));
+    }
+    const pos: TutorialSheetPos = { top, left, width };
+    const prevPos = tutorialSheetPosRef.current;
+    if (
+      !prevPos ||
+      Math.abs(prevPos.top - pos.top) > 0.5 ||
+      Math.abs(prevPos.left - pos.left) > 0.5 ||
+      Math.abs(prevPos.width - pos.width) > 0.5
+    ) {
+      tutorialSheetPosRef.current = pos;
+      setTutorialSheetPos(pos);
     }
   };
 
@@ -1831,6 +1940,47 @@ export default function Step1Deck({
     } else {
       setTutorialStep(tutorialStep + 1);
     }
+  };
+
+  // TUTORIAL DEMO — on a bucket step, tapping the ringed tile
+  // rehearses a real sort: the bucket's stamp lands on the
+  // card, the tile wears its committed fill, and the card
+  // flips — the same visual sentence a real button sort
+  // speaks (flipAct + the static stamp), driven here by
+  // timers alone. It calls NO sort path: handleSetBucket,
+  // act() and flipAct() are never invoked, nothing is
+  // written (no triageMap, no localStorage, no passed mark),
+  // the deck does not advance and progress does not move —
+  // setPhase/setFlipTarget/setDemoBucket are pure render
+  // state. The stamp gets a beat to read (DEMO_STAMP_MS)
+  // before the flip starts; when the flip lands (~900ms
+  // total) the rehearsal state clears — the card is back to
+  // its normal unsorted front — and the tour steps forward.
+  // The landing timer judges the step through the ref: if
+  // the tour was closed mid-demo (Esc), it just cleans up.
+  const playDemo = (bucket: BucketType) => {
+    if (tutorialStep === null || demoPlayingRef.current) return;
+    const stepAtTap = tutorialStep;
+    demoPlayingRef.current = true;
+    setDemoPlaying(true);
+    setDemoBucket(bucket);
+    setFlipTarget(bucket);
+    schedule(() => {
+      setPhase('flip-out');
+      schedule(() => {
+        setPhase('flip-in');
+        schedule(() => {
+          setPhase('idle');
+          setFlipTarget(null);
+          setDemoBucket(null);
+          demoPlayingRef.current = false;
+          setDemoPlaying(false);
+          if (tutorialStepRef.current === stepAtTap) {
+            advanceTutorial();
+          }
+        }, FLIP_IN_MS + 60);
+      }, FLIP_OUT_MS);
+    }, DEMO_STAMP_MS);
   };
 
   // NUDGE — arm once, the first time a song card is on screen
@@ -1934,6 +2084,25 @@ export default function Step1Deck({
         }
       : null;
 
+  // TUTORIAL DEMO STAMP — while a bucket step's rehearsal is
+  // playing, the demo bucket's stamp takes the static stamp's
+  // place (same text/ink/size derivation as a real bucket
+  // verdict, including the 'Slaps' shortening). Purely
+  // visual: the triage map is never touched, so when the
+  // demo clears, the card's real state shows through again.
+  const demoStamp: { text: string; ink: string; size: string } | null =
+    demoBucket === null
+      ? null
+      : {
+          text:
+            demoBucket === 'slaps'
+              ? 'Slaps'
+              : BUCKET_CONFIG[demoBucket].label,
+          ink: BUCKET_CONFIG[demoBucket].color,
+          size: 'text-2xl',
+        };
+  const shownStamp = demoStamp ?? staticStamp;
+
   // Shared swipe wiring for the two draggable shells (song card
   // and end card).
   const swipeProps = {
@@ -1950,6 +2119,18 @@ export default function Step1Deck({
     phase,
     exitX,
   };
+
+  // TUTORIAL render inputs: the open step's def; its measured
+  // adjacent sheet position (null while the step is a bottom
+  // step, and until the first measure lands on an adjacent
+  // step — the sheet renders as the bottom sheet meanwhile);
+  // and the bucket the step's tap zone demos (bucket steps
+  // only, null everywhere else).
+  const tutorialDef =
+    tutorialStep !== null ? TUTORIAL_STEPS[tutorialStep] : null;
+  const tutorialAdjacentPos =
+    tutorialDef?.placement === 'adjacent' ? tutorialSheetPos : null;
+  const tutorialDemoBucket = tutorialDef?.bucket ?? null;
 
   return (
     <div
@@ -2191,13 +2372,15 @@ export default function Step1Deck({
                   top-[84px]), rendered only while no drag stamp
                   is up. It sits over the art; the preview button
                   lives in the card's bottom slot, far below the
-                  stamp's band, so they can never overlap. */}
-              {staticStamp && stampKind === null && (
+                  stamp's band, so they can never overlap. During
+                  a tutorial demo, shownStamp is the demo bucket's
+                  stamp instead (see demoStamp above). */}
+              {shownStamp && stampKind === null && (
                 <span
                   aria-hidden="true"
-                  className={`pointer-events-none absolute left-1/2 top-[84px] z-10 -translate-x-1/2 -translate-y-1/2 -rotate-[10deg] rounded-lg border-[3px] px-3 py-1 font-black uppercase tracking-widest opacity-90 bg-white/60 ${staticStamp.size} ${staticStamp.ink}`}
+                  className={`pointer-events-none absolute left-1/2 top-[84px] z-10 -translate-x-1/2 -translate-y-1/2 -rotate-[10deg] rounded-lg border-[3px] px-3 py-1 font-black uppercase tracking-widest opacity-90 bg-white/60 ${shownStamp.size} ${shownStamp.ink}`}
                 >
-                  {staticStamp.text}
+                  {shownStamp.text}
                 </span>
               )}
               {/* ART — a fixed 128px slot; it no longer flexes or
@@ -2377,14 +2560,21 @@ export default function Step1Deck({
           its buttons are always inside the visible area, above
           Safari's toolbar — the old root-measured placement
           could park it below the fold on phones, visible but
-          unreachable. Each step anchors the sheet to the top
-          or the bottom of the viewport (TUTORIAL_STEPS'
-          placement), away from the element it explains — a
-          bottom-only sheet covered the low-sitting preview
-          button and tray tiles (owner report, Oct 17). It
-          uses the deck's vocabulary: white card, brand-blue
-          step eyebrow, amber primary. Neither element shifts
-          the deck's layout. */}
+          unreachable. Steps 1 and 8 keep that bottom sheet.
+          Steps 2–7 place the sheet ADJACENT to their target:
+          measured in viewport coordinates (see
+          measureTutorial), hovering just above it — below it
+          only when above doesn't fit — because anchoring to
+          the screen's top put the sheet inches from the
+          element it pointed at (owner report, Oct 17); until
+          the first measure lands, an adjacent step's sheet
+          renders as the bottom sheet, always reachable. On
+          bucket steps an invisible tap zone covers the ringed
+          tile and plays the demo sort (see playDemo) — the
+          one live surface besides the sheet's own buttons.
+          The sheet uses the deck's vocabulary: white card,
+          brand-blue step eyebrow, amber primary. No element
+          here shifts the deck's layout. */}
       {tutorialStep !== null && (
         <div
           className="absolute inset-0 z-50 [touch-action:none]"
@@ -2411,12 +2601,50 @@ export default function Step1Deck({
               className="absolute inset-0 bg-slate-900/60"
             />
           )}
+          {/* DEMO TAP ZONE — bucket steps only: an invisible
+              button over the ring's rect (same root-relative
+              box as the ring). It is the only tappable thing
+              out here; the ring above/below it is visual only,
+              and the deck beneath stays inert under the
+              overlay. Tapping plays the demo (playDemo) —
+              while one is playing, the handler ignores taps. */}
+          {tutorialDemoBucket !== null && tutorialRect && (
+            <button
+              type="button"
+              aria-label={`Try it: tap to sort as ${
+                tutorialDemoBucket === 'slaps'
+                  ? 'Slaps'
+                  : BUCKET_CONFIG[tutorialDemoBucket].label
+              }`}
+              onClick={() => playDemo(tutorialDemoBucket)}
+              className="absolute cursor-pointer"
+              style={{
+                top: tutorialRect.top,
+                left: tutorialRect.left,
+                width: tutorialRect.width,
+                height: tutorialRect.height,
+                borderRadius: TUTORIAL_STEPS[tutorialStep].radius,
+              }}
+            />
+          )}
           <div
-            className="fixed left-3 right-3 mx-auto w-auto max-w-[400px] bg-white rounded-3xl border border-slate-200 shadow-2xl p-5"
+            ref={tutorialSheetRef}
+            className={
+              tutorialAdjacentPos
+                ? 'fixed bg-white rounded-3xl border border-slate-200 shadow-2xl p-5 transition-[top,left] duration-300 ease-out'
+                : 'fixed left-3 right-3 mx-auto w-auto max-w-[400px] bg-white rounded-3xl border border-slate-200 shadow-2xl p-5'
+            }
             style={
-              TUTORIAL_STEPS[tutorialStep].placement === 'top'
-                ? { top: 'calc(12px + env(safe-area-inset-top, 0px))' }
-                : { bottom: 'calc(12px + env(safe-area-inset-bottom, 0px))' }
+              tutorialAdjacentPos
+                ? {
+                    top: tutorialAdjacentPos.top,
+                    left: tutorialAdjacentPos.left,
+                    width: tutorialAdjacentPos.width,
+                  }
+                : {
+                    bottom:
+                      'calc(12px + env(safe-area-inset-bottom, 0px))',
+                  }
             }
           >
             <p className="text-[11px] font-black uppercase tracking-wider text-[#0072CE]">
@@ -2431,7 +2659,8 @@ export default function Step1Deck({
             <div className="flex items-center justify-between gap-3 mt-4">
               <button
                 onClick={closeTutorial}
-                className="text-sm font-bold text-slate-400 hover:text-slate-600 transition cursor-pointer py-1"
+                disabled={demoPlaying}
+                className="text-sm font-bold text-slate-400 hover:text-slate-600 transition cursor-pointer py-1 disabled:opacity-40 disabled:cursor-default"
               >
                 Skip tutorial
               </button>
@@ -2439,14 +2668,16 @@ export default function Step1Deck({
                 {tutorialStep > 0 && (
                   <button
                     onClick={() => setTutorialStep(tutorialStep - 1)}
-                    className="text-sm font-extrabold text-slate-600 bg-white border border-slate-300 rounded-full px-5 py-2.5 hover:bg-slate-100 transition-all cursor-pointer"
+                    disabled={demoPlaying}
+                    className="text-sm font-extrabold text-slate-600 bg-white border border-slate-300 rounded-full px-5 py-2.5 hover:bg-slate-100 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-default"
                   >
                     Back
                   </button>
                 )}
                 <button
                   onClick={advanceTutorial}
-                  className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm px-5 py-2.5 min-h-[48px] inline-flex items-center justify-center rounded-full shadow-md transition transform hover:scale-105 cursor-pointer border-2 border-amber-200 whitespace-nowrap"
+                  disabled={demoPlaying}
+                  className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm px-5 py-2.5 min-h-[48px] inline-flex items-center justify-center rounded-full shadow-md transition transform hover:scale-105 cursor-pointer border-2 border-amber-200 whitespace-nowrap disabled:opacity-60 disabled:cursor-default"
                 >
                   {tutorialStep >= TUTORIAL_STEPS.length - 1
                     ? 'Start sorting'

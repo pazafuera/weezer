@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useWeezer, AppStep, getProgressState } from '../context/WeezerContext';
 import { FlyingWIcon } from './SharedUI';
 import WeezerAccountDrawer from './WeezerAccountDrawer';
+import BucketGuide from './BucketGuide';
 
 export default function AppShell({
   children,
@@ -16,9 +17,35 @@ export default function AppShell({
   const [menuOpen, setMenuOpen] = useState(false);
   const [hasViewedWrapped, setHasViewedWrapped] = useState(false);
   const [accountDrawerOpen, setAccountDrawerOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [bucketsOpen, setBucketsOpen] = useState(false);
 
   const openAccountDrawer = () => setAccountDrawerOpen(true);
   const closeAccountDrawer = () => setAccountDrawerOpen(false);
+
+  const closeHelp = () => setHelpOpen(false);
+  const closeBuckets = () => setBucketsOpen(false);
+
+  // HELP → "Replay the deck tutorial": hand the request to
+  // Step1Deck by two routes. The sessionStorage flag is set
+  // before navigating, so a deck that mounts on arrival picks
+  // it up; the window event reaches a deck that is already
+  // mounted on the triage step. (Same-step navigateTo doesn't
+  // remount the deck, so the event is the live route there.)
+  // The deck clears the flag when the tour actually opens.
+  const replayTutorial = () => {
+    try {
+      window.sessionStorage.setItem('weezer-deck-tutorial-force', '1');
+    } catch (e) {
+      // sessionStorage unavailable — the event below still
+      // covers a deck that is already on screen.
+    }
+    setHelpOpen(false);
+    if (step === 'triage') {
+      window.dispatchEvent(new CustomEvent('weezer:replay-tutorial'));
+    }
+    navigateTo('triage');
+  };
 
   const {
     step,
@@ -161,6 +188,15 @@ export default function AppShell({
           </button>
 
           <div className="flex items-center gap-2 lg:gap-3">
+            <button
+              onClick={() => setHelpOpen(true)}
+              aria-label="Help"
+              title="Help"
+              className="w-9 h-9 lg:w-10 lg:h-10 flex items-center justify-center rounded-xl bg-white/10 hover:bg-white/20 text-white font-black text-base transition-colors cursor-pointer"
+            >
+              ?
+            </button>
+
             {userId && pendingRequestsCount > 0 && (
               <button
                 onClick={() => navigateTo('friends')}
@@ -445,6 +481,104 @@ export default function AppShell({
               <p className="text-[10px] font-bold text-slate-300">
                 All My Favorite Songs • 2026 Canon
               </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* HELP MENU — opened by the header "?" button */}
+      {helpOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div
+            onClick={closeHelp}
+            className="absolute inset-0 bg-slate-950/40 backdrop-blur-xs transition-opacity"
+          />
+
+          <div className="relative w-full max-w-sm bg-white rounded-3xl shadow-2xl border border-slate-200 p-5 z-10">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 bg-[#0072CE] text-white rounded-lg flex items-center justify-center">
+                  <FlyingWIcon className="w-4 h-4 text-white" />
+                </div>
+                <span className="text-xs font-black text-slate-900 uppercase tracking-wider">
+                  Help
+                </span>
+              </div>
+
+              <button
+                onClick={closeHelp}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors cursor-pointer"
+                aria-label="Close Help"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-2 mt-4">
+              <button
+                onClick={replayTutorial}
+                className="w-full flex items-center justify-between gap-3 px-4 py-3.5 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200/80 text-left transition-colors cursor-pointer"
+              >
+                <span>
+                  <span className="block text-sm font-black text-slate-900">
+                    Replay the deck tutorial
+                  </span>
+                  <span className="block text-xs font-medium text-slate-500 mt-0.5">
+                    The five-step tour of the deck, one more time.
+                  </span>
+                </span>
+                <span className="text-[#0072CE] font-black text-sm">→</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setHelpOpen(false);
+                  setBucketsOpen(true);
+                }}
+                className="w-full flex items-center justify-between gap-3 px-4 py-3.5 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200/80 text-left transition-colors cursor-pointer"
+              >
+                <span>
+                  <span className="block text-sm font-black text-slate-900">
+                    Bucket definitions
+                  </span>
+                  <span className="block text-xs font-medium text-slate-500 mt-0.5">
+                    What Banger, Slaps, Mid, Skip and Trash mean.
+                  </span>
+                </span>
+                <span className="text-[#0072CE] font-black text-sm">→</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* BUCKET DEFINITIONS — the BucketGuide card in a sheet.
+          The panel caps its own height in dvh and scrolls
+          internally, so it can't become an iOS scroll trap. */}
+      {bucketsOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div
+            onClick={closeBuckets}
+            className="absolute inset-0 bg-slate-950/40 backdrop-blur-xs transition-opacity"
+          />
+
+          <div className="relative w-full max-w-md max-h-[85dvh] overflow-y-auto bg-white rounded-3xl shadow-2xl border border-slate-200 z-10">
+            <div className="sticky top-0 bg-white border-b border-slate-100 px-5 sm:px-6 py-4 flex items-center justify-between rounded-t-3xl">
+              <span className="text-xs font-black text-slate-900 uppercase tracking-wider">
+                The buckets
+              </span>
+
+              <button
+                onClick={closeBuckets}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors cursor-pointer"
+                aria-label="Close Bucket Definitions"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-4 sm:p-5">
+              <BucketGuide />
             </div>
           </div>
         </div>

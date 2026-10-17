@@ -386,6 +386,15 @@ function buildSectionMilestone(
 // sessions.
 const TUTORIAL_SEEN_KEY = 'weezer-deck-tutorial-seen-v1';
 
+// TUTORIAL REPLAY — the header "?" button (AppShell) can ask
+// for the tour again: it sets this sessionStorage flag before
+// navigating to the triage step, and dispatches a window event
+// of this name when the deck is already mounted. A forced
+// open ignores the seen flag and the fresh-sorter rule (see
+// the replay block inside the component).
+const TUTORIAL_FORCE_KEY = 'weezer-deck-tutorial-force';
+const TUTORIAL_REPLAY_EVENT = 'weezer:replay-tutorial';
+
 type TutorialTargetKey = 'card' | 'preview' | 'tray' | 'unknown';
 
 interface TutorialStepDef {
@@ -874,6 +883,11 @@ export default function Step1Deck({
   const tutorialCalloutRef = useRef<TutorialCalloutPos | null>(null);
   const tutorialDecidedRef = useRef(false);
   const tutorialArmedRef = useRef(false);
+  // Replay bookkeeping: whether the tour currently open was
+  // force-opened (its close must not write the seen flag), and
+  // whether a forced request is waiting for a song card.
+  const tutorialForcedRef = useRef(false);
+  const tutorialForcePendingRef = useRef(false);
 
   const markTutorialSeen = () => {
     try {
@@ -884,9 +898,15 @@ export default function Step1Deck({
   };
   // Finishing and skipping are the same exit: the flag is set
   // either way (once means once) and the geometry resets so a
-  // (never expected) reopen measures fresh.
+  // (never expected) reopen measures fresh. A FORCED (replay)
+  // viewing is the one exception: it leaves the seen flag
+  // exactly as it was — a replay neither earns nor spends the
+  // first-run offer.
   const closeTutorial = () => {
-    markTutorialSeen();
+    if (!tutorialForcedRef.current) {
+      markTutorialSeen();
+    }
+    tutorialForcedRef.current = false;
     setTutorialStep(null);
     setTutorialRect(null);
     setTutorialCallout(null);
@@ -1579,6 +1599,90 @@ export default function Step1Deck({
     inSong: inSongState,
     categorized: categorizedCount,
   };
+
+  // TUTORIAL REPLAY — forced opens, for the header "?" button's
+  // Replay entry (AppShell). The request arrives two ways (see
+  // TUTORIAL_FORCE_KEY above): the sessionStorage flag, consumed
+  // on mount below, and the window event, for a deck already on
+  // screen. A forced open ignores the seen flag, the
+  // fresh-sorter rule, and the already-interacted rule — the
+  // user explicitly asked — but it still waits for a normal
+  // song card: if a milestone / end / completion card is up
+  // when the request lands, the request stays pending and the
+  // tour opens on the next song card instead (the watcher
+  // effect below). Opening retires the nudge for the session,
+  // exactly like the first-run open, and consumes the flag so
+  // a later remount doesn't replay the replay.
+  const openForcedTutorial = () => {
+    try {
+      window.sessionStorage.removeItem(TUTORIAL_FORCE_KEY);
+    } catch {
+      /* sessionStorage unavailable */
+    }
+    tutorialForcePendingRef.current = false;
+    tutorialForcedRef.current = true;
+    markNudgeDone();
+    cancelNudge();
+    setTutorialStep(0);
+  };
+  const requestForcedTutorial = () => {
+    if (tutorialStep !== null) return; // the tour is already up
+    if (tutorialStateRef.current.inSong) {
+      openForcedTutorial();
+    } else {
+      tutorialForcePendingRef.current = true;
+    }
+  };
+
+  // Consume the sessionStorage flag on mount. Declared BEFORE
+  // the first-run decision effect so a consumed request marks
+  // that decision made and the effect stands down — a replay
+  // must not also run the fresh-sorter bookkeeping.
+  useEffect(() => {
+    let forced = false;
+    try {
+      forced =
+        window.sessionStorage.getItem(TUTORIAL_FORCE_KEY) === '1';
+    } catch {
+      /* sessionStorage unavailable — the event route still works */
+    }
+    if (!forced) return;
+    tutorialDecidedRef.current = true;
+    tutorialArmedRef.current = true;
+    requestForcedTutorial();
+    // Mount-only: requestForcedTutorial judges the world
+    // through the state mirror — the same pattern the
+    // first-run decision effect below uses.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // The already-mounted route: AppShell dispatches this when
+  // Replay is tapped while the triage step is on screen.
+  useEffect(() => {
+    const onReplay = () => requestForcedTutorial();
+    window.addEventListener(TUTORIAL_REPLAY_EVENT, onReplay);
+    return () =>
+      window.removeEventListener(TUTORIAL_REPLAY_EVENT, onReplay);
+    // Re-bound when the card state changes so the closure's
+    // requestForcedTutorial sees the current card and step.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inSongState, tutorialStep]);
+
+  // A pending forced request opens the moment a normal song
+  // card is on screen (e.g. the milestone that was up when the
+  // request landed gets dismissed).
+  useEffect(() => {
+    if (
+      tutorialForcePendingRef.current &&
+      inSongState &&
+      tutorialStep === null
+    ) {
+      openForcedTutorial();
+    }
+    // openForcedTutorial only touches refs and setters.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inSongState, tutorialStep]);
+
   useEffect(() => {
     if (tutorialDecidedRef.current || tutorialArmedRef.current) {
       return;

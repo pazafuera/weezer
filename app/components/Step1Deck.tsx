@@ -18,7 +18,7 @@ import type { TriageSection } from './Step1Triage';
  * the list view (handleSetBucket / handleFinishTriage), and walks the
  * SAME recognition-first display order: Step1Triage computes its
  * sections once and passes the flattened order down, so deck and list
- * can never disagree about what comes next.
+ * can never disagree about the sequence.
  *
  * ONE-SCREEN LAYOUT (owner feedback): Step1Triage hands this component
  * a column at least one viewport tall (100dvh minus the sticky
@@ -29,40 +29,45 @@ import type { TriageSection } from './Step1Triage';
  * everything fits one screen; on short ones the page scrolls a
  * little — the owner accepted that in exchange for a song card tall
  * enough to hold a two-line title without pushing the preview button
- * off it. The checkpoint and completion states replace the card
- * inside the same column, at the same fixed height.
+ * off it. The checkpoint, completion and end-of-deck states replace
+ * the card inside the same column, at the same fixed height.
  *
- * SWIPE (owner feedback): the song card also drags horizontally —
- * commit left = Skip for an unrated song, advance-with-rating-kept
- * for a rated one; commit right = Undo. Directional stamps on the
- * card (SKIP / NEXT / BACK) plus quiet edge chevrons show the
- * affordance. See the SWIPE block in the component for the mapping;
- * it funnels into the same act()/undo() as the buttons.
+ * NAVIGATION MODEL (owner correction, Oct 16): the deck is a
+ * BROWSER, not a funnel. `position` is a plain index into
+ * orderedSongs (0..205), plus one past the end (206) for the
+ * end-of-deck card. Until the user first navigates, position is
+ * unset and the deck shows the first uncategorized song (so it
+ * resumes where the work is, and self-corrects if the triage map
+ * loads in late). Sorting a card records the verdict and advances
+ * to position+1 — the NEXT card, sorted or not. Jump goes to a
+ * section's FIRST song. Swipe right / the U key step back one.
+ * There is no history stack and no undo-as-navigation: because the
+ * deck is browsable, every card shows its own state (the
+ * already-rated badge and the selected tile for a sorted song; a
+ * muted "Not Sorted" badge for a passed one — see below).
  *
- * ANIMATION (owner feedback): a committed swipe flies the card
- * off-screen BEFORE the action runs — the state never advances
- * early — and a button sort flips the card edge-on, swaps the song
- * at the midpoint, and flips back. The stamps sit centered over the
- * album art (the old corner stamps rotated off-screen first and
- * were hard to see), and a swipe-skip flashes a brief "Song Not
- * Sorted" pill as the next card lands. The Undo BUTTON is gone
- * (owner) — swipe right and the U key are the ways back.
+ * SWIPE = PURE NAVIGATION (owner correction, Oct 16): a swipe NEVER
+ * writes a rating. Sorting a song as Skip is a judgment; swiping
+ * past a song is not sorting it at all — the same Tier 1 principle
+ * behind Don't Know It (an unjudged song must never be recorded as
+ * a rating). Leaving an UNSORTED song via a committed forward
+ * swipe marks it in the session-only `passedIds` set, which drives
+ * its "Not Sorted" badge on revisit and the end card's unsorted
+ * count; sorting it later clears the mark. Don't Know It counts as
+ * SORTED (a deliberate disposition, value 'unknown') — passing is
+ * only for songs with NO triageMap entry. Dragging shows a stamp
+ * over the album art: NOT SORTED (unsorted song, forward), NEXT
+ * (sorted song, forward), BACK (either way back). The Skip stamp
+ * is gone from swiping entirely — Skip is reachable only via its
+ * tile.
  *
- * Cursor model: `cursorId` names the song on the card. Null means "no
- * explicit cursor" — the card shows the first uncategorized song in
- * display order (or the completion state when none are left). Acting
- * on a song advances the cursor to the next uncategorized song AFTER
- * the acted one, wrapping to the first uncategorized song overall when
- * the tail of the order is exhausted. Jump and Undo set the cursor
- * explicitly; a song the cursor lands on may already be categorized
- * (its state shows on the card, and picking a tier overwrites it).
- *
- * Undo: the context only exposes a setter (setSongBucket) — there is
- * no clear/remove API for a triage entry anywhere in the app, and the
- * list view cannot un-bucket a song either. So Undo moves the cursor
- * back to the last acted song WITHOUT clearing its entry; re-choosing
- * a tier (or Don't Know It) overwrites it. The in-memory history stack
- * holds acted song ids in order.
+ * ANIMATION: a committed swipe flies the card off-screen BEFORE
+ * the position changes — the state never advances early — and a
+ * button sort flips the card edge-on, swaps the song at the
+ * midpoint, and flips back. The stamps sit centered over the album
+ * art (the old corner stamps rotated off-screen first and were
+ * hard to see). The Undo BUTTON is gone (owner) — swipe right and
+ * the U key are the ways back.
  */
 
 // The short-path promise the site's own splash copy makes ("25 songs
@@ -81,28 +86,25 @@ const CHECKPOINT_DISMISSED_KEY = 'weezer-deck-checkpoint-dismissed';
 
 const BUCKET_ORDER: BucketType[] = ['banger', 'slaps', 'mid', 'skip', 'trash'];
 
-// Swipe (owner, Oct 16): dragging the card left past the commit
-// threshold is "as good as a skip" for an unrated song (and just an
-// advance for a rated one); dragging right is Undo. The stamp fades
-// in from STAMP_FADE_PX and the gesture commits at
-// max(COMMIT_MIN_PX, SWIPE_COMMIT_RATIO × card width).
+// Swipe: dragging the card horizontally browses the deck — left
+// advances one card, right goes back one (see the navigation model
+// above; a swipe never writes). The stamp fades in from
+// STAMP_FADE_PX and the gesture commits at max(COMMIT_MIN_PX,
+// SWIPE_COMMIT_RATIO × card width).
 const STAMP_FADE_PX = 40;
 const COMMIT_MIN_PX = 80;
 const SWIPE_COMMIT_RATIO = 0.25;
 
-// Animation timing (owner, Oct 16): a committed swipe flies the
-// card off-screen over EXIT_MS before its action runs; a button
-// sort flips the card edge-on (FLIP_OUT_MS), swaps the song at the
-// midpoint, and flips back (FLIP_IN_MS). SNAP_MS is the
-// transition-less beat that lets a flown-off card's replacement
-// appear in place instead of sliding in from off-screen. TOAST_MS
-// is the "Song Not Sorted" pill's fade window (its keyframes in
-// the render below run the same duration).
+// Animation timing: a committed swipe flies the card off-screen
+// over EXIT_MS before its navigation runs; a button sort flips
+// the card edge-on (FLIP_OUT_MS), swaps the song at the midpoint,
+// and flips back (FLIP_IN_MS). SNAP_MS is the transition-less beat
+// that lets a flown-off card's replacement appear in place instead
+// of sliding in from off-screen.
 const EXIT_MS = 260;
 const FLIP_OUT_MS = 150;
 const FLIP_IN_MS = 150;
 const SNAP_MS = 40;
-const TOAST_MS = 1200;
 
 /**
  * Card animation phases. 'idle' covers both resting and actively
@@ -120,8 +122,9 @@ type CardAnimPhase = 'idle' | 'exit' | 'snap' | 'flip-out' | 'flip-in';
  * brand-blue tint (owner: try a color instead of white); the two
  * backing layers stay white for contrast. The shell is a FIXED
  * height — it never grows or shrinks with content — so a song title
- * can never push the preview button off the card; the checkpoint and
- * completion states render inside the same shell at the same height.
+ * can never push the preview button off the card; the checkpoint,
+ * completion and end-of-deck states render inside the same shell
+ * at the same height.
  *
  * Slot budget (mobile-first, sums to the 392px height): card vertical
  * padding py-5 (40) + art slot h-32 (128) + gap-3 (12) + two-line
@@ -135,13 +138,14 @@ function DeckCardShell({
 }: {
   children: React.ReactNode;
   /**
-   * Song state only: makes the front card draggable (see the swipe
-   * block in Step1Deck). The backing layers stay put — only the
-   * front card follows the pointer, complete with its directional
-   * stamp (centered over the album art) and edge chevrons.
-   * Checkpoint/completion shells render without it, so they can
-   * never be dragged. `phase`/`exitX` drive the exit and flip
-   * animations (see the ANIMATION block in Step1Deck).
+   * Song state (and the end-of-deck card): makes the front card
+   * draggable (see the swipe block in Step1Deck). The backing
+   * layers stay put — only the front card follows the pointer,
+   * complete with its directional stamp (centered over the album
+   * art) and edge chevrons. Checkpoint/completion shells render
+   * without it, so they can never be dragged. `phase`/`exitX`
+   * drive the exit and flip animations (see the ANIMATION block
+   * in Step1Deck).
    */
   swipe?: {
     dragX: number;
@@ -150,7 +154,7 @@ function DeckCardShell({
     onPointerDown: (e: React.PointerEvent<HTMLDivElement>) => void;
     onPointerMove: (e: React.PointerEvent<HTMLDivElement>) => void;
     onPointerEnd: (e: React.PointerEvent<HTMLDivElement>) => void;
-    stamp: 'skip' | 'next' | 'back' | null;
+    stamp: 'notsorted' | 'next' | 'back' | null;
     stampOpacity: number;
     phase: CardAnimPhase;
     exitX: number;
@@ -228,14 +232,16 @@ function DeckCardShell({
               (20px) plus half the h-32 art slot (64px). Opacity is
               proportional to drag distance (computed by the
               parent), and only the stamp for the current drag
-              direction renders. */}
-          {swipe.stamp === 'skip' && (
+              direction renders. NOT SORTED is the stamp motif in
+              neutral slate — swiping past an unsorted song sorts
+              nothing, and the stamp says exactly that. */}
+          {swipe.stamp === 'notsorted' && (
             <span
               aria-hidden="true"
               style={{ opacity: swipe.stampOpacity }}
-              className="pointer-events-none absolute left-1/2 top-[84px] z-20 -translate-x-1/2 -translate-y-1/2 -rotate-12 rounded-lg border-[3px] border-orange-500 px-2.5 py-1 text-lg font-black uppercase tracking-widest text-orange-500 bg-white/70"
+              className="pointer-events-none absolute left-1/2 top-[84px] z-20 -translate-x-1/2 -translate-y-1/2 -rotate-12 rounded-lg border-[3px] border-slate-500 px-2.5 py-1 text-base font-black uppercase tracking-widest text-slate-600 bg-white/70"
             >
-              Skip
+              Not Sorted
             </span>
           )}
           {swipe.stamp === 'next' && (
@@ -282,8 +288,17 @@ export default function Step1Deck({
   handleFinishTriage: () => void;
   onSwitchToList: () => void;
 }) {
-  const [cursorId, setCursorId] = useState<string | null>(null);
-  const [history, setHistory] = useState<string[]>([]);
+  // NAVIGATION — a plain position index into orderedSongs, not a
+  // funnel. Null = "not yet navigated": the deck then shows the
+  // first uncategorized song (see effectivePosition below). One
+  // past the last index is the end-of-deck card.
+  const [position, setPosition] = useState<number | null>(null);
+  // Session-only marks for songs the user swiped past while they
+  // were unsorted. React state only — never persisted, never
+  // written to the triage map.
+  const [passedIds, setPassedIds] = useState<ReadonlySet<string>>(
+    () => new Set()
+  );
   const [checkpointPending, setCheckpointPending] = useState(false);
   const [checkpointDismissed, setCheckpointDismissed] = useState(false);
 
@@ -302,49 +317,57 @@ export default function Step1Deck({
   const categorizedCount = countCategorizedSongs(triageMap);
   const bucketedCount = countBucketedSongs(triageMap);
   const total = FULL_SONG_POOL.length;
+  const deckLength = orderedSongs.length;
   const progressPercent = Math.round((categorizedCount / total) * 100);
   const isComplete = categorizedCount === total;
   const songsToWrapped = Math.max(0, WRAPPED_SHORT_PATH_GOAL - bucketedCount);
 
-  const firstUncategorized = (map: Record<string, TriageValue>): Song | null =>
-    orderedSongs.find((s) => map[s.id] === undefined) ?? null;
+  const firstUncatIdx = orderedSongs.findIndex(
+    (s) => triageMap[s.id] === undefined
+  );
+  const effectivePosition =
+    position ?? (firstUncatIdx === -1 ? deckLength : firstUncatIdx);
+  const atEnd = effectivePosition >= deckLength;
+  const currentSong = atEnd ? null : orderedSongs[effectivePosition] ?? null;
 
-  const nextUncategorizedAfter = (
-    map: Record<string, TriageValue>,
-    afterId: string
-  ): Song | null => {
-    const idx = orderedSongs.findIndex((s) => s.id === afterId);
-    for (let i = idx + 1; i < orderedSongs.length; i++) {
-      if (map[orderedSongs[i].id] === undefined) return orderedSongs[i];
-    }
-    for (let i = 0; i <= idx; i++) {
-      if (map[orderedSongs[i].id] === undefined) return orderedSongs[i];
-    }
-    return null;
-  };
-
-  const cursorSong = cursorId
-    ? orderedSongs.find((s) => s.id === cursorId) ?? null
-    : null;
-  const currentSong = cursorSong ?? firstUncategorized(triageMap);
+  // Passed songs that are STILL unsorted (sorting one clears its
+  // mark in act(), but the map is the source of truth here).
+  const firstPassedUnsortedIdx = orderedSongs.findIndex(
+    (s) => passedIds.has(s.id) && triageMap[s.id] === undefined
+  );
+  const passedUnsortedCount = orderedSongs.reduce(
+    (n, s) => (passedIds.has(s.id) && triageMap[s.id] === undefined ? n + 1 : n),
+    0
+  );
 
   const act = (value: TriageValue) => {
     if (!currentSong || checkpointPending) return;
     const song = currentSong;
+    const idx = effectivePosition;
     handleSetBucket(song.id, value);
-    setHistory((h) => [...h, song.id]);
 
-    // Advance against the prospective map — the context update hasn't
-    // rendered yet, but the acted song must not be re-offered.
+    // Sorting a passed song clears its passed mark — it has a
+    // verdict now.
+    setPassedIds((prev) => {
+      if (!prev.has(song.id)) return prev;
+      const next = new Set(prev);
+      next.delete(song.id);
+      return next;
+    });
+
+    // Advance to the NEXT card — plain position+1, sorted or not.
+    // (At the last card this lands on the end-of-deck card, or the
+    // completion card if that was the final unsorted song.)
+    setPosition(idx + 1);
+
+    // Checkpoint: this action crosses the front-section boundary
+    // (Blue + Pinkerton + Singles) with the Wrapped short-path met.
+    // Computed against the prospective map — the context update
+    // hasn't rendered yet.
     const prospective: Record<string, TriageValue> = {
       ...triageMap,
       [song.id]: value,
     };
-    const next = nextUncategorizedAfter(prospective, song.id);
-    setCursorId(next ? next.id : null);
-
-    // Checkpoint: this action crosses the front-section boundary
-    // (Blue + Pinkerton + Singles) with the Wrapped short-path met.
     const newCategorized = countCategorizedSongs(prospective);
     const newBucketed = countBucketedSongs(prospective);
     if (
@@ -357,24 +380,21 @@ export default function Step1Deck({
     }
   };
 
-  const undo = () => {
-    if (history.length === 0) return;
-    const lastId = history[history.length - 1];
-    setHistory((h) => h.slice(0, -1));
-    setCheckpointPending(false);
-    setCursorId(lastId);
+  // Step back one card. From the end card this returns to the last
+  // song; at position 0 it's a no-op.
+  const goBack = () => {
+    if (effectivePosition > 0) {
+      setPosition(effectivePosition - 1);
+    }
   };
 
   // SWIPE — hand-rolled pointer drag on the song card (no library).
-  // Buttons remain the primary path; a committed swipe funnels into
-  // the SAME act()/undo() the buttons use, so history, checkpoint
-  // logic and advance rules live in exactly one place:
-  //   commit left, song unrated → act('skip')  ("as good as a skip")
-  //   commit left, song rated   → advance only, rating kept — done by
-  //     re-acting the song's existing value: act() re-sets the same
-  //     bucket, pushes history, advances and recomputes the
-  //     checkpoint exactly as a button tap on that bucket would.
-  //   commit right              → undo()
+  // Buttons remain the primary SORTING path; a swipe only ever
+  // NAVIGATES (see the model at the top of the file):
+  //   commit left  → position+1. If the song being left is
+  //     unsorted, it's marked passed (badge + end-card count) —
+  //     nothing is written to the triage map.
+  //   commit right → position−1 (same as the U key).
   // The card element carries `touch-action: pan-y` (see
   // DeckCardShell), so vertical scrolls belong to the page and only
   // horizontal-dominant drags are captured here.
@@ -388,11 +408,12 @@ export default function Step1Deck({
   const [dragX, setDragX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
 
-  // ANIMATION — phases sequence around act()/undo() so the triage
+  // ANIMATION — phases sequence around act()/navigation so the
   // state NEVER advances before its animation says so:
   //   exit: the card flies off-screen over EXIT_MS; only then does
-  //     the pending action run, followed by one 'snap' beat with
-  //     transitions off so the next card appears in place.
+  //     the pending navigation/sort run, followed by one 'snap'
+  //     beat with transitions off so the next card appears in
+  //     place.
   //   flip: a button sort flips the card edge-on over FLIP_OUT_MS;
   //     act() runs at the midpoint (the content swaps while the
   //     card is edge-on and invisible), then it flips back over
@@ -409,35 +430,15 @@ export default function Step1Deck({
     timersRef.current.push(id);
   };
 
-  // "Song Not Sorted" toast — flashed when a swipe-left on an
-  // UNRATED song records a Skip (the swipe-skip path only: not the
-  // Skip tile, not a rated-song advance). Keyed by trigger time so
-  // consecutive swipe-skips restart the fade cleanly.
-  const [toastKey, setToastKey] = useState<number | null>(null);
-  const toastTimerRef = useRef<number | null>(null);
-  const showNotSortedToast = () => {
-    if (toastTimerRef.current !== null) {
-      window.clearTimeout(toastTimerRef.current);
-    }
-    setToastKey(Date.now());
-    toastTimerRef.current = window.setTimeout(
-      () => setToastKey(null),
-      TOAST_MS + 50
-    );
-  };
-
   useEffect(() => {
     const timers = timersRef.current;
     return () => {
       timers.forEach((id) => window.clearTimeout(id));
-      if (toastTimerRef.current !== null) {
-        window.clearTimeout(toastTimerRef.current);
-      }
     };
   }, []);
 
-  // Fly the card off-screen in `dir`, THEN run `action` (an act()
-  // or undo()) and snap-reset for the next card.
+  // Fly the card off-screen in `dir`, THEN run `action` (a sort or
+  // a navigation step) and snap-reset for the next card.
   const exitTo = (dir: -1 | 1, action: () => void) => {
     if (phase !== 'idle') return;
     const width = cardRef.current?.offsetWidth ?? 320;
@@ -464,14 +465,14 @@ export default function Step1Deck({
     }, FLIP_OUT_MS);
   };
 
-  // A song change (advance, jump, undo, mode remount) ends any drag
-  // and resets the transform — the next card renders in place.
-  const currentSongId = currentSong?.id ?? null;
+  // A position/state change (advance, jump, step back, mode
+  // remount) ends any drag and resets the transform — the next
+  // card renders in place.
   useEffect(() => {
     dragRef.current = null;
     setDragX(0);
     setIsDragging(false);
-  }, [currentSongId, checkpointPending, isComplete]);
+  }, [effectivePosition, checkpointPending, isComplete]);
 
   const handleCardPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (phase !== 'idle') return;
@@ -523,7 +524,7 @@ export default function Step1Deck({
     if (!drag || drag.pointerId !== e.pointerId) return;
     dragRef.current = null;
     setIsDragging(false);
-    if (!drag.locked || !currentSong) {
+    if (!drag.locked) {
       setDragX(0);
       return;
     }
@@ -533,28 +534,47 @@ export default function Step1Deck({
       width * SWIPE_COMMIT_RATIO
     );
     const dx = dragX;
-    if (dx <= -threshold) {
-      // Swipe left = move on — but NOT yet: the card first flies
-      // off-screen (exitTo), and the action runs only as it lands.
-      // Unrated: a swipe IS a skip, and the "Song Not Sorted"
-      // toast fires as the next card shows. Rated: keep the rating
-      // and advance the same way a tap on its current bucket would
-      // (act re-sets the identical value) — no toast, it WAS
-      // sorted.
-      const existing = triageMap[currentSong.id];
-      if (existing === undefined) {
-        exitTo(-1, () => {
-          act('skip');
-          showNotSortedToast();
-        });
+    if (atEnd) {
+      // END CARD — it can't be swiped forward (there's nothing
+      // past it); a committed right swipe flies back to the last
+      // song. Anything else springs back.
+      if (dx >= threshold) {
+        exitTo(1, () => setPosition(deckLength - 1));
       } else {
-        exitTo(-1, () => act(existing));
+        setDragX(0);
       }
+      return;
+    }
+    if (!currentSong) {
+      setDragX(0);
+      return;
+    }
+    if (dx <= -threshold) {
+      // Swipe left = next card — but NOT yet: the card first
+      // flies off-screen (exitTo), and the position changes only
+      // as it lands. Pure navigation: no setter is called. If
+      // the song being left has no verdict, mark it passed (the
+      // NOT SORTED stamp rode the card out) so it wears the badge
+      // on revisit and counts on the end card.
+      const song = currentSong;
+      const idx = effectivePosition;
+      const wasUnsorted = triageMap[song.id] === undefined;
+      exitTo(-1, () => {
+        if (wasUnsorted) {
+          setPassedIds((prev) => {
+            if (prev.has(song.id)) return prev;
+            const next = new Set(prev);
+            next.add(song.id);
+            return next;
+          });
+        }
+        setPosition(idx + 1);
+      });
     } else if (dx >= threshold) {
-      // Swipe right = go back, with the same fly-off. With no
-      // history there's nothing to fly to: plain snap-back.
-      if (history.length > 0) {
-        exitTo(1, () => undo());
+      // Swipe right = one card back, with the same fly-off. At
+      // position 0 there's nowhere to fly to: plain snap-back.
+      if (effectivePosition > 0) {
+        exitTo(1, () => setPosition(effectivePosition - 1));
       } else {
         setDragX(0);
       }
@@ -565,16 +585,19 @@ export default function Step1Deck({
     }
   };
 
-  // Stamp state, derived from the live drag distance. SKIP shows
-  // only when moving on would actually record a skip; a rated song
-  // gets NEXT instead. BACK mirrors the Undo affordance and only
-  // appears when there's history to go back to.
-  const stampKind: 'skip' | 'next' | 'back' | null =
+  // Stamp state, derived from the live drag distance. Forward on
+  // an unsorted song shows NOT SORTED (nothing is being recorded —
+  // the song is only being passed); forward on a sorted song
+  // shows NEXT; back shows BACK whenever there's a card to go
+  // back to (from the end card, always).
+  const stampKind: 'notsorted' | 'next' | 'back' | null =
     dragX <= -STAMP_FADE_PX
-      ? currentSong && triageMap[currentSong.id] === undefined
-        ? 'skip'
-        : 'next'
-      : dragX >= STAMP_FADE_PX && history.length > 0
+      ? !atEnd && currentSong && triageMap[currentSong.id] === undefined
+        ? 'notsorted'
+        : !atEnd
+        ? 'next'
+        : null
+      : dragX >= STAMP_FADE_PX && effectivePosition > 0
       ? 'back'
       : null;
   const stampOpacity = Math.min(
@@ -583,16 +606,18 @@ export default function Step1Deck({
   );
 
   const jumpToSection = (sectionKey: string) => {
-    // A jump mid-animation would fight the pending act()/undo()
-    // for the cursor — the window is a few hundred ms; ignore it.
+    // A jump mid-animation would fight the pending navigation for
+    // the position — the window is a few hundred ms; ignore it.
     if (phase !== 'idle') return;
     const section = sections.find((s) => s.key === sectionKey);
     if (!section || section.songs.length === 0) return;
-    const target =
-      section.songs.find((s) => triageMap[s.id] === undefined) ??
-      section.songs[0];
+    // Plain first song of the section — the deck is a browser, so
+    // a jump lands on the section's start whether or not its
+    // songs are sorted yet.
+    const idx = orderedSongs.findIndex((s) => s.id === section.songs[0].id);
+    if (idx === -1) return;
     setCheckpointPending(false);
-    setCursorId(target.id);
+    setPosition(idx);
   };
 
   const dismissCheckpoint = () => {
@@ -605,8 +630,9 @@ export default function Step1Deck({
     }
   };
 
-  // Keyboard: 1–5 pick the buckets in displayed order, U undoes.
-  // Ignored while typing in a form field or when a modal state
+  // Keyboard: 1–5 pick the buckets in displayed order (sort the
+  // current card, with the flip), U steps back one card. Ignored
+  // while typing in a form field or when a modal state
   // (checkpoint / completion) owns the screen.
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -626,13 +652,13 @@ export default function Step1Deck({
       if (e.key >= '1' && e.key <= '5') {
         flipAct(BUCKET_ORDER[Number(e.key) - 1]);
       } else if (e.key === 'u' || e.key === 'U') {
-        undo();
+        goBack();
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-    // act/undo close over current state; re-binding per render keeps
-    // them fresh (the listener is cheap to re-attach).
+    // act/goBack close over current state; re-binding per render
+    // keeps them fresh (the listener is cheap to re-attach).
   });
 
   const renderBucketButton = (bucket: BucketType) => {
@@ -643,7 +669,9 @@ export default function Step1Deck({
 
     // The mock's bucket tiles: white, thin slate border, the bucket's
     // glyph large on top and its label underneath. The selected tile
-    // keeps the deck's sky-400 family as a border/ring treatment.
+    // keeps the deck's sky-400 family as a border/ring treatment —
+    // and because the deck is browsable, it always reflects the
+    // CURRENT card's verdict.
     return (
       <button
         key={bucket}
@@ -679,19 +707,23 @@ export default function Step1Deck({
       ? 'text-[30px] sm:text-4xl'
       : 'text-2xl sm:text-[34px]';
 
+  // Shared swipe wiring for the two draggable shells (song card
+  // and end card).
+  const swipeProps = {
+    dragX,
+    isDragging,
+    cardRef,
+    onPointerDown: handleCardPointerDown,
+    onPointerMove: handleCardPointerMove,
+    onPointerEnd: handleCardPointerEnd,
+    stamp: stampKind,
+    stampOpacity,
+    phase,
+    exitX,
+  };
+
   return (
     <div className="flex-1 min-h-0 flex flex-col w-full max-w-[560px] mx-auto px-4">
-      {/* "Song Not Sorted" toast fade (opacity only, so it never
-          fights the pill's translate centering). */}
-      <style>{`
-        @keyframes deck-toast-fade {
-          0% { opacity: 0; }
-          12% { opacity: 1; }
-          78% { opacity: 1; }
-          100% { opacity: 0; }
-        }
-        .deck-toast { animation: deck-toast-fade ${TOAST_MS}ms ease forwards; }
-      `}</style>
       {/* COMPACT PROGRESS — one line + a slim bar. Same counts as the
           list header (categorizedCount / bucketedCount), so the two
           views always agree; the deck's old full counters block and
@@ -728,10 +760,9 @@ export default function Step1Deck({
         </div>
       </div>
 
-      {/* CARD REGION — flex-1 and centered; the checkpoint and
-          completion states replace the card right here, at the same
-          fixed height. Relative so the "Song Not Sorted" toast can
-          center over the card area. */}
+      {/* CARD REGION — flex-1 and centered; the checkpoint,
+          completion and end-of-deck states replace the card right
+          here, at the same fixed height. */}
       <div className="relative flex-1 min-h-0 flex items-center justify-center py-2">
         {checkpointPending ? (
           <DeckCardShell>
@@ -762,9 +793,11 @@ export default function Step1Deck({
               </div>
             </div>
           </DeckCardShell>
-        ) : isComplete || !currentSong ? (
+        ) : isComplete ? (
           /* COMPLETION — every song categorized (the same count the
-             list's "Categorize All Songs" lock runs on). */
+             list's "Categorize All Songs" lock runs on). Takes
+             precedence over the end card: a fully sorted deck has
+             nothing left to review. */
           <DeckCardShell>
             <div className="h-full flex flex-col items-center justify-center text-center p-6 sm:p-8 space-y-5">
               <div className="text-4xl">🏆</div>
@@ -784,31 +817,77 @@ export default function Step1Deck({
               </button>
             </div>
           </DeckCardShell>
-        ) : (
+        ) : atEnd ? (
+          /* END OF DECK — one past the last card. The shell stays
+             draggable so a right swipe flies back to the last song;
+             it can't be swiped forward. Passed-but-unsorted songs
+             get their count and a review jump; a fully sorted deck
+             never lands here (the completion card above wins). */
+          <DeckCardShell swipe={swipeProps}>
+            <div className="h-full flex flex-col items-center justify-center text-center p-6 sm:p-8 space-y-5">
+              <div className="text-4xl">🎴</div>
+              <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-950">
+                That&apos;s the whole deck
+              </h2>
+              {passedUnsortedCount > 0 ? (
+                <>
+                  <p className="text-sm font-bold text-slate-500 leading-snug max-w-sm mx-auto">
+                    {passedUnsortedCount}{' '}
+                    {passedUnsortedCount === 1 ? 'song is' : 'songs are'}{' '}
+                    still not sorted — you swiped past{' '}
+                    {passedUnsortedCount === 1 ? 'it' : 'them'} without a
+                    verdict.
+                  </p>
+                  <button
+                    onClick={() => {
+                      if (firstPassedUnsortedIdx !== -1) {
+                        setPosition(firstPassedUnsortedIdx);
+                      }
+                    }}
+                    className="bg-[#0072CE] hover:bg-[#005fae] text-white font-black text-sm px-6 py-3.5 rounded-full shadow-md transition transform hover:scale-105 cursor-pointer whitespace-nowrap"
+                  >
+                    Review the unsorted
+                  </button>
+                </>
+              ) : (
+                <p className="text-sm font-bold text-slate-500 leading-snug max-w-sm mx-auto">
+                  You&apos;ve seen every card. Swipe back through any of
+                  them to change a verdict.
+                </p>
+              )}
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-1">
+                <button
+                  onClick={goBack}
+                  className="text-sm font-extrabold text-slate-600 bg-white border border-slate-300 rounded-full px-6 py-3.5 hover:bg-slate-100 transition-all cursor-pointer whitespace-nowrap"
+                >
+                  ← Back to the last card
+                </button>
+                {bucketedCount >= WRAPPED_SHORT_PATH_GOAL && (
+                  <button
+                    onClick={handleFinishTriage}
+                    className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm px-6 py-3.5 rounded-full shadow-md transition transform hover:scale-105 cursor-pointer border-2 border-amber-200 flex items-center gap-2.5 whitespace-nowrap"
+                  >
+                    <FlyingWIcon className="w-6 h-4 text-slate-950" />
+                    <span>See your Wrapped</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </DeckCardShell>
+        ) : !currentSong ? null : (
           /* THE CARD — the owner's reference mock: centered stack of
              art, huge title, "Album (Year)", and the big preview
              button, every element in a FIXED-height slot (see the
              budget on DeckCardShell). The layout is therefore
              identical for one-line and two-line titles, and the
              preview button — the last slot — can never be pushed
-             off the card. The already-rated note rides on the card's
-             top edge as a badge, so it never adds layout height. */
-          <DeckCardShell
-            swipe={{
-              dragX,
-              isDragging,
-              cardRef,
-              onPointerDown: handleCardPointerDown,
-              onPointerMove: handleCardPointerMove,
-              onPointerEnd: handleCardPointerEnd,
-              stamp: stampKind,
-              stampOpacity,
-              phase,
-              exitX,
-            }}
-          >
+             off the card. The state badge rides on the card's top
+             edge, so it never adds layout height: a sorted song
+             shows its verdict; a passed-but-unsorted song shows a
+             muted "Not Sorted"; a never-visited song shows none. */
+          <DeckCardShell swipe={swipeProps}>
             <div className="relative h-full flex flex-col items-center text-center px-5 py-5 gap-3">
-              {triageMap[currentSong.id] !== undefined && (
+              {triageMap[currentSong.id] !== undefined ? (
                 <p className="absolute -top-3 left-1/2 -translate-x-1/2 z-10 whitespace-nowrap bg-slate-900 text-white text-[11px] font-bold px-3 py-1 rounded-full shadow-md">
                   {triageMap[currentSong.id] === 'unknown'
                     ? '✓ You marked this Don’t Know It — tap a tier to rate it'
@@ -817,7 +896,11 @@ export default function Step1Deck({
                           .label
                       } — tap a tier to change it`}
                 </p>
-              )}
+              ) : passedIds.has(currentSong.id) ? (
+                <p className="absolute -top-3 left-1/2 -translate-x-1/2 z-10 whitespace-nowrap bg-slate-200 text-slate-500 text-[11px] font-bold px-3 py-1 rounded-full shadow-sm border border-slate-300">
+                  Not Sorted — you swiped past this one
+                </p>
+              ) : null}
               {/* ART — a fixed 128px slot; it no longer flexes or
                   shrinks to make room for the title. */}
               <div className="h-32 w-full flex items-center justify-center">
@@ -849,27 +932,15 @@ export default function Step1Deck({
             </div>
           </DeckCardShell>
         )}
-        {/* "SONG NOT SORTED" — flashed as the next card lands after
-            a swipe-skip (see showNotSortedToast). Purely visual:
-            pointer-events-none, and it unmounts on its timer. */}
-        {toastKey !== null && (
-          <div
-            key={toastKey}
-            aria-hidden="true"
-            className="deck-toast pointer-events-none absolute left-1/2 top-1/2 z-30 -translate-x-1/2 -translate-y-1/2 rounded-full bg-slate-900 px-4 py-2 text-xs font-bold text-white shadow-lg"
-          >
-            Song Not Sorted
-          </div>
-        )}
       </div>
 
       {/* ACTIONS — pinned at the bottom of the column: the mock's
           light tray holds ONLY the five tier tiles; Don't Know It
           sits on one quiet centered line below the tray (owner,
           Oct 16); the Jump row beneath that also carries the
-          Deck | List toggle on the same line. The Undo BUTTON is
-          gone (owner, Oct 16) — swipe right or the U key goes
-          back. */}
+          Deck | List toggle on the same line. There's no Undo
+          button (owner, Oct 16) — swipe right or the U key steps
+          back one card. */}
       {inSongState && (
         <div className="shrink-0">
           <div className="bg-slate-100 border border-slate-200/60 rounded-3xl shadow-sm p-3 [@media(max-height:740px)]:p-2.5">
@@ -880,7 +951,8 @@ export default function Step1Deck({
           {/* DON'T KNOW IT — one quiet centered text button directly
               below the tray; still a single tap (through flipAct →
               act()), and still visibly active when the song is
-              marked unknown. */}
+              marked unknown. It counts as SORTED — a deliberate
+              disposition, not a pass. */}
           <div className="text-center pt-1.5">
             <button
               onClick={() => flipAct('unknown')}
@@ -951,14 +1023,14 @@ export default function Step1Deck({
             </div>
           </div>
           <p className="hidden sm:block text-center text-[10px] font-semibold text-slate-300 pt-1.5">
-            Keys 1–5 pick a tier · U undoes
+            Keys 1–5 pick a tier · U goes back
           </p>
         </div>
       )}
 
-      {/* CHECKPOINT / COMPLETION FOOTER — there's no actions block
-          in those states, but the toggle still needs a home: the
-          same inline pill, centered at the column bottom. */}
+      {/* CHECKPOINT / COMPLETION / END FOOTER — there's no actions
+          block in those states, but the toggle still needs a home:
+          the same inline pill, centered at the column bottom. */}
       {!inSongState && (
         <div className="shrink-0 flex justify-center pb-3">
           <div className="inline-flex bg-white border border-slate-200 rounded-full p-1 shadow-sm">

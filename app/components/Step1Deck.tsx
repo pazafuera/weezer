@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { BucketType, BUCKET_CONFIG, FULL_SONG_POOL, Song } from '../data/constants';
 import {
   countBucketedSongs,
@@ -24,13 +24,20 @@ import type { TriageSection } from './Step1Triage';
  * a column at least one viewport tall (100dvh minus the sticky
  * AppShell header, as a MIN height) and the deck fills it as a flex
  * column: compact progress line → the fixed-height card (centered in
- * the remaining space) → the action buttons → a small Deck | List
- * toggle at the very bottom. On tall phones everything fits one
- * screen; on short ones the page scrolls a little — the owner
- * accepted that in exchange for a song card tall enough to hold a
- * two-line title without pushing the preview button off it. The
- * checkpoint and completion states replace the card inside the same
- * column, at the same fixed height.
+ * the remaining space) → the tray of tier tiles → one quiet Don't
+ * Know It line → the Undo / Jump / Deck|List row. On tall phones
+ * everything fits one screen; on short ones the page scrolls a
+ * little — the owner accepted that in exchange for a song card tall
+ * enough to hold a two-line title without pushing the preview button
+ * off it. The checkpoint and completion states replace the card
+ * inside the same column, at the same fixed height.
+ *
+ * SWIPE (owner feedback): the song card also drags horizontally —
+ * commit left = Skip for an unrated song, advance-with-rating-kept
+ * for a rated one; commit right = Undo. Directional stamps on the
+ * card (SKIP / NEXT / BACK) plus quiet edge chevrons show the
+ * affordance. See the SWIPE block in the component for the mapping;
+ * it funnels into the same act()/undo() as the buttons.
  *
  * Cursor model: `cursorId` names the song on the card. Null means "no
  * explicit cursor" — the card shows the first uncategorized song in
@@ -65,6 +72,15 @@ const CHECKPOINT_DISMISSED_KEY = 'weezer-deck-checkpoint-dismissed';
 
 const BUCKET_ORDER: BucketType[] = ['banger', 'slaps', 'mid', 'skip', 'trash'];
 
+// Swipe (owner, Oct 16): dragging the card left past the commit
+// threshold is "as good as a skip" for an unrated song (and just an
+// advance for a rated one); dragging right is Undo. The stamp fades
+// in from STAMP_FADE_PX and the gesture commits at
+// max(COMMIT_MIN_PX, SWIPE_COMMIT_RATIO × card width).
+const STAMP_FADE_PX = 40;
+const COMMIT_MIN_PX = 80;
+const SWIPE_COMMIT_RATIO = 0.25;
+
 /**
  * The white card from the owner's reference mock, with a stacked-deck
  * effect: two backing cards peek out behind the real one, rotated a
@@ -79,7 +95,29 @@ const BUCKET_ORDER: BucketType[] = ['banger', 'slaps', 'mid', 'skip', 'trash'];
  * text-5xl × leading-[1.05], is 100.8) + gap-3 (12) + meta line
  * text-sm (20) + gap-3 (12) + preview-button slot h-16 (64) = 392.
  */
-function DeckCardShell({ children }: { children: React.ReactNode }) {
+function DeckCardShell({
+  children,
+  swipe,
+}: {
+  children: React.ReactNode;
+  /**
+   * Song state only: makes the front card draggable (see the swipe
+   * block in Step1Deck). The backing layers stay put — only the
+   * front card follows the pointer, complete with its directional
+   * stamp and edge chevrons. Checkpoint/completion shells render
+   * without it, so they can never be dragged.
+   */
+  swipe?: {
+    dragX: number;
+    isDragging: boolean;
+    cardRef: React.RefObject<HTMLDivElement>;
+    onPointerDown: (e: React.PointerEvent<HTMLDivElement>) => void;
+    onPointerMove: (e: React.PointerEvent<HTMLDivElement>) => void;
+    onPointerEnd: (e: React.PointerEvent<HTMLDivElement>) => void;
+    stamp: 'skip' | 'next' | 'back' | null;
+    stampOpacity: number;
+  };
+}) {
   return (
     <div className="relative w-full h-[392px]">
       <div
@@ -90,9 +128,77 @@ function DeckCardShell({ children }: { children: React.ReactNode }) {
         aria-hidden="true"
         className="absolute inset-0 rounded-[28px] bg-white border border-slate-200 shadow-md rotate-[1.5deg] translate-y-0.5"
       />
-      <div className="relative h-full rounded-[28px] bg-white border border-slate-200 shadow-xl">
-        {children}
-      </div>
+      {swipe ? (
+        <div
+          ref={swipe.cardRef}
+          onPointerDown={swipe.onPointerDown}
+          onPointerMove={swipe.onPointerMove}
+          onPointerUp={swipe.onPointerEnd}
+          onPointerCancel={swipe.onPointerEnd}
+          style={{
+            transform: `translateX(${swipe.dragX}px) rotate(${
+              swipe.dragX * 0.03
+            }deg)`,
+            touchAction: 'pan-y',
+            cursor: swipe.isDragging ? 'grabbing' : 'grab',
+          }}
+          className={`relative h-full rounded-[28px] bg-white border border-slate-200 shadow-xl select-none ${
+            swipe.isDragging ? '' : 'transition-transform duration-200'
+          }`}
+        >
+          {/* Persistent drag hint: quiet chevrons at the card's
+              side edges, vertical center. */}
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 z-10 text-2xl font-black leading-none text-slate-300/70"
+          >
+            ‹
+          </span>
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 z-10 text-2xl font-black leading-none text-slate-300/70"
+          >
+            ›
+          </span>
+          {/* Directional stamps: SKIP/NEXT ride the top-LEFT corner
+              (opposite a leftward drag), BACK the top-right. Their
+              opacity is proportional to drag distance (computed by
+              the parent), and only the stamp for the current drag
+              direction renders. */}
+          {swipe.stamp === 'skip' && (
+            <span
+              aria-hidden="true"
+              style={{ opacity: swipe.stampOpacity }}
+              className="pointer-events-none absolute top-4 left-4 z-20 -rotate-12 rounded-lg border-[3px] border-orange-500 px-2.5 py-1 text-lg font-black uppercase tracking-widest text-orange-500 bg-white/70"
+            >
+              Skip
+            </span>
+          )}
+          {swipe.stamp === 'next' && (
+            <span
+              aria-hidden="true"
+              style={{ opacity: swipe.stampOpacity }}
+              className="pointer-events-none absolute top-4 left-4 z-20 -rotate-12 rounded-lg border-[3px] border-slate-500 px-2.5 py-1 text-lg font-black uppercase tracking-widest text-slate-600 bg-white/70"
+            >
+              Next
+            </span>
+          )}
+          {swipe.stamp === 'back' && (
+            <span
+              aria-hidden="true"
+              style={{ opacity: swipe.stampOpacity }}
+              className="pointer-events-none absolute top-4 right-4 z-20 rotate-12 rounded-lg border-[3px] border-[#0072CE] px-2.5 py-1 text-lg font-black uppercase tracking-widest text-[#0072CE] bg-white/70"
+            >
+              Back
+            </span>
+          )}
+          {children}
+        </div>
+      ) : (
+        <div className="relative h-full rounded-[28px] bg-white border border-slate-200 shadow-xl">
+          {children}
+        </div>
+      )}
     </div>
   );
 }
@@ -194,6 +300,134 @@ export default function Step1Deck({
     setCheckpointPending(false);
     setCursorId(lastId);
   };
+
+  // SWIPE — hand-rolled pointer drag on the song card (no library).
+  // Buttons remain the primary path; a committed swipe funnels into
+  // the SAME act()/undo() the buttons use, so history, checkpoint
+  // logic and advance rules live in exactly one place:
+  //   commit left, song unrated → act('skip')  ("as good as a skip")
+  //   commit left, song rated   → advance only, rating kept — done by
+  //     re-acting the song's existing value: act() re-sets the same
+  //     bucket, pushes history, advances and recomputes the
+  //     checkpoint exactly as a button tap on that bucket would.
+  //   commit right              → undo()
+  // The card element carries `touch-action: pan-y` (see
+  // DeckCardShell), so vertical scrolls belong to the page and only
+  // horizontal-dominant drags are captured here.
+  const cardRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    locked: boolean;
+  } | null>(null);
+  const [dragX, setDragX] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+
+  // A song change (advance, jump, undo, mode remount) ends any drag
+  // and resets the transform — the next card renders in place.
+  const currentSongId = currentSong?.id ?? null;
+  useEffect(() => {
+    dragRef.current = null;
+    setDragX(0);
+    setIsDragging(false);
+  }, [currentSongId, checkpointPending, isComplete]);
+
+  const handleCardPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
+    // Never steal a drag that starts on the preview button or any
+    // other interactive element inside the card.
+    if (
+      (e.target as HTMLElement).closest(
+        'button, a, input, select, textarea, [data-no-swipe]'
+      )
+    ) {
+      return;
+    }
+    dragRef.current = {
+      pointerId: e.pointerId,
+      startX: e.clientX,
+      startY: e.clientY,
+      locked: false,
+    };
+  };
+
+  const handleCardPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== e.pointerId) return;
+    const dx = e.clientX - drag.startX;
+    const dy = e.clientY - drag.startY;
+    if (!drag.locked) {
+      // Direction lock: only take over horizontal-dominant drags;
+      // anything else (vertical scroll, a tap) is released for
+      // good, so the gesture never fights the page.
+      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+      if (Math.abs(dy) >= Math.abs(dx)) {
+        dragRef.current = null;
+        return;
+      }
+      drag.locked = true;
+      setIsDragging(true);
+      try {
+        e.currentTarget.setPointerCapture(e.pointerId);
+      } catch {
+        /* capture is best-effort; coordinates still track */
+      }
+    }
+    setDragX(dx);
+  };
+
+  const handleCardPointerEnd = (e: React.PointerEvent<HTMLDivElement>) => {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== e.pointerId) return;
+    dragRef.current = null;
+    setIsDragging(false);
+    if (!drag.locked || !currentSong) {
+      setDragX(0);
+      return;
+    }
+    const width = cardRef.current?.offsetWidth ?? 0;
+    const threshold = Math.max(
+      COMMIT_MIN_PX,
+      width * SWIPE_COMMIT_RATIO
+    );
+    const dx = dragX;
+    setDragX(0);
+    if (dx <= -threshold) {
+      // Swipe left = move on. Unrated: a swipe IS a skip. Rated:
+      // keep the rating and advance the same way a tap on its
+      // current bucket would (act re-sets the identical value).
+      const existing = triageMap[currentSong.id];
+      if (existing === undefined) {
+        act('skip');
+      } else {
+        act(existing);
+      }
+    } else if (dx >= threshold) {
+      // Swipe right = go back (a no-op snap-back when there's no
+      // history, since undo() guards on an empty stack).
+      undo();
+    }
+    // Below threshold: dragX reset + the shell's transition class
+    // animates the card back to rest.
+  };
+
+  // Stamp state, derived from the live drag distance. SKIP shows
+  // only when moving on would actually record a skip; a rated song
+  // gets NEXT instead. BACK mirrors the Undo affordance and only
+  // appears when there's history to go back to.
+  const stampKind: 'skip' | 'next' | 'back' | null =
+    dragX <= -STAMP_FADE_PX
+      ? currentSong && triageMap[currentSong.id] === undefined
+        ? 'skip'
+        : 'next'
+      : dragX >= STAMP_FADE_PX && history.length > 0
+      ? 'back'
+      : null;
+  const stampOpacity = Math.min(
+    1,
+    Math.abs(dragX) / (COMMIT_MIN_PX * 1.5)
+  );
 
   const jumpToSection = (sectionKey: string) => {
     const section = sections.find((s) => s.key === sectionKey);
@@ -390,7 +624,18 @@ export default function Step1Deck({
              preview button — the last slot — can never be pushed
              off the card. The already-rated note rides on the card's
              top edge as a badge, so it never adds layout height. */
-          <DeckCardShell>
+          <DeckCardShell
+            swipe={{
+              dragX,
+              isDragging,
+              cardRef,
+              onPointerDown: handleCardPointerDown,
+              onPointerMove: handleCardPointerMove,
+              onPointerEnd: handleCardPointerEnd,
+              stamp: stampKind,
+              stampOpacity,
+            }}
+          >
             <div className="relative h-full flex flex-col items-center text-center px-5 py-5 gap-3">
               {triageMap[currentSong.id] !== undefined && (
                 <p className="absolute -top-3 left-1/2 -translate-x-1/2 z-10 whitespace-nowrap bg-slate-900 text-white text-[11px] font-bold px-3 py-1 rounded-full shadow-md">
@@ -436,31 +681,34 @@ export default function Step1Deck({
       </div>
 
       {/* ACTIONS — pinned at the bottom of the column: the mock's
-          light tray holds the five tier tiles with Don't Know It
-          centered beneath them; Undo and Jump sit below the tray as
-          two white pills. */}
+          light tray holds ONLY the five tier tiles; Don't Know It
+          moved out to one quiet centered line below the tray
+          (owner, Oct 16); the Undo / Jump row beneath that now
+          also carries the Deck | List toggle on the same line. */}
       {inSongState && (
         <div className="shrink-0">
-          <div className="bg-slate-100 border border-slate-200/60 rounded-3xl shadow-sm p-3 [@media(max-height:740px)]:p-2.5 space-y-2">
+          <div className="bg-slate-100 border border-slate-200/60 rounded-3xl shadow-sm p-3 [@media(max-height:740px)]:p-2.5">
             <div className="flex gap-1.5 sm:gap-2">
               {BUCKET_ORDER.map(renderBucketButton)}
             </div>
-            {/* DON'T KNOW IT — centered text action inside the tray */}
-            <div className="text-center">
-              <button
-                onClick={() => act('unknown')}
-                className={`text-sm font-semibold px-4 py-1 rounded-full transition-all cursor-pointer ${
-                  triageMap[currentSong.id] === 'unknown'
-                    ? 'bg-white text-slate-900 shadow-sm'
-                    : 'text-slate-500 hover:text-slate-800'
-                }`}
-                title="I haven't heard this song — don't rate it"
-              >
-                Don&apos;t Know It
-              </button>
-            </div>
           </div>
-          <div className="flex items-center gap-2 mt-2">
+          {/* DON'T KNOW IT — one quiet centered text button directly
+              below the tray; still a single tap through act(), and
+              still visibly active when the song is marked unknown. */}
+          <div className="text-center pt-1.5">
+            <button
+              onClick={() => act('unknown')}
+              className={`text-sm px-4 py-1 rounded-full transition-all cursor-pointer ${
+                triageMap[currentSong.id] === 'unknown'
+                  ? 'text-[#0072CE] font-bold'
+                  : 'text-slate-500 font-medium hover:text-slate-800'
+              }`}
+              title="I haven't heard this song — don't rate it"
+            >
+              Don&apos;t Know It
+            </button>
+          </div>
+          <div className="flex items-center gap-2 mt-1.5">
             <button
               onClick={undo}
               disabled={history.length === 0}
@@ -468,7 +716,7 @@ export default function Step1Deck({
             >
               ↩ Undo
             </button>
-            <div className="relative flex-1">
+            <div className="relative flex-1 min-w-0">
               <select
                 value=""
                 onChange={(e) => {
@@ -504,6 +752,24 @@ export default function Step1Deck({
                 <path d="m6 9 6 6 6-6" />
               </svg>
             </div>
+            {/* DECK | LIST TOGGLE — rides in the Undo/Jump row now
+                (owner, Oct 16): same white pill with the blue active
+                segment, shrunk to share one line. In list mode the
+                toggle stays up in the header instead. */}
+            <div className="inline-flex shrink-0 bg-white border border-slate-200 rounded-full p-1 shadow-sm">
+              <button
+                className="px-3.5 py-1.5 rounded-full text-sm font-bold bg-[#0072CE] text-white shadow-sm"
+                aria-current="true"
+              >
+                Deck
+              </button>
+              <button
+                onClick={onSwitchToList}
+                className="px-3.5 py-1.5 rounded-full text-sm font-bold text-slate-600 hover:text-slate-900 transition-all cursor-pointer"
+              >
+                List
+              </button>
+            </div>
           </div>
           <p className="hidden sm:block text-center text-[10px] font-semibold text-slate-300 pt-1.5">
             Keys 1–5 pick a tier · U undoes
@@ -511,25 +777,27 @@ export default function Step1Deck({
         </div>
       )}
 
-      {/* DECK | LIST TOGGLE — below the card/actions: the mock's white
-          pill, active segment filled brand blue (in list mode the
-          toggle stays up in the header instead). */}
-      <div className="shrink-0 flex justify-center pt-2 pb-3">
-        <div className="inline-flex bg-white border border-slate-200 rounded-full p-1 shadow-sm">
-          <button
-            className="px-5 py-1.5 rounded-full text-sm font-bold bg-[#0072CE] text-white shadow-sm"
-            aria-current="true"
-          >
-            Deck
-          </button>
-          <button
-            onClick={onSwitchToList}
-            className="px-5 py-1.5 rounded-full text-sm font-bold text-slate-600 hover:text-slate-900 transition-all cursor-pointer"
-          >
-            List
-          </button>
+      {/* CHECKPOINT / COMPLETION FOOTER — there's no actions block
+          in those states, but the toggle still needs a home: the
+          same inline pill, centered at the column bottom. */}
+      {!inSongState && (
+        <div className="shrink-0 flex justify-center pb-3">
+          <div className="inline-flex bg-white border border-slate-200 rounded-full p-1 shadow-sm">
+            <button
+              className="px-3.5 py-1.5 rounded-full text-sm font-bold bg-[#0072CE] text-white shadow-sm"
+              aria-current="true"
+            >
+              Deck
+            </button>
+            <button
+              onClick={onSwitchToList}
+              className="px-3.5 py-1.5 rounded-full text-sm font-bold text-slate-600 hover:text-slate-900 transition-all cursor-pointer"
+            >
+              List
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

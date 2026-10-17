@@ -69,6 +69,22 @@ const HorizontalCarousel = ({ children, itemCount }: { children: React.ReactNode
   );
 };
 
+// Placeholder treatment for stat blocks whose community sample is still
+// too thin for real numbers (data loaded, but below the display minimums
+// in fanStatsMethodology). Values render as "—" with zero-width bars —
+// never invented numbers presented as real data.
+const PlaceholderBadge = () => (
+  <span className="inline-block text-[9px] font-black uppercase tracking-widest text-slate-500 bg-slate-200 border border-slate-300 rounded px-1.5 py-0.5">
+    Placeholder
+  </span>
+);
+
+const PlaceholderNote = () => (
+  <p className="text-[11px] font-bold text-slate-400 leading-relaxed mt-2">
+    Placeholder — only a handful of fans so far. Real numbers land as more fans rank.
+  </p>
+);
+
 export default function FanStats({
   userMasterList,
   setStep,
@@ -365,17 +381,12 @@ export default function FanStats({
     };
   }, [communityMasterLists, communityTriageMaps]);
 
-  // Show a soft inline loader ONLY if data hasn't finished its first initial fetch yet
-  if (!communityStats || communityStats.totalFans === 0) {
-    if (communityTriageMaps.length > 0) {
-      return (
-        <div className="py-20 text-center space-y-3 px-4">
-          <p className="text-sm font-bold text-slate-500 max-w-md mx-auto leading-relaxed">
-            Not enough qualified rankings yet. A submission needs at least {MIN_QUALIFYING_RATINGS} rated songs before it counts toward community stats — rank a few more songs and check back.
-          </p>
-        </div>
-      );
-    }
+  // Show a soft inline loader ONLY while the first fetch hasn't landed
+  // yet (communityStats is null until submission data arrives). Loaded
+  // but thin data — maps arrived, few or zero qualified fans — no longer
+  // blanks the whole page: the blocks below render their normal shells
+  // with placeholder values, a PLACEHOLDER badge, and a disclaimer.
+  if (!communityStats) {
     return (
       <div className="py-20 text-center space-y-3">
         <div className="w-8 h-8 border-4 border-[#0072CE] border-t-transparent rounded-full animate-spin mx-auto" />
@@ -383,6 +394,10 @@ export default function FanStats({
       </div>
     );
   }
+
+  const thinSample = !communityStats.enoughForPercentages;
+  const showDivide =
+    communityStats.enoughForPercentages && communityStats.hasDebateData;
 
   return (
     <div className="pb-32 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -412,7 +427,8 @@ export default function FanStats({
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
           
           {/* THE DIVIDE (1/3 Width on Desktop) */}
-          <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 text-center relative overflow-hidden h-full flex flex-col justify-center">
+          <div className="flex flex-col h-full">
+          <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 text-center relative overflow-hidden flex-1 flex flex-col justify-center">
             <div className="absolute top-0 left-0 w-1/2 h-full bg-[#0072CE]/5" />
             <div className="absolute top-0 right-0 w-1/2 h-full bg-slate-800/5" />
             
@@ -422,7 +438,7 @@ export default function FanStats({
               <p className="text-xs text-slate-500 mt-2 max-w-xs mx-auto text-balance">Based on qualified rankings from participating fans.</p>
             </div>
 
-            {communityStats.enoughForPercentages && communityStats.hasDebateData ? (
+            {showDivide ? (
             <div className="relative z-10 flex items-center justify-center">
               <div className="flex-1 text-center pr-2">
                 <div className="text-5xl lg:text-6xl font-black text-[#0072CE] tracking-tighter">{communityStats.bluePct}%</div>
@@ -435,10 +451,25 @@ export default function FanStats({
               </div>
             </div>
             ) : (
-            <p className="relative z-10 text-sm font-bold text-slate-500 max-w-xs mx-auto leading-relaxed">
-              Not enough data for a reliable percentage yet — based on {communityStats.totalFans} qualified fan rankings so far.
-            </p>
+            <>
+              <div className="relative z-10 flex items-center justify-center">
+                <div className="flex-1 text-center pr-2">
+                  <div className="text-5xl lg:text-6xl font-black text-[#0072CE] tracking-tighter">—%</div>
+                  <h4 className="text-[10px] lg:text-xs font-black uppercase tracking-widest mt-1 text-slate-500">Blue</h4>
+                </div>
+                <div className="shrink-0 text-slate-300 font-black italic text-2xl px-4">VS</div>
+                <div className="flex-1 text-center pl-2">
+                  <div className="text-5xl lg:text-6xl font-black text-slate-800 tracking-tighter">—%</div>
+                  <h4 className="text-[10px] lg:text-xs font-black uppercase tracking-widest mt-1 text-slate-500">Pinkerton</h4>
+                </div>
+              </div>
+              <div className="relative z-10 mt-4">
+                <PlaceholderBadge />
+              </div>
+            </>
             )}
+          </div>
+          {!showDivide && <PlaceholderNote />}
           </div>
 
           {/* FAN AWARDS (2/3 Width on Desktop) */}
@@ -451,7 +482,7 @@ export default function FanStats({
               <div className="bg-slate-800/80 p-5 rounded-2xl border border-slate-700/50 flex flex-col justify-between">
                 <div>
                   <span className="text-[10px] font-black uppercase text-amber-400 block mb-1">Most Universally Loved</span>
-                  <h3 className="text-xl lg:text-2xl font-black text-white text-balance leading-tight">{communityStats.mostLoved?.song?.title}</h3>
+                  <h3 className="text-xl lg:text-2xl font-black text-white text-balance leading-tight">{communityStats.mostLoved?.song?.title ?? '—'}</h3>
                 </div>
                 <p className="text-xs font-medium text-slate-400 mt-3 leading-snug">Highest ratio of positive ratings with the lowest disagreement.</p>
               </div>
@@ -468,7 +499,20 @@ export default function FanStats({
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-xs font-medium text-slate-400 mt-2 leading-snug">No song has enough split ratings yet to call it divisive.</p>
+                  <>
+                    <ul className="mt-2 space-y-2">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <li key={i} className="flex items-baseline justify-between gap-3">
+                          <span className="text-sm font-black text-slate-500 leading-tight truncate">—</span>
+                          <span className="text-[10px] font-bold text-slate-500 shrink-0">— ratings</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <div className="mt-3">
+                      <PlaceholderBadge />
+                    </div>
+                    <PlaceholderNote />
+                  </>
                 )}
                 <p className="text-xs font-medium text-slate-400 mt-3 leading-snug">The sharpest divide between &apos;Banger&apos; and &apos;Trash&apos; votes.</p>
               </div>
@@ -476,7 +520,7 @@ export default function FanStats({
               <div className="bg-slate-800/80 p-5 rounded-2xl border border-slate-700/50 flex flex-col justify-between">
                 <div>
                   <span className="text-[10px] font-black uppercase text-indigo-400 block mb-1">The Hidden Gem</span>
-                  <h3 className="text-xl lg:text-2xl font-black text-white text-balance leading-tight">{communityStats.hiddenGem?.song?.title}</h3>
+                  <h3 className="text-xl lg:text-2xl font-black text-white text-balance leading-tight">{communityStats.hiddenGem?.song?.title ?? '—'}</h3>
                 </div>
                 <p className="text-xs font-medium text-slate-400 mt-3 leading-snug">Included on fewer explicit lists, but ranked exceptionally high when it appears.</p>
               </div>
@@ -484,7 +528,7 @@ export default function FanStats({
               <div className="bg-slate-800/80 p-5 rounded-2xl border border-slate-700/50 flex flex-col justify-between">
                 <div>
                   <span className="text-[10px] font-black uppercase text-slate-500 block mb-1">Most Disliked</span>
-                  <h3 className="text-xl lg:text-2xl font-black text-white text-balance leading-tight">{communityStats.mostRejected?.song?.title}</h3>
+                  <h3 className="text-xl lg:text-2xl font-black text-white text-balance leading-tight">{communityStats.mostRejected?.song?.title ?? '—'}</h3>
                 </div>
                 <p className="text-xs font-medium text-slate-400 mt-3 leading-snug">
                   {communityStats.enoughForPercentages && communityStats.mostRejected?.pTrash
@@ -500,7 +544,8 @@ export default function FanStats({
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
           
           {/* GLOBAL TOP 10 CANON */}
-          <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm h-full flex flex-col">
+          <div className="flex flex-col h-full">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm flex-1 flex flex-col">
             <div className="text-center sm:text-left mb-6 border-b border-slate-100 pb-4">
               <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 block mb-1">Consensus</span>
               <h2 className="text-3xl sm:text-4xl font-black text-slate-950 tracking-tight leading-tight">Community Top 10</h2>
@@ -508,7 +553,8 @@ export default function FanStats({
             </div>
             
             <div className="space-y-4 flex-1">
-              {communityStats.topConsensus.map((item, idx) => {
+              {communityStats.topConsensus.length > 0 ? (
+                communityStats.topConsensus.map((item, idx) => {
                  const resolvedId = item.song.albumId || ALBUM_NAME_TO_ID[item.song.album] || "unknown";
                  return (
                   <div key={item.song.id} className="flex items-center gap-4 group">
@@ -521,12 +567,33 @@ export default function FanStats({
                     </div>
                   </div>
                 );
-              })}
+                })
+              ) : (
+                <>
+                  {Array.from({ length: 10 }).map((_, idx) => (
+                    <div key={idx} className="flex items-center gap-4">
+                      <span className="text-2xl sm:text-3xl font-black w-8 text-center tracking-tighter shrink-0 text-slate-200">
+                        {idx + 1}
+                      </span>
+                      <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg bg-slate-100 border border-slate-200 shrink-0" />
+                      <div className="min-w-0 flex-1 border-b border-slate-50 pb-3 pt-1">
+                        <h4 className="text-lg sm:text-xl font-extrabold text-slate-300 pr-2 leading-tight mb-1">—</h4>
+                      </div>
+                    </div>
+                  ))}
+                  <div className="pt-1">
+                    <PlaceholderBadge />
+                  </div>
+                </>
+              )}
             </div>
+          </div>
+          {communityStats.topConsensus.length === 0 && <PlaceholderNote />}
           </div>
 
           {/* ALBUM RANKINGS */}
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl h-full flex flex-col">
+          <div className="flex flex-col h-full">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl flex-1 flex flex-col">
             <div className="text-center sm:text-left mb-6 border-b border-slate-800 pb-4">
               <span className="text-[10px] font-black uppercase tracking-widest text-blue-400 block mb-1">Catalog Power</span>
               <h2 className="text-3xl sm:text-4xl font-black text-white tracking-tight leading-tight mb-1">Top Albums</h2>
@@ -534,7 +601,8 @@ export default function FanStats({
             </div>
             
             <div className="space-y-3 flex-1">
-              {communityStats.albumLeaderboard.map((item, idx) => (
+              {communityStats.albumLeaderboard.length > 0 ? (
+                communityStats.albumLeaderboard.map((item, idx) => (
                 <div key={item.album} className="bg-slate-800 border border-slate-700 p-3 sm:p-4 rounded-xl flex justify-between items-center hover:border-[#0072CE]/50 transition-colors shadow-inner group">
                   <div className="flex items-center gap-4 min-w-0">
                     <span className={`text-lg sm:text-xl font-black w-6 text-center shrink-0 ${idx === 0 ? 'text-amber-400' : 'text-slate-500'}`}>{idx + 1}</span>
@@ -547,8 +615,31 @@ export default function FanStats({
                     </span>
                   </div>
                 </div>
-              ))}
+                ))
+              ) : (
+                <>
+                  {Array.from({ length: 5 }).map((_, idx) => (
+                    <div key={idx} className="bg-slate-800 border border-slate-700 p-3 sm:p-4 rounded-xl flex justify-between items-center">
+                      <div className="flex items-center gap-4 min-w-0">
+                        <span className="text-lg sm:text-xl font-black w-6 text-center shrink-0 text-slate-600">{idx + 1}</span>
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded bg-slate-700/60 border border-slate-700 shrink-0" />
+                        <span className="text-sm sm:text-base font-bold text-slate-500 leading-tight">—</span>
+                      </div>
+                      <div className="flex flex-col items-end shrink-0 ml-3">
+                        <span className="text-[10px] font-black text-slate-400 bg-slate-700 px-2.5 py-1 rounded border border-slate-600">
+                          —
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                  <div className="pt-1">
+                    <PlaceholderBadge />
+                  </div>
+                </>
+              )}
             </div>
+          </div>
+          {communityStats.albumLeaderboard.length === 0 && <PlaceholderNote />}
           </div>
         </div>
 
@@ -727,6 +818,43 @@ export default function FanStats({
                 </HorizontalCarousel>
               </div>
             )}
+            {communityStats.loneBangers.length === 0 && thinSample && (
+              <div className="bg-slate-50 rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-200">
+                <div className="text-center sm:text-left mb-5">
+                  <h2 className="text-2xl font-black text-slate-900 tracking-tight leading-tight mb-2">
+                    Better Than The Album
+                  </h2>
+                  <p className="text-xs text-slate-500 text-balance">The highest-rated songs carrying the lowest-rated albums.</p>
+                </div>
+
+                <div className="bg-white p-5 rounded-2xl border-2 border-slate-200 shadow-sm">
+                  <div className="flex items-start gap-4 mb-5">
+                    <div className="w-12 h-12 rounded-xl bg-slate-100 border border-slate-100 shrink-0" />
+                    <div className="min-w-0 flex-1 pt-1">
+                      <h3 className="text-lg font-black text-slate-300 leading-tight mb-1">—</h3>
+                      <span className="text-[9px] font-bold text-slate-300 uppercase tracking-widest">—</span>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-100">
+                    <div className="text-center">
+                      <span className="text-[9px] font-black uppercase text-slate-400 block mb-0.5">Album Avg</span>
+                      <span className="text-lg font-black text-slate-300">—</span>
+                    </div>
+                    <div className="text-slate-300 font-black">→</div>
+                    <div className="text-center">
+                      <span className="text-[9px] font-black uppercase text-[#0072CE] block mb-0.5">Song Avg</span>
+                      <span className="text-xl font-black text-slate-300">—</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <PlaceholderBadge />
+                </div>
+                <PlaceholderNote />
+              </div>
+            )}
 
             {/* TASTE TWINS */}
             {communityStats.tasteTwin && (
@@ -754,6 +882,38 @@ export default function FanStats({
                     <span className="text-sm font-bold text-white text-balance">{communityStats.tasteTwin.twin.title}</span>
                   </div>
                 </div>
+              </div>
+            )}
+            {!communityStats.tasteTwin && thinSample && (
+              <div className="bg-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-800">
+                <div className="text-center sm:text-left mb-6">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-amber-400 block mb-1">Correlation</span>
+                  <h2 className="text-2xl font-black text-white tracking-tight leading-tight">Taste Twins</h2>
+                  <p className="text-xs text-slate-400 mt-2 text-balance">
+                    Fans who love the global #1 track almost always love this deep cut.
+                  </p>
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-3">
+                  <div className="bg-indigo-500/20 p-4 rounded-xl text-center w-full sm:flex-1 border border-indigo-500/30">
+                    <span className="text-sm font-bold text-slate-400">—</span>
+                  </div>
+                  <div className="flex sm:flex-col items-center justify-center shrink-0">
+                    <div className="w-4 h-0.5 sm:w-0.5 sm:h-3 bg-amber-400/50" />
+                    <div className="text-amber-400/70 font-black px-3 py-1 border border-amber-400/30 rounded-full bg-amber-400/10 text-[10px] shrink-0 my-1 sm:my-0 sm:mx-1">
+                      —
+                    </div>
+                    <div className="w-4 h-0.5 sm:w-0.5 sm:h-3 bg-amber-400/50" />
+                  </div>
+                  <div className="bg-blue-500/20 p-4 rounded-xl text-center w-full sm:flex-1 border border-blue-500/30">
+                    <span className="text-sm font-bold text-slate-400">—</span>
+                  </div>
+                </div>
+
+                <div className="mt-5">
+                  <PlaceholderBadge />
+                </div>
+                <PlaceholderNote />
               </div>
             )}
 
@@ -796,6 +956,51 @@ export default function FanStats({
                     </div>
                   </div>
                 </div>
+              </div>
+            )}
+            {!(communityStats.genClassicistSong && communityStats.genModernistSong) && thinSample && (
+              <div className="bg-slate-50 border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm flex-1">
+                <div className="text-center sm:text-left mb-5">
+                  <h2 className="text-2xl font-black text-slate-900 tracking-tight leading-tight">Old vs. New</h2>
+                  <p className="text-xs text-slate-500 mt-2 text-balance">The tracks pre-2000 purists and modern defenders disagree on most.</p>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                    <span className="text-[9px] font-black uppercase tracking-widest text-[#0072CE] block mb-1">Old School Choice</span>
+                    <h3 className="text-lg font-black text-slate-300 leading-tight text-balance mb-3">—</h3>
+                    <div className="flex items-center gap-3 text-center">
+                      <div className="flex-1 bg-slate-50 p-2 rounded-lg border border-slate-100">
+                        <span className="text-[9px] font-black uppercase text-slate-400 block mb-0.5">90s Purists</span>
+                        <span className="text-lg font-black text-slate-300">—</span>
+                      </div>
+                      <div className="flex-1 bg-slate-50 p-2 rounded-lg border border-slate-100">
+                        <span className="text-[9px] font-black uppercase text-slate-400 block mb-0.5">Modernists</span>
+                        <span className="text-lg font-black text-slate-300">—</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                    <span className="text-[9px] font-black uppercase tracking-widest text-emerald-500 block mb-1">New School Choice</span>
+                    <h3 className="text-lg font-black text-slate-300 leading-tight text-balance mb-3">—</h3>
+                    <div className="flex items-center gap-3 text-center">
+                      <div className="flex-1 bg-slate-50 p-2 rounded-lg border border-slate-100">
+                        <span className="text-[9px] font-black uppercase text-slate-400 block mb-0.5">Modernists</span>
+                        <span className="text-lg font-black text-slate-300">—</span>
+                      </div>
+                      <div className="flex-1 bg-slate-50 p-2 rounded-lg border border-slate-100">
+                        <span className="text-[9px] font-black uppercase text-slate-400 block mb-0.5">90s Purists</span>
+                        <span className="text-lg font-black text-slate-300">—</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <PlaceholderBadge />
+                </div>
+                <PlaceholderNote />
               </div>
             )}
 

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useWeezer, AppStep, getProgressState } from '../context/WeezerContext';
 import { FlyingWIcon } from './SharedUI';
 import WeezerAccountDrawer from './WeezerAccountDrawer';
@@ -154,7 +155,7 @@ export default function AppShell({
                 All My Favorite Songs
               </span>
               <span className="text-[9px] lg:text-[10px] font-bold text-blue-100 uppercase tracking-widest block mt-0.5">
-                Weezer Canon Ranker
+                The Weezer Song Ranking Project
               </span>
             </div>
           </button>
@@ -225,12 +226,19 @@ export default function AppShell({
               <FlyingWIcon className="w-3 h-3 text-white" />
             </div>
             <span className="text-xs font-black text-slate-900 tracking-tight">
-              All My Favorite Songs • Weezer Canon Ranker
+              All My Favorite Songs • The Weezer Song Ranking Project
             </span>
           </div>
 
           <p className="text-[10px] font-medium text-slate-400 max-w-xl mx-auto leading-relaxed">
-            This is an unofficial, non-commercial fan application. It is not affiliated with, endorsed by, sponsored by, or associated with Weezer, Crush Music, Atlantic Records, or Geffen Records. All song titles, album artwork, and trademarks belong to their respective owners.
+            Fan site. Not affiliated with Weezer. ·{' '}
+            <Link href="/terms" className="font-bold text-slate-500 hover:text-[#0072CE] underline underline-offset-2">
+              Terms of Use
+            </Link>{' '}
+            ·{' '}
+            <Link href="/privacy" className="font-bold text-slate-500 hover:text-[#0072CE] underline underline-offset-2">
+              Privacy Policy
+            </Link>
           </p>
         </div>
       </footer>

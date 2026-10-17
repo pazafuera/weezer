@@ -13,11 +13,11 @@ const siteUrl =
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  title: 'All My Favorite Songs | The Weezer Ranking Project',
+  title: 'All My Favorite Songs | The Weezer Song Ranking Project',
   description:
     'Rank all 206 Weezer songs your way — triage, refine, and compare your list with friends on RankingWeezer.com.',
   openGraph: {
-    title: 'All My Favorite Songs | The Weezer Ranking Project',
+    title: 'All My Favorite Songs | The Weezer Song Ranking Project',
     description:
       'Rank all 206 Weezer songs, discover your Fan Tribe and Era DNA, and compare lists with friends.',
     url: siteUrl,
@@ -35,7 +35,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'All My Favorite Songs | The Weezer Ranking Project',
+    title: 'All My Favorite Songs | The Weezer Song Ranking Project',
     description:
       'Rank all 206 Weezer songs, discover your Fan Tribe and Era DNA, and compare lists with friends.',
     images: ['/api/og'],

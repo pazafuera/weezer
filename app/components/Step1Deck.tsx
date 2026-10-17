@@ -25,7 +25,7 @@ import type { TriageSection } from './Step1Triage';
  * AppShell header, as a MIN height) and the deck fills it as a flex
  * column: compact progress line → the fixed-height card (centered in
  * the remaining space) → the tray of tier tiles → one quiet Don't
- * Know It line → the Undo / Jump / Deck|List row. On tall phones
+ * Know It line → the Jump / Deck|List row. On tall phones
  * everything fits one screen; on short ones the page scrolls a
  * little — the owner accepted that in exchange for a song card tall
  * enough to hold a two-line title without pushing the preview button
@@ -38,6 +38,15 @@ import type { TriageSection } from './Step1Triage';
  * card (SKIP / NEXT / BACK) plus quiet edge chevrons show the
  * affordance. See the SWIPE block in the component for the mapping;
  * it funnels into the same act()/undo() as the buttons.
+ *
+ * ANIMATION (owner feedback): a committed swipe flies the card
+ * off-screen BEFORE the action runs — the state never advances
+ * early — and a button sort flips the card edge-on, swaps the song
+ * at the midpoint, and flips back. The stamps sit centered over the
+ * album art (the old corner stamps rotated off-screen first and
+ * were hard to see), and a swipe-skip flashes a brief "Song Not
+ * Sorted" pill as the next card lands. The Undo BUTTON is gone
+ * (owner) — swipe right and the U key are the ways back.
  *
  * Cursor model: `cursorId` names the song on the card. Null means "no
  * explicit cursor" — the card shows the first uncategorized song in
@@ -81,10 +90,35 @@ const STAMP_FADE_PX = 40;
 const COMMIT_MIN_PX = 80;
 const SWIPE_COMMIT_RATIO = 0.25;
 
+// Animation timing (owner, Oct 16): a committed swipe flies the
+// card off-screen over EXIT_MS before its action runs; a button
+// sort flips the card edge-on (FLIP_OUT_MS), swaps the song at the
+// midpoint, and flips back (FLIP_IN_MS). SNAP_MS is the
+// transition-less beat that lets a flown-off card's replacement
+// appear in place instead of sliding in from off-screen. TOAST_MS
+// is the "Song Not Sorted" pill's fade window (its keyframes in
+// the render below run the same duration).
+const EXIT_MS = 260;
+const FLIP_OUT_MS = 150;
+const FLIP_IN_MS = 150;
+const SNAP_MS = 40;
+const TOAST_MS = 1200;
+
 /**
- * The white card from the owner's reference mock, with a stacked-deck
+ * Card animation phases. 'idle' covers both resting and actively
+ * dragging (the drag transform is driven by dragX, not the phase).
+ * 'exit' flies the card off-screen; 'snap' is the one-beat
+ * transition-less reset that follows an exit; 'flip-out' /
+ * 'flip-in' are the two halves of the button-sort flip.
+ */
+type CardAnimPhase = 'idle' | 'exit' | 'snap' | 'flip-out' | 'flip-in';
+
+/**
+ * The card from the owner's reference mock, with a stacked-deck
  * effect: two backing cards peek out behind the real one, rotated a
- * couple of degrees — pure CSS, no images. The shell is a FIXED
+ * couple of degrees — pure CSS, no images. The face wears a soft
+ * brand-blue tint (owner: try a color instead of white); the two
+ * backing layers stay white for contrast. The shell is a FIXED
  * height — it never grows or shrinks with content — so a song title
  * can never push the preview button off the card; the checkpoint and
  * completion states render inside the same shell at the same height.
@@ -104,8 +138,10 @@ function DeckCardShell({
    * Song state only: makes the front card draggable (see the swipe
    * block in Step1Deck). The backing layers stay put — only the
    * front card follows the pointer, complete with its directional
-   * stamp and edge chevrons. Checkpoint/completion shells render
-   * without it, so they can never be dragged.
+   * stamp (centered over the album art) and edge chevrons.
+   * Checkpoint/completion shells render without it, so they can
+   * never be dragged. `phase`/`exitX` drive the exit and flip
+   * animations (see the ANIMATION block in Step1Deck).
    */
   swipe?: {
     dragX: number;
@@ -116,10 +152,38 @@ function DeckCardShell({
     onPointerEnd: (e: React.PointerEvent<HTMLDivElement>) => void;
     stamp: 'skip' | 'next' | 'back' | null;
     stampOpacity: number;
+    phase: CardAnimPhase;
+    exitX: number;
   };
 }) {
+  // The front card's transform/transition are phase-driven: it
+  // follows the pointer while dragging, springs back over 200ms on
+  // a below-threshold release, flies off-screen on a committed
+  // swipe ('exit'), resets without a transition ('snap'), and
+  // flips edge-on and back for a button sort ('flip-out'/'flip-in'
+  // — the shell root carries the perspective that sells the flip).
+  const cardTransform =
+    swipe === undefined || swipe.phase === 'idle'
+      ? swipe === undefined
+        ? undefined
+        : `translateX(${swipe.dragX}px) rotate(${swipe.dragX * 0.03}deg)`
+      : swipe.phase === 'exit'
+      ? `translateX(${swipe.exitX}px) rotate(${swipe.dragX * 0.03}deg)`
+      : swipe.phase === 'flip-out'
+      ? 'rotateY(90deg)'
+      : 'rotateY(0deg)';
+  const cardTransition =
+    swipe === undefined || swipe.phase === 'snap' || swipe.isDragging
+      ? 'none'
+      : swipe.phase === 'exit'
+      ? `transform ${EXIT_MS}ms ease-in`
+      : swipe.phase === 'flip-out'
+      ? `transform ${FLIP_OUT_MS}ms ease-in`
+      : swipe.phase === 'flip-in'
+      ? `transform ${FLIP_IN_MS}ms ease-out`
+      : 'transform 200ms ease';
   return (
-    <div className="relative w-full h-[392px]">
+    <div className="relative w-full h-[392px] [perspective:1200px]">
       <div
         aria-hidden="true"
         className="absolute inset-0 rounded-[28px] bg-white border border-slate-200 shadow-md -rotate-2 translate-y-1"
@@ -136,15 +200,12 @@ function DeckCardShell({
           onPointerUp={swipe.onPointerEnd}
           onPointerCancel={swipe.onPointerEnd}
           style={{
-            transform: `translateX(${swipe.dragX}px) rotate(${
-              swipe.dragX * 0.03
-            }deg)`,
+            transform: cardTransform,
+            transition: cardTransition,
             touchAction: 'pan-y',
             cursor: swipe.isDragging ? 'grabbing' : 'grab',
           }}
-          className={`relative h-full rounded-[28px] bg-white border border-slate-200 shadow-xl select-none ${
-            swipe.isDragging ? '' : 'transition-transform duration-200'
-          }`}
+          className="relative h-full rounded-[28px] bg-[#e8f2fc] border border-slate-200 shadow-xl select-none"
         >
           {/* Persistent drag hint: quiet chevrons at the card's
               side edges, vertical center. */}
@@ -160,16 +221,19 @@ function DeckCardShell({
           >
             ›
           </span>
-          {/* Directional stamps: SKIP/NEXT ride the top-LEFT corner
-              (opposite a leftward drag), BACK the top-right. Their
-              opacity is proportional to drag distance (computed by
-              the parent), and only the stamp for the current drag
+          {/* Directional stamps: all three are CENTERED OVER THE
+              ALBUM ART (owner: the old corner stamps rotated
+              off-screen first and were hard to see). top-[84px] is
+              the art slot's vertical center — the content's py-5
+              (20px) plus half the h-32 art slot (64px). Opacity is
+              proportional to drag distance (computed by the
+              parent), and only the stamp for the current drag
               direction renders. */}
           {swipe.stamp === 'skip' && (
             <span
               aria-hidden="true"
               style={{ opacity: swipe.stampOpacity }}
-              className="pointer-events-none absolute top-4 left-4 z-20 -rotate-12 rounded-lg border-[3px] border-orange-500 px-2.5 py-1 text-lg font-black uppercase tracking-widest text-orange-500 bg-white/70"
+              className="pointer-events-none absolute left-1/2 top-[84px] z-20 -translate-x-1/2 -translate-y-1/2 -rotate-12 rounded-lg border-[3px] border-orange-500 px-2.5 py-1 text-lg font-black uppercase tracking-widest text-orange-500 bg-white/70"
             >
               Skip
             </span>
@@ -178,7 +242,7 @@ function DeckCardShell({
             <span
               aria-hidden="true"
               style={{ opacity: swipe.stampOpacity }}
-              className="pointer-events-none absolute top-4 left-4 z-20 -rotate-12 rounded-lg border-[3px] border-slate-500 px-2.5 py-1 text-lg font-black uppercase tracking-widest text-slate-600 bg-white/70"
+              className="pointer-events-none absolute left-1/2 top-[84px] z-20 -translate-x-1/2 -translate-y-1/2 -rotate-12 rounded-lg border-[3px] border-slate-500 px-2.5 py-1 text-lg font-black uppercase tracking-widest text-slate-600 bg-white/70"
             >
               Next
             </span>
@@ -187,7 +251,7 @@ function DeckCardShell({
             <span
               aria-hidden="true"
               style={{ opacity: swipe.stampOpacity }}
-              className="pointer-events-none absolute top-4 right-4 z-20 rotate-12 rounded-lg border-[3px] border-[#0072CE] px-2.5 py-1 text-lg font-black uppercase tracking-widest text-[#0072CE] bg-white/70"
+              className="pointer-events-none absolute left-1/2 top-[84px] z-20 -translate-x-1/2 -translate-y-1/2 rotate-12 rounded-lg border-[3px] border-[#0072CE] px-2.5 py-1 text-lg font-black uppercase tracking-widest text-[#0072CE] bg-white/70"
             >
               Back
             </span>
@@ -195,7 +259,7 @@ function DeckCardShell({
           {children}
         </div>
       ) : (
-        <div className="relative h-full rounded-[28px] bg-white border border-slate-200 shadow-xl">
+        <div className="relative h-full rounded-[28px] bg-[#e8f2fc] border border-slate-200 shadow-xl">
           {children}
         </div>
       )}
@@ -324,6 +388,82 @@ export default function Step1Deck({
   const [dragX, setDragX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
 
+  // ANIMATION — phases sequence around act()/undo() so the triage
+  // state NEVER advances before its animation says so:
+  //   exit: the card flies off-screen over EXIT_MS; only then does
+  //     the pending action run, followed by one 'snap' beat with
+  //     transitions off so the next card appears in place.
+  //   flip: a button sort flips the card edge-on over FLIP_OUT_MS;
+  //     act() runs at the midpoint (the content swaps while the
+  //     card is edge-on and invisible), then it flips back over
+  //     FLIP_IN_MS.
+  // While phase !== 'idle', pointer drags, button taps, jumps and
+  // keys are all ignored. Timers are tracked and cleared on
+  // unmount (e.g. toggling to the list mid-animation cancels the
+  // pending action rather than firing it into a hidden view).
+  const [phase, setPhase] = useState<CardAnimPhase>('idle');
+  const [exitX, setExitX] = useState(0);
+  const timersRef = useRef<number[]>([]);
+  const schedule = (fn: () => void, ms: number) => {
+    const id = window.setTimeout(fn, ms);
+    timersRef.current.push(id);
+  };
+
+  // "Song Not Sorted" toast — flashed when a swipe-left on an
+  // UNRATED song records a Skip (the swipe-skip path only: not the
+  // Skip tile, not a rated-song advance). Keyed by trigger time so
+  // consecutive swipe-skips restart the fade cleanly.
+  const [toastKey, setToastKey] = useState<number | null>(null);
+  const toastTimerRef = useRef<number | null>(null);
+  const showNotSortedToast = () => {
+    if (toastTimerRef.current !== null) {
+      window.clearTimeout(toastTimerRef.current);
+    }
+    setToastKey(Date.now());
+    toastTimerRef.current = window.setTimeout(
+      () => setToastKey(null),
+      TOAST_MS + 50
+    );
+  };
+
+  useEffect(() => {
+    const timers = timersRef.current;
+    return () => {
+      timers.forEach((id) => window.clearTimeout(id));
+      if (toastTimerRef.current !== null) {
+        window.clearTimeout(toastTimerRef.current);
+      }
+    };
+  }, []);
+
+  // Fly the card off-screen in `dir`, THEN run `action` (an act()
+  // or undo()) and snap-reset for the next card.
+  const exitTo = (dir: -1 | 1, action: () => void) => {
+    if (phase !== 'idle') return;
+    const width = cardRef.current?.offsetWidth ?? 320;
+    setExitX(dir * (width + 80));
+    setPhase('exit');
+    schedule(() => {
+      action();
+      setDragX(0);
+      setPhase('snap');
+      schedule(() => setPhase('idle'), SNAP_MS);
+    }, EXIT_MS);
+  };
+
+  // Flip the card edge-on, run act(value) at the midpoint, flip
+  // back. Used by the bucket tiles, Don't Know It, and keys 1–5 —
+  // every "sort via a control" path gets the same transition.
+  const flipAct = (value: TriageValue) => {
+    if (phase !== 'idle' || !currentSong || checkpointPending) return;
+    setPhase('flip-out');
+    schedule(() => {
+      act(value);
+      setPhase('flip-in');
+      schedule(() => setPhase('idle'), FLIP_IN_MS);
+    }, FLIP_OUT_MS);
+  };
+
   // A song change (advance, jump, undo, mode remount) ends any drag
   // and resets the transform — the next card renders in place.
   const currentSongId = currentSong?.id ?? null;
@@ -334,6 +474,7 @@ export default function Step1Deck({
   }, [currentSongId, checkpointPending, isComplete]);
 
   const handleCardPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (phase !== 'idle') return;
     if (e.button !== 0 && e.pointerType === 'mouse') return;
     // Never steal a drag that starts on the preview button or any
     // other interactive element inside the card.
@@ -392,24 +533,36 @@ export default function Step1Deck({
       width * SWIPE_COMMIT_RATIO
     );
     const dx = dragX;
-    setDragX(0);
     if (dx <= -threshold) {
-      // Swipe left = move on. Unrated: a swipe IS a skip. Rated:
-      // keep the rating and advance the same way a tap on its
-      // current bucket would (act re-sets the identical value).
+      // Swipe left = move on — but NOT yet: the card first flies
+      // off-screen (exitTo), and the action runs only as it lands.
+      // Unrated: a swipe IS a skip, and the "Song Not Sorted"
+      // toast fires as the next card shows. Rated: keep the rating
+      // and advance the same way a tap on its current bucket would
+      // (act re-sets the identical value) — no toast, it WAS
+      // sorted.
       const existing = triageMap[currentSong.id];
       if (existing === undefined) {
-        act('skip');
+        exitTo(-1, () => {
+          act('skip');
+          showNotSortedToast();
+        });
       } else {
-        act(existing);
+        exitTo(-1, () => act(existing));
       }
     } else if (dx >= threshold) {
-      // Swipe right = go back (a no-op snap-back when there's no
-      // history, since undo() guards on an empty stack).
-      undo();
+      // Swipe right = go back, with the same fly-off. With no
+      // history there's nothing to fly to: plain snap-back.
+      if (history.length > 0) {
+        exitTo(1, () => undo());
+      } else {
+        setDragX(0);
+      }
+    } else {
+      // Below threshold: dragX reset + the shell's spring-back
+      // transition animates the card back to rest.
+      setDragX(0);
     }
-    // Below threshold: dragX reset + the shell's transition class
-    // animates the card back to rest.
   };
 
   // Stamp state, derived from the live drag distance. SKIP shows
@@ -430,6 +583,9 @@ export default function Step1Deck({
   );
 
   const jumpToSection = (sectionKey: string) => {
+    // A jump mid-animation would fight the pending act()/undo()
+    // for the cursor — the window is a few hundred ms; ignore it.
+    if (phase !== 'idle') return;
     const section = sections.find((s) => s.key === sectionKey);
     if (!section || section.songs.length === 0) return;
     const target =
@@ -466,8 +622,9 @@ export default function Step1Deck({
         return;
       }
       if (checkpointPending || isComplete) return;
+      if (phase !== 'idle') return;
       if (e.key >= '1' && e.key <= '5') {
-        act(BUCKET_ORDER[Number(e.key) - 1]);
+        flipAct(BUCKET_ORDER[Number(e.key) - 1]);
       } else if (e.key === 'u' || e.key === 'U') {
         undo();
       }
@@ -490,7 +647,7 @@ export default function Step1Deck({
     return (
       <button
         key={bucket}
-        onClick={() => act(bucket)}
+        onClick={() => flipAct(bucket)}
         className={`flex-1 flex flex-col items-center justify-center gap-0.5 rounded-2xl border py-3 [@media(max-height:740px)]:py-2 shadow-sm transition-all cursor-pointer ${
           isSelected
             ? 'bg-sky-50 border-sky-400 ring-1 ring-sky-400'
@@ -524,6 +681,17 @@ export default function Step1Deck({
 
   return (
     <div className="flex-1 min-h-0 flex flex-col w-full max-w-[560px] mx-auto px-4">
+      {/* "Song Not Sorted" toast fade (opacity only, so it never
+          fights the pill's translate centering). */}
+      <style>{`
+        @keyframes deck-toast-fade {
+          0% { opacity: 0; }
+          12% { opacity: 1; }
+          78% { opacity: 1; }
+          100% { opacity: 0; }
+        }
+        .deck-toast { animation: deck-toast-fade ${TOAST_MS}ms ease forwards; }
+      `}</style>
       {/* COMPACT PROGRESS — one line + a slim bar. Same counts as the
           list header (categorizedCount / bucketedCount), so the two
           views always agree; the deck's old full counters block and
@@ -562,8 +730,9 @@ export default function Step1Deck({
 
       {/* CARD REGION — flex-1 and centered; the checkpoint and
           completion states replace the card right here, at the same
-          fixed height. */}
-      <div className="flex-1 min-h-0 flex items-center justify-center py-2">
+          fixed height. Relative so the "Song Not Sorted" toast can
+          center over the card area. */}
+      <div className="relative flex-1 min-h-0 flex items-center justify-center py-2">
         {checkpointPending ? (
           <DeckCardShell>
             <div className="h-full flex flex-col items-center justify-center text-center p-6 sm:p-8 space-y-5">
@@ -634,6 +803,8 @@ export default function Step1Deck({
               onPointerEnd: handleCardPointerEnd,
               stamp: stampKind,
               stampOpacity,
+              phase,
+              exitX,
             }}
           >
             <div className="relative h-full flex flex-col items-center text-center px-5 py-5 gap-3">
@@ -654,7 +825,7 @@ export default function Step1Deck({
                 <img
                   src={albumCoverSrc(resolveAlbumId(currentSong))}
                   alt={`${currentSong.album} cover art`}
-                  className="h-32 w-32 object-cover rounded-xl shadow-md border border-slate-100"
+                  className="h-32 w-32 object-cover rounded-xl shadow-lg border-[3px] border-white ring-1 ring-slate-900/10"
                 />
               </div>
               {/* TITLE — a fixed two-line slot. line-clamp-2 caps the
@@ -668,7 +839,7 @@ export default function Step1Deck({
                   {currentSong.title}
                 </h2>
               </div>
-              <p className="text-sm font-bold text-slate-400">
+              <p className="text-sm font-bold text-slate-500">
                 {currentSong.album} ({currentSong.year})
               </p>
               {/* The list rows' preview button, exact same component
@@ -678,13 +849,27 @@ export default function Step1Deck({
             </div>
           </DeckCardShell>
         )}
+        {/* "SONG NOT SORTED" — flashed as the next card lands after
+            a swipe-skip (see showNotSortedToast). Purely visual:
+            pointer-events-none, and it unmounts on its timer. */}
+        {toastKey !== null && (
+          <div
+            key={toastKey}
+            aria-hidden="true"
+            className="deck-toast pointer-events-none absolute left-1/2 top-1/2 z-30 -translate-x-1/2 -translate-y-1/2 rounded-full bg-slate-900 px-4 py-2 text-xs font-bold text-white shadow-lg"
+          >
+            Song Not Sorted
+          </div>
+        )}
       </div>
 
       {/* ACTIONS — pinned at the bottom of the column: the mock's
           light tray holds ONLY the five tier tiles; Don't Know It
-          moved out to one quiet centered line below the tray
-          (owner, Oct 16); the Undo / Jump row beneath that now
-          also carries the Deck | List toggle on the same line. */}
+          sits on one quiet centered line below the tray (owner,
+          Oct 16); the Jump row beneath that also carries the
+          Deck | List toggle on the same line. The Undo BUTTON is
+          gone (owner, Oct 16) — swipe right or the U key goes
+          back. */}
       {inSongState && (
         <div className="shrink-0">
           <div className="bg-slate-100 border border-slate-200/60 rounded-3xl shadow-sm p-3 [@media(max-height:740px)]:p-2.5">
@@ -693,11 +878,12 @@ export default function Step1Deck({
             </div>
           </div>
           {/* DON'T KNOW IT — one quiet centered text button directly
-              below the tray; still a single tap through act(), and
-              still visibly active when the song is marked unknown. */}
+              below the tray; still a single tap (through flipAct →
+              act()), and still visibly active when the song is
+              marked unknown. */}
           <div className="text-center pt-1.5">
             <button
-              onClick={() => act('unknown')}
+              onClick={() => flipAct('unknown')}
               className={`text-sm px-4 py-1 rounded-full transition-all cursor-pointer ${
                 triageMap[currentSong.id] === 'unknown'
                   ? 'text-[#0072CE] font-bold'
@@ -709,13 +895,6 @@ export default function Step1Deck({
             </button>
           </div>
           <div className="flex items-center gap-2 mt-1.5">
-            <button
-              onClick={undo}
-              disabled={history.length === 0}
-              className="shrink-0 text-xs font-extrabold text-slate-700 bg-white border border-slate-200 rounded-full shadow-sm px-5 py-2 transition-all enabled:hover:bg-slate-50 enabled:cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              ↩ Undo
-            </button>
             <div className="relative flex-1 min-w-0">
               <select
                 value=""
@@ -752,8 +931,8 @@ export default function Step1Deck({
                 <path d="m6 9 6 6 6-6" />
               </svg>
             </div>
-            {/* DECK | LIST TOGGLE — rides in the Undo/Jump row now
-                (owner, Oct 16): same white pill with the blue active
+            {/* DECK | LIST TOGGLE — rides in the Jump row (owner,
+                Oct 16): same white pill with the blue active
                 segment, shrunk to share one line. In list mode the
                 toggle stays up in the header instead. */}
             <div className="inline-flex shrink-0 bg-white border border-slate-200 rounded-full p-1 shadow-sm">

@@ -11,6 +11,23 @@ interface OrientationBucket {
   desc: string;
 }
 
+// The overall process, shown before the buckets (owner direction, Oct 17):
+// orient on the journey first — sort, refine, Thread — then on the buckets.
+const PROCESS_STEPS: { title: string; desc: string }[] = [
+  {
+    title: 'Sort',
+    desc: "Go through the songs and bucket the ones you know. Never heard it? Mark it Don't Know It and move on.",
+  },
+  {
+    title: 'Refine',
+    desc: 'Your top picks face off head-to-head until your full 1–206 ranking is set.',
+  },
+  {
+    title: 'Your Sweater Thread',
+    desc: 'Get your personalized results: your Top 10, your fan tribe, your Era DNA.',
+  },
+];
+
 const ORIENTATION_BUCKETS: OrientationBucket[] = [
   {
     key: 'banger',
@@ -73,10 +90,37 @@ export default function Step05Orientation() {
         </p>
       </div>
 
+      {/* HOW THIS WORKS — the process first, buckets second */}
+      <div className="space-y-3 pt-2">
+        <h2 className="text-base sm:text-xl font-black text-slate-950 tracking-tight text-center">
+          How this works
+        </h2>
+        <div className="bg-white border border-slate-200/90 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
+          {PROCESS_STEPS.map((step, idx) => (
+            <div
+              key={step.title}
+              className={`flex items-start gap-3.5 ${idx > 0 ? 'pt-4 border-t border-slate-100' : ''}`}
+            >
+              <div className="w-11 h-11 rounded-2xl border bg-blue-100 text-[#0072CE] border-blue-300 flex items-center justify-center text-lg font-black shrink-0 shadow-sm">
+                {idx + 1}
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-lg sm:text-xl font-black text-slate-950 tracking-tight leading-tight">
+                  {step.title}
+                </h3>
+                <p className="text-xs sm:text-sm font-medium text-slate-600 leading-relaxed mt-0.5">
+                  {step.desc}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* SECTION HEADER */}
       <div className="space-y-2.5 text-center pt-2">
         <h2 className="text-base sm:text-xl font-black text-slate-950 tracking-tight">
-          First, you'll put songs into one of the following buckets.
+          Then, every song you know goes in a bucket.
         </h2>
       </div>
 
@@ -129,7 +173,7 @@ export default function Step05Orientation() {
       <p className="text-xs sm:text-sm font-semibold text-slate-500 leading-relaxed text-center max-w-md mx-auto">
         Don&apos;t know a song? Mark it Don&apos;t Know It. No shame — it
         just won&apos;t be rated. Most fans bucket the songs they know,
-        grab their Wrapped, then come back for the deep cuts.
+        grab their Sweater Thread, then come back for the deep cuts.
       </p>
 
       {/* CONTINUATION CTAS */}

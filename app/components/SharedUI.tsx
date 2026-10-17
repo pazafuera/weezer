@@ -32,7 +32,7 @@ export function AlbumArtwork({ albumId, className = "" }: { albumId: string; cla
   );
 }
 
-export function AudioPreviewButton({ title, compact = false }: { title: string; compact?: boolean }) {
+export function AudioPreviewButton({ title, compact = false, large = false }: { title: string; compact?: boolean; large?: boolean }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -115,6 +115,8 @@ export function AudioPreviewButton({ title, compact = false }: { title: string; 
       className={`flex items-center justify-center rounded-full transition-all duration-200 shrink-0 cursor-pointer ${
         compact 
           ? 'w-7 h-7 bg-white hover:bg-slate-100 border border-slate-300 shadow-2xs' 
+          : large
+          ? 'w-16 h-16 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-[#0072CE]'
           : 'w-10 h-10 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-[#0072CE]'
       } ${
         isPlaying 
@@ -124,11 +126,11 @@ export function AudioPreviewButton({ title, compact = false }: { title: string; 
       title="Play 30s Preview"
     >
       {isLoading ? (
-        <span className="block w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+        <span className={`block ${large ? 'w-5 h-5' : 'w-3 h-3'} border-2 border-current border-t-transparent rounded-full animate-spin`} />
       ) : isPlaying ? (
-        <span className={`font-black leading-none tracking-tighter ${compact ? 'text-[9px]' : 'text-xs'}`}>||</span>
+        <span className={`font-black leading-none tracking-tighter ${compact ? 'text-[9px]' : large ? 'text-lg' : 'text-xs'}`}>||</span>
       ) : (
-        <span className={`font-black leading-none ml-0.5 ${compact ? 'text-[10px]' : 'text-sm'}`}>▶</span>
+        <span className={`font-black leading-none ml-0.5 ${compact ? 'text-[10px]' : large ? 'text-xl' : 'text-sm'}`}>▶</span>
       )}
     </button>
   );

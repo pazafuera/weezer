@@ -438,19 +438,15 @@ const TUTORIAL_STEPS: TutorialStepDef[] = [
 ];
 
 // The measured highlight box (target rect relative to the
-// deck root, padded 4px a side — see measureTutorial) and the
-// measured callout placement.
+// deck root, padded 4px a side — see measureTutorial). The
+// callout needs no measured placement: it is a bottom sheet
+// fixed to the viewport (see the render), so it is reachable
+// no matter how tall the deck root grows past the fold.
 interface TutorialRect {
   top: number;
   left: number;
   width: number;
   height: number;
-}
-
-interface TutorialCalloutPos {
-  top: number;
-  left: number;
-  width: number;
 }
 
 const BUCKET_ORDER: BucketType[] = ['banger', 'slaps', 'mid', 'skip', 'trash'];
@@ -866,21 +862,18 @@ export default function Step1Deck({
   const phaseRef = useRef<CardAnimPhase>('idle');
 
   // TUTORIAL — the open step's index, or null when the tour
-  // isn't showing; the measured highlight/callout geometry
-  // (refs mirror the state so the measure pass can skip no-op
-  // updates); and the root/callout refs the geometry reads.
+  // isn't showing; the measured highlight geometry (a ref
+  // mirrors the state so the measure pass can skip no-op
+  // updates); and the root ref the geometry reads. The
+  // callout is viewport-fixed and needs no state at all.
   // The show decision itself lives further down, next to the
   // nudge it has to retire (see the TUTORIAL decision effect).
   const [tutorialStep, setTutorialStep] = useState<number | null>(null);
   const [tutorialRect, setTutorialRect] = useState<TutorialRect | null>(
     null
   );
-  const [tutorialCallout, setTutorialCallout] =
-    useState<TutorialCalloutPos | null>(null);
   const deckRootRef = useRef<HTMLDivElement>(null);
-  const calloutRef = useRef<HTMLDivElement>(null);
   const tutorialRectRef = useRef<TutorialRect | null>(null);
-  const tutorialCalloutRef = useRef<TutorialCalloutPos | null>(null);
   const tutorialDecidedRef = useRef(false);
   const tutorialArmedRef = useRef(false);
   // Replay bookkeeping: whether the tour currently open was
@@ -909,9 +902,7 @@ export default function Step1Deck({
     tutorialForcedRef.current = false;
     setTutorialStep(null);
     setTutorialRect(null);
-    setTutorialCallout(null);
     tutorialRectRef.current = null;
-    tutorialCalloutRef.current = null;
   };
 
   const markNudgeDone = () => {
@@ -1715,17 +1706,15 @@ export default function Step1Deck({
   }, []);
 
   // TUTORIAL — geometry. Measure the step's target (found by
-  // its data-tutorial attribute) against the deck root, pad
-  // the box 4px a side for the ring, and place the callout:
-  // below the target when it fits inside the root, above when
-  // it fits there, otherwise on the roomier side clamped
-  // inside the root; horizontally centered on the target and
-  // clamped to the root's margins. The callout's height is its
-  // own measured offsetHeight (190 until it has rendered), so
-  // a step change re-places with the previous step's height
-  // and then corrects itself on the follow-up passes below.
-  // State updates are skipped when nothing moved, so the
-  // scroll/resize listeners can't loop.
+  // its data-tutorial attribute) against the deck root and pad
+  // the box 4px a side for the ring. Only the ring is
+  // measured: the callout is a viewport-fixed bottom sheet
+  // (see the render), so its reachability never depends on
+  // root geometry — the old root-relative callout placement
+  // could park it below the fold on phones, where the deck
+  // root is taller than the visible viewport. State updates
+  // are skipped when nothing moved, so the scroll/resize
+  // listeners can't loop.
   const measureTutorial = () => {
     if (tutorialStep === null) return;
     const root = deckRootRef.current;
@@ -1754,45 +1743,12 @@ export default function Step1Deck({
       tutorialRectRef.current = rect;
       setTutorialRect(rect);
     }
-    const margin = 12;
-    const gap = 12;
-    const calloutW = Math.min(rootRect.width - margin * 2, 352);
-    const calloutH = calloutRef.current?.offsetHeight ?? 190;
-    let top: number;
-    const belowTop = rect.top + rect.height + gap;
-    if (belowTop + calloutH <= rootRect.height - 8) {
-      top = belowTop;
-    } else if (rect.top - gap - calloutH >= 8) {
-      top = rect.top - gap - calloutH;
-    } else {
-      const roomBelow = rootRect.height - (rect.top + rect.height);
-      const roomAbove = rect.top;
-      top =
-        roomBelow >= roomAbove ? belowTop : rect.top - gap - calloutH;
-      top = Math.max(8, Math.min(top, rootRect.height - calloutH - 8));
-    }
-    const center = rect.left + rect.width / 2;
-    const left = Math.max(
-      margin,
-      Math.min(center - calloutW / 2, rootRect.width - calloutW - margin)
-    );
-    const callout: TutorialCalloutPos = { top, left, width: calloutW };
-    const prevCallout = tutorialCalloutRef.current;
-    if (
-      !prevCallout ||
-      Math.abs(prevCallout.top - callout.top) > 0.5 ||
-      Math.abs(prevCallout.left - callout.left) > 0.5 ||
-      Math.abs(prevCallout.width - callout.width) > 0.5
-    ) {
-      tutorialCalloutRef.current = callout;
-      setTutorialCallout(callout);
-    }
   };
 
   // While the tour is open: measure on open and on every step
   // change, follow resize/scroll, and take two settling passes
-  // (the callout's real height lands after its first paint,
-  // and its move transition ends ~300ms in).
+  // (late layout shifts — fonts, album art — can move the
+  // target just after a step change).
   useEffect(() => {
     if (tutorialStep === null) return;
     measureTutorial();
@@ -2370,10 +2326,19 @@ export default function Step1Deck({
           highlight ring punches its hole in the dim with a
           giant box-shadow and is pointer-events-none itself;
           before the first measure lands, a flat dim covers the
-          root instead. The callout uses the deck's vocabulary:
-          white card, brand-blue step eyebrow, amber primary.
-          Neither element shifts the deck's layout — both are
-          absolutely positioned over it. */}
+          root instead. The callout is the exception to the
+          root-relative layout: it is a bottom sheet FIXED to
+          the viewport (no ancestor of it creates a containing
+          block — verified: deck root, Step1Triage root, main
+          and AppShell root carry no transform / filter /
+          backdrop-filter / will-change / perspective, and the
+          card's flip transform lives on a sibling subtree), so
+          its buttons are always inside the visible area, above
+          Safari's toolbar — the old root-measured placement
+          could park it below the fold on phones, visible but
+          unreachable. It uses the deck's vocabulary: white
+          card, brand-blue step eyebrow, amber primary. Neither
+          element shifts the deck's layout. */}
       {tutorialStep !== null && (
         <div
           className="absolute inset-0 z-50 [touch-action:none]"
@@ -2401,17 +2366,10 @@ export default function Step1Deck({
             />
           )}
           <div
-            ref={calloutRef}
-            className="absolute bg-white rounded-3xl border border-slate-200 shadow-2xl p-5 transition-all duration-300"
-            style={
-              tutorialCallout
-                ? {
-                    top: tutorialCallout.top,
-                    left: tutorialCallout.left,
-                    width: tutorialCallout.width,
-                  }
-                : { left: 12, right: 12, bottom: 12 }
-            }
+            className="fixed left-3 right-3 mx-auto w-auto max-w-[400px] bg-white rounded-3xl border border-slate-200 shadow-2xl p-5"
+            style={{
+              bottom: 'calc(12px + env(safe-area-inset-bottom, 0px))',
+            }}
           >
             <p className="text-[11px] font-black uppercase tracking-wider text-[#0072CE]">
               Step {tutorialStep + 1} of {TUTORIAL_STEPS.length}
@@ -2440,7 +2398,7 @@ export default function Step1Deck({
                 )}
                 <button
                   onClick={advanceTutorial}
-                  className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm px-5 py-2.5 rounded-full shadow-md transition transform hover:scale-105 cursor-pointer border-2 border-amber-200 whitespace-nowrap"
+                  className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm px-5 py-2.5 min-h-[48px] inline-flex items-center justify-center rounded-full shadow-md transition transform hover:scale-105 cursor-pointer border-2 border-amber-200 whitespace-nowrap"
                 >
                   {tutorialStep >= TUTORIAL_STEPS.length - 1
                     ? 'Start sorting'

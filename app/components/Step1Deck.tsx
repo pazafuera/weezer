@@ -30,7 +30,9 @@ import type { TriageSection } from './Step1Triage';
  * little — the owner accepted that in exchange for a song card tall
  * enough to hold a two-line title without pushing the preview button
  * off it. The milestone, completion and end-of-deck states replace
- * the card inside the same column, at the same fixed height.
+ * the card inside the same column at the same 392px floor — their
+ * shell is adaptive and grows past it when a state's content needs
+ * the room (see DeckCardShell); the song card's height never moves.
  *
  * NAVIGATION MODEL (owner correction, Oct 16): the deck is a
  * BROWSER, not a funnel. `position` is a plain index into
@@ -215,11 +217,17 @@ type CardAnimPhase = 'idle' | 'exit' | 'snap' | 'flip-out' | 'flip-in';
  * couple of degrees — pure CSS, no images. The face wears a
  * brand-blue tint (#d9eafa — a color instead of white per the
  * owner, deepened one shade in his polish pass); the two
- * backing layers stay white for contrast. The shell is a FIXED
+ * backing layers stay white for contrast. The SONG shell is a FIXED
  * height — it never grows or shrinks with content — so a song title
- * can never push the preview button off the card; the milestone,
- * completion and end-of-deck states render inside the same shell
- * at the same height.
+ * can never push the preview button off the card. The milestone,
+ * completion and end-of-deck states render in the same shell with
+ * `adaptive` set instead: a 392px MINIMUM height that grows to fit
+ * content (Overnight 3.5 — the milestone action stack's tallest
+ * guest state runs ~569px of content at phone width, which no
+ * spacing trim could fit into 392; a non-song state short enough
+ * to fit renders identically to the fixed shell). The backing
+ * layers are inset-0, so they scale with a taller shell and the
+ * stacked-deck peek survives at any height.
  *
  * Slot budget (mobile-first, sums to the 392px height): card vertical
  * padding py-5 (40) + art slot h-32 (128) + gap-3 (12) + two-line
@@ -230,8 +238,20 @@ type CardAnimPhase = 'idle' | 'exit' | 'snap' | 'flip-out' | 'flip-in';
 function DeckCardShell({
   children,
   swipe,
+  adaptive,
 }: {
   children: React.ReactNode;
+  /**
+   * Non-song states only (milestone / completion / end-of-deck):
+   * the shell's fixed 392px height becomes a 392px MINIMUM and
+   * the shell grows to fit its content (see the shell comment
+   * above). Song cards never set it — their rendering path is
+   * byte-for-byte the fixed shell. The inner content containers
+   * of adaptive states pair this with min-h-[392px] in place of
+   * h-full, so a state that fits still centers its content in
+   * exactly 392px, identically to before.
+   */
+  adaptive?: boolean;
   /**
    * Song state (and the end-of-deck card): makes the front card
    * draggable (see the swipe block in Step1Deck). The backing
@@ -292,7 +312,11 @@ function DeckCardShell({
       ? 'transform 300ms ease-in-out'
       : 'transform 200ms ease';
   return (
-    <div className="relative w-full h-[392px] [perspective:1200px]">
+    <div
+      className={`relative w-full ${
+        adaptive ? 'min-h-[392px]' : 'h-[392px]'
+      } [perspective:1200px]`}
+    >
       <div
         aria-hidden="true"
         className="absolute inset-0 rounded-[28px] bg-white border border-slate-200 shadow-md -rotate-2 translate-y-1"
@@ -314,7 +338,9 @@ function DeckCardShell({
             touchAction: 'pan-y',
             cursor: swipe.isDragging ? 'grabbing' : 'grab',
           }}
-          className="relative h-full rounded-[28px] bg-[#d9eafa] border border-slate-200 shadow-xl select-none"
+          className={`relative ${
+            adaptive ? 'min-h-[392px]' : 'h-full'
+          } rounded-[28px] bg-[#d9eafa] border border-slate-200 shadow-xl select-none`}
         >
           {/* Directional stamps: all three are CENTERED OVER THE
               ALBUM ART (owner: the old corner stamps rotated
@@ -356,7 +382,11 @@ function DeckCardShell({
           {children}
         </div>
       ) : (
-        <div className="relative h-full rounded-[28px] bg-[#d9eafa] border border-slate-200 shadow-xl">
+        <div
+          className={`relative ${
+            adaptive ? 'min-h-[392px]' : 'h-full'
+          } rounded-[28px] bg-[#d9eafa] border border-slate-200 shadow-xl`}
+        >
           {children}
         </div>
       )}
@@ -437,7 +467,11 @@ function MilestoneRibbon() {
  * Deliberately the strongest button on the milestone card —
  * same amber treatment as "Keep sorting" in its primary form.
  * A standalone component so the end/completion cards (next
- * build) reuse the exact button instead of drifting.
+ * build) reuse the exact button instead of drifting. The label
+ * is the tightened "Create free account, save progress"
+ * (Overnight 3.5): the original wording wrapped to two lines
+ * at phone width, and this is the longest variant measured to
+ * fit one line at 375px — see REPORT.md for the measurement.
  */
 function SaveProgressButton({ onClick }: { onClick: () => void }) {
   return (
@@ -445,7 +479,7 @@ function SaveProgressButton({ onClick }: { onClick: () => void }) {
       onClick={onClick}
       className="w-full bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm px-4 py-3.5 rounded-full shadow-md transition transform hover:scale-105 cursor-pointer border-2 border-amber-200"
     >
-      Create a free account to save your progress
+      Create free account, save progress
     </button>
   );
 }
@@ -1342,7 +1376,8 @@ export default function Step1Deck({
 
       {/* CARD REGION — flex-1 and centered; the milestone,
           completion and end-of-deck states replace the card right
-          here, at the same fixed height. */}
+          here, in the adaptive shell (392px floor, grows to fit —
+          see DeckCardShell). */}
       <div className="relative flex-1 min-h-0 flex items-center justify-center py-2">
         {milestonePending ? (
           /* MILESTONE — a sort just crossed a threshold (see
@@ -1365,10 +1400,14 @@ export default function Step1Deck({
              real buckets also gets the Refine offer. The stack
              is why this container's spacing tightened again
              (py-3/sm:py-4, space-y-1.5/sm:space-y-2) — the
-             392px fit math, including the one state that still
-             doesn't fit, is in REPORT.md (Overnight 3). */
-          <DeckCardShell>
-            <div className="h-full flex flex-col items-center justify-center text-center px-6 py-3 sm:px-8 sm:py-4 space-y-1.5 sm:space-y-2">
+             fit math is in REPORT.md (Overnight 3). The shell
+             here is ADAPTIVE (Overnight 3.5): the tallest guest
+             stacks can't fit 392px at phone width, so the card
+             grows to fit them in flow instead of the stack
+             painting outside the card's bounds; stacks that fit
+             render in exactly 392px, as before. */
+          <DeckCardShell adaptive>
+            <div className="min-h-[392px] flex flex-col items-center justify-center text-center px-6 py-3 sm:px-8 sm:py-4 space-y-1.5 sm:space-y-2">
               <MilestoneRibbon />
               <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-950">
                 {milestonePending.headline}
@@ -1387,8 +1426,8 @@ export default function Step1Deck({
              list's "Categorize All Songs" lock runs on). Takes
              precedence over the end card: a fully sorted deck has
              nothing left to review. */
-          <DeckCardShell>
-            <div className="h-full flex flex-col items-center justify-center text-center p-6 sm:p-8 space-y-5">
+          <DeckCardShell adaptive>
+            <div className="min-h-[392px] flex flex-col items-center justify-center text-center p-6 sm:p-8 space-y-5">
               <div className="text-4xl">🏆</div>
               <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-950">
                 All {total} songs sorted
@@ -1412,8 +1451,8 @@ export default function Step1Deck({
              it can't be swiped forward. Passed-but-unsorted songs
              get their count and a review jump; a fully sorted deck
              never lands here (the completion card above wins). */
-          <DeckCardShell swipe={swipeProps}>
-            <div className="h-full flex flex-col items-center justify-center text-center p-6 sm:p-8 space-y-5">
+          <DeckCardShell swipe={swipeProps} adaptive>
+            <div className="min-h-[392px] flex flex-col items-center justify-center text-center p-6 sm:p-8 space-y-5">
               <div className="text-4xl">🎴</div>
               <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-950">
                 That&apos;s the whole deck

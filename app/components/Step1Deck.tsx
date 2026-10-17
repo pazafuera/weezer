@@ -362,7 +362,9 @@ function DeckCardShell({
  * FlyingWIcon in SharedUI.tsx (viewBox 0 0 1000 550) and scaled
  * into place — FlyingWIcon itself renders a standalone <svg>,
  * which can't be embedded inside this one. The seal renders
- * absolutely positioned so it straddles the card's top edge.
+ * in-flow at the top of the milestone card's content stack
+ * (it originally straddled the card's top edge; the owner moved
+ * it inside so it can't hover over the progress line above).
  */
 function MilestoneRibbon() {
   // Twelve scallop bumps around the medallion's rim.
@@ -1198,19 +1200,21 @@ export default function Step1Deck({
           </div>
         </div>
         {/* The Flying W rides the fill's edge — the same treatment
-            as the list view's bar (Step1Triage): a w-8 h-5 marker
-            centered on the fill edge, its left % clamped to 2–98
-            so it never hangs off either end. The vertical margin
-            gives the mark room over the slim bar. */}
-        <div className="relative w-full h-1.5 my-2.5">
-          <div className="absolute inset-0 bg-slate-200 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-[#0072CE] rounded-full transition-all duration-300"
-              style={{ width: `${progressPercent}%` }}
-            />
-          </div>
+            as the list view's bar (Step1Triage), colors included:
+            a light track (bg-[#E0F2FE], blue-200 border) and a sky
+            fill (bg-[#7DD3FC]) so the #0072CE W reads against both
+            (owner: on the old solid-#0072CE fill the W drowned in
+            its own color). A w-8 h-5 marker centered on the fill
+            edge, its left % clamped to 2–98 so it never hangs off
+            either end. */}
+        <div className="relative w-full h-3.5 my-2 z-0">
+          <div className="absolute inset-0 bg-[#E0F2FE] rounded-full border border-blue-200 z-10" />
           <div
-            className="absolute top-1/2 -translate-y-1/2 transition-all duration-300 z-10 text-[#0072CE] w-8 h-5 ml-[-16px] pointer-events-none"
+            className="absolute top-0 left-0 h-full bg-[#7DD3FC] rounded-full transition-all duration-300 z-20"
+            style={{ width: `${progressPercent}%` }}
+          />
+          <div
+            className="absolute top-1/2 -translate-y-1/2 transition-all duration-300 z-30 text-[#0072CE] w-8 h-5 ml-[-16px] pointer-events-none"
             style={{
               left: `${Math.min(98, Math.max(2, progressPercent))}%`,
             }}
@@ -1236,31 +1240,32 @@ export default function Step1Deck({
              also offered a finish button, but its handler goes to
              the ranking step, not the Thread — offering it here
              was misleading, so it's gone. The award seal
-             (MilestoneRibbon) straddles the card's top edge in
-             place of the old "Milestone" eyebrow text. */
+             (MilestoneRibbon) sits IN-FLOW at the top of the stack
+             in place of the old "Milestone" eyebrow text (owner:
+             the old build straddled it over the card's top edge,
+             where it hovered over the progress line above — now
+             it lives inside the card, and its height is paid for
+             by the tightened stack: py-4/sm:py-5 padding and
+             space-y-2/sm:space-y-3 gaps). */
           <DeckCardShell>
-            <div className="relative h-full">
-              <div className="absolute left-1/2 -translate-x-1/2 -top-8 z-10 pointer-events-none">
-                <MilestoneRibbon />
-              </div>
-              <div className="h-full flex flex-col items-center justify-center text-center p-6 sm:p-8 space-y-3">
-                <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-950">
-                  {milestonePending.headline}
-                </h2>
-                <p className="text-sm font-bold text-slate-500 leading-snug max-w-sm mx-auto">
-                  {milestonePending.body}
-                </p>
-                <p className="text-sm font-bold text-slate-400 leading-snug max-w-sm mx-auto">
-                  {milestonePending.compel}
-                </p>
-                <div className="pt-1">
-                  <button
-                    onClick={dismissMilestone}
-                    className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm px-6 py-3.5 rounded-full shadow-md transition transform hover:scale-105 cursor-pointer border-2 border-amber-200 whitespace-nowrap"
-                  >
-                    Keep sorting
-                  </button>
-                </div>
+            <div className="h-full flex flex-col items-center justify-center text-center px-6 py-4 sm:px-8 sm:py-5 space-y-2 sm:space-y-3">
+              <MilestoneRibbon />
+              <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-950">
+                {milestonePending.headline}
+              </h2>
+              <p className="text-sm font-bold text-slate-500 leading-snug max-w-sm mx-auto">
+                {milestonePending.body}
+              </p>
+              <p className="text-sm font-bold text-slate-400 leading-snug max-w-sm mx-auto">
+                {milestonePending.compel}
+              </p>
+              <div>
+                <button
+                  onClick={dismissMilestone}
+                  className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm px-6 py-3.5 rounded-full shadow-md transition transform hover:scale-105 cursor-pointer border-2 border-amber-200 whitespace-nowrap"
+                >
+                  Keep sorting
+                </button>
               </div>
             </div>
           </DeckCardShell>

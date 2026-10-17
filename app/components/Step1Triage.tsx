@@ -190,13 +190,17 @@ export default function Step1Triage({
       className={
         viewMode === 'list'
           ? 'space-y-6 pb-44'
-          : // Deck mode: the step itself becomes a viewport-bounded
-            // column — exactly one screen tall under the sticky
-            // AppShell header (h-14 = 56px, lg:h-16 = 64px in
-            // AppShell.tsx), bleeding over <main>'s padding
-            // (p-4 / sm:p-6 / lg:p-8) the same way the list's sticky
-            // bar below does, so the page never scrolls in deck mode.
-            'flex flex-col -m-4 sm:-m-6 lg:-m-8 h-[calc(100dvh-56px)] lg:h-[calc(100dvh-64px)]'
+          : // Deck mode: the step itself becomes a column AT LEAST
+            // one screen tall under the sticky AppShell header
+            // (h-14 = 56px, lg:h-16 = 64px in AppShell.tsx), bleeding
+            // over <main>'s padding (p-4 / sm:p-6 / lg:p-8) the same
+            // way the list's sticky bar below does. Minimum height,
+            // not fixed: on tall phones everything fits one screen,
+            // but the deck's fixed-height song card can push the
+            // tray/toggle just below the fold on short screens — the
+            // owner accepted a little scroll there over a card too
+            // short for two-line titles.
+            'flex flex-col -m-4 sm:-m-6 lg:-m-8 min-h-[calc(100dvh-56px)] lg:min-h-[calc(100dvh-64px)]'
       }
     >
       {viewMode === 'list' && (

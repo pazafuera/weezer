@@ -21,12 +21,16 @@ import type { TriageSection } from './Step1Triage';
  * can never disagree about what comes next.
  *
  * ONE-SCREEN LAYOUT (owner feedback): Step1Triage hands this component
- * a viewport-bounded column (100dvh minus the sticky AppShell header)
- * and the deck fills it as a flex column that never scrolls: compact
- * progress line → the card (flex-1, centered) → the action buttons
- * pinned at the bottom → a small Deck | List toggle at the very
- * bottom. The checkpoint and completion states replace the card
- * inside the same column.
+ * a column at least one viewport tall (100dvh minus the sticky
+ * AppShell header, as a MIN height) and the deck fills it as a flex
+ * column: compact progress line → the fixed-height card (centered in
+ * the remaining space) → the action buttons → a small Deck | List
+ * toggle at the very bottom. On tall phones everything fits one
+ * screen; on short ones the page scrolls a little — the owner
+ * accepted that in exchange for a song card tall enough to hold a
+ * two-line title without pushing the preview button off it. The
+ * checkpoint and completion states replace the card inside the same
+ * column, at the same fixed height.
  *
  * Cursor model: `cursorId` names the song on the card. Null means "no
  * explicit cursor" — the card shows the first uncategorized song in
@@ -64,14 +68,20 @@ const BUCKET_ORDER: BucketType[] = ['banger', 'slaps', 'mid', 'skip', 'trash'];
 /**
  * The white card from the owner's reference mock, with a stacked-deck
  * effect: two backing cards peek out behind the real one, rotated a
- * couple of degrees — pure CSS, no images. The shell fills the card
- * region (capped on tall screens) so the song card can lay its
- * content out in a full-height column; the checkpoint and completion
- * states render inside the same shell.
+ * couple of degrees — pure CSS, no images. The shell is a FIXED
+ * height — it never grows or shrinks with content — so a song title
+ * can never push the preview button off the card; the checkpoint and
+ * completion states render inside the same shell at the same height.
+ *
+ * Slot budget (mobile-first, sums to the 392px height): card vertical
+ * padding py-5 (40) + art slot h-32 (128) + gap-3 (12) + two-line
+ * title slot h-[104px] (104 — two lines at the ladder's largest size,
+ * text-5xl × leading-[1.05], is 100.8) + gap-3 (12) + meta line
+ * text-sm (20) + gap-3 (12) + preview-button slot h-16 (64) = 392.
  */
 function DeckCardShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative w-full h-full max-h-[500px]">
+    <div className="relative w-full h-[392px]">
       <div
         aria-hidden="true"
         className="absolute inset-0 rounded-[28px] bg-white border border-slate-200 shadow-md -rotate-2 translate-y-1"
@@ -314,21 +324,11 @@ export default function Step1Deck({
             style={{ width: `${progressPercent}%` }}
           />
         </div>
-        {bucketedCount >= 1 && !isComplete && (
-          <div className="text-right">
-            <button
-              onClick={handleFinishTriage}
-              className="text-[11px] font-semibold text-slate-400 hover:text-[#0072CE] underline underline-offset-2 decoration-slate-300 transition-colors cursor-pointer"
-            >
-              Continue with {bucketedCount} of {total} bucketed →
-            </button>
-          </div>
-        )}
       </div>
 
       {/* CARD REGION — flex-1 and centered; the checkpoint and
-          completion states replace the card right here, inside the
-          same bounded column. */}
+          completion states replace the card right here, at the same
+          fixed height. */}
       <div className="flex-1 min-h-0 flex items-center justify-center py-2">
         {checkpointPending ? (
           <DeckCardShell>
@@ -384,12 +384,14 @@ export default function Step1Deck({
         ) : (
           /* THE CARD — the owner's reference mock: centered stack of
              art, huge title, "Album (Year)", and the big preview
-             button. The art sits in a flex-1 well, so a tall title
-             shrinks the art instead of pushing actions off-screen.
-             The already-rated note rides on the card's top edge as a
-             badge, so it never adds layout height. */
+             button, every element in a FIXED-height slot (see the
+             budget on DeckCardShell). The layout is therefore
+             identical for one-line and two-line titles, and the
+             preview button — the last slot — can never be pushed
+             off the card. The already-rated note rides on the card's
+             top edge as a badge, so it never adds layout height. */
           <DeckCardShell>
-            <div className="relative h-full flex flex-col items-center text-center px-5 py-5 [@media(max-height:740px)]:py-4 gap-3 [@media(max-height:740px)]:gap-2.5">
+            <div className="relative h-full flex flex-col items-center text-center px-5 py-5 gap-3">
               {triageMap[currentSong.id] !== undefined && (
                 <p className="absolute -top-3 left-1/2 -translate-x-1/2 z-10 whitespace-nowrap bg-slate-900 text-white text-[11px] font-bold px-3 py-1 rounded-full shadow-md">
                   {triageMap[currentSong.id] === 'unknown'
@@ -400,24 +402,33 @@ export default function Step1Deck({
                       } — tap a tier to change it`}
                 </p>
               )}
-              <div className="flex-1 min-h-[56px] w-full flex items-center justify-center">
+              {/* ART — a fixed 128px slot; it no longer flexes or
+                  shrinks to make room for the title. */}
+              <div className="h-32 w-full flex items-center justify-center">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={albumCoverSrc(resolveAlbumId(currentSong))}
                   alt={`${currentSong.album} cover art`}
-                  className="h-full max-h-32 w-auto aspect-square object-cover rounded-xl shadow-md border border-slate-100"
+                  className="h-32 w-32 object-cover rounded-xl shadow-md border border-slate-100"
                 />
               </div>
-              <h2
-                className={`${titleSizeClass} font-black tracking-tight text-slate-950 leading-[1.05] break-words`}
-              >
-                {currentSong.title}
-              </h2>
+              {/* TITLE — a fixed two-line slot. line-clamp-2 caps the
+                  title at two lines, so it can never outgrow the
+                  slot; a one-line title centers in it and leaves the
+                  second line's space empty. */}
+              <div className="h-[104px] w-full flex items-center justify-center">
+                <h2
+                  className={`${titleSizeClass} font-black tracking-tight text-slate-950 leading-[1.05] break-words line-clamp-2`}
+                >
+                  {currentSong.title}
+                </h2>
+              </div>
               <p className="text-sm font-bold text-slate-400">
                 {currentSong.album} ({currentSong.year})
               </p>
               {/* The list rows' preview button, exact same component
-                  and styling — only bigger (large = 64px). */}
+                  and styling — only bigger (large = 64px), pinned in
+                  the card's last slot. */}
               <AudioPreviewButton title={currentSong.title} large />
             </div>
           </DeckCardShell>

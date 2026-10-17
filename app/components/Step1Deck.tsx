@@ -20,6 +20,14 @@ import type { TriageSection } from './Step1Triage';
  * sections once and passes the flattened order down, so deck and list
  * can never disagree about what comes next.
  *
+ * ONE-SCREEN LAYOUT (owner feedback): Step1Triage hands this component
+ * a viewport-bounded column (100dvh minus the sticky AppShell header)
+ * and the deck fills it as a flex column that never scrolls: compact
+ * progress line → the card (flex-1, centered) → the action buttons
+ * pinned at the bottom → a small Deck | List toggle at the very
+ * bottom. The checkpoint and completion states replace the card
+ * inside the same column.
+ *
  * Cursor model: `cursorId` names the song on the card. Null means "no
  * explicit cursor" — the card shows the first uncategorized song in
  * display order (or the completion state when none are left). Acting
@@ -59,12 +67,14 @@ export default function Step1Deck({
   sections,
   handleSetBucket,
   handleFinishTriage,
+  onSwitchToList,
 }: {
   triageMap: Record<string, TriageValue>;
   orderedSongs: Song[];
   sections: TriageSection[];
   handleSetBucket: (id: string, bucket: TriageValue) => void;
   handleFinishTriage: () => void;
+  onSwitchToList: () => void;
 }) {
   const [cursorId, setCursorId] = useState<string | null>(null);
   const [history, setHistory] = useState<string[]>([]);
@@ -204,13 +214,15 @@ export default function Step1Deck({
     const cfg = BUCKET_CONFIG[bucket];
     const displayLabel = bucket === 'slaps' ? 'Slaps' : cfg.label;
 
-    // Class strings mirror the list rows in Step1Triage exactly:
-    // same selected state (sky-400), same border/hover treatment.
+    // Class strings mirror the list rows in Step1Triage: same selected
+    // state (sky-400), same border/hover treatment — with a touch more
+    // vertical padding so the row is a comfortable thumb target now
+    // that it anchors the bottom of the screen.
     return (
       <button
         key={bucket}
         onClick={() => act(bucket)}
-        className={`py-2 px-1.5 sm:py-2.5 sm:px-3 lg:px-4 rounded-xl text-xs sm:text-sm font-black border transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 cursor-pointer ${
+        className={`py-2.5 px-1.5 sm:py-3 sm:px-3 lg:px-4 rounded-xl text-xs sm:text-sm font-black border transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 cursor-pointer ${
           isSelected
             ? 'bg-sky-400 text-slate-950 font-black border-sky-500 shadow-md scale-[1.02] z-10'
             : 'bg-white text-slate-500 border-slate-300 hover:bg-slate-100 hover:text-slate-800'
@@ -225,48 +237,43 @@ export default function Step1Deck({
     );
   };
 
+  const inSongState = !checkpointPending && !isComplete && !!currentSong;
+
   return (
-    <div className="max-w-[560px] mx-auto w-full space-y-4">
-      {/* PROGRESS HEADER — same counters the list header shows
-          (countCategorizedSongs / countBucketedSongs), so deck and
-          list always agree. */}
-      <div className="space-y-2">
-        <div className="flex justify-between items-center text-xs font-black text-slate-700">
+    <div className="flex-1 min-h-0 flex flex-col w-full max-w-[560px] mx-auto px-4">
+      {/* COMPACT PROGRESS — one line + a slim bar. Same counts as the
+          list header (categorizedCount / bucketedCount), so the two
+          views always agree; the deck's old full counters block and
+          Flying-W bar are replaced by this. */}
+      <div className="shrink-0 pt-2 space-y-1.5">
+        <div className="flex items-baseline justify-between gap-2 text-[11px] font-black text-slate-700">
           <span className="uppercase tracking-wider">
             Song{' '}
-            <strong className="text-[#0072CE] font-mono text-sm">
+            <strong className="text-[#0072CE] font-mono text-xs">
               {isComplete ? total : Math.min(categorizedCount + 1, total)}
             </strong>{' '}
             of {total}
+            {songsToWrapped > 0 ? (
+              <span className="normal-case tracking-normal font-bold text-slate-500">
+                {' '}
+                · {songsToWrapped} more to your Wrapped
+              </span>
+            ) : (
+              <span className="normal-case tracking-normal font-bold text-[#0072CE]">
+                {' '}
+                · Wrapped unlocked ✓
+              </span>
+            )}
           </span>
-          <span className="text-[#0072CE] font-mono text-sm font-black">
+          <span className="text-[#0072CE] font-mono text-xs shrink-0">
             {progressPercent}%
           </span>
         </div>
-        <div className="relative w-full h-3.5 z-0">
-          <div className="absolute inset-0 bg-[#E0F2FE] rounded-full border border-blue-200 z-10" />
+        <div className="w-full h-2 bg-[#E0F2FE] border border-blue-200 rounded-full overflow-hidden">
           <div
-            className="absolute top-0 left-0 h-full bg-[#7DD3FC] rounded-full transition-all duration-300 z-20"
+            className="h-full bg-[#7DD3FC] rounded-full transition-all duration-300"
             style={{ width: `${progressPercent}%` }}
           />
-          <div
-            className="absolute top-1/2 -translate-y-1/2 transition-all duration-300 z-30 text-[#0072CE] w-8 h-5 ml-[-16px]"
-            style={{ left: `${Math.min(98, Math.max(2, progressPercent))}%` }}
-          >
-            <FlyingWIcon className="w-full h-full drop-shadow-sm" />
-          </div>
-        </div>
-        <div className="flex justify-between items-center text-[11px] font-bold text-slate-500">
-          <span>
-            Progress: {categorizedCount} / {total} · {bucketedCount} bucketed
-          </span>
-          {songsToWrapped > 0 ? (
-            <span>
-              {songsToWrapped} more to your Wrapped
-            </span>
-          ) : (
-            <span className="text-[#0072CE]">Wrapped unlocked ✓</span>
-          )}
         </div>
         {bucketedCount >= 1 && !isComplete && (
           <div className="text-right">
@@ -280,146 +287,170 @@ export default function Step1Deck({
         )}
       </div>
 
-      {/* CONTROLS: JUMP + UNDO */}
-      <div className="flex items-center justify-between gap-3">
-        <select
-          value=""
-          onChange={(e) => {
-            if (e.target.value) jumpToSection(e.target.value);
-          }}
-          className="text-[11px] font-extrabold text-slate-600 bg-white border border-slate-300 rounded-lg px-2.5 py-2 cursor-pointer hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-[#0072CE] max-w-[60%]"
-          aria-label="Jump to album"
-        >
-          <option value="" disabled>
-            Jump to album…
-          </option>
-          {sections.map((section) => {
-            const sortedInSection = section.songs.filter(
-              (s) => triageMap[s.id]
-            ).length;
-            return (
-              <option key={section.key} value={section.key}>
-                {section.title} ({sortedInSection}/{section.songs.length})
-              </option>
-            );
-          })}
-        </select>
-        <button
-          onClick={undo}
-          disabled={history.length === 0}
-          className="text-[11px] font-extrabold text-slate-600 bg-white border border-slate-300 rounded-lg px-3 py-2 transition-all enabled:hover:bg-slate-100 enabled:cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          ↩ Undo
-        </button>
-      </div>
-
-      {/* CHECKPOINT — shown once, in place of the next song, when the
-          front section (Blue + Pinkerton + Singles) is fully sorted
-          and the Wrapped short-path goal is met. */}
-      {checkpointPending ? (
-        <div className="bg-white border border-slate-300 rounded-3xl shadow-xs p-6 sm:p-8 text-center space-y-5">
-          <div className="text-4xl">🎉</div>
-          <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-950">
-            You&apos;ve sorted the big ones
-          </h2>
-          <p className="text-sm font-bold text-slate-500 leading-snug max-w-sm mx-auto">
-            The Blue Album, Pinkerton, and all the big singles are done —
-            and you&apos;ve got enough ranked for your Wrapped whenever
-            you want it. The deep cuts will still be here.
-          </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-1">
-            <button
-              onClick={handleFinishTriage}
-              className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm px-6 py-3.5 rounded-full shadow-md transition transform hover:scale-105 cursor-pointer border-2 border-amber-200 flex items-center gap-2.5 whitespace-nowrap"
-            >
-              <FlyingWIcon className="w-6 h-4 text-slate-950" />
-              <span>See your Wrapped</span>
-            </button>
-            <button
-              onClick={dismissCheckpoint}
-              className="text-sm font-extrabold text-slate-600 bg-white border border-slate-300 rounded-full px-6 py-3.5 hover:bg-slate-100 transition-all cursor-pointer whitespace-nowrap"
-            >
-              Keep going
-            </button>
-          </div>
-        </div>
-      ) : isComplete || !currentSong ? (
-        /* COMPLETION — every song categorized (the same count the
-           list's "Categorize All Songs" lock runs on). */
-        <div className="bg-white border border-slate-300 rounded-3xl shadow-xs p-6 sm:p-8 text-center space-y-5">
-          <div className="text-4xl">🏆</div>
-          <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-950">
-            All {total} songs sorted
-          </h2>
-          <p className="text-sm font-bold text-slate-500 leading-snug max-w-sm mx-auto">
-            Every song has a verdict. Time to refine the buckets and see
-            where they land.
-          </p>
-          <button
-            onClick={handleFinishTriage}
-            className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm sm:text-base px-8 py-4 rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.35)] transition transform hover:scale-105 cursor-pointer border-2 border-amber-200 inline-flex items-center gap-2.5 whitespace-nowrap"
-          >
-            <FlyingWIcon className="w-6 h-4 text-slate-950" />
-            <span>Next Step: Refine Buckets</span>
-          </button>
-        </div>
-      ) : (
-        /* THE CARD — title is the hero; art supports. */
-        <div className="bg-white border border-slate-300 rounded-3xl shadow-xs p-6 sm:p-8 space-y-6">
-          <div className="text-center space-y-4">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={albumCoverSrc(resolveAlbumId(currentSong))}
-              alt={`${currentSong.album} cover art`}
-              className="w-[140px] h-[140px] rounded-2xl shadow-md border border-slate-200 mx-auto object-cover"
-            />
-            <h2 className="text-4xl sm:text-5xl font-black tracking-tight text-slate-950 leading-tight break-words">
-              {currentSong.title}
+      {/* CARD REGION — flex-1 and centered; the checkpoint and
+          completion states replace the card right here, inside the
+          same bounded column. */}
+      <div className="flex-1 min-h-0 flex items-center justify-center py-2">
+        {checkpointPending ? (
+          <div className="w-full bg-white border border-slate-300 rounded-3xl shadow-xs p-6 sm:p-8 text-center space-y-5">
+            <div className="text-4xl">🎉</div>
+            <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-950">
+              You&apos;ve sorted the big ones
             </h2>
-            <div className="flex items-center justify-center gap-2 text-sm font-bold text-slate-400">
-              <span>
-                {currentSong.album} ({currentSong.year})
-              </span>
-              <AudioPreviewButton title={currentSong.title} compact />
-            </div>
-            {triageMap[currentSong.id] !== undefined && (
-              <p className="text-[11px] font-bold text-slate-400">
-                {triageMap[currentSong.id] === 'unknown'
-                  ? 'You marked this Don’t Know It — tap a tier to rate it.'
-                  : `You marked this ${
-                      BUCKET_CONFIG[triageMap[currentSong.id] as BucketType]
-                        .label
-                    } — tap another tier to change it.`}
-              </p>
-            )}
-          </div>
-
-          {/* BUCKET BUTTONS — same styling as the list rows */}
-          <div className="space-y-1.5">
-            <div className="grid grid-cols-5 gap-1.5 sm:gap-2 items-center">
-              {BUCKET_ORDER.map(renderBucketButton)}
-            </div>
-            {/* DON'T KNOW IT — quieter/secondary, same treatment as the list */}
-            <div className="text-center pt-1">
+            <p className="text-sm font-bold text-slate-500 leading-snug max-w-sm mx-auto">
+              The Blue Album, Pinkerton, and all the big singles are done —
+              and you&apos;ve got enough ranked for your Wrapped whenever
+              you want it. The deep cuts will still be here.
+            </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-1">
               <button
-                onClick={() => act('unknown')}
-                className={`text-[10px] font-bold px-2 py-1 rounded-lg border transition-all cursor-pointer ${
-                  triageMap[currentSong.id] === 'unknown'
-                    ? 'bg-slate-200 text-slate-600 border-slate-300'
-                    : 'bg-transparent text-slate-400 border-transparent hover:text-slate-600 hover:bg-slate-100'
-                }`}
-                title="I haven't heard this song — don't rate it"
+                onClick={handleFinishTriage}
+                className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm px-6 py-3.5 rounded-full shadow-md transition transform hover:scale-105 cursor-pointer border-2 border-amber-200 flex items-center gap-2.5 whitespace-nowrap"
               >
-                Don&apos;t Know It
+                <FlyingWIcon className="w-6 h-4 text-slate-950" />
+                <span>See your Wrapped</span>
+              </button>
+              <button
+                onClick={dismissCheckpoint}
+                className="text-sm font-extrabold text-slate-600 bg-white border border-slate-300 rounded-full px-6 py-3.5 hover:bg-slate-100 transition-all cursor-pointer whitespace-nowrap"
+              >
+                Keep going
               </button>
             </div>
           </div>
+        ) : isComplete || !currentSong ? (
+          /* COMPLETION — every song categorized (the same count the
+             list's "Categorize All Songs" lock runs on). */
+          <div className="w-full bg-white border border-slate-300 rounded-3xl shadow-xs p-6 sm:p-8 text-center space-y-5">
+            <div className="text-4xl">🏆</div>
+            <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-950">
+              All {total} songs sorted
+            </h2>
+            <p className="text-sm font-bold text-slate-500 leading-snug max-w-sm mx-auto">
+              Every song has a verdict. Time to refine the buckets and see
+              where they land.
+            </p>
+            <button
+              onClick={handleFinishTriage}
+              className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm sm:text-base px-8 py-4 rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.35)] transition transform hover:scale-105 cursor-pointer border-2 border-amber-200 inline-flex items-center gap-2.5 whitespace-nowrap"
+            >
+              <FlyingWIcon className="w-6 h-4 text-slate-950" />
+              <span>Next Step: Refine Buckets</span>
+            </button>
+          </div>
+        ) : (
+          /* THE CARD — title is the hero; art supports, a step smaller
+             than before so the whole screen fits without scrolling. */
+          <div className="w-full bg-white border border-slate-300 rounded-3xl shadow-xs p-5 sm:p-6">
+            <div className="text-center space-y-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={albumCoverSrc(resolveAlbumId(currentSong))}
+                alt={`${currentSong.album} cover art`}
+                className="w-[112px] h-[112px] [@media(max-height:560px)]:w-20 [@media(max-height:560px)]:h-20 rounded-2xl shadow-md border border-slate-200 mx-auto object-cover"
+              />
+              <h2 className="text-4xl sm:text-5xl [@media(max-height:560px)]:text-3xl font-black tracking-tight text-slate-950 leading-tight break-words">
+                {currentSong.title}
+              </h2>
+              <div className="flex items-center justify-center gap-3 text-sm font-bold text-slate-400">
+                <span>
+                  {currentSong.album} ({currentSong.year})
+                </span>
+                {/* The list rows' preview button, exact same component
+                    and styling — only bigger (large = 48px). */}
+                <AudioPreviewButton title={currentSong.title} large />
+              </div>
+              {triageMap[currentSong.id] !== undefined && (
+                <p className="text-[11px] font-bold text-slate-400">
+                  {triageMap[currentSong.id] === 'unknown'
+                    ? 'You marked this Don’t Know It — tap a tier to rate it.'
+                    : `You marked this ${
+                        BUCKET_CONFIG[triageMap[currentSong.id] as BucketType]
+                          .label
+                      } — tap another tier to change it.`}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
 
+      {/* ACTIONS — pinned at the bottom of the column: the five tier
+          buttons, then the quieter Don't Know It / Undo / Jump row. */}
+      {inSongState && (
+        <div className="shrink-0 space-y-2">
+          <div className="grid grid-cols-5 gap-1.5 sm:gap-2 items-center">
+            {BUCKET_ORDER.map(renderBucketButton)}
+          </div>
+          <div className="flex items-center justify-between gap-2">
+            {/* DON'T KNOW IT — quieter/secondary, same treatment as the list */}
+            <button
+              onClick={() => act('unknown')}
+              className={`text-[10px] font-bold px-2 py-1 rounded-lg border transition-all cursor-pointer ${
+                triageMap[currentSong.id] === 'unknown'
+                  ? 'bg-slate-200 text-slate-600 border-slate-300'
+                  : 'bg-transparent text-slate-400 border-transparent hover:text-slate-600 hover:bg-slate-100'
+              }`}
+              title="I haven't heard this song — don't rate it"
+            >
+              Don&apos;t Know It
+            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={undo}
+                disabled={history.length === 0}
+                className="text-[11px] font-extrabold text-slate-600 bg-white border border-slate-300 rounded-lg px-3 py-2 transition-all enabled:hover:bg-slate-100 enabled:cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                ↩ Undo
+              </button>
+              <select
+                value=""
+                onChange={(e) => {
+                  if (e.target.value) jumpToSection(e.target.value);
+                }}
+                className="text-[11px] font-extrabold text-slate-600 bg-white border border-slate-300 rounded-lg px-2.5 py-2 cursor-pointer hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-[#0072CE] max-w-[42vw]"
+                aria-label="Jump to album"
+              >
+                <option value="" disabled>
+                  Jump to album…
+                </option>
+                {sections.map((section) => {
+                  const sortedInSection = section.songs.filter(
+                    (s) => triageMap[s.id]
+                  ).length;
+                  return (
+                    <option key={section.key} value={section.key}>
+                      {section.title} ({sortedInSection}/{section.songs.length})
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+          </div>
           <p className="hidden sm:block text-center text-[10px] font-semibold text-slate-300">
             Keys 1–5 pick a tier · U undoes
           </p>
         </div>
       )}
+
+      {/* DECK | LIST TOGGLE — below the card/actions, small and muted
+          (in list mode the toggle stays up in the header instead). */}
+      <div className="shrink-0 flex justify-center pt-2 pb-3">
+        <div className="inline-flex bg-white border border-slate-300 rounded-full p-0.5 shadow-xs">
+          <button
+            className="px-3 py-1 rounded-full text-[11px] font-black bg-[#0072CE] text-white shadow-sm"
+            aria-current="true"
+          >
+            Deck
+          </button>
+          <button
+            onClick={onSwitchToList}
+            className="px-3 py-1 rounded-full text-[11px] font-black text-slate-500 hover:text-slate-800 transition-all cursor-pointer"
+          >
+            List
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

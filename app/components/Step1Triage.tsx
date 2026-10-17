@@ -186,7 +186,19 @@ export default function Step1Triage({
   };
 
   return (
-    <div className={`space-y-6 ${viewMode === 'list' ? 'pb-44' : 'pb-16'}`}>
+    <div
+      className={
+        viewMode === 'list'
+          ? 'space-y-6 pb-44'
+          : // Deck mode: the step itself becomes a viewport-bounded
+            // column — exactly one screen tall under the sticky
+            // AppShell header (h-14 = 56px, lg:h-16 = 64px in
+            // AppShell.tsx), bleeding over <main>'s padding
+            // (p-4 / sm:p-6 / lg:p-8) the same way the list's sticky
+            // bar below does, so the page never scrolls in deck mode.
+            'flex flex-col -m-4 sm:-m-6 lg:-m-8 h-[calc(100dvh-56px)] lg:h-[calc(100dvh-64px)]'
+      }
+    >
       {viewMode === 'list' && (
       <>
       {/* STICKY PROGRESS & ALBUM QUICK-JUMP BAR (EXPANDED FOR DESKTOP) */}
@@ -255,36 +267,47 @@ export default function Step1Triage({
       </>
       )}
 
-      {/* HEADER */}
-      <div className="text-center space-y-2 px-4 mb-8">
-        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-950 tracking-tighter">
-          The <span className="text-[#0072CE]">Gut Check</span>
-        </h1>
-        <p className="text-sm font-bold text-slate-500 max-w-sm mx-auto leading-snug">
-          Sort every song into a tier. Trust your first instinct, don&apos;t overthink it.
-        </p>
-        <p className="text-xs font-semibold text-slate-400 max-w-sm mx-auto leading-snug">
-          Haven&apos;t heard a song? Tap Don&apos;t Know It — it won&apos;t count as a rating.
-        </p>
-        {/* DECK | LIST TOGGLE — both views share the same triageMap */}
-        <div className="pt-2">
-          <div className="inline-flex bg-white border border-slate-300 rounded-full p-1 shadow-xs">
-            {(['deck', 'list'] as const).map((mode) => (
-              <button
-                key={mode}
-                onClick={() => changeViewMode(mode)}
-                className={`px-4 py-1.5 rounded-full text-xs font-black capitalize transition-all cursor-pointer ${
-                  viewMode === mode
-                    ? 'bg-[#0072CE] text-white shadow-sm'
-                    : 'text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                {mode}
-              </button>
-            ))}
+      {/* HEADER — deck mode gets a compact variant (smaller headline,
+          one-line subhead, no toggle up here: the deck renders its own
+          small toggle at the bottom) so headline + card + actions fit
+          a single screen. List mode keeps the full header and toggle. */}
+      {viewMode === 'deck' ? (
+        <div className="text-center px-4 pt-3 pb-1 shrink-0">
+          <h1 className="text-2xl font-black text-slate-950 tracking-tighter leading-none">
+            The <span className="text-[#0072CE]">Gut Check</span>
+          </h1>
+          <p className="text-xs font-bold text-slate-500 leading-snug mt-1">
+            Sort every song into a tier. Trust your first instinct.
+          </p>
+        </div>
+      ) : (
+        <div className="text-center space-y-2 px-4 mb-8">
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-950 tracking-tighter">
+            The <span className="text-[#0072CE]">Gut Check</span>
+          </h1>
+          <p className="text-sm font-bold text-slate-500 max-w-sm mx-auto leading-snug">
+            Sort every song into a tier. Trust your first instinct, don&apos;t overthink it.
+          </p>
+          {/* DECK | LIST TOGGLE — both views share the same triageMap */}
+          <div className="pt-2">
+            <div className="inline-flex bg-white border border-slate-300 rounded-full p-1 shadow-xs">
+              {(['deck', 'list'] as const).map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => changeViewMode(mode)}
+                  className={`px-4 py-1.5 rounded-full text-xs font-black capitalize transition-all cursor-pointer ${
+                    viewMode === mode
+                      ? 'bg-[#0072CE] text-white shadow-sm'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  {mode}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {viewMode === 'deck' ? (
         <Step1Deck
@@ -293,6 +316,7 @@ export default function Step1Triage({
           sections={sections}
           handleSetBucket={handleSetBucket}
           handleFinishTriage={handleFinishTriage}
+          onSwitchToList={() => changeViewMode('list')}
         />
       ) : (
       <>

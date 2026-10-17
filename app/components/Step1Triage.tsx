@@ -273,7 +273,7 @@ export default function Step1Triage({
           a single screen. List mode keeps the full header and toggle. */}
       {viewMode === 'deck' ? (
         <div className="text-center px-4 pt-3 pb-1 shrink-0">
-          <h1 className="text-2xl font-black text-slate-950 tracking-tighter leading-none">
+          <h1 className="text-3xl font-black text-slate-950 tracking-tighter leading-none">
             The <span className="text-[#0072CE]">Gut Check</span>
           </h1>
           <p className="text-xs font-bold text-slate-500 leading-snug mt-1">

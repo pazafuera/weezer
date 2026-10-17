@@ -61,6 +61,32 @@ const CHECKPOINT_DISMISSED_KEY = 'weezer-deck-checkpoint-dismissed';
 
 const BUCKET_ORDER: BucketType[] = ['banger', 'slaps', 'mid', 'skip', 'trash'];
 
+/**
+ * The white card from the owner's reference mock, with a stacked-deck
+ * effect: two backing cards peek out behind the real one, rotated a
+ * couple of degrees — pure CSS, no images. The shell fills the card
+ * region (capped on tall screens) so the song card can lay its
+ * content out in a full-height column; the checkpoint and completion
+ * states render inside the same shell.
+ */
+function DeckCardShell({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="relative w-full h-full max-h-[500px]">
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 rounded-[28px] bg-white border border-slate-200 shadow-md -rotate-2 translate-y-1"
+      />
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 rounded-[28px] bg-white border border-slate-200 shadow-md rotate-[1.5deg] translate-y-0.5"
+      />
+      <div className="relative h-full rounded-[28px] bg-white border border-slate-200 shadow-xl">
+        {children}
+      </div>
+    </div>
+  );
+}
+
 export default function Step1Deck({
   triageMap,
   orderedSongs,
@@ -214,23 +240,24 @@ export default function Step1Deck({
     const cfg = BUCKET_CONFIG[bucket];
     const displayLabel = bucket === 'slaps' ? 'Slaps' : cfg.label;
 
-    // Class strings mirror the list rows in Step1Triage: same selected
-    // state (sky-400), same border/hover treatment — with a touch more
-    // vertical padding so the row is a comfortable thumb target now
-    // that it anchors the bottom of the screen.
+    // The mock's bucket tiles: white, thin slate border, the bucket's
+    // glyph large on top and its label underneath. The selected tile
+    // keeps the deck's sky-400 family as a border/ring treatment.
     return (
       <button
         key={bucket}
         onClick={() => act(bucket)}
-        className={`py-2.5 px-1.5 sm:py-3 sm:px-3 lg:px-4 rounded-xl text-xs sm:text-sm font-black border transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 cursor-pointer ${
+        className={`flex-1 flex flex-col items-center justify-center gap-0.5 rounded-2xl border py-3 [@media(max-height:740px)]:py-2 shadow-sm transition-all cursor-pointer ${
           isSelected
-            ? 'bg-sky-400 text-slate-950 font-black border-sky-500 shadow-md scale-[1.02] z-10'
-            : 'bg-white text-slate-500 border-slate-300 hover:bg-slate-100 hover:text-slate-800'
+            ? 'bg-sky-50 border-sky-400 ring-1 ring-sky-400'
+            : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50'
         }`}
         title={displayLabel}
       >
-        <span className="text-sm sm:text-base leading-none">{cfg.emoji}</span>
-        <span className="truncate text-[10px] sm:text-xs lg:text-sm tracking-tight">
+        <span className="text-[26px] [@media(max-height:740px)]:text-[22px] leading-none">
+          {cfg.emoji}
+        </span>
+        <span className="text-[13px] font-bold text-slate-800 leading-tight">
           {displayLabel}
         </span>
       </button>
@@ -238,6 +265,18 @@ export default function Step1Deck({
   };
 
   const inSongState = !checkpointPending && !isComplete && !!currentSong;
+
+  // Title size steps down as titles get longer, so a long title wraps
+  // to two lines at a readable size instead of eating the card.
+  const titleLength = currentSong?.title.length ?? 0;
+  const titleSizeClass =
+    titleLength <= 12
+      ? 'text-5xl sm:text-6xl'
+      : titleLength <= 20
+      ? 'text-[34px] sm:text-5xl'
+      : titleLength <= 32
+      ? 'text-[30px] sm:text-4xl'
+      : 'text-2xl sm:text-[34px]';
 
   return (
     <div className="flex-1 min-h-0 flex flex-col w-full max-w-[560px] mx-auto px-4">
@@ -249,7 +288,7 @@ export default function Step1Deck({
         <div className="flex items-baseline justify-between gap-2 text-[11px] font-black text-slate-700">
           <span className="uppercase tracking-wider">
             Song{' '}
-            <strong className="text-[#0072CE] font-mono text-xs">
+            <strong className="text-[#0072CE] text-xs">
               {isComplete ? total : Math.min(categorizedCount + 1, total)}
             </strong>{' '}
             of {total}
@@ -265,13 +304,13 @@ export default function Step1Deck({
               </span>
             )}
           </span>
-          <span className="text-[#0072CE] font-mono text-xs shrink-0">
+          <span className="text-[#0072CE] text-xs shrink-0">
             {progressPercent}%
           </span>
         </div>
-        <div className="w-full h-2 bg-[#E0F2FE] border border-blue-200 rounded-full overflow-hidden">
+        <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
           <div
-            className="h-full bg-[#7DD3FC] rounded-full transition-all duration-300"
+            className="h-full bg-[#0072CE] rounded-full transition-all duration-300"
             style={{ width: `${progressPercent}%` }}
           />
         </div>
@@ -292,123 +331,139 @@ export default function Step1Deck({
           same bounded column. */}
       <div className="flex-1 min-h-0 flex items-center justify-center py-2">
         {checkpointPending ? (
-          <div className="w-full bg-white border border-slate-300 rounded-3xl shadow-xs p-6 sm:p-8 text-center space-y-5">
-            <div className="text-4xl">🎉</div>
-            <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-950">
-              You&apos;ve sorted the big ones
-            </h2>
-            <p className="text-sm font-bold text-slate-500 leading-snug max-w-sm mx-auto">
-              The Blue Album, Pinkerton, and all the big singles are done —
-              and you&apos;ve got enough ranked for your Wrapped whenever
-              you want it. The deep cuts will still be here.
-            </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-1">
-              <button
-                onClick={handleFinishTriage}
-                className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm px-6 py-3.5 rounded-full shadow-md transition transform hover:scale-105 cursor-pointer border-2 border-amber-200 flex items-center gap-2.5 whitespace-nowrap"
-              >
-                <FlyingWIcon className="w-6 h-4 text-slate-950" />
-                <span>See your Wrapped</span>
-              </button>
-              <button
-                onClick={dismissCheckpoint}
-                className="text-sm font-extrabold text-slate-600 bg-white border border-slate-300 rounded-full px-6 py-3.5 hover:bg-slate-100 transition-all cursor-pointer whitespace-nowrap"
-              >
-                Keep going
-              </button>
+          <DeckCardShell>
+            <div className="h-full flex flex-col items-center justify-center text-center p-6 sm:p-8 space-y-5">
+              <div className="text-4xl">🎉</div>
+              <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-950">
+                You&apos;ve sorted the big ones
+              </h2>
+              <p className="text-sm font-bold text-slate-500 leading-snug max-w-sm mx-auto">
+                The Blue Album, Pinkerton, and all the big singles are done
+                — and you&apos;ve got enough ranked for your Wrapped
+                whenever you want it. The deep cuts will still be here.
+              </p>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-1">
+                <button
+                  onClick={handleFinishTriage}
+                  className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm px-6 py-3.5 rounded-full shadow-md transition transform hover:scale-105 cursor-pointer border-2 border-amber-200 flex items-center gap-2.5 whitespace-nowrap"
+                >
+                  <FlyingWIcon className="w-6 h-4 text-slate-950" />
+                  <span>See your Wrapped</span>
+                </button>
+                <button
+                  onClick={dismissCheckpoint}
+                  className="text-sm font-extrabold text-slate-600 bg-white border border-slate-300 rounded-full px-6 py-3.5 hover:bg-slate-100 transition-all cursor-pointer whitespace-nowrap"
+                >
+                  Keep going
+                </button>
+              </div>
             </div>
-          </div>
+          </DeckCardShell>
         ) : isComplete || !currentSong ? (
           /* COMPLETION — every song categorized (the same count the
              list's "Categorize All Songs" lock runs on). */
-          <div className="w-full bg-white border border-slate-300 rounded-3xl shadow-xs p-6 sm:p-8 text-center space-y-5">
-            <div className="text-4xl">🏆</div>
-            <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-950">
-              All {total} songs sorted
-            </h2>
-            <p className="text-sm font-bold text-slate-500 leading-snug max-w-sm mx-auto">
-              Every song has a verdict. Time to refine the buckets and see
-              where they land.
-            </p>
-            <button
-              onClick={handleFinishTriage}
-              className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm sm:text-base px-8 py-4 rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.35)] transition transform hover:scale-105 cursor-pointer border-2 border-amber-200 inline-flex items-center gap-2.5 whitespace-nowrap"
-            >
-              <FlyingWIcon className="w-6 h-4 text-slate-950" />
-              <span>Next Step: Refine Buckets</span>
-            </button>
-          </div>
-        ) : (
-          /* THE CARD — title is the hero; art supports, a step smaller
-             than before so the whole screen fits without scrolling. */
-          <div className="w-full bg-white border border-slate-300 rounded-3xl shadow-xs p-5 sm:p-6">
-            <div className="text-center space-y-3">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={albumCoverSrc(resolveAlbumId(currentSong))}
-                alt={`${currentSong.album} cover art`}
-                className="w-[112px] h-[112px] [@media(max-height:560px)]:w-20 [@media(max-height:560px)]:h-20 rounded-2xl shadow-md border border-slate-200 mx-auto object-cover"
-              />
-              <h2 className="text-4xl sm:text-5xl [@media(max-height:560px)]:text-3xl font-black tracking-tight text-slate-950 leading-tight break-words">
-                {currentSong.title}
+          <DeckCardShell>
+            <div className="h-full flex flex-col items-center justify-center text-center p-6 sm:p-8 space-y-5">
+              <div className="text-4xl">🏆</div>
+              <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-950">
+                All {total} songs sorted
               </h2>
-              <div className="flex items-center justify-center gap-3 text-sm font-bold text-slate-400">
-                <span>
-                  {currentSong.album} ({currentSong.year})
-                </span>
-                {/* The list rows' preview button, exact same component
-                    and styling — only bigger (large = 48px). */}
-                <AudioPreviewButton title={currentSong.title} large />
-              </div>
+              <p className="text-sm font-bold text-slate-500 leading-snug max-w-sm mx-auto">
+                Every song has a verdict. Time to refine the buckets and see
+                where they land.
+              </p>
+              <button
+                onClick={handleFinishTriage}
+                className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm sm:text-base px-8 py-4 rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.35)] transition transform hover:scale-105 cursor-pointer border-2 border-amber-200 inline-flex items-center gap-2.5 whitespace-nowrap"
+              >
+                <FlyingWIcon className="w-6 h-4 text-slate-950" />
+                <span>Next Step: Refine Buckets</span>
+              </button>
+            </div>
+          </DeckCardShell>
+        ) : (
+          /* THE CARD — the owner's reference mock: centered stack of
+             art, huge title, "Album (Year)", and the big preview
+             button. The art sits in a flex-1 well, so a tall title
+             shrinks the art instead of pushing actions off-screen.
+             The already-rated note rides on the card's top edge as a
+             badge, so it never adds layout height. */
+          <DeckCardShell>
+            <div className="relative h-full flex flex-col items-center text-center px-5 py-5 [@media(max-height:740px)]:py-4 gap-3 [@media(max-height:740px)]:gap-2.5">
               {triageMap[currentSong.id] !== undefined && (
-                <p className="text-[11px] font-bold text-slate-400">
+                <p className="absolute -top-3 left-1/2 -translate-x-1/2 z-10 whitespace-nowrap bg-slate-900 text-white text-[11px] font-bold px-3 py-1 rounded-full shadow-md">
                   {triageMap[currentSong.id] === 'unknown'
-                    ? 'You marked this Don’t Know It — tap a tier to rate it.'
-                    : `You marked this ${
+                    ? '✓ You marked this Don’t Know It — tap a tier to rate it'
+                    : `✓ You marked this ${
                         BUCKET_CONFIG[triageMap[currentSong.id] as BucketType]
                           .label
-                      } — tap another tier to change it.`}
+                      } — tap a tier to change it`}
                 </p>
               )}
+              <div className="flex-1 min-h-[56px] w-full flex items-center justify-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={albumCoverSrc(resolveAlbumId(currentSong))}
+                  alt={`${currentSong.album} cover art`}
+                  className="h-full max-h-32 w-auto aspect-square object-cover rounded-xl shadow-md border border-slate-100"
+                />
+              </div>
+              <h2
+                className={`${titleSizeClass} font-black tracking-tight text-slate-950 leading-[1.05] break-words`}
+              >
+                {currentSong.title}
+              </h2>
+              <p className="text-sm font-bold text-slate-400">
+                {currentSong.album} ({currentSong.year})
+              </p>
+              {/* The list rows' preview button, exact same component
+                  and styling — only bigger (large = 64px). */}
+              <AudioPreviewButton title={currentSong.title} large />
             </div>
-          </div>
+          </DeckCardShell>
         )}
       </div>
 
-      {/* ACTIONS — pinned at the bottom of the column: the five tier
-          buttons, then the quieter Don't Know It / Undo / Jump row. */}
+      {/* ACTIONS — pinned at the bottom of the column: the mock's
+          light tray holds the five tier tiles with Don't Know It
+          centered beneath them; Undo and Jump sit below the tray as
+          two white pills. */}
       {inSongState && (
-        <div className="shrink-0 space-y-2">
-          <div className="grid grid-cols-5 gap-1.5 sm:gap-2 items-center">
-            {BUCKET_ORDER.map(renderBucketButton)}
-          </div>
-          <div className="flex items-center justify-between gap-2">
-            {/* DON'T KNOW IT — quieter/secondary, same treatment as the list */}
-            <button
-              onClick={() => act('unknown')}
-              className={`text-[10px] font-bold px-2 py-1 rounded-lg border transition-all cursor-pointer ${
-                triageMap[currentSong.id] === 'unknown'
-                  ? 'bg-slate-200 text-slate-600 border-slate-300'
-                  : 'bg-transparent text-slate-400 border-transparent hover:text-slate-600 hover:bg-slate-100'
-              }`}
-              title="I haven't heard this song — don't rate it"
-            >
-              Don&apos;t Know It
-            </button>
-            <div className="flex items-center gap-2">
+        <div className="shrink-0">
+          <div className="bg-slate-100 border border-slate-200/60 rounded-3xl shadow-sm p-3 [@media(max-height:740px)]:p-2.5 space-y-2">
+            <div className="flex gap-1.5 sm:gap-2">
+              {BUCKET_ORDER.map(renderBucketButton)}
+            </div>
+            {/* DON'T KNOW IT — centered text action inside the tray */}
+            <div className="text-center">
               <button
-                onClick={undo}
-                disabled={history.length === 0}
-                className="text-[11px] font-extrabold text-slate-600 bg-white border border-slate-300 rounded-lg px-3 py-2 transition-all enabled:hover:bg-slate-100 enabled:cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                onClick={() => act('unknown')}
+                className={`text-sm font-semibold px-4 py-1 rounded-full transition-all cursor-pointer ${
+                  triageMap[currentSong.id] === 'unknown'
+                    ? 'bg-white text-slate-900 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+                title="I haven't heard this song — don't rate it"
               >
-                ↩ Undo
+                Don&apos;t Know It
               </button>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 mt-2">
+            <button
+              onClick={undo}
+              disabled={history.length === 0}
+              className="shrink-0 text-xs font-extrabold text-slate-700 bg-white border border-slate-200 rounded-full shadow-sm px-5 py-2 transition-all enabled:hover:bg-slate-50 enabled:cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              ↩ Undo
+            </button>
+            <div className="relative flex-1">
               <select
                 value=""
                 onChange={(e) => {
                   if (e.target.value) jumpToSection(e.target.value);
                 }}
-                className="text-[11px] font-extrabold text-slate-600 bg-white border border-slate-300 rounded-lg px-2.5 py-2 cursor-pointer hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-[#0072CE] max-w-[42vw]"
+                className="w-full appearance-none text-xs font-extrabold text-slate-700 bg-white border border-slate-200 rounded-full shadow-sm pl-4 pr-9 py-2 cursor-pointer hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#0072CE]"
                 aria-label="Jump to album"
               >
                 <option value="" disabled>
@@ -425,27 +480,40 @@ export default function Step1Deck({
                   );
                 })}
               </select>
+              <svg
+                aria-hidden="true"
+                className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="m6 9 6 6 6-6" />
+              </svg>
             </div>
           </div>
-          <p className="hidden sm:block text-center text-[10px] font-semibold text-slate-300">
+          <p className="hidden sm:block text-center text-[10px] font-semibold text-slate-300 pt-1.5">
             Keys 1–5 pick a tier · U undoes
           </p>
         </div>
       )}
 
-      {/* DECK | LIST TOGGLE — below the card/actions, small and muted
-          (in list mode the toggle stays up in the header instead). */}
+      {/* DECK | LIST TOGGLE — below the card/actions: the mock's white
+          pill, active segment filled brand blue (in list mode the
+          toggle stays up in the header instead). */}
       <div className="shrink-0 flex justify-center pt-2 pb-3">
-        <div className="inline-flex bg-white border border-slate-300 rounded-full p-0.5 shadow-xs">
+        <div className="inline-flex bg-white border border-slate-200 rounded-full p-1 shadow-sm">
           <button
-            className="px-3 py-1 rounded-full text-[11px] font-black bg-[#0072CE] text-white shadow-sm"
+            className="px-5 py-1.5 rounded-full text-sm font-bold bg-[#0072CE] text-white shadow-sm"
             aria-current="true"
           >
             Deck
           </button>
           <button
             onClick={onSwitchToList}
-            className="px-3 py-1 rounded-full text-[11px] font-black text-slate-500 hover:text-slate-800 transition-all cursor-pointer"
+            className="px-5 py-1.5 rounded-full text-sm font-bold text-slate-600 hover:text-slate-900 transition-all cursor-pointer"
           >
             List
           </button>

@@ -116,7 +116,7 @@ export function AudioPreviewButton({ title, compact = false, large = false }: { 
         compact 
           ? 'w-7 h-7 bg-white hover:bg-slate-100 border border-slate-300 shadow-2xs' 
           : large
-          ? 'w-12 h-12 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-[#0072CE]'
+          ? 'w-16 h-16 [@media(max-height:740px)]:w-14 [@media(max-height:740px)]:h-14 [@media(max-height:620px)]:w-12 [@media(max-height:620px)]:h-12 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-[#0072CE]'
           : 'w-10 h-10 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-[#0072CE]'
       } ${
         isPlaying 
@@ -126,11 +126,11 @@ export function AudioPreviewButton({ title, compact = false, large = false }: { 
       title="Play 30s Preview"
     >
       {isLoading ? (
-        <span className={`block ${large ? 'w-4 h-4' : 'w-3 h-3'} border-2 border-current border-t-transparent rounded-full animate-spin`} />
+        <span className={`block ${large ? 'w-5 h-5 [@media(max-height:620px)]:w-4 [@media(max-height:620px)]:h-4' : 'w-3 h-3'} border-2 border-current border-t-transparent rounded-full animate-spin`} />
       ) : isPlaying ? (
-        <span className={`font-black leading-none tracking-tighter ${compact ? 'text-[9px]' : large ? 'text-sm' : 'text-xs'}`}>||</span>
+        <span className={`font-black leading-none tracking-tighter ${compact ? 'text-[9px]' : large ? 'text-lg [@media(max-height:740px)]:text-base [@media(max-height:620px)]:text-sm' : 'text-xs'}`}>||</span>
       ) : (
-        <span className={`font-black leading-none ml-0.5 ${compact ? 'text-[10px]' : large ? 'text-base' : 'text-sm'}`}>▶</span>
+        <span className={`font-black leading-none ml-0.5 ${compact ? 'text-[10px]' : large ? 'text-xl [@media(max-height:740px)]:text-lg [@media(max-height:620px)]:text-base' : 'text-sm'}`}>▶</span>
       )}
     </button>
   );

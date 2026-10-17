@@ -42,9 +42,10 @@ import type { TriageSection } from './Step1Triage';
  * to position+1 — the NEXT card, sorted or not. Jump goes to a
  * section's FIRST song. Swipe right / the U key step back one.
  * There is no history stack and no undo-as-navigation: because the
- * deck is browsable, every card shows its own state (the
- * already-rated badge and the selected tile for a sorted song; a
- * muted "Not Sorted" badge for a passed one — see below).
+ * deck is browsable, every card shows its own state (a large
+ * ink stamp over the album art and the selected tile for a
+ * sorted song; a slate "Not Sorted" stamp for a passed one —
+ * see below).
  *
  * SWIPE = PURE NAVIGATION (owner correction, Oct 16): a swipe NEVER
  * writes a rating. Sorting a song as Skip is a judgment; swiping
@@ -52,7 +53,7 @@ import type { TriageSection } from './Step1Triage';
  * behind Don't Know It (an unjudged song must never be recorded as
  * a rating). Leaving an UNSORTED song via a committed forward
  * swipe marks it in the session-only `passedIds` set, which drives
- * its "Not Sorted" badge on revisit and the end card's unsorted
+ * its "Not Sorted" stamp on revisit and the end card's unsorted
  * count; sorting it later clears the mark. Don't Know It counts as
  * SORTED (a deliberate disposition, value 'unknown') — passing is
  * only for songs with NO triageMap entry. Dragging shows a stamp
@@ -102,8 +103,8 @@ const SWIPE_COMMIT_RATIO = 0.25;
 // that lets a flown-off card's replacement appear in place instead
 // of sliding in from off-screen.
 const EXIT_MS = 260;
-const FLIP_OUT_MS = 150;
-const FLIP_IN_MS = 150;
+const FLIP_OUT_MS = 240;
+const FLIP_IN_MS = 240;
 const SNAP_MS = 40;
 
 /**
@@ -118,8 +119,9 @@ type CardAnimPhase = 'idle' | 'exit' | 'snap' | 'flip-out' | 'flip-in';
 /**
  * The card from the owner's reference mock, with a stacked-deck
  * effect: two backing cards peek out behind the real one, rotated a
- * couple of degrees — pure CSS, no images. The face wears a soft
- * brand-blue tint (owner: try a color instead of white); the two
+ * couple of degrees — pure CSS, no images. The face wears a
+ * brand-blue tint (#d9eafa — a color instead of white per the
+ * owner, deepened one shade in his polish pass); the two
  * backing layers stay white for contrast. The shell is a FIXED
  * height — it never grows or shrinks with content — so a song title
  * can never push the preview button off the card; the checkpoint,
@@ -209,19 +211,21 @@ function DeckCardShell({
             touchAction: 'pan-y',
             cursor: swipe.isDragging ? 'grabbing' : 'grab',
           }}
-          className="relative h-full rounded-[28px] bg-[#e8f2fc] border border-slate-200 shadow-xl select-none"
+          className="relative h-full rounded-[28px] bg-[#d9eafa] border border-slate-200 shadow-xl select-none"
         >
-          {/* Persistent drag hint: quiet chevrons at the card's
-              side edges, vertical center. */}
+          {/* Persistent drag hint: chevrons at the card's side
+              edges, vertical center — sized up and set on white
+              discs so they read clearly against the tinted face
+              (owner polish: more pronounced). */}
           <span
             aria-hidden="true"
-            className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 z-10 text-2xl font-black leading-none text-slate-300/70"
+            className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/80 shadow-sm text-3xl font-black leading-none text-slate-500"
           >
             ‹
           </span>
           <span
             aria-hidden="true"
-            className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 z-10 text-2xl font-black leading-none text-slate-300/70"
+            className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/80 shadow-sm text-3xl font-black leading-none text-slate-500"
           >
             ›
           </span>
@@ -265,7 +269,7 @@ function DeckCardShell({
           {children}
         </div>
       ) : (
-        <div className="relative h-full rounded-[28px] bg-[#e8f2fc] border border-slate-200 shadow-xl">
+        <div className="relative h-full rounded-[28px] bg-[#d9eafa] border border-slate-200 shadow-xl">
           {children}
         </div>
       )}
@@ -392,7 +396,7 @@ export default function Step1Deck({
   // Buttons remain the primary SORTING path; a swipe only ever
   // NAVIGATES (see the model at the top of the file):
   //   commit left  → position+1. If the song being left is
-  //     unsorted, it's marked passed (badge + end-card count) —
+  //     unsorted, it's marked passed (stamp + end-card count) —
   //     nothing is written to the triage map.
   //   commit right → position−1 (same as the U key).
   // The card element carries `touch-action: pan-y` (see
@@ -424,6 +428,12 @@ export default function Step1Deck({
   // pending action rather than firing it into a hidden view).
   const [phase, setPhase] = useState<CardAnimPhase>('idle');
   const [exitX, setExitX] = useState(0);
+  // The control (bucket tile or Don't Know It) whose sort is
+  // mid-flip: it wears a committed dark fill while the flip runs
+  // so the tap unmistakably registers, and resets the instant
+  // the flip completes (cleared in the same timer that returns
+  // the phase to 'idle').
+  const [flipTarget, setFlipTarget] = useState<TriageValue | null>(null);
   const timersRef = useRef<number[]>([]);
   const schedule = (fn: () => void, ms: number) => {
     const id = window.setTimeout(fn, ms);
@@ -455,13 +465,19 @@ export default function Step1Deck({
   // Flip the card edge-on, run act(value) at the midpoint, flip
   // back. Used by the bucket tiles, Don't Know It, and keys 1–5 —
   // every "sort via a control" path gets the same transition.
+  // The activated control is marked (flipTarget) for the whole
+  // flip so it shows its committed state, then resets.
   const flipAct = (value: TriageValue) => {
     if (phase !== 'idle' || !currentSong || checkpointPending) return;
+    setFlipTarget(value);
     setPhase('flip-out');
     schedule(() => {
       act(value);
       setPhase('flip-in');
-      schedule(() => setPhase('idle'), FLIP_IN_MS);
+      schedule(() => {
+        setPhase('idle');
+        setFlipTarget(null);
+      }, FLIP_IN_MS);
     }, FLIP_OUT_MS);
   };
 
@@ -554,7 +570,7 @@ export default function Step1Deck({
       // flies off-screen (exitTo), and the position changes only
       // as it lands. Pure navigation: no setter is called. If
       // the song being left has no verdict, mark it passed (the
-      // NOT SORTED stamp rode the card out) so it wears the badge
+      // NOT SORTED stamp rode the card out) so it wears the stamp
       // on revisit and counts on the end card.
       const song = currentSong;
       const idx = effectivePosition;
@@ -664,6 +680,7 @@ export default function Step1Deck({
   const renderBucketButton = (bucket: BucketType) => {
     const activeBucket = currentSong ? triageMap[currentSong.id] : undefined;
     const isSelected = activeBucket === bucket;
+    const isCommitted = flipTarget === bucket;
     const cfg = BUCKET_CONFIG[bucket];
     const displayLabel = bucket === 'slaps' ? 'Slaps' : cfg.label;
 
@@ -671,13 +688,19 @@ export default function Step1Deck({
     // glyph large on top and its label underneath. The selected tile
     // keeps the deck's sky-400 family as a border/ring treatment —
     // and because the deck is browsable, it always reflects the
-    // CURRENT card's verdict.
+    // CURRENT card's verdict. While THIS tile's sort is mid-flip it
+    // wears a committed fill instead (slate-900 + white text — the
+    // bucket config's own fills are light tints only, so the dark
+    // committed state is uniform across buckets), resetting the
+    // moment the flip completes.
     return (
       <button
         key={bucket}
         onClick={() => flipAct(bucket)}
         className={`flex-1 flex flex-col items-center justify-center gap-0.5 rounded-2xl border py-3 [@media(max-height:740px)]:py-2 shadow-sm transition-all cursor-pointer ${
-          isSelected
+          isCommitted
+            ? 'bg-slate-900 border-slate-900 shadow-md'
+            : isSelected
             ? 'bg-sky-50 border-sky-400 ring-1 ring-sky-400'
             : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50'
         }`}
@@ -686,7 +709,11 @@ export default function Step1Deck({
         <span className="text-[26px] [@media(max-height:740px)]:text-[22px] leading-none">
           {cfg.emoji}
         </span>
-        <span className="text-[13px] font-bold text-slate-800 leading-tight">
+        <span
+          className={`text-[13px] font-bold leading-tight ${
+            isCommitted ? 'text-white' : 'text-slate-800'
+          }`}
+        >
           {displayLabel}
         </span>
       </button>
@@ -706,6 +733,43 @@ export default function Step1Deck({
       : titleLength <= 32
       ? 'text-[30px] sm:text-4xl'
       : 'text-2xl sm:text-[34px]';
+
+  // STATIC STAMP — the current card's state as a large ink stamp
+  // over the album art, replacing the old top-edge pill badges
+  // (owner polish: the pills read wrong and crowded the card's
+  // top edge). A sorted song is stamped with its verdict in the
+  // bucket's own ink (BUCKET_CONFIG.color); Don't Know It gets a
+  // brand-blue stamp; a passed-but-unsorted song is stamped
+  // NOT SORTED in slate; a never-visited unsorted song wears
+  // nothing. While a drag is active the drag stamp owns that
+  // spot (the render below hides this one when stampKind is
+  // set) — one stamp at a time.
+  const currentValue = currentSong ? triageMap[currentSong.id] : undefined;
+  const staticStamp: { text: string; ink: string; size: string } | null =
+    !currentSong
+      ? null
+      : currentValue === 'unknown'
+      ? {
+          text: 'Don’t Know It',
+          ink: 'border-[#0072CE] text-[#0072CE]',
+          size: 'text-xl',
+        }
+      : currentValue !== undefined
+      ? {
+          text:
+            currentValue === 'slaps'
+              ? 'Slaps'
+              : BUCKET_CONFIG[currentValue as BucketType].label,
+          ink: BUCKET_CONFIG[currentValue as BucketType].color,
+          size: 'text-2xl',
+        }
+      : passedIds.has(currentSong.id)
+      ? {
+          text: 'Not Sorted',
+          ink: 'border-slate-500 text-slate-600',
+          size: 'text-2xl',
+        }
+      : null;
 
   // Shared swipe wiring for the two draggable shells (song card
   // and end card).
@@ -731,11 +795,10 @@ export default function Step1Deck({
       <div className="shrink-0 pt-2 space-y-1.5">
         <div className="flex items-baseline justify-between gap-2 text-[11px] font-black text-slate-700">
           <span className="uppercase tracking-wider">
-            Song{' '}
             <strong className="text-[#0072CE] text-xs">
-              {isComplete ? total : Math.min(categorizedCount + 1, total)}
+              {categorizedCount}
             </strong>{' '}
-            of {total}
+            of {total} sorted
             {songsToWrapped > 0 ? (
               <span className="normal-case tracking-normal font-bold text-slate-500">
                 {' '}
@@ -881,26 +944,26 @@ export default function Step1Deck({
              budget on DeckCardShell). The layout is therefore
              identical for one-line and two-line titles, and the
              preview button — the last slot — can never be pushed
-             off the card. The state badge rides on the card's top
-             edge, so it never adds layout height: a sorted song
-             shows its verdict; a passed-but-unsorted song shows a
-             muted "Not Sorted"; a never-visited song shows none. */
+             off the card. The card's state is a large ink stamp
+             over the album art (see staticStamp above) — it adds
+             no layout height and never competes with the progress
+             line above the card. */
           <DeckCardShell swipe={swipeProps}>
             <div className="relative h-full flex flex-col items-center text-center px-5 py-5 gap-3">
-              {triageMap[currentSong.id] !== undefined ? (
-                <p className="absolute -top-3 left-1/2 -translate-x-1/2 z-10 whitespace-nowrap bg-slate-900 text-white text-[11px] font-bold px-3 py-1 rounded-full shadow-md">
-                  {triageMap[currentSong.id] === 'unknown'
-                    ? '✓ You marked this Don’t Know It — tap a tier to rate it'
-                    : `✓ You marked this ${
-                        BUCKET_CONFIG[triageMap[currentSong.id] as BucketType]
-                          .label
-                      } — tap a tier to change it`}
-                </p>
-              ) : passedIds.has(currentSong.id) ? (
-                <p className="absolute -top-3 left-1/2 -translate-x-1/2 z-10 whitespace-nowrap bg-slate-200 text-slate-500 text-[11px] font-bold px-3 py-1 rounded-full shadow-sm border border-slate-300">
-                  Not Sorted — you swiped past this one
-                </p>
-              ) : null}
+              {/* STATIC STAMP — same anchor as the drag stamps
+                  (the art slot's center: py-5 + half of h-32 =
+                  top-[84px]), rendered only while no drag stamp
+                  is up. It sits over the art; the preview button
+                  lives in the card's bottom slot, far below the
+                  stamp's band, so they can never overlap. */}
+              {staticStamp && stampKind === null && (
+                <span
+                  aria-hidden="true"
+                  className={`pointer-events-none absolute left-1/2 top-[84px] z-10 -translate-x-1/2 -translate-y-1/2 -rotate-[10deg] rounded-lg border-[3px] px-3 py-1 font-black uppercase tracking-widest opacity-90 bg-white/60 ${staticStamp.size} ${staticStamp.ink}`}
+                >
+                  {staticStamp.text}
+                </span>
+              )}
               {/* ART — a fixed 128px slot; it no longer flexes or
                   shrinks to make room for the title. */}
               <div className="h-32 w-full flex items-center justify-center">
@@ -957,7 +1020,9 @@ export default function Step1Deck({
             <button
               onClick={() => flipAct('unknown')}
               className={`text-sm px-4 py-1 rounded-full transition-all cursor-pointer ${
-                triageMap[currentSong.id] === 'unknown'
+                flipTarget === 'unknown'
+                  ? 'bg-slate-900 text-white font-bold shadow-md'
+                  : triageMap[currentSong.id] === 'unknown'
                   ? 'text-[#0072CE] font-bold'
                   : 'text-slate-500 font-medium hover:text-slate-800'
               }`}

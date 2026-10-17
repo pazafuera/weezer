@@ -29,7 +29,7 @@ import type { TriageSection } from './Step1Triage';
  * everything fits one screen; on short ones the page scrolls a
  * little — the owner accepted that in exchange for a song card tall
  * enough to hold a two-line title without pushing the preview button
- * off it. The checkpoint, completion and end-of-deck states replace
+ * off it. The milestone, completion and end-of-deck states replace
  * the card inside the same column, at the same fixed height.
  *
  * NAVIGATION MODEL (owner correction, Oct 16): the deck is a
@@ -69,21 +69,88 @@ import type { TriageSection } from './Step1Triage';
  * art (the old corner stamps rotated off-screen first and were
  * hard to see). The Undo BUTTON is gone (owner) — swipe right and
  * the U key are the ways back.
+ *
+ * MILESTONES (owner design, Oct 16): one mid-deck checkpoint
+ * doesn't pace 206 songs, so crossing a sorted-count threshold
+ * (46 / 75 / 103 / 135 / 165 — see MILESTONES below) with a SORT
+ * earns a milestone card that replaces the next song card. The
+ * first card is the one that reveals the payoff by name — the
+ * Sweater Thread. The deck's sorting flow drops the results
+ * step's old nickname entirely: new users don't know it yet.
+ * Each threshold fires at most once per session
+ * (the fired set persists in sessionStorage across list
+ * toggles), only a sort can fire one — never navigation — and
+ * nothing fires retroactively when the deck is entered already
+ * past a threshold.
  */
 
-// The short-path promise the site's own splash copy makes ("25 songs
-// gets you your Wrapped in about 5 minutes" — Step0Splash). There is
-// no separate code constant for it; the deck's framing counts bucketed
-// songs toward that same 25. Actual step gating is unchanged and
-// still runs through handleFinishTriage.
-const WRAPPED_SHORT_PATH_GOAL = 25;
+// The short-path promise the site's own splash copy makes ("25
+// songs in about 5 minutes" — Step0Splash). There is no separate
+// code constant for it; the deck counts bucketed songs toward that
+// same 25, which is also the Sweater Thread's real unlock
+// condition — it gates the milestone card's "Peek at my Thread"
+// button and the end card's Thread button. Actual step gating is
+// unchanged and still runs through handleFinishTriage.
+const THREAD_SHORT_PATH_GOAL = 25;
 
-// Blue (10) + Pinkerton (10) + the singles block (26): the end of the
-// recognition-first front section. Crossing this many categorized
-// songs — with the short-path Wrapped goal met — earns one checkpoint.
-const FRONT_SECTION_SIZE = 46;
+// MILESTONES — sorted-count thresholds (categorizedCount:
+// bucketed + Don't Know It, the counter the progress line shows)
+// that earn a milestone card mid-deck. The first threshold, 46,
+// is also the end of the recognition-first front section (Blue
+// 10 + Pinkerton 10 + the singles block 26) — the moment every
+// song a casual fan knows is done — so its card is the one that
+// reveals the Sweater Thread by name. The rest pace the deep-cut
+// back half. Remaining-count figures in the copy are computed
+// from the threshold, never hand-kept.
+const TOTAL_SONGS = FULL_SONG_POOL.length;
 
-const CHECKPOINT_DISMISSED_KEY = 'weezer-deck-checkpoint-dismissed';
+interface DeckMilestone {
+  threshold: number;
+  headline: string;
+  body: string;
+  compel: string;
+}
+
+const MILESTONES: DeckMilestone[] = [
+  {
+    threshold: 46,
+    headline: "That's every song a casual fan knows.",
+    body: "You've unlocked the Sweater Thread — your results: your Top 10, your fan tribe, your Era DNA.",
+    compel: `The deep cuts are where it gets interesting — ${
+      TOTAL_SONGS - 46
+    } songs still out there, and your Thread gets sharper with every one.`,
+  },
+  {
+    threshold: 75,
+    headline: '75 sorted.',
+    body: 'More than a third of the catalog. Your Thread is taking shape.',
+    compel: 'Next stop: halfway.',
+  },
+  {
+    threshold: 103,
+    headline: 'Halfway there.',
+    body: `103 of ${TOTAL_SONGS}. The back half is deep cuts and late-era swings.`,
+    compel: 'Your Thread gets sharper with every song.',
+  },
+  {
+    threshold: 135,
+    headline: '135 sorted.',
+    body: 'Two-thirds of the catalog, done.',
+    compel: `${TOTAL_SONGS - 135} songs left.`,
+  },
+  {
+    threshold: 165,
+    headline: '165 sorted.',
+    body: 'The finish line is real now.',
+    compel: `${
+      TOTAL_SONGS - 165
+    } songs left. The last stretch is all bragging rights.`,
+  },
+];
+
+// The milestone thresholds fired this session, persisted across
+// deck remounts (toggling to the list and back) in sessionStorage.
+const MILESTONES_FIRED_KEY = 'weezer-deck-milestones-fired';
 
 const BUCKET_ORDER: BucketType[] = ['banger', 'slaps', 'mid', 'skip', 'trash'];
 
@@ -124,7 +191,7 @@ type CardAnimPhase = 'idle' | 'exit' | 'snap' | 'flip-out' | 'flip-in';
  * owner, deepened one shade in his polish pass); the two
  * backing layers stay white for contrast. The shell is a FIXED
  * height — it never grows or shrinks with content — so a song title
- * can never push the preview button off the card; the checkpoint,
+ * can never push the preview button off the card; the milestone,
  * completion and end-of-deck states render inside the same shell
  * at the same height.
  *
@@ -144,7 +211,7 @@ function DeckCardShell({
    * draggable (see the swipe block in Step1Deck). The backing
    * layers stay put — only the front card follows the pointer,
    * complete with its directional stamp (centered over the album
-   * art) and edge chevrons. Checkpoint/completion shells render
+   * art) and edge chevrons. Milestone/completion shells render
    * without it, so they can never be dragged. `phase`/`exitX`
    * drive the exit and flip animations (see the ANIMATION block
    * in Step1Deck).
@@ -303,18 +370,36 @@ export default function Step1Deck({
   const [passedIds, setPassedIds] = useState<ReadonlySet<string>>(
     () => new Set()
   );
-  const [checkpointPending, setCheckpointPending] = useState(false);
-  const [checkpointDismissed, setCheckpointDismissed] = useState(false);
+  // The milestone card currently on screen (set by the sort that
+  // crossed its threshold), and the thresholds already fired this
+  // session — each fires at most once.
+  const [milestonePending, setMilestonePending] =
+    useState<DeckMilestone | null>(null);
+  const [milestonesFired, setMilestonesFired] = useState<
+    ReadonlySet<number>
+  >(() => new Set());
 
-  // "Don't show again this session" survives toggling to the list and
-  // back (which remounts the deck), so it lives in sessionStorage.
+  // The fired set survives toggling to the list and back (which
+  // remounts the deck), so it lives in sessionStorage.
   useEffect(() => {
     try {
-      if (window.sessionStorage.getItem(CHECKPOINT_DISMISSED_KEY) === '1') {
-        setCheckpointDismissed(true);
+      const raw = window.sessionStorage.getItem(MILESTONES_FIRED_KEY);
+      if (raw) {
+        const parsed: unknown = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          setMilestonesFired(
+            new Set(
+              parsed.filter(
+                (n): n is number => typeof n === 'number'
+              )
+            )
+          );
+        }
       }
+      // Retire the old single-checkpoint guard's key.
+      window.sessionStorage.removeItem('weezer-deck-checkpoint-dismissed');
     } catch {
-      /* sessionStorage unavailable — checkpoint just stays session-local */
+      /* sessionStorage unavailable — milestones stay session-local */
     }
   }, []);
 
@@ -324,7 +409,13 @@ export default function Step1Deck({
   const deckLength = orderedSongs.length;
   const progressPercent = Math.round((categorizedCount / total) * 100);
   const isComplete = categorizedCount === total;
-  const songsToWrapped = Math.max(0, WRAPPED_SHORT_PATH_GOAL - bucketedCount);
+  // Progress-line suffix: distance to the next milestone, or to
+  // the finish once every milestone is behind the user. (No
+  // results-step nickname here — new users don't know it yet;
+  // the milestone cards introduce the Thread by name.)
+  const nextMilestone = MILESTONES.find(
+    (m) => m.threshold > categorizedCount
+  );
 
   const firstUncatIdx = orderedSongs.findIndex(
     (s) => triageMap[s.id] === undefined
@@ -345,7 +436,7 @@ export default function Step1Deck({
   );
 
   const act = (value: TriageValue) => {
-    if (!currentSong || checkpointPending) return;
+    if (!currentSong || milestonePending) return;
     const song = currentSong;
     const idx = effectivePosition;
     handleSetBucket(song.id, value);
@@ -364,23 +455,40 @@ export default function Step1Deck({
     // completion card if that was the final unsorted song.)
     setPosition(idx + 1);
 
-    // Checkpoint: this action crosses the front-section boundary
-    // (Blue + Pinkerton + Singles) with the Wrapped short-path met.
-    // Computed against the prospective map — the context update
-    // hasn't rendered yet.
+    // Milestone: this sort crosses a threshold. Computed against
+    // the prospective map — the context update hasn't rendered
+    // yet. A sort moves the count by at most one, so at most one
+    // threshold can cross; each fires at most once per session.
+    // (Landing on `total` shows the completion card instead —
+    // milestones never fire there.)
     const prospective: Record<string, TriageValue> = {
       ...triageMap,
       [song.id]: value,
     };
     const newCategorized = countCategorizedSongs(prospective);
-    const newBucketed = countBucketedSongs(prospective);
-    if (
-      !checkpointDismissed &&
-      categorizedCount < FRONT_SECTION_SIZE &&
-      newCategorized >= FRONT_SECTION_SIZE &&
-      newBucketed >= WRAPPED_SHORT_PATH_GOAL
-    ) {
-      setCheckpointPending(true);
+    if (newCategorized < total) {
+      const crossed = MILESTONES.find(
+        (m) =>
+          categorizedCount < m.threshold &&
+          newCategorized >= m.threshold &&
+          !milestonesFired.has(m.threshold)
+      );
+      if (crossed) {
+        setMilestonesFired((prev) => {
+          const next = new Set(prev);
+          next.add(crossed.threshold);
+          try {
+            window.sessionStorage.setItem(
+              MILESTONES_FIRED_KEY,
+              JSON.stringify(Array.from(next))
+            );
+          } catch {
+            /* the state update above still covers this mount */
+          }
+          return next;
+        });
+        setMilestonePending(crossed);
+      }
     }
   };
 
@@ -468,7 +576,7 @@ export default function Step1Deck({
   // The activated control is marked (flipTarget) for the whole
   // flip so it shows its committed state, then resets.
   const flipAct = (value: TriageValue) => {
-    if (phase !== 'idle' || !currentSong || checkpointPending) return;
+    if (phase !== 'idle' || !currentSong || milestonePending) return;
     setFlipTarget(value);
     setPhase('flip-out');
     schedule(() => {
@@ -488,7 +596,7 @@ export default function Step1Deck({
     dragRef.current = null;
     setDragX(0);
     setIsDragging(false);
-  }, [effectivePosition, checkpointPending, isComplete]);
+  }, [effectivePosition, milestonePending, isComplete]);
 
   const handleCardPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (phase !== 'idle') return;
@@ -632,24 +740,22 @@ export default function Step1Deck({
     // songs are sorted yet.
     const idx = orderedSongs.findIndex((s) => s.id === section.songs[0].id);
     if (idx === -1) return;
-    setCheckpointPending(false);
+    setMilestonePending(null);
     setPosition(idx);
   };
 
-  const dismissCheckpoint = () => {
-    setCheckpointPending(false);
-    setCheckpointDismissed(true);
-    try {
-      window.sessionStorage.setItem(CHECKPOINT_DISMISSED_KEY, '1');
-    } catch {
-      /* state flag above still covers this mount */
-    }
+  // "Keep sorting" — the position already advanced to the pending
+  // next card when the triggering sort landed (see act()), so
+  // dismissing just hands the screen back to it. (If that position
+  // is one past the last card, the end card shows instead.)
+  const dismissMilestone = () => {
+    setMilestonePending(null);
   };
 
   // Keyboard: 1–5 pick the buckets in displayed order (sort the
   // current card, with the flip), U steps back one card. Ignored
   // while typing in a form field or when a modal state
-  // (checkpoint / completion) owns the screen.
+  // (milestone / completion) owns the screen.
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey || e.altKey) return;
@@ -663,7 +769,7 @@ export default function Step1Deck({
       ) {
         return;
       }
-      if (checkpointPending || isComplete) return;
+      if (milestonePending || isComplete) return;
       if (phase !== 'idle') return;
       if (e.key >= '1' && e.key <= '5') {
         flipAct(BUCKET_ORDER[Number(e.key) - 1]);
@@ -720,7 +826,7 @@ export default function Step1Deck({
     );
   };
 
-  const inSongState = !checkpointPending && !isComplete && !!currentSong;
+  const inSongState = !milestonePending && !isComplete && !!currentSong;
 
   // Title size steps down as titles get longer, so a long title wraps
   // to two lines at a readable size instead of eating the card.
@@ -799,17 +905,18 @@ export default function Step1Deck({
               {categorizedCount}
             </strong>{' '}
             of {total} sorted
-            {songsToWrapped > 0 ? (
+            {nextMilestone ? (
               <span className="normal-case tracking-normal font-bold text-slate-500">
                 {' '}
-                · {songsToWrapped} more to your Wrapped
+                · {nextMilestone.threshold - categorizedCount} to the
+                next milestone
               </span>
-            ) : (
-              <span className="normal-case tracking-normal font-bold text-[#0072CE]">
+            ) : categorizedCount < total ? (
+              <span className="normal-case tracking-normal font-bold text-slate-500">
                 {' '}
-                · Wrapped unlocked ✓
+                · {total - categorizedCount} to the finish
               </span>
-            )}
+            ) : null}
           </span>
           <span className="text-[#0072CE] text-xs shrink-0">
             {progressPercent}%
@@ -823,36 +930,51 @@ export default function Step1Deck({
         </div>
       </div>
 
-      {/* CARD REGION — flex-1 and centered; the checkpoint,
+      {/* CARD REGION — flex-1 and centered; the milestone,
           completion and end-of-deck states replace the card right
           here, at the same fixed height. */}
       <div className="relative flex-1 min-h-0 flex items-center justify-center py-2">
-        {checkpointPending ? (
+        {milestonePending ? (
+          /* MILESTONE — a sort just crossed a threshold (see
+             MILESTONES). It replaces the next song card: the sort
+             and the position advance already landed in act(), so
+             "Keep sorting" simply hands the screen back. Not
+             swipeable (no swipe prop, like the completion card);
+             the tray hides while it shows (inSongState is false)
+             and the footer toggle pill below keeps Deck/List
+             reachable. "Peek at my Thread" is the same
+             handleFinishTriage the old checkpoint offered, gated
+             on the Thread's real unlock (25 bucketed songs). */
           <DeckCardShell>
-            <div className="h-full flex flex-col items-center justify-center text-center p-6 sm:p-8 space-y-5">
-              <div className="text-4xl">🎉</div>
+            <div className="h-full flex flex-col items-center justify-center text-center p-6 sm:p-8 space-y-4">
+              <div className="text-[11px] font-black uppercase tracking-[0.25em] text-[#0072CE]">
+                Milestone
+              </div>
               <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-950">
-                You&apos;ve sorted the big ones
+                {milestonePending.headline}
               </h2>
               <p className="text-sm font-bold text-slate-500 leading-snug max-w-sm mx-auto">
-                The Blue Album, Pinkerton, and all the big singles are done
-                — and you&apos;ve got enough ranked for your Wrapped
-                whenever you want it. The deep cuts will still be here.
+                {milestonePending.body}
+              </p>
+              <p className="text-sm font-bold text-slate-400 leading-snug max-w-sm mx-auto">
+                {milestonePending.compel}
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-1">
                 <button
-                  onClick={handleFinishTriage}
-                  className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm px-6 py-3.5 rounded-full shadow-md transition transform hover:scale-105 cursor-pointer border-2 border-amber-200 flex items-center gap-2.5 whitespace-nowrap"
+                  onClick={dismissMilestone}
+                  className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm px-6 py-3.5 rounded-full shadow-md transition transform hover:scale-105 cursor-pointer border-2 border-amber-200 whitespace-nowrap"
                 >
-                  <FlyingWIcon className="w-6 h-4 text-slate-950" />
-                  <span>See your Wrapped</span>
+                  Keep sorting
                 </button>
-                <button
-                  onClick={dismissCheckpoint}
-                  className="text-sm font-extrabold text-slate-600 bg-white border border-slate-300 rounded-full px-6 py-3.5 hover:bg-slate-100 transition-all cursor-pointer whitespace-nowrap"
-                >
-                  Keep going
-                </button>
+                {bucketedCount >= THREAD_SHORT_PATH_GOAL && (
+                  <button
+                    onClick={handleFinishTriage}
+                    className="text-sm font-extrabold text-slate-600 bg-white border border-slate-300 rounded-full px-6 py-3.5 hover:bg-slate-100 transition-all cursor-pointer flex items-center gap-2.5 whitespace-nowrap"
+                  >
+                    <FlyingWIcon className="w-6 h-4 text-slate-950" />
+                    <span>Peek at my Thread</span>
+                  </button>
+                )}
               </div>
             </div>
           </DeckCardShell>
@@ -925,13 +1047,13 @@ export default function Step1Deck({
                 >
                   ← Back to the last card
                 </button>
-                {bucketedCount >= WRAPPED_SHORT_PATH_GOAL && (
+                {bucketedCount >= THREAD_SHORT_PATH_GOAL && (
                   <button
                     onClick={handleFinishTriage}
                     className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm px-6 py-3.5 rounded-full shadow-md transition transform hover:scale-105 cursor-pointer border-2 border-amber-200 flex items-center gap-2.5 whitespace-nowrap"
                   >
                     <FlyingWIcon className="w-6 h-4 text-slate-950" />
-                    <span>See your Wrapped</span>
+                    <span>Peek at my Thread</span>
                   </button>
                 )}
               </div>
@@ -1093,7 +1215,7 @@ export default function Step1Deck({
         </div>
       )}
 
-      {/* CHECKPOINT / COMPLETION / END FOOTER — there's no actions
+      {/* MILESTONE / COMPLETION / END FOOTER — there's no actions
           block in those states, but the toggle still needs a home:
           the same inline pill, centered at the column bottom. */}
       {!inSongState && (

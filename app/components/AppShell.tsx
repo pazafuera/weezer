@@ -15,7 +15,6 @@ export default function AppShell({
   fullWidth?: boolean;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [hasViewedWrapped, setHasViewedWrapped] = useState(false);
   const [accountDrawerOpen, setAccountDrawerOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [bucketsOpen, setBucketsOpen] = useState(false);
@@ -82,39 +81,8 @@ export default function AppShell({
     }
   }, [menuOpen, userId, refreshFriends]);
 
-  // TRACK IF USER HAS VIEWED SWEATER THREAD (WRAPPED)
-  useEffect(() => {
-    if (step === 'wrapped') {
-      setHasViewedWrapped(true);
-      try {
-        localStorage.setItem('weezer_viewed_wrapped', 'true');
-      } catch (e) {
-        // Fallback for private browsing storage restrictions
-      }
-    } else if (
-      typeof window !== 'undefined' &&
-      localStorage.getItem('weezer_viewed_wrapped') === 'true'
-    ) {
-      setHasViewedWrapped(true);
-    }
-  }, [step]);
-
   // UNIFIED PROGRESSION STATE — one rule shared with dashboard, navigateTo, URL guard.
   const progress = getProgressState(triageMap, masterList);
-
-
-
-  // CALCULATE WHICH STEP GETS THE NEXT-STEP ARROW (→)
-  let nextStepKey: AppStep | null = null;
-  if (!progress.isTriageComplete) {
-    nextStepKey = 'triage';
-  } else if (!progress.isMasterUnlocked) {
-    nextStepKey = 'rank_buckets';
-  } else if (!hasViewedWrapped) {
-    nextStepKey = 'wrapped';
-  } else {
-    nextStepKey = 'fan_stats';
-  }
 
   // NAV ITEM CONFIGURATION
   interface NavItem {
@@ -123,11 +91,13 @@ export default function AppShell({
     requiresAuth?: boolean;
     hideIf?: boolean;
     disabled?: boolean;
+    /** 'sorting' pairs Sort + Refine in one grouped block (below). */
+    group?: 'sorting';
   }
 
   const navItems: NavItem[] = [
     {
-      label: 'In The Garage',
+      label: 'Dashboard',
       step: 'dashboard',
     },
     {
@@ -136,13 +106,15 @@ export default function AppShell({
       hideIf: Object.keys(triageMap).length > 0,
     },
     {
-      label: 'Gut Check',
+      label: 'Sort',
       step: 'triage',
+      group: 'sorting',
     },
     {
-      label: 'Rank Order',
+      label: 'Refine',
       step: 'rank_buckets',
       disabled: !progress.isRefineUnlocked,
+      group: 'sorting',
     },
     {
       label: 'My Rankings',
@@ -155,12 +127,12 @@ export default function AppShell({
       disabled: !progress.isWrappedUnlocked,
     },
     {
-      label: 'Shareables',
-      step: 'shareables',
+      label: 'Global Fan Stats',
+      step: 'fan_stats',
     },
     {
-      label: 'Global Rankings',
-      step: 'fan_stats',
+      label: 'Shareables',
+      step: 'shareables',
     },
     {
       label: 'Compare with Friends',
@@ -177,6 +149,41 @@ export default function AppShell({
   });
 
   const activeFriendsCount = Array.isArray(friendsList) ? friendsList.length : 0;
+
+  // One nav row. The current step is marked by the filled blue
+  // pill — there are no arrow indicators anywhere in the menu.
+  const renderNavButton = (item: NavItem) => {
+    const isActive = step === item.step;
+    const isDisabled = item.disabled;
+
+    return (
+      <button
+        key={item.step}
+        disabled={isDisabled}
+        onClick={() => {
+          if (!isDisabled) {
+            closeMenu();
+            navigateTo(item.step);
+          }
+        }}
+        className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-xs font-black transition-all ${
+          isDisabled
+            ? 'opacity-40 cursor-not-allowed text-slate-400 bg-slate-50'
+            : isActive
+            ? 'bg-[#0072CE] text-white shadow-xs cursor-pointer'
+            : 'text-slate-700 hover:bg-slate-100 cursor-pointer'
+        }`}
+      >
+        <span>{item.label}</span>
+
+        {item.step === 'friends' && pendingRequestsCount > 0 && (
+          <span className="bg-amber-400 text-slate-950 font-black text-[10px] px-2 py-0.5 rounded-full">
+            {pendingRequestsCount}
+          </span>
+        )}
+      </button>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-slate-100 font-sans text-slate-900 flex flex-col selection:bg-amber-300 selection:text-slate-950">
@@ -291,7 +298,7 @@ export default function AppShell({
             className="absolute inset-0 bg-slate-950/40 backdrop-blur-xs transition-opacity"
           />
 
-          <div className="relative w-full max-w-xs bg-white h-full shadow-2xl border-l border-slate-200 flex flex-col justify-between overflow-y-auto z-10 animate-in slide-in-from-right duration-300">
+          <div className="relative w-full max-w-xs bg-white h-full shadow-2xl border-l border-slate-200 flex flex-col overflow-y-auto z-10 animate-in slide-in-from-right duration-300">
             <div>
               <div className="p-4 border-b border-slate-100 flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -379,7 +386,7 @@ export default function AppShell({
                         className="w-full bg-amber-100 hover:bg-amber-200 text-amber-950 border border-amber-300 rounded-xl p-2.5 flex items-center justify-between transition-colors cursor-pointer text-left mt-1"
                       >
                         <span className="text-[11px] font-black">
-                          {pendingRequestsCount} Pending Invite{pendingRequestsCount > 1 ? 's' : ''} →
+                          {pendingRequestsCount} Pending Invite{pendingRequestsCount > 1 ? 's' : ''}
                         </span>
                         <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
                       </button>
@@ -390,13 +397,6 @@ export default function AppShell({
 
               {!userId && (
                 <div className="mx-4 my-3 p-4 bg-amber-50 border border-amber-200/80 rounded-2xl space-y-3">
-                  <div className="flex items-center justify-start">
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-200/70 text-amber-900">
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-600 animate-pulse" />
-                      Guest Mode
-                    </span>
-                  </div>
-
                   <div className="space-y-1">
                     <h4 className="text-xs font-black text-amber-950">
                       Why Bother creating an account?
@@ -415,7 +415,7 @@ export default function AppShell({
                       }}
                       className="w-full bg-[#0072CE] hover:bg-blue-600 text-white font-black py-2.5 px-4 rounded-xl text-xs transition-all shadow-xs cursor-pointer text-center"
                     >
-                      Create Free Account to Backup 🚀
+                      Create An Account
                     </button>
 
                     <button
@@ -433,50 +433,31 @@ export default function AppShell({
 
               <nav className="p-2 space-y-1">
                 {visibleNavItems.map((item) => {
-                  const isActive = step === item.step;
-                  const isDisabled = item.disabled;
-                  const isNextStep = nextStepKey === item.step;
+                  if (item.group === 'sorting') {
+                    // The Sorting group renders once, as a single
+                    // bordered block at its first item's position:
+                    // eyebrow + the grouped Sort / Refine rows.
+                    const sortingItems = visibleNavItems.filter(
+                      (i) => i.group === 'sorting'
+                    );
+                    if (item.step !== sortingItems[0].step) return null;
 
-                  return (
-                    <button
-                      key={item.step}
-                      disabled={isDisabled}
-                      onClick={() => {
-                        if (!isDisabled) {
-                          closeMenu();
-                          navigateTo(item.step);
-                        }
-                      }}
-                      className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-xs font-black transition-all ${
-                        isDisabled
-                          ? 'opacity-40 cursor-not-allowed text-slate-400 bg-slate-50'
-                          : isActive
-                          ? 'bg-[#0072CE] text-white shadow-xs cursor-pointer'
-                          : 'text-slate-700 hover:bg-slate-100 cursor-pointer'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        {isNextStep && (
-                          <span
-                            className={
-                              isActive
-                                ? 'text-white font-black text-sm'
-                                : 'text-[#0072CE] font-black text-sm animate-pulse'
-                            }
-                          >
-                            →
-                          </span>
+                    return (
+                      <div
+                        key="sorting-group"
+                        className="rounded-2xl border border-slate-200 bg-slate-50/70 p-1.5 space-y-1"
+                      >
+                        <p className="px-2 pt-1 text-[9px] font-black uppercase tracking-widest text-slate-400">
+                          Sorting
+                        </p>
+                        {sortingItems.map((groupItem) =>
+                          renderNavButton(groupItem)
                         )}
-                        <span>{item.label}</span>
                       </div>
+                    );
+                  }
 
-                      {item.step === 'friends' && pendingRequestsCount > 0 && (
-                        <span className="bg-amber-400 text-slate-950 font-black text-[10px] px-2 py-0.5 rounded-full">
-                          {pendingRequestsCount}
-                        </span>
-                      )}
-                    </button>
-                  );
+                  return renderNavButton(item);
                 })}
               </nav>
 
@@ -498,12 +479,6 @@ export default function AppShell({
                   <span>Help</span>
                 </button>
               </div>
-            </div>
-
-            <div className="p-4 border-t border-slate-100 text-center">
-              <p className="text-[10px] font-bold text-slate-300">
-                All My Favorite Songs • 2026 Canon
-              </p>
             </div>
           </div>
         </div>

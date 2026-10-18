@@ -158,9 +158,10 @@ const THREAD_SHORT_PATH_GOAL = 25;
 // cards; every later section is an album section and shares
 // one template. Copy is the owner's direction, in his voice;
 // remaining-count figures are computed from the map at fire
-// time, never hand-kept.
-const TOTAL_SONGS = FULL_SONG_POOL.length;
-
+// time, never hand-kept. (Milestone diet, owner Oct 17: the
+// cards carry as little text as possible — the prose Thread
+// nuggets are gone, replaced on the singles and album cards
+// by a single dashboard factoid; see buildSectionMilestone.)
 const BLUE_SECTION_KEY = 'album-the-blue-album';
 const PINKERTON_SECTION_KEY = 'album-pinkerton';
 const SINGLES_SECTION_KEY = 'album-the-singles';
@@ -173,6 +174,15 @@ interface SectionMilestone {
   headline: string;
   body: string | null;
   compel: string | null;
+  /** The dashboard factoid (singles + album cards only): one
+   *  big figure over a one-line label, computed from the
+   *  sorter's real buckets at fire time. Null on the Blue and
+   *  Pinkerton cards — their snark is the content. */
+  factoid: { figure: string; label: string } | null;
+  /** The section album's cover art (album sections, Blue and
+   *  Pinkerton): leads the card in place of the award ribbon.
+   *  Null on the singles card, which keeps the ribbon. */
+  cover: { src: string; album: string } | null;
 }
 
 // The section ids fired this session, persisted across deck
@@ -185,19 +195,11 @@ const sectionIsComplete = (
   map: Record<string, TriageValue>
 ) => section.songs.every((s) => map[s.id] !== undefined);
 
-// Favorites, everywhere below, are the songs the fan actually
-// loved: real-bucket verdicts of 'banger' or 'slaps'. Don't
-// Know It marks are not ratings and the pass tiers (Mid / Skip
-// / Trash) are not love — neither ever feeds a Thread nugget.
-const isFavorite = (
-  map: Record<string, TriageValue>,
-  id: string
-) => map[id] === 'banger' || map[id] === 'slaps';
-
 // An album's love stats over its RATED songs only (real
 // buckets — Don't Know It is not a rating): how many songs
 // were rated, and what share of them landed in the top two
-// buckets. Drives the Pinkerton card's snark.
+// buckets (Banger / Slaps — the "top buckets" everywhere
+// below). Drives the Pinkerton card's snark and the factoid.
 const loveStats = (
   songs: Song[],
   map: Record<string, TriageValue>
@@ -214,41 +216,56 @@ const loveStats = (
   return { rated, share: rated > 0 ? loved / rated : 0 };
 };
 
-// The album (Song.album) holding the most favorites. Ties
-// break to the album whose first favorite comes earliest in
-// deck order, so the answer is stable.
-const dominantAlbum = (
-  favorites: Song[]
-): { album: string; count: number } | null => {
-  const counts = new Map<string, number>();
-  for (const s of favorites) {
-    counts.set(s.album, (counts.get(s.album) ?? 0) + 1);
+// The milestone factoid over a set of songs: the headline
+// figure is the top-bucket share of the RATED songs (the
+// loveStats share, as a whole percent). A set with zero rated
+// songs — every song marked Don't Know It — has no share to
+// show, so the figure is the Don't Know It count itself. The
+// caller supplies both labels (they name the scope: one album,
+// or everything rated so far).
+const factoidFor = (
+  songs: Song[],
+  map: Record<string, TriageValue>,
+  percentLabel: string,
+  unknownLabel: string
+): { figure: string; label: string } => {
+  const { rated, share } = loveStats(songs, map);
+  if (rated > 0) {
+    return { figure: `${Math.round(share * 100)}%`, label: percentLabel };
   }
-  let best: { album: string; count: number } | null = null;
-  for (const s of favorites) {
-    const c = counts.get(s.album) ?? 0;
-    if (!best || c > best.count) best = { album: s.album, count: c };
-  }
-  return best;
+  const unknown = songs.filter((s) => map[s.id] === 'unknown').length;
+  return { figure: `${unknown}`, label: unknownLabel };
 };
 
 /**
  * The milestone card for a just-completed section, copy and
  * all, computed against the prospective (post-sort) map — the
- * nuggets describe the world the triggering sort created.
- * Every section gets a card: the three front sections are
- * bespoke, the rest take the album template.
+ * card describes the world the triggering sort created. Every
+ * section gets a card: the three front sections are bespoke,
+ * the rest take the album template. Album sections (and Blue
+ * and Pinkerton) lead with the album's cover art, resolved
+ * the same way the song cards resolve theirs; the singles
+ * card keeps the award ribbon. The singles and album cards
+ * carry the factoid in place of the old prose Thread nugget —
+ * one stat off the sorter's real buckets, nothing else.
  */
 function buildSectionMilestone(
   section: TriageSection,
   map: Record<string, TriageValue>,
-  sections: TriageSection[],
-  orderedSongs: Song[]
+  sections: TriageSection[]
 ): SectionMilestone {
-  const base = { sectionKey: section.key };
+  const firstSong = section.songs[0];
+  const cover =
+    section.key !== SINGLES_SECTION_KEY && firstSong
+      ? {
+          src: albumCoverSrc(resolveAlbumId(firstSong)),
+          album: section.title,
+        }
+      : null;
+  const base = { sectionKey: section.key, cover, factoid: null };
 
-  // BLUE — pure tease. No Thread nugget yet and no Save prompt
-  // (the owner's flow puts the first save ask on the Pinkerton
+  // BLUE — pure tease. No factoid yet and no Save prompt (the
+  // owner's flow puts the first save ask on the Pinkerton
   // card); the card's whole job is pointing at Pinkerton.
   if (section.key === BLUE_SECTION_KEY) {
     return {
@@ -296,62 +313,38 @@ function buildSectionMilestone(
     return { ...base, kind: 'pinkerton', headline, body: null, compel };
   }
 
-  // SINGLES — the recognition block is done, so this card pays
-  // out the first Sweater Thread sneak preview: the strongest
-  // true statement the buckets so far support, always framed
-  // as a draft ("so far") that the rest of the catalog can
-  // still change. The remaining count is computed (160 in the
-  // normal straight-through path).
+  // SINGLES — the recognition block is done. The factoid
+  // covers everything rated so far (Blue + Pinkerton + the
+  // singles themselves); the only other copy is the pointer
+  // at the album run ahead.
   if (section.key === SINGLES_SECTION_KEY) {
-    const favorites = orderedSongs.filter((s) => isFavorite(map, s.id));
-    const remaining = TOTAL_SONGS - countCategorizedSongs(map);
-    let nugget: string;
-    if (favorites.length >= 5) {
-      const earlyCount = favorites.filter(
-        (s) => s.album === 'The Blue Album' || s.album === 'Pinkerton'
-      ).length;
-      if (earlyCount / favorites.length >= 0.7) {
-        nugget = `A peek at your Sweater Thread so far: ${earlyCount} of your ${favorites.length} early favorites are from Blue and Pinkerton. Right now you read as a '90s Purist — but ${remaining} songs are still out there, and the deep cuts get a vote.`;
-      } else {
-        // favorites is non-empty here, so a dominant album
-        // always exists.
-        const dom = dominantAlbum(favorites)!;
-        nugget = `A peek at your Sweater Thread so far: your early favorites lean ${dom.album} — ${dom.count} of ${favorites.length} come from ${dom.album}. The rest of the catalog gets its say next.`;
-      }
-    } else {
-      nugget = `A peek at your Sweater Thread so far: you're a tough grader — only ${favorites.length} ${
-        favorites.length === 1 ? 'song has' : 'songs have'
-      } cleared your bar. Your Thread is still taking shape, and ${remaining} songs are still out there.`;
-    }
+    const ratedSoFar = sections
+      .filter(
+        (s) =>
+          s.key === BLUE_SECTION_KEY ||
+          s.key === PINKERTON_SECTION_KEY ||
+          s.key === SINGLES_SECTION_KEY
+      )
+      .flatMap((s) => s.songs);
     return {
       ...base,
       kind: 'singles',
       headline: "You've made it through Blue, Pinkerton, and the singles.",
-      body: nugget,
+      body: null,
+      factoid: factoidFor(
+        ratedSoFar,
+        map,
+        "of everything you've rated is in your top buckets",
+        "of everything so far marked Don't Know It — they won't count against you"
+      ),
       compel: 'Next up: the rest of the albums, one at a time.',
     };
   }
 
-  // ALBUM sections — one template: name the album, pay out
-  // one fresh Thread nugget (first applicable), and count the
-  // albums still standing. The nugget's "new material" check
-  // looks at THIS section's songs — the ones whose sorting
-  // just finished — in deck order.
-  const sectionIds = new Set(section.songs.map((s) => s.id));
-  const firstFavInSection = orderedSongs.find(
-    (s) => sectionIds.has(s.id) && isFavorite(map, s.id)
-  );
-  const favorites = orderedSongs.filter((s) => isFavorite(map, s.id));
-  let nugget: string;
-  if (firstFavInSection) {
-    nugget = `New Thread material: '${firstFavInSection.title}' is sitting in your favorites.`;
-  } else if (favorites.length >= 5) {
-    const dom = dominantAlbum(favorites)!;
-    nugget = `Your Thread so far: ${favorites.length} favorites, led by ${dom.album}.`;
-  } else {
-    const remaining = TOTAL_SONGS - countCategorizedSongs(map);
-    nugget = `Your Thread is still taking shape — ${remaining} songs to go.`;
-  }
+  // ALBUM sections — one template: name the album, show its
+  // factoid (over THIS section's songs — the ones whose
+  // sorting just finished), and count the albums still
+  // standing.
   const albumsRemaining = sections.filter(
     (s) =>
       s.key !== BLUE_SECTION_KEY &&
@@ -363,7 +356,13 @@ function buildSectionMilestone(
     ...base,
     kind: 'album',
     headline: `${section.title} — done.`,
-    body: nugget,
+    body: null,
+    factoid: factoidFor(
+      section.songs,
+      map,
+      `of ${section.title} landed in your top buckets`,
+      `of ${section.title} marked Don't Know It — they won't count against you`
+    ),
     compel:
       albumsRemaining > 0
         ? `${albumsRemaining} ${
@@ -845,25 +844,6 @@ function MilestoneRibbon() {
 }
 
 /**
- * The guest line — the honesty anchor of every guest action
- * stack (memo §3.9): guest progress lives in localStorage, in
- * this browser only, until an account saves it. One promise,
- * made the same way everywhere, so the wording is a single
- * shared component: the milestone stack and the completion
- * card (Overnight 4) both render it. (Build 3 inlined it in
- * renderMilestoneActions; factored out when the completion
- * card became the second consumer.)
- */
-function GuestProgressLine() {
-  return (
-    <p className="text-sm font-bold text-slate-500 leading-snug">
-      You&apos;re sorting as a guest — this progress lives only in
-      this browser.
-    </p>
-  );
-}
-
-/**
  * The milestone action stack's Save button — the guest
  * conversion action (milestone-flows memo, §2 scenarios 1–2):
  * create a free account to SAVE the progress made so far. The
@@ -890,23 +870,6 @@ function SaveProgressButton({ onClick }: { onClick: () => void }) {
   );
 }
 
-/**
- * The milestone action stack's quiet off-ramp to the Garage
- * (memo §2): a text-weight link, deliberately weaker than every
- * button above it — it's the break, not a destination. The same
- * link closes the completion card's stack (Overnight 4).
- */
-function GarageBreakLink({ onClick }: { onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className="text-sm font-bold text-slate-400 hover:text-slate-600 transition cursor-pointer py-1"
-    >
-      Take a break — the Garage
-    </button>
-  );
-}
-
 export default function Step1Deck({
   triageMap,
   orderedSongs,
@@ -924,12 +887,15 @@ export default function Step1Deck({
   handleSetBucket: (id: string, bucket: TriageValue) => void;
   handleFinishTriage: () => void;
   onSwitchToList: () => void;
-  /** Auth/navigation plumbing (page.tsx → Step1Triage → here),
-   *  consumed by the milestone action stack and the end /
-   *  completion card stacks below (guest Save prompts + Garage
-   *  off-ramp — milestone-flows design memo, §2 scenarios 1–4
-   *  and 9–11). Required (not optional) because the single
-   *  render path above always supplies them. */
+  /** Auth/navigation plumbing (page.tsx → Step1Triage → here).
+   *  isGuest and onCreateAccount are consumed by the milestone
+   *  action stack and the end / completion card stacks below
+   *  (guest Save prompts — milestone-flows design memo, §2
+   *  scenarios 1–4 and 9–11). onOpenGarage is still supplied by
+   *  the single render path above but no longer consumed here:
+   *  the milestone diet (owner, Oct 17) removed the cards'
+   *  Garage off-ramp. Required (not optional) because the
+   *  render path always supplies them. */
   isGuest: boolean;
   onCreateAccount: () => void;
   onOpenGarage: () => void;
@@ -1267,12 +1233,7 @@ export default function Step1Deck({
           return next;
         });
         setMilestonePending(
-          buildSectionMilestone(
-            section,
-            prospective,
-            sections,
-            orderedSongs
-          )
+          buildSectionMilestone(section, prospective, sections)
         );
       }
     }
@@ -1601,28 +1562,31 @@ export default function Step1Deck({
   };
 
   // MILESTONE ACTION STACKS (milestone-flows memo §2, re-
-  // pointed at the section cards, Oct 17). What renders under
-  // a milestone card's copy depends on the CARD and on who is
+  // pointed at the section cards, Oct 17; slimmed by the
+  // milestone diet, owner Oct 17). What renders under a
+  // milestone card's copy depends on the CARD and on who is
   // sorting:
-  //   Blue card:      Keep sorting (primary) · Garage link —
-  //                   no Save prompt yet, even for guests; the
-  //                   owner's flow puts the first one on the
-  //                   Pinkerton card.
-  //   Pinkerton card: guest line · Save (primary) · Keep
-  //                   sorting · Garage link for guests; Keep
-  //                   (primary) · Garage for signed-in.
+  //   Blue card:      Keep sorting (primary) — no Save prompt
+  //                   yet, even for guests; the owner's flow
+  //                   puts the first one on the Pinkerton card.
+  //   Pinkerton card: Save (primary) · Keep sorting for
+  //                   guests; Keep (primary) for signed-in.
   //   Singles + album cards: the Pinkerton stack, plus the
-  //                   Refine offer when the sorter is eligible.
-  // "Keep sorting" wears the primary (amber) treatment whenever
-  // no Save button is on the card to outrank it. Eligibility
-  // runs on bucketedCount (real buckets only) against
-  // THREAD_SHORT_PATH_GOAL — a milestone earned mostly on Don't
-  // Know It marks gets the celebration and (from Pinkerton on)
-  // the Save offer, but no Refine. Refine calls
+  //                   Refine text link when the sorter is
+  //                   eligible.
+  // The diet removed the guest explainer line, the Garage
+  // off-ramp, and the Refine button + its explainer: a guest's
+  // Keep button now carries the guest state in its label
+  // ("Keep sorting as a guest"), and Refine survives only as
+  // a quiet text link at the very bottom of the stack. "Keep
+  // sorting" wears the primary (amber) treatment whenever no
+  // Save button is on the card to outrank it. Eligibility runs
+  // on bucketedCount (real buckets only) against
+  // THREAD_SHORT_PATH_GOAL — a milestone earned mostly on
+  // Don't Know It marks gets the celebration and (from
+  // Pinkerton on) the Save offer, but no Refine. Refine calls
   // handleFinishTriage — it goes to ranking, the step that
-  // produces the master list the Thread is compiled from, and
-  // its explainer says exactly that (shortened form; see
-  // REPORT.md Overnight 3 for the fit math that required it).
+  // produces the master list the Thread is compiled from.
   const refineEligible = bucketedCount >= THREAD_SHORT_PATH_GOAL;
   const renderMilestoneActions = ({
     showSave,
@@ -1632,7 +1596,6 @@ export default function Step1Deck({
     showRefine: boolean;
   }) => (
     <div className="w-full max-w-sm flex flex-col items-center gap-1.5">
-      {showSave && isGuest && <GuestProgressLine />}
       {showSave && isGuest && (
         <SaveProgressButton onClick={onCreateAccount} />
       )}
@@ -1644,22 +1607,16 @@ export default function Step1Deck({
             : 'w-full bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm px-6 py-3.5 rounded-full shadow-md transition transform hover:scale-105 cursor-pointer border-2 border-amber-200 whitespace-nowrap'
         }
       >
-        Keep sorting
+        {isGuest ? 'Keep sorting as a guest' : 'Keep sorting'}
       </button>
       {showRefine && refineEligible && (
-        <div className="flex flex-col items-center gap-1">
-          <p className="text-xs font-bold text-slate-400 leading-snug">
-            You&apos;ve rated 25+ songs — enough to refine.
-          </p>
-          <button
-            onClick={handleFinishTriage}
-            className="bg-[#0072CE] hover:bg-[#005fae] text-white font-black text-sm px-6 py-3.5 rounded-full shadow-md transition transform hover:scale-105 cursor-pointer whitespace-nowrap"
-          >
-            Refine →
-          </button>
-        </div>
+        <button
+          onClick={handleFinishTriage}
+          className="text-sm font-bold text-slate-400 hover:text-[#0072CE] underline underline-offset-4 transition cursor-pointer py-1"
+        >
+          Refine →
+        </button>
       )}
-      <GarageBreakLink onClick={onOpenGarage} />
     </div>
   );
 
@@ -1740,6 +1697,13 @@ export default function Step1Deck({
   };
 
   const inSongState = !milestonePending && !isComplete && !!currentSong;
+
+  // The pending milestone's visual payload, pulled out flat
+  // for the render below (cover art on the album-family cards,
+  // factoid on the singles and album cards — see
+  // buildSectionMilestone).
+  const milestoneCover = milestonePending?.cover ?? null;
+  const milestoneFactoid = milestonePending?.factoid ?? null;
 
   // TUTORIAL — the show decision. Like the nudge below, it
   // settles on a short timer and judges the world at FIRE
@@ -2318,25 +2282,38 @@ export default function Step1Deck({
              hands the screen back. Not swipeable (no swipe prop,
              like the completion card); the tray hides while it
              shows (inSongState is false) and the footer toggle
-             pill below keeps Deck/List reachable. The award seal
-             (MilestoneRibbon) sits IN-FLOW at the top of the
-             stack. The copy is the section's card as built at
-             fire time (headline always; body / compel only when
-             the card has them — the Blue card is two lines, the
-             Pinkerton card's snark IS its headline). Below the
-             copy sits the card's ACTION STACK
-             (renderMilestoneActions): Keep sorting + the quiet
-             Garage off-ramp on every card; the guest line and
-             Save from the Pinkerton card on; the Refine offer
-             (25+ real buckets) on the singles and album cards.
-             The shell here is ADAPTIVE (Overnight 3.5): the
-             tallest stacks can't fit 392px at phone width, so
-             the card grows to fit them in flow instead of the
-             stack painting outside the card's bounds; stacks
-             that fit render in exactly 392px, as before. */
+             pill below keeps Deck/List reachable. The card leads
+             IN-FLOW with the section album's cover art (the
+             singles card keeps the award seal, MilestoneRibbon),
+             then the section's copy as built at fire time:
+             headline always; body / compel only when the card
+             has them (the Blue card is two lines, the Pinkerton
+             card's snark IS its headline); the factoid — one big
+             figure and a one-line label — on the singles and
+             album cards. Below the copy sits the card's ACTION
+             STACK (renderMilestoneActions): the Save button from
+             the Pinkerton card on (guests only), the Keep button
+             under it, and the Refine text link (25+ real
+             buckets) at the very bottom of the singles and
+             album cards. The shell here is ADAPTIVE (Overnight
+             3.5): the tallest stacks can't fit 392px at phone
+             width, so the card grows to fit them in flow instead
+             of the stack painting outside the card's bounds;
+             stacks that fit render in exactly 392px, as before. */
           <DeckCardShell adaptive>
             <div className="min-h-[392px] flex flex-col items-center justify-center text-center px-6 py-3 sm:px-8 sm:py-4 space-y-1.5 sm:space-y-2">
-              <MilestoneRibbon />
+              {milestoneCover ? (
+                <>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={milestoneCover.src}
+                    alt={`${milestoneCover.album} cover art`}
+                    className="h-28 w-28 object-cover rounded-2xl shadow-md"
+                  />
+                </>
+              ) : (
+                <MilestoneRibbon />
+              )}
               <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-950">
                 {milestonePending.headline}
               </h2>
@@ -2344,6 +2321,16 @@ export default function Step1Deck({
                 <p className="text-sm font-bold text-slate-500 leading-snug max-w-sm mx-auto">
                   {milestonePending.body}
                 </p>
+              )}
+              {milestoneFactoid && (
+                <div className="flex flex-col items-center gap-1 pt-1">
+                  <span className="text-[44px] leading-none font-black tracking-tight text-[#0072CE]">
+                    {milestoneFactoid.figure}
+                  </span>
+                  <span className="text-sm font-bold text-slate-500 leading-snug max-w-sm mx-auto">
+                    {milestoneFactoid.label}
+                  </span>
+                </div>
               )}
               {milestonePending.compel && (
                 <p className="text-sm font-bold text-slate-400 leading-snug max-w-sm mx-auto">
@@ -2365,13 +2352,14 @@ export default function Step1Deck({
              nothing left to review. The action stack (memo §2
              scenarios 9–10, decision §3.5): this is the
              highest-intent moment in the app, so a GUEST gets the
-             guest line and the Save button as the card's PRIMARY
-             action — ahead of "Next Step: Refine Buckets", which
-             stays exactly as it was — because a guest who refines
-             without saving can still lose everything; the quiet
-             Garage link closes the stack for everyone. Signed-in
-             users see no Save and no guest line, just the added
-             Garage link under the Refine button. */
+             Save button as the card's PRIMARY action — ahead of
+             "Next Step: Refine Buckets", which stays exactly as
+             it was — because a guest who refines without saving
+             can still lose everything. (The milestone diet,
+             owner Oct 17, removed the guest explainer line that
+             used to sit above the Save button and the Garage
+             link that used to close this stack.) Signed-in users
+             see no Save, just the Refine button. */
           <DeckCardShell adaptive>
             <div className="min-h-[392px] flex flex-col items-center justify-center text-center p-6 sm:p-8 space-y-5">
               <div className="text-4xl">🏆</div>
@@ -2382,7 +2370,6 @@ export default function Step1Deck({
                 Every song has a verdict. Time to refine the buckets and see
                 where they land.
               </p>
-              {isGuest && <GuestProgressLine />}
               {isGuest && <SaveProgressButton onClick={onCreateAccount} />}
               <button
                 onClick={handleFinishTriage}
@@ -2391,7 +2378,6 @@ export default function Step1Deck({
                 <FlyingWIcon className="w-6 h-4 text-slate-950" />
                 <span>Next Step: Refine Buckets</span>
               </button>
-              <GarageBreakLink onClick={onOpenGarage} />
             </div>
           </DeckCardShell>
         ) : atEnd ? (

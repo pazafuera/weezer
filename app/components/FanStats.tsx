@@ -87,12 +87,10 @@ const PlaceholderNote = () => (
 
 export default function FanStats({
   userMasterList,
-  setStep,
 }: {
   userMasterList?: Song[];
-  setStep?: (s: 'master' | 'triage' | 'rank_buckets' | 'wrapped' | 'fan_stats') => void;
 }) {
-  const { communityMasterLists = [], communityTriageMaps = [], refreshCommunityData } = useWeezer();
+  const { communityMasterLists = [], communityTriageMaps = [], refreshCommunityData, closeFanStats } = useWeezer();
   const [expandedTribe, setExpandedTribe] = useState<string | null>(null);
 
   // If context hasn't loaded data yet when user jumps straight to Fan Stats, trigger background fetch
@@ -406,11 +404,9 @@ export default function FanStats({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-8 pt-2">
         {/* TOP NAVIGATION */}
         <div className="flex items-center justify-between">
-          {setStep && (
-            <button onClick={() => setStep('wrapped')} className="text-xs font-black text-slate-400 hover:text-slate-600 transition-colors flex items-center gap-1 cursor-pointer">
-              ← Back to Wrapped
-            </button>
-          )}
+          <button onClick={() => closeFanStats()} className="text-xs font-black text-slate-400 hover:text-slate-600 transition-colors flex items-center gap-1 cursor-pointer">
+            ← Back
+          </button>
         </div>
 
         {/* HERO */}

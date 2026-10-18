@@ -245,6 +245,9 @@ interface WeezerContextType {
   navigateTo: (targetStep: AppStep, authMode?: AuthModeType) => void;
   closeLogin: () => void;
   closeOrientation: () => void;
+  closeFanStats: () => void;
+  closeMaster: () => void;
+  closeRefine: () => void;
 
   // Auth & User State
   loadingUser: boolean;
@@ -364,12 +367,22 @@ export const migrateGuestRankingsToUser = async (newUserId: string) => {
 
 /**
  * Steps whose exit control means "take me back where I came from"
- * rather than a fixed destination: 'login' (its card's X) and
- * 'orientation' (its "← Back"). navigateTo records an origin for
- * these on entry; closeLogin / closeOrientation consume it. See
+ * rather than a fixed destination: 'login' (its card's X),
+ * 'orientation' (How It Works' "← Back"), 'fan_stats' (Fan Stats'
+ * "← Back"), 'master' (Final Review's "← Back"), and 'rank_buckets'
+ * (Refine's stage-0 "← Back"). navigateTo records an origin for
+ * these on entry; the close* functions consume it, each falling back
+ * to the destination its control hardcoded before origin tracking
+ * (splash / splash / wrapped / rank_buckets / triage). See
  * returnStepRef in the provider.
  */
-const RETURN_TRACKED_STEPS: readonly AppStep[] = ['login', 'orientation'];
+const RETURN_TRACKED_STEPS: readonly AppStep[] = [
+  'login',
+  'orientation',
+  'fan_stats',
+  'master',
+  'rank_buckets',
+];
 
 export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
@@ -389,7 +402,9 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   // Recorded origins for the return-tracked steps (RETURN_TRACKED_STEPS):
   // the step the user was on when they entered each one, so that step's
   // exit control — the login card's X (closeLogin), the orientation
-  // page's "← Back" (closeOrientation) — can return them there instead
+  // page's "← Back" (closeOrientation), Fan Stats' "← Back"
+  // (closeFanStats), Final Review's "← Back" (closeMaster), Refine's
+  // stage-0 "← Back" (closeRefine) — can return them there instead
   // of a hardcoded destination. navigateTo records the origin on the
   // way INTO a tracked step and clears every recorded origin on any
   // navigation to an ordinary (non-tracked) step (a completed sign-in
@@ -848,7 +863,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     isReturn: boolean = false
   ) => {
     // Origin bookkeeping for the return-tracked steps. A return
-    // navigation (closeLogin / closeOrientation) skips it entirely:
+    // navigation (the close* exits) skips it entirely:
     // the exit consumes its own origin in returnFromStep, and landing
     // back on another tracked step must not overwrite (or clear) that
     // step's recorded origin with the step just exited.
@@ -901,19 +916,24 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   /**
    * Shared exit for the return-tracked steps: leaves the step WITHOUT
    * completing its flow and returns to the step the user entered it
-   * from. Falls back to splash — the destination both exits hardcoded
-   * before origin tracking — when no origin was recorded (e.g. a cold
-   * ?step=login / ?step=orientation deep link) or the recorded origin
-   * is the step itself. The origin is consumed here, and the return
-   * navigation runs with isReturn so it never records a new origin:
-   * when the login X lands back on orientation, orientation's own
-   * recorded origin survives for its Back.
+   * from. Falls back to `fallback` — the destination the exit
+   * hardcoded before origin tracking (splash for login/orientation,
+   * wrapped for Fan Stats, rank_buckets for Final Review, triage for
+   * Refine) — when no origin was recorded (e.g. a cold ?step= deep
+   * link, or a step entered through a raw setStep like Refine's
+   * finish into Final Review) or the recorded origin is the step
+   * itself. The origin is consumed here, and the return navigation
+   * runs with isReturn so it never records a new origin: when the
+   * login X lands back on orientation, orientation's own recorded
+   * origin survives for its Back — and when Final Review's Back
+   * falls back to Refine, Refine's recorded origin survives for its
+   * stage-0 Back.
    */
-  const returnFromStep = (fromStep: AppStep) => {
+  const returnFromStep = (fromStep: AppStep, fallback: AppStep = 'splash') => {
     const recorded = returnStepRef.current[fromStep];
     delete returnStepRef.current[fromStep];
     const target: AppStep =
-      recorded && recorded !== fromStep ? recorded : 'splash';
+      recorded && recorded !== fromStep ? recorded : fallback;
     navigateInternal(target, undefined, true);
   };
 
@@ -925,6 +945,21 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   /** Orientation's "← Back": leave How It Works, go back where you came from. */
   const closeOrientation = () => {
     returnFromStep('orientation');
+  };
+
+  /** Fan Stats' "← Back": leave Global Fan Stats, go back where you came from. */
+  const closeFanStats = () => {
+    returnFromStep('fan_stats', 'wrapped');
+  };
+
+  /** Final Review's "← Back": leave My Rankings, go back where you came from. */
+  const closeMaster = () => {
+    returnFromStep('master', 'rank_buckets');
+  };
+
+  /** Refine's stage-0 "← Back": leave Refine, go back where you came from. */
+  const closeRefine = () => {
+    returnFromStep('rank_buckets', 'triage');
   };
 
   const handleSignOut = async () => {
@@ -953,6 +988,9 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         navigateTo,
         closeLogin,
         closeOrientation,
+        closeFanStats,
+        closeMaster,
+        closeRefine,
         loadingUser,
         userId,
         userProfile,

@@ -34,6 +34,8 @@ export default function WeezerRankerPage() {
     autoStartMatchups,
     setAutoStartMatchups,
     navigateTo,
+    closeMaster,
+    closeRefine,
     setSongBucket,
     userId,
   } = useWeezer();
@@ -89,7 +91,7 @@ export default function WeezerRankerPage() {
           triageMap={triageMap}
           onUpdateRanks={updateAndSyncBucketRanks}
           handleFinishBucketRanking={() => setStep('master')}
-          onBackToTriage={() => setStep('triage')}
+          onBackToTriage={() => closeRefine()}
           autoStartMatchups={autoStartMatchups}
           initialStageIdx={refineStageIdx}
         />
@@ -103,8 +105,7 @@ export default function WeezerRankerPage() {
           setStep={setStep}
           onBack={() => {
             setAutoStartMatchups(false);
-            setRefineStageIdx(4);
-            navigateTo('rank_buckets');
+            closeMaster();
           }}
         />
       )}

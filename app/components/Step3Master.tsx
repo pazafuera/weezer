@@ -51,7 +51,7 @@ export default function Step3Master({
           onClick={() => { triggerHaptic(15); onBack(); }}
           className="text-xs font-black text-slate-400 hover:text-slate-600 transition-colors flex items-center gap-1 cursor-pointer"
         >
-          ← Back to Refinement
+          ← Back
         </button>
       </div>
 

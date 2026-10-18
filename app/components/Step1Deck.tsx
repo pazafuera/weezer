@@ -444,7 +444,7 @@ const TUTORIAL_STEPS: TutorialStepDef[] = [
     radius: 20,
     placement: 'adjacent',
     bucket: 'banger',
-    headline: 'Tap to Sort',
+    headline: 'Tap to Sort as Banger',
     line: 'Select Banger for your all-time favorites. The best of the best.',
   },
   {
@@ -452,7 +452,7 @@ const TUTORIAL_STEPS: TutorialStepDef[] = [
     radius: 20,
     placement: 'adjacent',
     bucket: 'slaps',
-    headline: 'Tap to Sort',
+    headline: 'Tap to Sort as Lowkey Slaps',
     line: 'Select Slaps for great songs — just not elite.',
   },
   {
@@ -460,7 +460,7 @@ const TUTORIAL_STEPS: TutorialStepDef[] = [
     radius: 20,
     placement: 'adjacent',
     bucket: 'mid',
-    headline: 'Tap to Sort',
+    headline: 'Tap to Sort as Mid',
     line: 'Select Mid for fine, forgettable songs.',
   },
   {
@@ -468,7 +468,7 @@ const TUTORIAL_STEPS: TutorialStepDef[] = [
     radius: 20,
     placement: 'adjacent',
     bucket: 'skip',
-    headline: 'Tap to Sort',
+    headline: 'Tap to Sort as Skip',
     line: 'Select Skip for songs you rarely reach for.',
   },
   {
@@ -476,7 +476,7 @@ const TUTORIAL_STEPS: TutorialStepDef[] = [
     radius: 20,
     placement: 'adjacent',
     bucket: 'trash',
-    headline: 'Tap to Sort',
+    headline: 'Tap to Sort as Trash',
     line: 'Select Trash for songs you never want to hear again.',
   },
   {

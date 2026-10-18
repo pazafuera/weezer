@@ -272,16 +272,15 @@ function buildSectionMilestone(
       ...base,
       kind: 'blue',
       headline: 'Sure, everyone loves the Blue Album.',
-      body: "But let's see how you feel about Pinkerton.",
+      body: "Okay, now let's get uncomfortable. Pinkerton.",
       compel: null,
     };
   }
 
   // PINKERTON — snark keyed to how the two '90s albums
   // actually fared in the sorter's real ratings (loveStats
-  // above). Every variant points at the singles next — the
-  // one variant whose snark doesn't already say so gets the
-  // entice as its compel line.
+  // above). Every variant points at the singles next, in its
+  // headline or its compel line.
   if (section.key === PINKERTON_SECTION_KEY) {
     const blueSection = sections.find((s) => s.key === BLUE_SECTION_KEY);
     const blue = loveStats(blueSection?.songs ?? [], map);
@@ -295,20 +294,20 @@ function buildSectionMilestone(
       pink.share >= 0.6
     ) {
       headline =
-        "Blue and Pinkerton, both stacked with Bangers. A '90s purist in the making — let's see if the singles agree.";
+        "Blue and Pinkerton both got the love. Your '90s Weezer era is looking strong. Let's see about the singles.";
     } else if (blue.share - pink.share >= 0.25) {
-      headline =
-        'Blue got the love. Pinkerton, less so. Rivers has entered the chat.';
-      compel =
-        'The singles are next — 26 of them, the ones everybody knows.';
+      headline = 'Blue wins this round. Pinkerton, not so much.';
+      compel = 'Next: 26 singles. Time for the hits to make their case.';
     } else if (pink.share - blue.share >= 0.25) {
-      headline =
-        "Pinkerton over Blue? Bold. The singles are next — this is where it gets interesting.";
+      headline = 'Pinkerton takes the crown. Blue can take it up with Rivers.';
+      compel = "Next: 26 singles. Let's see what the hits have to say.";
     } else {
       // Everything else — including a wall of Don't Know It
       // (zero rated songs makes both shares 0 and both diffs 0).
       headline =
-        'Tough crowd so far. The singles are next — surely something in there slaps.';
+        'The verdict is still out. Luckily, Weezer has more where that came from.';
+      compel =
+        'Next up: 26 singles. Some familiar faces, some questionable feelings.';
     }
     return { ...base, kind: 'pinkerton', headline, body: null, compel };
   }
@@ -329,15 +328,15 @@ function buildSectionMilestone(
     return {
       ...base,
       kind: 'singles',
-      headline: "You've made it through Blue, Pinkerton, and the singles.",
+      headline: "Blue. Pinkerton. The hits. You're just getting started.",
       body: null,
       factoid: factoidFor(
         ratedSoFar,
         map,
-        "of everything you've rated is in your top buckets",
-        "of everything so far marked Don't Know It — they won't count against you"
+        "of your rated songs landed in your top buckets",
+        "songs marked Don't Know It — they won't count against you"
       ),
-      compel: 'Next up: the rest of the albums, one at a time.',
+      compel: 'Now for the deep cuts. One album at a time.',
     };
   }
 
@@ -355,13 +354,13 @@ function buildSectionMilestone(
   return {
     ...base,
     kind: 'album',
-    headline: `${section.title} — done.`,
+    headline: `${section.title} — judged.`,
     body: null,
     factoid: factoidFor(
       section.songs,
       map,
-      `of ${section.title} landed in your top buckets`,
-      `of ${section.title} marked Don't Know It — they won't count against you`
+      `of the ${section.title} songs you rated made your top buckets`,
+      `${section.title} songs marked Don't Know It — they don't count against you`
     ),
     compel:
       albumsRemaining > 0
@@ -2367,8 +2366,8 @@ export default function Step1Deck({
                 All {total} songs sorted
               </h2>
               <p className="text-sm font-bold text-slate-500 leading-snug max-w-sm mx-auto">
-                Every song has a verdict. Time to refine the buckets and see
-                where they land.
+                206 songs. One very personal theory of Weezer. Time to
+                fine-tune your rankings.
               </p>
               {isGuest && <SaveProgressButton onClick={onCreateAccount} />}
               <button
@@ -2389,7 +2388,7 @@ export default function Step1Deck({
              A GUEST also gets one quiet save line above the button
              row (memo §2 scenario 11) — text-weight, not a button,
              so Review the unsorted / Start ranking keep the visual
-             lead; its "create a free account" is the tappable link
+             lead; its "Create a free account" is the tappable link
              inside the sentence. Signed-in users see no line. */
           <DeckCardShell swipe={swipeProps} adaptive>
             <div className="min-h-[392px] flex flex-col items-center justify-center text-center p-6 sm:p-8 space-y-5">
@@ -2401,10 +2400,8 @@ export default function Step1Deck({
                 <>
                   <p className="text-sm font-bold text-slate-500 leading-snug max-w-sm mx-auto">
                     {passedUnsortedCount}{' '}
-                    {passedUnsortedCount === 1 ? 'song is' : 'songs are'}{' '}
-                    still not sorted — you swiped past{' '}
-                    {passedUnsortedCount === 1 ? 'it' : 'them'} without a
-                    verdict.
+                    {passedUnsortedCount === 1 ? 'song' : 'songs'} escaped
+                    your verdict. Want another look?
                   </p>
                   <button
                     onClick={() => {
@@ -2419,18 +2416,17 @@ export default function Step1Deck({
                 </>
               ) : (
                 <p className="text-sm font-bold text-slate-500 leading-snug max-w-sm mx-auto">
-                  You&apos;ve seen every card. Swipe back through any of
-                  them to change a verdict.
+                  No loose ends. Swipe back if you want to change a verdict.
                 </p>
               )}
               {isGuest && (
                 <p className="text-sm font-bold text-slate-500 leading-snug max-w-sm mx-auto">
-                  Sorting as a guest —{' '}
+                  Don&apos;t lose your place.{' '}
                   <button
                     onClick={onCreateAccount}
                     className="font-extrabold text-[#0072CE] hover:text-[#005fae] underline underline-offset-2 transition cursor-pointer"
                   >
-                    create a free account
+                    Create a free account
                   </button>{' '}
                   to save your progress.
                 </p>

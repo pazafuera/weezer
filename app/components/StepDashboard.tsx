@@ -287,15 +287,6 @@ export default function StepDashboard() {
               Welcome! You&apos;re <b>In The Garage.</b>
             </p>
           </div>
-
-          {triageSortedCount === 0 && (
-            <button
-              onClick={() => navigateTo('splash')}
-              className="text-xs font-black text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
-            >
-              View Intro →
-            </button>
-          )}
         </div>
 
         {/* GUEST SAVE HERO (GUESTS WITH PROGRESS ONLY) */}

@@ -548,27 +548,40 @@ const COMMIT_MIN_PX = 80;
 const SWIPE_COMMIT_RATIO = 0.25;
 
 // Animation timing: a committed swipe flies the card off-screen
-// over EXIT_MS before its navigation runs; a button sort flips
-// the card edge-on (FLIP_OUT_MS), swaps the song at the midpoint,
-// and flips back (FLIP_IN_MS). SNAP_MS is the transition-less beat
-// that lets a flown-off card's replacement appear in place instead
-// of sliding in from off-screen.
+// over EXIT_MS before its navigation runs; a button sort first
+// stamps the tapped verdict on the still-face-up card for
+// STAMP_BEAT_MS, then flips the card edge-on (FLIP_OUT_MS),
+// swaps the song at the midpoint, and flips back (FLIP_IN_MS).
+// SNAP_MS is the transition-less beat that lets a flown-off
+// card's replacement appear in place instead of sliding in from
+// off-screen.
 const EXIT_MS = 260;
 const FLIP_OUT_MS = 240;
 const FLIP_IN_MS = 240;
 const SNAP_MS = 40;
-// Tutorial demo: how long the rehearsal stamp sits on the
-// card before the demo flip starts (stamp + flip ≈ 900ms).
-const DEMO_STAMP_MS = 360;
+// The stamp beat: how long a sort's stamp sits on the card
+// before the flip starts. One shared rhythm — a real button
+// sort (flipAct) and the tutorial's no-write rehearsal
+// (playDemo) both speak stamp → beat → flip (stamp + flip
+// ≈ 840ms).
+const STAMP_BEAT_MS = 360;
 
 /**
  * Card animation phases. 'idle' covers both resting and actively
  * dragging (the drag transform is driven by dragX, not the phase).
  * 'exit' flies the card off-screen; 'snap' is the one-beat
- * transition-less reset that follows an exit; 'flip-out' /
- * 'flip-in' are the two halves of the button-sort flip.
+ * transition-less reset that follows an exit; 'stamp' is the
+ * sort stamp's visible beat (card still face-up, input locked
+ * like every non-idle phase); 'flip-out' / 'flip-in' are the
+ * two halves of the button-sort flip.
  */
-type CardAnimPhase = 'idle' | 'exit' | 'snap' | 'flip-out' | 'flip-in';
+type CardAnimPhase =
+  | 'idle'
+  | 'exit'
+  | 'snap'
+  | 'stamp'
+  | 'flip-out'
+  | 'flip-in';
 
 /**
  * The card from the owner's reference mock, with a stacked-deck
@@ -661,7 +674,7 @@ function DeckCardShell({
   // flips edge-on and back for a button sort ('flip-out'/'flip-in'
   // — the shell root carries the perspective that sells the flip).
   const cardTransform =
-    swipe === undefined || swipe.phase === 'idle'
+    swipe === undefined || swipe.phase === 'idle' || swipe.phase === 'stamp'
       ? swipe === undefined
         ? undefined
         : `translateX(${swipe.dragX + swipe.nudgeX}px) rotate(${
@@ -992,6 +1005,13 @@ export default function Step1Deck({
   const [demoBucket, setDemoBucket] = useState<BucketType | null>(null);
   const [demoPlaying, setDemoPlaying] = useState(false);
   const demoPlayingRef = useRef(false);
+  // While a demo plays, the tutorial ring's hole sits on this
+  // rect — the card's — instead of the step's target (see
+  // playDemo and the ring render). Measured at the tap,
+  // cleared when the demo lands.
+  const [demoCardRect, setDemoCardRect] = useState<TutorialRect | null>(
+    null
+  );
   // Mirrored for the demo's timers, which must judge the step
   // that's open when they FIRE (an Esc mid-demo closes the
   // tour; the landing timer must not reopen it).
@@ -1293,22 +1313,38 @@ export default function Step1Deck({
   //     the pending navigation/sort run, followed by one 'snap'
   //     beat with transitions off so the next card appears in
   //     place.
-  //   flip: a button sort flips the card edge-on over FLIP_OUT_MS;
-  //     act() runs at the midpoint (the content swaps while the
-  //     card is edge-on and invisible), then it flips back over
-  //     FLIP_IN_MS.
+  //   stamp + flip: a button sort first holds the tapped
+  //     verdict's stamp on the face-up card for STAMP_BEAT_MS
+  //     (phase 'stamp'), then flips the card edge-on over
+  //     FLIP_OUT_MS; act() runs at the midpoint (the content
+  //     swaps while the card is edge-on and invisible), then it
+  //     flips back over FLIP_IN_MS.
   // While phase !== 'idle', pointer drags, button taps, jumps and
-  // keys are all ignored. Timers are tracked and cleared on
-  // unmount (e.g. toggling to the list mid-animation cancels the
-  // pending action rather than firing it into a hidden view).
+  // keys are all ignored — the 'stamp' beat included, so a
+  // second tile tap mid-sequence can't stack another one.
+  // Timers are tracked and cleared on unmount (e.g. toggling to
+  // the list mid-animation cancels the pending action rather
+  // than firing it into a hidden view).
   const [phase, setPhase] = useState<CardAnimPhase>('idle');
   const [exitX, setExitX] = useState(0);
   // The control (bucket tile or Don't Know It) whose sort is
-  // mid-flip: it wears a committed dark fill while the flip runs
-  // so the tap unmistakably registers, and resets the instant
-  // the flip completes (cleared in the same timer that returns
-  // the phase to 'idle').
+  // mid-sequence: it wears a committed dark fill from the tap
+  // through the stamp beat and the flip so the tap unmistakably
+  // registers, and resets the instant the flip completes
+  // (cleared in the same timer that returns the phase to
+  // 'idle').
   const [flipTarget, setFlipTarget] = useState<TriageValue | null>(null);
+  // The verdict whose stamp a button sort is holding on the
+  // card during its stamp beat: a render-only override (see
+  // sortStampVisual below), set at the tap and cleared in the
+  // same timer that runs act() at the flip's midpoint. It has
+  // to exist because the stamp derivation reads the DISPLAYED
+  // song's triage value — and act() writes the value and
+  // advances the position in one batch, so without an override
+  // there is never a render where the tapped song shows its
+  // own new stamp (owner report, Oct 17: the stamp was only
+  // ever seen later, swiping back to the sorted song).
+  const [sortStamp, setSortStamp] = useState<TriageValue | null>(null);
   // Mirrored for the nudge's fire-time check (its timer closes
   // over stale state otherwise).
   phaseRef.current = phase;
@@ -1340,24 +1376,37 @@ export default function Step1Deck({
     }, EXIT_MS);
   };
 
-  // Flip the card edge-on, run act(value) at the midpoint, flip
-  // back. Used by the bucket tiles, Don't Know It, and keys 1–5 —
-  // every "sort via a control" path gets the same transition.
-  // The activated control is marked (flipTarget) for the whole
-  // flip so it shows its committed state, then resets.
+  // Sort via a control, as one visual sentence: the tapped
+  // verdict's stamp lands on the still-face-up card and holds
+  // for STAMP_BEAT_MS (phase 'stamp' — input locked, like every
+  // non-idle phase, so tiles/drag/keys can't pile a second
+  // sequence on), then the card flips edge-on, act(value) runs
+  // at the midpoint, and it flips back. Used by the bucket
+  // tiles, Don't Know It, and keys 1–5 — every "sort via a
+  // control" path gets the same sequence. act() itself is
+  // untouched: the write and any section milestone still land
+  // at the flip's midpoint, exactly as they did when the flip
+  // started at the tap. The activated control is marked
+  // (flipTarget) from the tap until the flip completes, so it
+  // shows its committed state for the whole sequence.
   const flipAct = (value: TriageValue) => {
     if (phase !== 'idle' || !currentSong || milestonePending) return;
     noteUserInteraction();
     setFlipTarget(value);
-    setPhase('flip-out');
+    setSortStamp(value);
+    setPhase('stamp');
     schedule(() => {
-      act(value);
-      setPhase('flip-in');
+      setPhase('flip-out');
       schedule(() => {
-        setPhase('idle');
-        setFlipTarget(null);
-      }, FLIP_IN_MS);
-    }, FLIP_OUT_MS);
+        act(value);
+        setSortStamp(null);
+        setPhase('flip-in');
+        schedule(() => {
+          setPhase('idle');
+          setFlipTarget(null);
+        }, FLIP_IN_MS);
+      }, FLIP_OUT_MS);
+    }, STAMP_BEAT_MS);
   };
 
   // A position/state change (advance, jump, step back, mode
@@ -1960,18 +2009,27 @@ export default function Step1Deck({
   // rehearses a real sort: the bucket's stamp lands on the
   // card, the tile wears its committed fill, and the card
   // flips — the same visual sentence a real button sort
-  // speaks (flipAct + the static stamp), driven here by
+  // speaks (stamp beat, then flipAct's flip), driven here by
   // timers alone. It calls NO sort path: handleSetBucket,
   // act() and flipAct() are never invoked, nothing is
   // written (no triageMap, no localStorage, no passed mark),
   // the deck does not advance and progress does not move —
   // setPhase/setFlipTarget/setDemoBucket are pure render
-  // state. The stamp gets a beat to read (DEMO_STAMP_MS)
+  // state. The stamp gets a beat to read (STAMP_BEAT_MS)
   // before the flip starts; when the flip lands (~900ms
   // total) the rehearsal state clears — the card is back to
   // its normal unsorted front — and the tour steps forward.
   // The landing timer judges the step through the ref: if
   // the tour was closed mid-demo (Esc), it just cleans up.
+  // THE SPOTLIGHT FOLLOWS THE PERFORMANCE: the stamp and the
+  // flip happen on the CARD, but on a bucket step the ring's
+  // hole sits on the TILE — so the whole show played under
+  // the dim (the ring's 9999px shadow washes everything
+  // outside its hole at 62% slate), in the corner of the eye
+  // while the user's attention was on the bright tile. For
+  // the demo's duration the ring's hole moves to the card
+  // (demoCardRect, measured here with measureTutorial's
+  // root-relative math) and the tile takes the dim instead.
   const playDemo = (bucket: BucketType) => {
     if (tutorialStep === null || demoPlayingRef.current) return;
     const stepAtTap = tutorialStep;
@@ -1979,6 +2037,20 @@ export default function Step1Deck({
     setDemoPlaying(true);
     setDemoBucket(bucket);
     setFlipTarget(bucket);
+    const root = deckRootRef.current;
+    const cardEl = root?.querySelector<HTMLElement>(
+      '[data-tutorial="card"]'
+    );
+    if (root && cardEl) {
+      const rootRect = root.getBoundingClientRect();
+      const t = cardEl.getBoundingClientRect();
+      setDemoCardRect({
+        top: t.top - rootRect.top - 4,
+        left: t.left - rootRect.left - 4,
+        width: t.width + 8,
+        height: t.height + 8,
+      });
+    }
     schedule(() => {
       setPhase('flip-out');
       schedule(() => {
@@ -1987,6 +2059,7 @@ export default function Step1Deck({
           setPhase('idle');
           setFlipTarget(null);
           setDemoBucket(null);
+          setDemoCardRect(null);
           demoPlayingRef.current = false;
           setDemoPlaying(false);
           if (tutorialStepRef.current === stepAtTap) {
@@ -1994,7 +2067,7 @@ export default function Step1Deck({
           }
         }, FLIP_IN_MS + 60);
       }, FLIP_OUT_MS);
-    }, DEMO_STAMP_MS);
+    }, STAMP_BEAT_MS);
   };
 
   // NUDGE — arm once, the first time a song card is on screen
@@ -2071,25 +2144,36 @@ export default function Step1Deck({
   // nothing. While a drag is active the drag stamp owns that
   // spot (the render below hides this one when stampKind is
   // set) — one stamp at a time.
-  const currentValue = currentSong ? triageMap[currentSong.id] : undefined;
-  const staticStamp: { text: string; ink: string; size: string } | null =
-    !currentSong
-      ? null
-      : currentValue === 'unknown'
+  // A verdict value as a stamp: Don't Know It in brand blue; a
+  // bucket in its own ink (BUCKET_CONFIG.color) under its
+  // label, with the deck's 'Slaps' shortening. One derivation
+  // shared by the static stamp (a song's standing verdict),
+  // the sort stamp (a button sort's beat) and the tutorial
+  // demo stamp — the three differ only in who drives them.
+  const stampForValue = (
+    value: TriageValue
+  ): { text: string; ink: string; size: string } =>
+    value === 'unknown'
       ? {
           text: 'Don’t Know It',
           ink: 'border-[#0072CE] text-[#0072CE]',
           size: 'text-xl',
         }
-      : currentValue !== undefined
-      ? {
+      : {
           text:
-            currentValue === 'slaps'
+            value === 'slaps'
               ? 'Slaps'
-              : BUCKET_CONFIG[currentValue as BucketType].label,
-          ink: BUCKET_CONFIG[currentValue as BucketType].color,
+              : BUCKET_CONFIG[value as BucketType].label,
+          ink: BUCKET_CONFIG[value as BucketType].color,
           size: 'text-2xl',
-        }
+        };
+
+  const currentValue = currentSong ? triageMap[currentSong.id] : undefined;
+  const staticStamp: { text: string; ink: string; size: string } | null =
+    !currentSong
+      ? null
+      : currentValue !== undefined
+      ? stampForValue(currentValue)
       : passedIds.has(currentSong.id)
       ? {
           text: 'Not Sorted',
@@ -2098,24 +2182,23 @@ export default function Step1Deck({
         }
       : null;
 
+  // SORT STAMP — while a button sort's stamp beat runs (see
+  // flipAct), the tapped verdict's stamp takes the static
+  // stamp's place on the still-displayed song. Because it
+  // outranks the static stamp, a re-sort shows the NEW bucket
+  // for the beat, not the song's standing verdict.
+  const sortStampVisual: { text: string; ink: string; size: string } | null =
+    sortStamp === null ? null : stampForValue(sortStamp);
+
   // TUTORIAL DEMO STAMP — while a bucket step's rehearsal is
   // playing, the demo bucket's stamp takes the static stamp's
-  // place (same text/ink/size derivation as a real bucket
-  // verdict, including the 'Slaps' shortening). Purely
-  // visual: the triage map is never touched, so when the
-  // demo clears, the card's real state shows through again.
+  // place (the shared derivation above, 'Slaps' shortening
+  // included). Purely visual: the triage map is never touched,
+  // so when the demo clears, the card's real state shows
+  // through again.
   const demoStamp: { text: string; ink: string; size: string } | null =
-    demoBucket === null
-      ? null
-      : {
-          text:
-            demoBucket === 'slaps'
-              ? 'Slaps'
-              : BUCKET_CONFIG[demoBucket].label,
-          ink: BUCKET_CONFIG[demoBucket].color,
-          size: 'text-2xl',
-        };
-  const shownStamp = demoStamp ?? staticStamp;
+    demoBucket === null ? null : stampForValue(demoBucket);
+  const shownStamp = demoStamp ?? sortStampVisual ?? staticStamp;
 
   // Shared swipe wiring for the two draggable shells (song card
   // and end card).
@@ -2147,6 +2230,18 @@ export default function Step1Deck({
   const tutorialAdjacentPos =
     tutorialDef?.placement === 'adjacent' ? tutorialSheetPos : null;
   const tutorialDemoBucket = tutorialDef?.bucket ?? null;
+  // The ring's hole: the step target's measured rect —
+  // EXCEPT while a demo plays, when the hole moves to the
+  // card (demoCardRect, at the card steps' 30px radius) so
+  // the stamp + flip perform in the clear instead of under
+  // the dim (see playDemo).
+  const tutorialRingRect = demoCardRect ?? tutorialRect;
+  const tutorialRingRadius =
+    demoCardRect !== null
+      ? 30
+      : tutorialStep !== null
+      ? TUTORIAL_STEPS[tutorialStep].radius
+      : 0;
   const tutorialSwaying =
     tutorialStep !== null &&
     tutorialStep === TUTORIAL_STEPS.length - 1;
@@ -2391,9 +2486,11 @@ export default function Step1Deck({
                   top-[84px]), rendered only while no drag stamp
                   is up. It sits over the art; the preview button
                   lives in the card's bottom slot, far below the
-                  stamp's band, so they can never overlap. During
-                  a tutorial demo, shownStamp is the demo bucket's
-                  stamp instead (see demoStamp above). */}
+                  stamp's band, so they can never overlap.
+                  shownStamp is the song's standing verdict —
+                  except during a button sort's stamp beat (the
+                  tapped verdict, see sortStampVisual) or a
+                  tutorial demo (the demo bucket's stamp). */}
               {shownStamp && stampKind === null && (
                 <span
                   aria-hidden="true"
@@ -2601,16 +2698,16 @@ export default function Step1Deck({
           aria-modal="true"
           aria-label="How the deck works"
         >
-          {tutorialRect ? (
+          {tutorialRingRect ? (
             <div
               aria-hidden="true"
               className="pointer-events-none absolute border-[3px] border-amber-400 transition-all duration-300"
               style={{
-                top: tutorialRect.top,
-                left: tutorialRect.left,
-                width: tutorialRect.width,
-                height: tutorialRect.height,
-                borderRadius: TUTORIAL_STEPS[tutorialStep].radius,
+                top: tutorialRingRect.top,
+                left: tutorialRingRect.left,
+                width: tutorialRingRect.width,
+                height: tutorialRingRect.height,
+                borderRadius: tutorialRingRadius,
                 boxShadow: '0 0 0 9999px rgba(15, 23, 42, 0.62)',
               }}
             />

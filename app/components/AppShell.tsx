@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useWeezer, AppStep, getProgressState } from '../context/WeezerContext';
+import { useWeezer, AppStep, getProgressState, countCategorizedSongs } from '../context/WeezerContext';
+import { FULL_SONG_POOL } from '../data/constants';
 import { FlyingWIcon } from './SharedUI';
 import WeezerAccountDrawer from './WeezerAccountDrawer';
 import BucketGuide from './BucketGuide';
@@ -84,6 +85,22 @@ export default function AppShell({
   // UNIFIED PROGRESSION STATE — one rule shared with dashboard, navigateTo, URL guard.
   const progress = getProgressState(triageMap, masterList);
 
+  // RANKING PROJECT COMPLETION — drives where the "The Ranking
+  // Project" group sits in the menu (see the nav render below).
+  // Sorting is complete when every catalog song is categorized —
+  // a real bucket OR a "Don't Know It" mark (countCategorizedSongs
+  // against the full pool; the same counter behind triage's own
+  // "Categorize All Songs (n/206)" completion state). Refinement
+  // is complete when a fully ranked master list exists — the
+  // hasRefinedMaster rule inside getProgressState, exposed as
+  // isMasterUnlocked: the master list is the refine step's
+  // finished product, so this means the user finished refining,
+  // not merely visited the step.
+  const sortingComplete =
+    countCategorizedSongs(triageMap) === FULL_SONG_POOL.length;
+  const rankingProjectComplete =
+    sortingComplete && progress.isMasterUnlocked;
+
   // NAV ITEM CONFIGURATION
   interface NavItem {
     label: string;
@@ -91,8 +108,8 @@ export default function AppShell({
     requiresAuth?: boolean;
     hideIf?: boolean;
     disabled?: boolean;
-    /** 'sorting' pairs Sort + Refine in one grouped block (below). */
-    group?: 'sorting';
+    /** 'ranking' puts the row in the "The Ranking Project" group (below). */
+    group?: 'ranking';
   }
 
   const navItems: NavItem[] = [
@@ -104,22 +121,24 @@ export default function AppShell({
       label: 'How It Works',
       step: 'orientation',
       hideIf: Object.keys(triageMap).length > 0,
+      group: 'ranking',
     },
     {
       label: 'Sort',
       step: 'triage',
-      group: 'sorting',
+      group: 'ranking',
     },
     {
       label: 'Refine',
       step: 'rank_buckets',
       disabled: !progress.isRefineUnlocked,
-      group: 'sorting',
+      group: 'ranking',
     },
     {
       label: 'My Rankings',
       step: 'master',
       disabled: !progress.isMasterUnlocked,
+      group: 'ranking',
     },
     {
       label: 'My Sweater Thread',
@@ -147,6 +166,17 @@ export default function AppShell({
     if (item.hideIf) return false;
     return true;
   });
+
+  // The Ranking Project group rows and the loose rows, each in
+  // their configured relative order. The group is rendered as
+  // one block (below) and placed by completion state; the loose
+  // list is the same in both states.
+  const rankingGroupItems = visibleNavItems.filter(
+    (item) => item.group === 'ranking'
+  );
+  const looseNavItems = visibleNavItems.filter(
+    (item) => item.group !== 'ranking'
+  );
 
   const activeFriendsCount = Array.isArray(friendsList) ? friendsList.length : 0;
 
@@ -182,6 +212,28 @@ export default function AppShell({
           </span>
         )}
       </button>
+    );
+  };
+
+  // "The Ranking Project" group — How It Works, Sort, Refine and
+  // My Rankings in one bordered block under a sentence-case
+  // eyebrow. The block renders identically wherever it sits;
+  // only its position in the nav changes (see the nav render):
+  // at the top while sorting or refinement is unfinished, below
+  // the loose items once both are complete.
+  const renderRankingGroup = () => {
+    if (rankingGroupItems.length === 0) return null;
+
+    return (
+      <div
+        key="ranking-project-group"
+        className="rounded-2xl border border-slate-200 bg-slate-50/70 p-1.5 space-y-1"
+      >
+        <p className="px-2 pt-1 text-[9px] font-black tracking-widest text-slate-400">
+          The Ranking Project
+        </p>
+        {rankingGroupItems.map((groupItem) => renderNavButton(groupItem))}
+      </div>
     );
   };
 
@@ -431,34 +483,16 @@ export default function AppShell({
                 </div>
               )}
 
+              {/* NAV — while the Ranking Project is unfinished
+                  (sorting or refinement incomplete) its group
+                  leads the nav, right under the guest card /
+                  account panel; once both are complete the same
+                  group drops below the loose items. The Help row
+                  under the nav stays last in both states. */}
               <nav className="p-2 space-y-1">
-                {visibleNavItems.map((item) => {
-                  if (item.group === 'sorting') {
-                    // The Sorting group renders once, as a single
-                    // bordered block at its first item's position:
-                    // eyebrow + the grouped Sort / Refine rows.
-                    const sortingItems = visibleNavItems.filter(
-                      (i) => i.group === 'sorting'
-                    );
-                    if (item.step !== sortingItems[0].step) return null;
-
-                    return (
-                      <div
-                        key="sorting-group"
-                        className="rounded-2xl border border-slate-200 bg-slate-50/70 p-1.5 space-y-1"
-                      >
-                        <p className="px-2 pt-1 text-[9px] font-black uppercase tracking-widest text-slate-400">
-                          Sorting
-                        </p>
-                        {sortingItems.map((groupItem) =>
-                          renderNavButton(groupItem)
-                        )}
-                      </div>
-                    );
-                  }
-
-                  return renderNavButton(item);
-                })}
+                {!rankingProjectComplete && renderRankingGroup()}
+                {looseNavItems.map((item) => renderNavButton(item))}
+                {rankingProjectComplete && renderRankingGroup()}
               </nav>
 
               {/* HELP — utility row under the nav list (site-wide

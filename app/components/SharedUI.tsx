@@ -11,6 +11,28 @@ export function FlyingWIcon({ className = "w-8 h-5" }: { className?: string }) {
   );
 }
 
+// HELP BUTTON — the "?" affordance for the triage step's chrome
+// (deck progress row + list progress bar; both modes carry one,
+// styled and wired identically from this single component). The
+// help sheet itself lives in AppShell; clicking dispatches the
+// 'weezer:open-help' window event AppShell listens for — the same
+// window-event pattern as the deck tutorial replay
+// ('weezer:replay-tutorial'), so no props need plumbing through
+// page.tsx.
+export function HelpButton() {
+  return (
+    <button
+      type="button"
+      onClick={() => window.dispatchEvent(new CustomEvent('weezer:open-help'))}
+      aria-label="Help"
+      title="Help"
+      className="w-7 h-7 shrink-0 flex items-center justify-center rounded-full bg-[#0072CE] hover:bg-blue-600 text-white font-black text-sm leading-none shadow-xs transition-colors cursor-pointer"
+    >
+      ?
+    </button>
+  );
+}
+
 // BULLETPROOF ARTWORK COMPONENT
 export function AlbumArtwork({ albumId, className = "" }: { albumId: string; className?: string }) {
   const album = ALBUMS_BY_ID[albumId];

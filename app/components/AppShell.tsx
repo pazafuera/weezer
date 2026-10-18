@@ -62,6 +62,19 @@ export default function AppShell({
 
   const closeMenu = () => setMenuOpen(false);
 
+  // OPEN HELP — the help sheet below is owned here, but one of
+  // its openers lives in the triage step's chrome (the HelpButton
+  // in SharedUI, carried by both the deck progress row and the
+  // list progress bar). Same window-event pattern as the tutorial
+  // replay: the button dispatches 'weezer:open-help', this
+  // listener opens the sheet. (The menu's Help item, below, calls
+  // setHelpOpen directly.)
+  useEffect(() => {
+    const onOpenHelp = () => setHelpOpen(true);
+    window.addEventListener('weezer:open-help', onOpenHelp);
+    return () => window.removeEventListener('weezer:open-help', onOpenHelp);
+  }, []);
+
   // REFRESH FRIENDS DATA INSTANTLY WHEN MENU OPENS
   useEffect(() => {
     if (menuOpen && userId && refreshFriends) {
@@ -188,15 +201,6 @@ export default function AppShell({
           </button>
 
           <div className="flex items-center gap-2 lg:gap-3">
-            <button
-              onClick={() => setHelpOpen(true)}
-              aria-label="Help"
-              title="Help"
-              className="w-9 h-9 lg:w-10 lg:h-10 flex items-center justify-center rounded-xl bg-white/10 hover:bg-white/20 text-white font-black text-base transition-colors cursor-pointer"
-            >
-              ?
-            </button>
-
             {userId && pendingRequestsCount > 0 && (
               <button
                 onClick={() => navigateTo('friends')}
@@ -475,6 +479,25 @@ export default function AppShell({
                   );
                 })}
               </nav>
+
+              {/* HELP — utility row under the nav list (site-wide
+                  home for help; the triage step also carries its
+                  own in-body help button). Closes the menu and
+                  opens the same help sheet. */}
+              <div className="p-2 pt-0">
+                <button
+                  onClick={() => {
+                    closeMenu();
+                    setHelpOpen(true);
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3.5 py-3 rounded-xl text-xs font-black text-slate-700 hover:bg-slate-100 transition-all cursor-pointer"
+                >
+                  <span className="w-5 h-5 shrink-0 rounded-full bg-[#0072CE] text-white flex items-center justify-center text-[11px] font-black leading-none">
+                    ?
+                  </span>
+                  <span>Help</span>
+                </button>
+              </div>
             </div>
 
             <div className="p-4 border-t border-slate-100 text-center">
@@ -486,7 +509,9 @@ export default function AppShell({
         </div>
       )}
 
-      {/* HELP MENU — opened by the header "?" button */}
+      {/* HELP MENU — opened by the menu's Help item and by the
+          triage step's help buttons (via the 'weezer:open-help'
+          window event; see the listener above) */}
       {helpOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div

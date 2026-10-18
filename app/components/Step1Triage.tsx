@@ -7,7 +7,7 @@ import {
   countCategorizedSongs,
   TriageValue,
 } from '../context/WeezerContext';
-import { FlyingWIcon, AudioPreviewButton } from './SharedUI';
+import { FlyingWIcon, AudioPreviewButton, HelpButton } from './SharedUI';
 import Step1Deck from './Step1Deck';
 
 export interface TriageSection {
@@ -233,6 +233,7 @@ export default function Step1Triage({
                 <span>Hide Sorted ({categorizedCount})</span>
               </label>
               <span className="text-[#0072CE] font-mono text-sm font-black">{progressPercent}%</span>
+              <HelpButton />
             </div>
           </div>
 

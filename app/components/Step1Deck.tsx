@@ -8,7 +8,7 @@ import {
   TriageValue,
 } from '../context/WeezerContext';
 import { albumCoverSrc, resolveAlbumId } from './shareables/ShareCardShell';
-import { FlyingWIcon, AudioPreviewButton } from './SharedUI';
+import { FlyingWIcon, AudioPreviewButton, HelpButton } from './SharedUI';
 import type { TriageSection } from './Step1Triage';
 
 /**
@@ -2241,6 +2241,7 @@ export default function Step1Deck({
             <span className="text-[#0072CE] text-xs">
               {progressPercent}%
             </span>
+            <HelpButton />
           </div>
         </div>
         {/* The Flying W rides the fill's edge — the same treatment

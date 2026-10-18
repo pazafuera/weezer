@@ -184,7 +184,7 @@ const COUNTRY_OPTIONS = [
 
 export default function Login() {
   const router = useRouter();
-  const { navigateTo, initialAuthMode } = useWeezer();
+  const { navigateTo, initialAuthMode, closeLogin } = useWeezer();
 
   // Auth Credentials State synced with context initialAuthMode
   const [email, setEmail] = useState('');
@@ -320,10 +320,11 @@ export default function Login() {
     <div className="min-h-screen bg-slate-100 flex flex-col justify-center items-center p-4 selection:bg-amber-400 selection:text-slate-950 font-sans">
       <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden relative">
         
-        {/* CLOSE (X) BUTTON */}
+        {/* CLOSE (X) BUTTON — abandons sign-in: back to the step the
+            user came from (closeLogin), NOT hardcoded to splash. */}
         <button
           type="button"
-          onClick={() => navigateTo('splash')}
+          onClick={() => closeLogin()}
           className="absolute top-4 right-4 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-black/20 hover:bg-black/30 text-white transition-all cursor-pointer"
           aria-label="Close"
         >

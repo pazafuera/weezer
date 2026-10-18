@@ -243,6 +243,7 @@ interface WeezerContextType {
   setAutoStartMatchups: (val: boolean) => void;
   initialAuthMode: AuthModeType;
   navigateTo: (targetStep: AppStep, authMode?: AuthModeType) => void;
+  closeLogin: () => void;
 
   // Auth & User State
   loadingUser: boolean;
@@ -375,6 +376,13 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   // Navigation & Auth Mode State
   const [step, setStepState] = useState<AppStep>('splash');
   const [initialAuthMode, setInitialAuthMode] = useState<AuthModeType>('signup');
+  // The step the user was on when they entered the login step, so the
+  // login card's X (closeLogin) can return them there instead of
+  // dumping them on splash. navigateTo records it on the way INTO
+  // 'login' and clears it on any navigation to a non-login step (a
+  // completed sign-in routes to dashboard / signup_success and
+  // consumes it). A ref, not state: nothing renders from it.
+  const loginReturnStepRef = useRef<AppStep | null>(null);
   const [refineStageIdx, setRefineStageIdx] = useState(0);
   const [autoStartMatchups, setAutoStartMatchups] = useState(false);
 
@@ -818,6 +826,18 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const navigateTo = (targetStep: AppStep, authMode?: AuthModeType) => {
+    if (targetStep === 'login') {
+      // Remember where the user is coming FROM so closeLogin() can
+      // take them back there. Re-entering login while already on it
+      // (the nav menu stays reachable from the login step itself)
+      // must not overwrite the recorded step with 'login'.
+      if (step !== 'login') {
+        loginReturnStepRef.current = step;
+      }
+    } else {
+      loginReturnStepRef.current = null;
+    }
+
     if (authMode) {
       setInitialAuthMode(authMode);
     }
@@ -839,6 +859,17 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         window.history.replaceState({}, '', url.toString());
       }
     }
+  };
+
+  /**
+   * Leaves the login step WITHOUT a completed sign-in/sign-up (the
+   * login card's X): returns to the step the user came from, or to
+   * splash when login wasn't entered from another step (e.g. a cold
+   * ?step=login deep link). The navigateTo call clears the recorded
+   * step because its target isn't 'login'.
+   */
+  const closeLogin = () => {
+    navigateTo(loginReturnStepRef.current ?? 'splash');
   };
 
   const handleSignOut = async () => {
@@ -865,6 +896,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         setAutoStartMatchups,
         initialAuthMode,
         navigateTo,
+        closeLogin,
         loadingUser,
         userId,
         userProfile,

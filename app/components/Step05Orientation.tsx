@@ -22,7 +22,7 @@ const PROCESS_STEPS: { title: string; desc: string }[] = [
 ];
 
 export default function Step05Orientation() {
-  const { navigateTo } = useWeezer();
+  const { navigateTo, closeOrientation } = useWeezer();
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
@@ -47,10 +47,14 @@ export default function Step05Orientation() {
     // bottom padding is all the end clearance it needs.
     <div className="h-full flex flex-col max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex-1 overflow-y-auto px-4 space-y-6 pb-8">
-      {/* BACK BUTTON */}
+      {/* BACK BUTTON — returns to the step the user came from
+          (closeOrientation), not a hardcoded home: a user who opened
+          How It Works from the dashboard goes back to the dashboard.
+          Falls back to splash on a cold arrival (first run, deep
+          link), which is where first-run users came from anyway. */}
       <div className="pt-4 flex items-center justify-start">
         <button
-          onClick={() => navigateTo('splash')}
+          onClick={closeOrientation}
           className="text-xs font-black text-slate-400 hover:text-slate-600 transition-colors flex items-center gap-1 cursor-pointer"
         >
           ← Back

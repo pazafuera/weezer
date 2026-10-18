@@ -244,6 +244,7 @@ interface WeezerContextType {
   initialAuthMode: AuthModeType;
   navigateTo: (targetStep: AppStep, authMode?: AuthModeType) => void;
   closeLogin: () => void;
+  closeOrientation: () => void;
 
   // Auth & User State
   loadingUser: boolean;
@@ -361,6 +362,15 @@ export const migrateGuestRankingsToUser = async (newUserId: string) => {
   }
 };
 
+/**
+ * Steps whose exit control means "take me back where I came from"
+ * rather than a fixed destination: 'login' (its card's X) and
+ * 'orientation' (its "← Back"). navigateTo records an origin for
+ * these on entry; closeLogin / closeOrientation consume it. See
+ * returnStepRef in the provider.
+ */
+const RETURN_TRACKED_STEPS: readonly AppStep[] = ['login', 'orientation'];
+
 export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
 
@@ -376,13 +386,20 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   // Navigation & Auth Mode State
   const [step, setStepState] = useState<AppStep>('splash');
   const [initialAuthMode, setInitialAuthMode] = useState<AuthModeType>('signup');
-  // The step the user was on when they entered the login step, so the
-  // login card's X (closeLogin) can return them there instead of
-  // dumping them on splash. navigateTo records it on the way INTO
-  // 'login' and clears it on any navigation to a non-login step (a
-  // completed sign-in routes to dashboard / signup_success and
-  // consumes it). A ref, not state: nothing renders from it.
-  const loginReturnStepRef = useRef<AppStep | null>(null);
+  // Recorded origins for the return-tracked steps (RETURN_TRACKED_STEPS):
+  // the step the user was on when they entered each one, so that step's
+  // exit control — the login card's X (closeLogin), the orientation
+  // page's "← Back" (closeOrientation) — can return them there instead
+  // of a hardcoded destination. navigateTo records the origin on the
+  // way INTO a tracked step and clears every recorded origin on any
+  // navigation to an ordinary (non-tracked) step (a completed sign-in
+  // routes to dashboard / signup_success and consumes its origin that
+  // way). Hopping between tracked steps — orientation's "Create an
+  // Account First" into login — leaves the other step's origin intact,
+  // so when the login X lands back on orientation, orientation's Back
+  // still remembers where orientation itself was entered from. A ref,
+  // not state: nothing renders from it.
+  const returnStepRef = useRef<Partial<Record<AppStep, AppStep>>>({});
   const [refineStageIdx, setRefineStageIdx] = useState(0);
   const [autoStartMatchups, setAutoStartMatchups] = useState(false);
 
@@ -825,17 +842,33 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     syncRankingsToDatabase(triageMap, list);
   };
 
-  const navigateTo = (targetStep: AppStep, authMode?: AuthModeType) => {
-    if (targetStep === 'login') {
-      // Remember where the user is coming FROM so closeLogin() can
-      // take them back there. Re-entering login while already on it
-      // (the nav menu stays reachable from the login step itself)
-      // must not overwrite the recorded step with 'login'.
-      if (step !== 'login') {
-        loginReturnStepRef.current = step;
+  const navigateInternal = (
+    targetStep: AppStep,
+    authMode?: AuthModeType,
+    isReturn: boolean = false
+  ) => {
+    // Origin bookkeeping for the return-tracked steps. A return
+    // navigation (closeLogin / closeOrientation) skips it entirely:
+    // the exit consumes its own origin in returnFromStep, and landing
+    // back on another tracked step must not overwrite (or clear) that
+    // step's recorded origin with the step just exited.
+    if (!isReturn) {
+      if (RETURN_TRACKED_STEPS.indexOf(targetStep) !== -1) {
+        // Remember where the user is coming FROM so the step's exit
+        // control can take them back there. Re-entering a tracked
+        // step while already on it (the nav menu stays reachable from
+        // these steps) must not overwrite the recorded step with the
+        // step itself. The OTHER tracked step's origin is left alone:
+        // a tracked-to-tracked hop is a detour, not a fresh start.
+        if (step !== targetStep) {
+          returnStepRef.current[targetStep] = step;
+        }
+      } else {
+        // Any navigation to an ordinary step consumes every recorded
+        // origin — the user has moved on, and a later visit to a
+        // tracked step records a fresh origin on entry anyway.
+        returnStepRef.current = {};
       }
-    } else {
-      loginReturnStepRef.current = null;
     }
 
     if (authMode) {
@@ -861,15 +894,37 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const navigateTo = (targetStep: AppStep, authMode?: AuthModeType) => {
+    navigateInternal(targetStep, authMode, false);
+  };
+
   /**
-   * Leaves the login step WITHOUT a completed sign-in/sign-up (the
-   * login card's X): returns to the step the user came from, or to
-   * splash when login wasn't entered from another step (e.g. a cold
-   * ?step=login deep link). The navigateTo call clears the recorded
-   * step because its target isn't 'login'.
+   * Shared exit for the return-tracked steps: leaves the step WITHOUT
+   * completing its flow and returns to the step the user entered it
+   * from. Falls back to splash — the destination both exits hardcoded
+   * before origin tracking — when no origin was recorded (e.g. a cold
+   * ?step=login / ?step=orientation deep link) or the recorded origin
+   * is the step itself. The origin is consumed here, and the return
+   * navigation runs with isReturn so it never records a new origin:
+   * when the login X lands back on orientation, orientation's own
+   * recorded origin survives for its Back.
    */
+  const returnFromStep = (fromStep: AppStep) => {
+    const recorded = returnStepRef.current[fromStep];
+    delete returnStepRef.current[fromStep];
+    const target: AppStep =
+      recorded && recorded !== fromStep ? recorded : 'splash';
+    navigateInternal(target, undefined, true);
+  };
+
+  /** The login card's X: abandon sign-in, go back where you came from. */
   const closeLogin = () => {
-    navigateTo(loginReturnStepRef.current ?? 'splash');
+    returnFromStep('login');
+  };
+
+  /** Orientation's "← Back": leave How It Works, go back where you came from. */
+  const closeOrientation = () => {
+    returnFromStep('orientation');
   };
 
   const handleSignOut = async () => {
@@ -897,6 +952,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         initialAuthMode,
         navigateTo,
         closeLogin,
+        closeOrientation,
         loadingUser,
         userId,
         userProfile,

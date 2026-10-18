@@ -8,16 +8,16 @@ import { useWeezer } from '../context/WeezerContext';
 // taught in the deck tutorial, not here (owner, Oct 17).
 const PROCESS_STEPS: { title: string; desc: string }[] = [
   {
-    title: 'Sort',
-    desc: 'Go through the songs and bucket the ones you know. Never heard it? Just move on — you can come back to it.',
+    title: 'Song Sorting',
+    desc: 'Pre-sort all canon Weezer songs into groups, from Banger to Trash',
   },
   {
     title: 'Refine',
-    desc: 'Your top picks face off head-to-head until your full 1–206 ranking is set.',
+    desc: 'Rank order your top picks to dial in what kind of Weezer fan you really are',
   },
   {
-    title: 'Your Sweater Thread',
-    desc: 'Get your personalized results: your Top 10, your fan tribe, your Era DNA.',
+    title: 'Sweater Thread',
+    desc: 'Your personal results unraveled, where you can compare with friends and other fans',
   },
 ];
 
@@ -36,18 +36,24 @@ export default function Step05Orientation() {
     // the page painted past the fold but would not scroll, leaving
     // both CTAs unreachable (owner report). Giving this root its own
     // full-height scroll region makes scrolling independent of the
-    // document: content flows inside it with safe-area-aware bottom
-    // padding so the CTAs can always be scrolled clear of Safari's
-    // bottom toolbar. Scoped to orientation only — the shared shell
-    // and every other step are untouched.
-    <div className="h-full overflow-y-auto space-y-6 pb-[calc(6rem+env(safe-area-inset-bottom,0px))] animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-2xl mx-auto px-4">
+    // document. Scoped to orientation only — the shared shell and
+    // every other step are untouched.
+    // CTA BAR (owner, Oct 17): the Start button must be visible
+    // without scrolling, so the root is now a flex column — the copy
+    // scrolls in the flex-1 region above, and the CTA bar is pinned
+    // below it, outside the scroll flow. The bar is always on screen
+    // (on load and mid-scroll), carries the safe-area bottom inset
+    // itself, and can never cover content: the scroll region's own
+    // bottom padding is all the end clearance it needs.
+    <div className="h-full flex flex-col max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="flex-1 overflow-y-auto px-4 space-y-6 pb-8">
       {/* BACK BUTTON */}
       <div className="pt-4 flex items-center justify-start">
         <button
           onClick={() => navigateTo('splash')}
           className="text-xs font-black text-slate-400 hover:text-slate-600 transition-colors flex items-center gap-1 cursor-pointer"
         >
-          ← Back to Splash
+          ← Back
         </button>
       </div>
 
@@ -92,24 +98,16 @@ export default function Step05Orientation() {
           deck tutorial teaches each bucket at the real tiles
           (owner, Oct 17). BucketGuide still lives in the app
           for the "?" help sheet's bucket definitions. */}
-
-      {/* PRO TIP */}
-      <div className="bg-amber-50/80 border border-amber-200/80 rounded-2xl p-3 w-full text-amber-950">
-        <p className="text-s font-bold leading-snug">
-          💡 <span className="font-black">Pro Tip:</span> Go with your gut! You'll fine-tune exact rankings later.
-        </p>
       </div>
 
-      {/* CONTINUATION CTAS */}
-      <div className="pt-2 space-y-2.5">
+      {/* CTA BAR — pinned under the scroll region (see the root
+          comment): always visible, never scrolled to. */}
+      <div className="shrink-0 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] bg-white/90 backdrop-blur-md border-t border-slate-200/90 space-y-2.5">
         <button
           onClick={() => navigateTo('triage')}
-          className="w-full bg-[#0072CE] hover:bg-blue-600 active:scale-[0.99] text-white font-black text-base sm:text-lg py-4 rounded-2xl shadow-[0_10px_25px_rgba(0,114,206,0.3)] transition-all cursor-pointer flex items-center justify-center gap-2 group"
+          className="w-full bg-[#0072CE] hover:bg-blue-600 active:scale-[0.99] text-white font-black text-base sm:text-lg py-4 rounded-2xl shadow-[0_10px_25px_rgba(0,114,206,0.3)] transition-all cursor-pointer flex items-center justify-center"
         >
-          <span>I'm Ready — Start Triage</span>
-          <span className="transform group-hover:translate-x-1 transition-transform">
-            ⚡️
-          </span>
+          Start Sorting
         </button>
 
         <button

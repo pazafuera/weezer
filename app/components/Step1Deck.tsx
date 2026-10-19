@@ -2425,7 +2425,13 @@ export default function Step1Deck({
               )}
               {renderMilestoneActions({
                 showSave: milestonePending.kind !== 'blue',
+                // Pinkerton joins singles/album: its card was the
+                // only post-Blue milestone that withheld the Refine
+                // link even past the 25-bucketed gate (the gate
+                // itself lives in renderMilestoneActions). Blue's
+                // omission is the owner's design and stays.
                 showRefine:
+                  milestonePending.kind === 'pinkerton' ||
                   milestonePending.kind === 'singles' ||
                   milestonePending.kind === 'album',
                 keepLabel:

@@ -438,46 +438,63 @@ export default function WeezerAccountDrawer({
             </button>
           </div>
 
-          {/* USER LOGGED IN */}
-          {userProfile?.username ? (
+          {/* USER LOGGED IN — keyed on userId, NOT on having a
+              username: this used to branch on userProfile?.username,
+              so a signed-in user who hadn't claimed a handle was
+              told they were in "Guest Mode", offered a sign-in CTA
+              that looped them to the dashboard, and never saw a
+              Sign Out. Signed-in is signed-in. */}
+          {userId ? (
             <div className="py-6 space-y-6">
               {/* PROFILE BADGE */}
               <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
                 <div className="w-12 h-12 bg-[#0072CE] text-white rounded-xl flex items-center justify-center font-black text-xl shadow-md shrink-0">
-                  {userProfile.displayName
+                  {userProfile?.displayName
                     ? userProfile.displayName.charAt(0).toUpperCase()
                     : 'W'}
                 </div>
                 <div className="min-w-0 flex-1">
                   <h3 className="text-base font-black text-slate-900 truncate">
-                    {userProfile.displayName}
+                    {userProfile?.displayName || 'Your account'}
                   </h3>
                   <p className="text-xs font-bold text-[#0072CE]">
-                    @{userProfile.username}
+                    {userProfile?.username
+                      ? `@${userProfile.username}`
+                      : 'No username yet'}
                   </p>
                 </div>
               </div>
 
-              {/* PUBLIC LINK MODULE */}
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">
-                  Your Public Profile Link
-                </label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    readOnly
-                    value={publicUrl || ''}
-                    className="flex-1 px-3 py-2 bg-slate-100 border border-slate-200 rounded-xl text-xs font-mono text-slate-600 truncate focus:outline-none"
-                  />
-                  <button
-                    onClick={handleCopyLink}
-                    className="bg-[#0072CE] hover:bg-blue-600 text-white text-xs font-black px-3 py-2 rounded-xl transition-colors cursor-pointer shrink-0"
-                  >
-                    {copiedLink ? 'Copied! ✓' : 'Copy'}
-                  </button>
+              {/* PUBLIC LINK MODULE — needs a username; without one,
+                  say so (the Edit Profile form below is where a
+                  handle gets claimed) instead of showing an empty
+                  link box with a Copy button that copies nothing. */}
+              {userProfile?.username ? (
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">
+                    Your Public Profile Link
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      readOnly
+                      value={publicUrl || ''}
+                      className="flex-1 px-3 py-2 bg-slate-100 border border-slate-200 rounded-xl text-xs font-mono text-slate-600 truncate focus:outline-none"
+                    />
+                    <button
+                      onClick={handleCopyLink}
+                      className="bg-[#0072CE] hover:bg-blue-600 text-white text-xs font-black px-3 py-2 rounded-xl transition-colors cursor-pointer shrink-0"
+                    >
+                      {copiedLink ? 'Copied! ✓' : 'Copy'}
+                    </button>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <p className="text-xs font-bold text-slate-500 leading-relaxed">
+                  Add a username in Edit Profile below to claim your
+                  public profile link.
+                </p>
+              )}
 
               {/* PROFILE DETAILS + EDIT */}
               <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-3">
@@ -496,7 +513,7 @@ export default function WeezerAccountDrawer({
                       </span>
                       <span>
                         {profileRow?.display_name ||
-                          userProfile.displayName ||
+                          userProfile?.displayName ||
                           'Not set'}
                       </span>
                     </div>
@@ -504,7 +521,7 @@ export default function WeezerAccountDrawer({
                       <span className="text-[9px] uppercase text-slate-400 block">
                         Username
                       </span>
-                      <span>@{profileRow?.username || userProfile.username}</span>
+                      <span>@{profileRow?.username || userProfile?.username || '—'}</span>
                     </div>
                     <div>
                       <span className="text-[9px] uppercase text-slate-400 block">
@@ -512,7 +529,7 @@ export default function WeezerAccountDrawer({
                       </span>
                       <span>
                         {profileRow?.birth_year ||
-                          userProfile.birthYear ||
+                          userProfile?.birthYear ||
                           'Not set'}
                       </span>
                     </div>
@@ -525,7 +542,7 @@ export default function WeezerAccountDrawer({
                           profileRow?.country_code ?? null,
                           profileRow?.state_code ?? null
                         ) ||
-                          userProfile.location ||
+                          userProfile?.location ||
                           'Not set'}
                       </span>
                     </div>
@@ -841,8 +858,9 @@ export default function WeezerAccountDrawer({
           )}
         </div>
 
-        {/* FOOTER / LOGOUT */}
-        {userProfile?.username && (
+        {/* FOOTER / LOGOUT — every signed-in user gets a Sign
+            Out, username or not. */}
+        {userId && (
           <div className="pt-4 border-t border-slate-100">
             <button
               onClick={() => {

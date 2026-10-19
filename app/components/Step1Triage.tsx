@@ -559,6 +559,17 @@ export default function Step1Triage({
             Continue with {bucketedCount} of {FULL_SONG_POOL.length} bucketed →
           </button>
         )}
+        {/* The neutral early-Refine line (UAT P-6, owner's
+            wording): wherever a partial sorter is offered the
+            jump to Refine, both doors are named and neither is
+            sold — no Thread-unlock pitch. Same line on the
+            deck's early-Refine offers (Step1Deck). */}
+        {hasPartialTriage && !isGutCheckComplete && (
+          <p className="text-[11px] font-semibold text-slate-200 bg-slate-950/60 backdrop-blur-sm rounded-2xl px-3 py-1.5 max-w-[300px] text-center leading-snug">
+            You can refine the songs you&apos;ve sorted so far, or
+            keep sorting and refine the full set later.
+          </p>
+        )}
         {/* Songs categorized but none bucketed yet (all Don't Know
             It so far): no Continue link exists and nothing said
             why. One line names the unlock. */}

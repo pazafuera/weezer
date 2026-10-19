@@ -1684,12 +1684,22 @@ export default function Step1Deck({
         {keepLabel ?? (isGuest ? 'Keep sorting as a guest' : 'Keep sorting')}
       </button>
       {showRefine && refineEligible && (
-        <button
-          onClick={handleFinishTriage}
-          className="text-sm font-bold text-slate-400 hover:text-[#0072CE] underline underline-offset-4 transition cursor-pointer py-1"
-        >
-          Refine →
-        </button>
+        <>
+          {/* The neutral early-Refine line (UAT P-6, owner's
+              wording): both doors named, neither sold — it sits
+              with the Refine offer wherever that offer is made
+              to a partial sorter. */}
+          <p className="text-xs font-semibold text-slate-400 leading-snug max-w-xs text-center pt-1">
+            You can refine the songs you&apos;ve sorted so far, or
+            keep sorting and refine the full set later.
+          </p>
+          <button
+            onClick={handleFinishTriage}
+            className="text-sm font-bold text-slate-400 hover:text-[#0072CE] underline underline-offset-4 transition cursor-pointer py-1"
+          >
+            Refine →
+          </button>
+        </>
       )}
     </div>
   );
@@ -2551,6 +2561,15 @@ export default function Step1Deck({
                     Create a free account
                   </button>{' '}
                   to save your progress.
+                </p>
+              )}
+              {/* The neutral early-Refine line (UAT P-6), with the
+                  end-of-deck "Start ranking" offer below — shown
+                  exactly when that offer is. */}
+              {bucketedCount >= THREAD_SHORT_PATH_GOAL && (
+                <p className="text-xs font-semibold text-slate-400 leading-snug max-w-sm mx-auto">
+                  You can refine the songs you&apos;ve sorted so far,
+                  or keep sorting and refine the full set later.
                 </p>
               )}
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-1">

@@ -451,10 +451,55 @@ function CompatibilityThumbnailItem({
  *  from a fixed 1024 layout width for the thumbnail, but FLUID at
  *  panel width inside the modal, exactly how it renders on the
  *  library page (scaling the fluid chart down instead would shrink
- *  its chip text to unreadability). The chart's own download button
- *  is the modal's download control, reached by vertical scroll. */
+ *  its chip text to unreadability).
+ *
+ *  SAVE, PINNED (UAT P-11): the modal also carries a pinned footer
+ *  Save (the CardModal footer pattern the portrait cards use), so
+ *  saving no longer means scrolling to the bottom of the fluid
+ *  chart. The pinned button is wired to the MODAL's own chart
+ *  instance — it activates that instance's own save button (marked
+ *  data-tier-save in TierListChart), so the export uses the modal
+ *  chart's toggle state and its export node, not the library
+ *  page's or the thumbnail's. A MutationObserver mirrors the
+ *  instance's generating/failure state onto the pinned button so
+ *  the feedback the chart shows on its own button is not lost.
+ *  (Sharing ONE chart instance between page and modal remains
+ *  deliberately undone — the owner approved the pin only.) */
 function TierThumbnailItem({ tierSection }: { tierSection: ReactNode }) {
   const [open, setOpen] = useState(false);
+  const modalChartRef = useRef<HTMLDivElement>(null);
+  const [pinnedBusy, setPinnedBusy] = useState(false);
+  const [pinnedFailed, setPinnedFailed] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    const root = modalChartRef.current;
+    if (!root) return;
+    const source =
+      root.querySelector<HTMLButtonElement>('[data-tier-save]');
+    if (!source) return;
+    const sync = () => {
+      setPinnedBusy(source.disabled);
+      setPinnedFailed(source.textContent?.includes("Couldn't generate") ?? false);
+    };
+    sync();
+    const observer = new MutationObserver(sync);
+    observer.observe(source, {
+      attributes: true,
+      attributeFilter: ['disabled', 'class'],
+      childList: true,
+      characterData: true,
+      subtree: true,
+    });
+    return () => observer.disconnect();
+  }, [open ]);
+
+  const saveFromModal = () => {
+    modalChartRef.current
+      ?.querySelector<HTMLButtonElement>('[data-tier-save]')
+      ?.click();
+  };
+
   return (
     <div>
       <ThumbnailButton
@@ -466,8 +511,29 @@ function TierThumbnailItem({ tierSection }: { tierSection: ReactNode }) {
       </ThumbnailButton>
 
       {open && (
-        <CardModal title="Tier List" onClose={() => setOpen(false)}>
-          {tierSection}
+        <CardModal
+          title="Tier List"
+          onClose={() => setOpen(false)}
+          footer={
+            <div className="border-t border-slate-200 bg-white p-4">
+              <button
+                type="button"
+                onClick={saveFromModal}
+                disabled={pinnedBusy}
+                className={`w-full text-white font-black text-xs py-3 px-3 rounded-xl transition cursor-pointer disabled:opacity-50 ${
+                  pinnedFailed ? 'bg-rose-500' : 'bg-[#0072CE] hover:bg-blue-600'
+                }`}
+              >
+                {pinnedBusy
+                  ? 'Generating Image...'
+                  : pinnedFailed
+                  ? "Couldn't generate — try again"
+                  : '📸 Save Tier List as Image'}
+              </button>
+            </div>
+          }
+        >
+          <div ref={modalChartRef}>{tierSection}</div>
         </CardModal>
       )}
     </div>

@@ -359,10 +359,14 @@ export default function TierListChart({
         </div>
       </div>
 
-      {/* SAVE / SHARE BUTTON */}
+      {/* SAVE / SHARE BUTTON — data-tier-save marks this
+          instance's save control so the Tier List modal's pinned
+          footer button (ShareablesGallery) can trigger THIS
+          instance's export and mirror its state (UAT P-11). */}
       <button
         onClick={handleExport}
         disabled={isExporting}
+        data-tier-save="true"
         className={`w-full ${exportFailed ? 'bg-rose-500' : 'bg-[#0072CE] hover:bg-blue-600'} active:scale-98 text-white font-black py-3.5 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer`}
       >
         <span>{isExporting ? 'Generating Image...' : exportFailed ? "Couldn't generate — try again" : '📸 Save Tier List as Image'}</span>

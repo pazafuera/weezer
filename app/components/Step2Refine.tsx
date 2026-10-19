@@ -41,8 +41,19 @@ export default function Step2Refine({
   }, [initialStageIdx]);
 
   useEffect(() => {
-    if (initialStageIdx === 0 && autoStartMatchups && (bucketRanks.banger || []).length >= 2) {
-      setShowMatchups(true);
+    // Auto-start (flag read once, on mount): fire the matchup pre-sort
+    // for the FIRST stage that has matchups (Banger, then Slaps) whose
+    // bucket holds ≥2 songs, landing on that stage — a Slaps-heavy
+    // user with 0–1 Bangers still gets matchups. If neither matchup
+    // stage qualifies, no auto-start: the stage-0 list, as before.
+    if (initialStageIdx === 0 && autoStartMatchups) {
+      const firstMatchupStage = REFINEMENT_STAGES.findIndex(
+        (stage, idx) => idx <= 1 && (bucketRanks[stage.bucket] || []).length >= 2
+      );
+      if (firstMatchupStage >= 0) {
+        setStageIdx(firstMatchupStage);
+        setShowMatchups(true);
+      }
     }
   }, []);
 

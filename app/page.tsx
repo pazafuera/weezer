@@ -122,9 +122,12 @@ export default function WeezerRankerPage() {
           triageMap={triageMap}
           setStep={(s) => {
             if (s === 'rank_buckets') {
-              setAutoStartMatchups(false);
               setRefineStageIdx(4);
               navigateTo('rank_buckets');
+              // AFTER navigateTo on purpose: navigateInternal sets the
+              // matchup flag explicitly on every Refine landing, so
+              // this edit-intent exception must run last to survive.
+              setAutoStartMatchups(false);
             } else {
               setStep(s as any);
             }

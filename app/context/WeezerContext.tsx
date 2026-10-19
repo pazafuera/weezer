@@ -920,6 +920,16 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     const guardedStep = resolveGuardedStep(targetStep, triageMap, masterList); if (guardedStep === 'rank_buckets') {
       setBucketRanks(getDerivedBucketRanks(triageMap, masterList));
       setRefineStageIdx(0);
+      // Matchup default (owner-approved, Oct 18): the flag is SET on
+      // every Refine landing, never left over from an earlier entry —
+      // a fresh, intentional entry arms the matchup pre-sort, but only
+      // for a user who has not already refined ("If someone has
+      // already gone through refine then the matchup picker shouldn't
+      // fire") and never on a return navigation (Final Review's Back
+      // lands on the stage list by design).
+      setAutoStartMatchups(
+        !isReturn && !getProgressState(triageMap, masterList).isMasterUnlocked
+      );
     }
 
     setStep(guardedStep);

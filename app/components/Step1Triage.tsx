@@ -67,6 +67,65 @@ export default function Step1Triage({
     setViewModeResolved(true);
   }, []);
 
+  // TUTORIAL-REPLAY DECK OVERRIDE (UAT P-8) — the deck tour lives
+  // in the deck, so "Replay the deck tutorial" was a dead button
+  // for list-mode users: the replay event fired with no deck
+  // mounted to hear it. Now a replay presents the deck for the
+  // tour's duration only: this session-only flag swaps the
+  // rendered mode, and Step1Deck's 'weezer:tutorial-ended'
+  // signal (dispatched when a tour closes) swaps it back. The
+  // persisted preference above is never read differently and
+  // never written — when the tour ends, the user is exactly
+  // where they were: list mode, same triageMap, same state.
+  const [tutorialDeckOverride, setTutorialDeckOverride] =
+    useState(false);
+  const effectiveMode: 'deck' | 'list' = tutorialDeckOverride
+    ? 'deck'
+    : viewMode;
+
+  // The already-on-triage route: AppShell dispatches the replay
+  // event when Replay is tapped on this step. A deck user needs
+  // nothing here (the deck hears the event itself); a list user
+  // engages the override, and the deck that mounts consumes the
+  // sessionStorage force flag AppShell set.
+  useEffect(() => {
+    if (viewMode !== 'list') return;
+    const onReplay = () => setTutorialDeckOverride(true);
+    window.addEventListener('weezer:replay-tutorial', onReplay);
+    return () =>
+      window.removeEventListener('weezer:replay-tutorial', onReplay);
+  }, [viewMode]);
+
+  // The arriving-from-elsewhere route: the replay was tapped on
+  // another step, so this component mounted fresh — the force
+  // flag is the only trace. Read it WITHOUT consuming it (the
+  // deck consumes it on mount); it is set only by a replay, so
+  // its presence here means a list user's replay is pending.
+  useEffect(() => {
+    if (!viewModeResolved || viewMode !== 'list') return;
+    try {
+      if (
+        window.sessionStorage.getItem('weezer-deck-tutorial-force') ===
+        '1'
+      ) {
+        setTutorialDeckOverride(true);
+      }
+    } catch {
+      /* sessionStorage unavailable — the event route above
+         still covers replays tapped while on this step */
+    }
+  }, [viewModeResolved, viewMode]);
+
+  // The hand-back: the tour closed (finished or skipped) — drop
+  // the override and the list returns.
+  useEffect(() => {
+    if (!tutorialDeckOverride) return;
+    const onEnded = () => setTutorialDeckOverride(false);
+    window.addEventListener('weezer:tutorial-ended', onEnded);
+    return () =>
+      window.removeEventListener('weezer:tutorial-ended', onEnded);
+  }, [tutorialDeckOverride]);
+
   // ALBUM JUMP HANDOFF — a tap on the dashboard's Catalog
   // Completion strip stores the album name in sessionStorage
   // ('weezer-triage-jump-album', set by StepDashboard's
@@ -229,18 +288,18 @@ export default function Step1Triage({
   // one-shot, exactly like the flag it came from. (Deck mode
   // applies its own below, via Step1Deck's jumpToSection.)
   useEffect(() => {
-    if (!viewModeResolved || viewMode !== 'list' || !pendingJumpKey) return;
+    if (!viewModeResolved || effectiveMode !== 'list' || !pendingJumpKey) return;
     scrollToSection(pendingJumpKey);
     setPendingJumpKey(null);
     // scrollToSection is a stable render-scope helper; the
     // jump is keyed on the three values above alone.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [viewModeResolved, viewMode, pendingJumpKey]);
+  }, [viewModeResolved, effectiveMode, pendingJumpKey]);
 
   return (
     <div
       className={
-        viewMode === 'list'
+        effectiveMode === 'list'
           ? 'space-y-6 pb-44'
           : // Deck mode: the step itself becomes a column AT LEAST
             // one screen tall under the sticky AppShell header
@@ -255,7 +314,7 @@ export default function Step1Triage({
             'flex flex-col -m-4 sm:-m-6 lg:-m-8 min-h-[calc(100dvh-56px)] lg:min-h-[calc(100dvh-64px)]'
       }
     >
-      {viewMode === 'list' && (
+      {effectiveMode === 'list' && (
       <>
       {/* STICKY PROGRESS & ALBUM QUICK-JUMP BAR (EXPANDED FOR DESKTOP) */}
       <div className="sticky top-[56px] lg:top-[64px] z-40 bg-slate-50/95 backdrop-blur-md border-b border-slate-200 py-3 px-4 shadow-xs -mx-4 sm:-mx-6 lg:-mx-8 -mt-4 sm:-mt-6 lg:-mt-8 mb-6 space-y-3">
@@ -351,7 +410,7 @@ export default function Step1Triage({
           one-line subhead) so headline + card + actions fit a single
           screen. List mode keeps the full header. (Neither header
           carries a Deck | List toggle anymore — owner, Oct 18.) */}
-      {viewMode === 'deck' ? (
+      {effectiveMode === 'deck' ? (
         <div className="text-center px-4 pt-3 pb-1 shrink-0">
           <h1 className="text-3xl font-black text-slate-950 tracking-tighter leading-none">
             The <span className="text-[#0072CE]">Gut Check</span>
@@ -371,7 +430,7 @@ export default function Step1Triage({
         </div>
       )}
 
-      {viewMode === 'deck' ? (
+      {effectiveMode === 'deck' ? (
         <Step1Deck
           triageMap={triageMap}
           orderedSongs={orderedSongs}
@@ -382,7 +441,7 @@ export default function Step1Triage({
           onCreateAccount={onCreateAccount}
           onOpenGarage={onOpenGarage}
           pendingJumpSectionKey={
-            viewModeResolved && viewMode === 'deck' ? pendingJumpKey : null
+            viewModeResolved && effectiveMode === 'deck' ? pendingJumpKey : null
           }
           onJumpApplied={() => setPendingJumpKey(null)}
         />

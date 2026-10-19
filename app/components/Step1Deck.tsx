@@ -403,6 +403,10 @@ const TUTORIAL_SEEN_KEY = 'weezer-deck-tutorial-seen-v1';
 // the replay block inside the component).
 const TUTORIAL_FORCE_KEY = 'weezer-deck-tutorial-force';
 const TUTORIAL_REPLAY_EVENT = 'weezer:replay-tutorial';
+// Dispatched when a tour closes (finished or skipped) — the
+// hand-back signal for Step1Triage's temporary-deck presentation
+// of a list-mode replay (UAT P-8).
+const TUTORIAL_ENDED_EVENT = 'weezer:tutorial-ended';
 
 type TutorialTargetKey =
   | 'card'
@@ -1896,6 +1900,21 @@ export default function Step1Deck({
     // openForcedTutorial only touches refs and setters.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inSongState, tutorialStep]);
+
+  // Tour-close signal (UAT P-8): tutorialStep returns to null
+  // only through closeTutorial (finish and skip alike) — announce
+  // it so a temporary presentation of this deck (Step1Triage's
+  // list-mode replay override) can hand the screen back to the
+  // list. Harmless for ordinary deck users: nothing listens
+  // unless the override is engaged.
+  const prevTutorialStepRef = useRef<number | null>(null);
+  useEffect(() => {
+    const was = prevTutorialStepRef.current;
+    prevTutorialStepRef.current = tutorialStep;
+    if (was !== null && tutorialStep === null) {
+      window.dispatchEvent(new CustomEvent(TUTORIAL_ENDED_EVENT));
+    }
+  }, [tutorialStep]);
 
   useEffect(() => {
     if (tutorialDecidedRef.current || tutorialArmedRef.current) {

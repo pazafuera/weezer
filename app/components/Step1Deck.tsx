@@ -880,12 +880,21 @@ export default function Step1Deck({
   isGuest,
   onCreateAccount,
   onOpenGarage,
+  pendingJumpSectionKey,
+  onJumpApplied,
 }: {
   triageMap: Record<string, TriageValue>;
   orderedSongs: Song[];
   sections: TriageSection[];
   handleSetBucket: (id: string, bucket: TriageValue) => void;
   handleFinishTriage: () => void;
+  /** A dashboard album tap's target section (Step1Triage holds
+   *  the consumed sessionStorage handoff; non-null only until
+   *  the jump applies). Applied through this deck's own
+   *  jumpToSection — see the effect beside it — then reported
+   *  consumed via onJumpApplied so it can never re-fire. */
+  pendingJumpSectionKey: string | null;
+  onJumpApplied: () => void;
   /** Auth/navigation plumbing (page.tsx → Step1Triage → here).
    *  isGuest and onCreateAccount are consumed by the milestone
    *  action stack and the end / completion card stacks below
@@ -1551,6 +1560,24 @@ export default function Step1Deck({
     setMilestonePending(null);
     setPosition(idx);
   };
+
+  // EXTERNAL ALBUM JUMP — a dashboard Catalog Completion tap
+  // hands its section over via Step1Triage (the consumed
+  // sessionStorage handoff). Applied through the very same
+  // jumpToSection the Jump-to-album dropdown uses, so the
+  // landing is identical by construction: first song of the
+  // section (the deck mounts with Hide Sorted off, the state
+  // the dropdown's jump normally meets), any pending milestone
+  // cleared the same way. Reported consumed immediately, so
+  // the handoff fires exactly once.
+  useEffect(() => {
+    if (!pendingJumpSectionKey) return;
+    jumpToSection(pendingJumpSectionKey);
+    onJumpApplied();
+    // Keyed on the handoff value alone; jumpToSection and
+    // onJumpApplied are render-scope closures over live state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingJumpSectionKey]);
 
   // "Keep sorting" — the position already advanced to the pending
   // next card when the triggering sort landed (see act()), so

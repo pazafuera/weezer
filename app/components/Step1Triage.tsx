@@ -52,12 +52,45 @@ export default function Step1Triage({
   // Oct 18) — the persisted preference and the deck default remain;
   // users simply stay in their current view.
   const [viewMode, setViewMode] = useState<'deck' | 'list'>('deck');
+  // True once the persisted mode above has been read. Consumers
+  // that must act on the RESOLVED mode (the album jump below)
+  // wait for this — the first paint is always the deck, and a
+  // list user's deck unmounts a beat later.
+  const [viewModeResolved, setViewModeResolved] = useState(false);
   useEffect(() => {
     try {
       const saved = window.localStorage.getItem('weezer-triage-view-mode');
       if (saved === 'list' || saved === 'deck') setViewMode(saved);
     } catch {
       /* localStorage unavailable — deck default stands */
+    }
+    setViewModeResolved(true);
+  }, []);
+
+  // ALBUM JUMP HANDOFF — a tap on the dashboard's Catalog
+  // Completion strip stores the album name in sessionStorage
+  // ('weezer-triage-jump-album', set by StepDashboard's
+  // handleAlbumClick — the same flag pattern as the deck
+  // tutorial's force flag) before navigating here. Consume it
+  // ONCE on mount: the flag is removed as it's read, so a later
+  // ordinary visit to triage never re-jumps. The album name maps
+  // to a section key by the same slug formula the section ids
+  // below are built with. Application waits for the resolved
+  // view mode: the list scrolls its section into view (see the
+  // effect further down, next to scrollToSection); the deck
+  // receives the key as a prop and applies its own jumpToSection.
+  const [pendingJumpKey, setPendingJumpKey] = useState<string | null>(null);
+  useEffect(() => {
+    try {
+      const album = window.sessionStorage.getItem('weezer-triage-jump-album');
+      if (album) {
+        window.sessionStorage.removeItem('weezer-triage-jump-album');
+        setPendingJumpKey(
+          `album-${album.replace(/\s+/g, '-').toLowerCase()}`
+        );
+      }
+    } catch {
+      /* sessionStorage unavailable — no jump to apply */
     }
   }, []);
 
@@ -188,6 +221,22 @@ export default function Step1Triage({
     }
   };
 
+  // Apply a pending dashboard album jump in LIST mode, through
+  // the same scrollToSection the quick-jump pills use. Runs
+  // after the render commit, so the section element exists;
+  // gated on the resolved mode so a list user's brief deck
+  // first paint can't consume it. Cleared as it applies —
+  // one-shot, exactly like the flag it came from. (Deck mode
+  // applies its own below, via Step1Deck's jumpToSection.)
+  useEffect(() => {
+    if (!viewModeResolved || viewMode !== 'list' || !pendingJumpKey) return;
+    scrollToSection(pendingJumpKey);
+    setPendingJumpKey(null);
+    // scrollToSection is a stable render-scope helper; the
+    // jump is keyed on the three values above alone.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewModeResolved, viewMode, pendingJumpKey]);
+
   return (
     <div
       className={
@@ -313,6 +362,10 @@ export default function Step1Triage({
           isGuest={isGuest}
           onCreateAccount={onCreateAccount}
           onOpenGarage={onOpenGarage}
+          pendingJumpSectionKey={
+            viewModeResolved && viewMode === 'deck' ? pendingJumpKey : null
+          }
+          onJumpApplied={() => setPendingJumpKey(null)}
         />
       ) : (
       <>

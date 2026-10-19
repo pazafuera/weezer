@@ -76,16 +76,23 @@ export default function StepDashboard() {
     return 'Start →';
   };
 
-  // HOT-LINK DIRECTLY TO ALBUM SECTION ON TRIAGE PAGE
+  // HOT-LINK TO AN ALBUM ON THE TRIAGE PAGE — the tap hands the
+  // album to the triage step through sessionStorage (the same
+  // flag pattern as the deck tutorial's 'weezer-deck-tutorial-force'):
+  // Step1Triage consumes it once on mount and lands the user on
+  // that album — the deck applies its own Jump-to-album logic,
+  // the list scrolls its album section into view. (The old code
+  // navigated, then raced the mount with a 150ms setTimeout DOM
+  // scroll: in deck mode there is no album element to find, so
+  // the tapped album was silently ignored and the deck stayed
+  // wherever it was.)
   const handleAlbumClick = (albumName: string) => {
-    const slug = albumName.replace(/\s+/g, '-').toLowerCase();
+    try {
+      window.sessionStorage.setItem('weezer-triage-jump-album', albumName);
+    } catch {
+      /* sessionStorage unavailable — navigate without the jump */
+    }
     navigateTo('triage');
-    setTimeout(() => {
-      const el = document.getElementById(`album-${slug}`);
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    }, 150);
   };
 
   // Step Status & Strict Locking

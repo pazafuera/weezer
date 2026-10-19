@@ -298,9 +298,10 @@ export default function Login() {
         // Route immediately upon account creation: land on the
         // orientation page under an "account created" banner (the
         // accountCreated flag) instead of the old signup_success
-        // step (owner, Oct 18). The signup_success step itself is
-        // left in place — ?step=signup_success deep links still
-        // resolve to it — but no in-app flow routes there anymore.
+        // step (owner, Oct 18). That step has since been removed
+        // entirely (UAT P-2): no in-app flow ever routed to it,
+        // and a cold ?step=signup_success URL now falls through
+        // the unknown-step handling like any other bad step name.
         if (authData.session || authData.user) {
           setAccountCreated(true);
           navigateTo('orientation');

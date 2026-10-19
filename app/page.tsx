@@ -115,6 +115,7 @@ export default function WeezerRankerPage() {
           masterList={masterList}
           triageMap={triageMap}
           moveMasterSong={moveMasterSong}
+          setSongBucket={setSongBucket}
           setStep={(s) => navigateTo(s)}
           onBack={() => {
             setAutoStartMatchups(false);

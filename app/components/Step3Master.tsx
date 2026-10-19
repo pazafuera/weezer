@@ -6,16 +6,18 @@ import { getRankedSongs } from '@/utils/rankingUtils';
 import type { TriageValue } from '../context/WeezerContext';
 
 export default function Step3Master({
-  masterList, 
-  triageMap, 
-  moveMasterSong, 
+  masterList,
+  triageMap,
+  moveMasterSong,
+  setSongBucket,
   setStep,
   onBack,
   onKeepSorting
 }: {
-  masterList: Song[]; 
-  triageMap: Record<string, TriageValue>; 
-  moveMasterSong: (idx: number, dir: 'up'|'down') => void; 
+  masterList: Song[];
+  triageMap: Record<string, TriageValue>;
+  moveMasterSong: (idx: number, dir: 'up'|'down') => void;
+  setSongBucket: (id: string, bucket: TriageValue) => void;
   setStep: (s: 'wrapped') => void;
   onBack: () => void;
   onKeepSorting: () => void;
@@ -94,6 +96,57 @@ export default function Step3Master({
             if (bucket === undefined || bucket === 'unknown') return null;
             const isRankable = bucket === 'banger' || bucket === 'slaps';
             const cfg = BUCKET_CONFIG[bucket];
+
+            // BOUNDARY MOVES (UAT P-12) — the arrows live only on
+            // the rankable rows (Banger / Lowkey Slaps), and the
+            // list is bucket-block ordered, so a rankable row's
+            // neighbor in a DIFFERENT bucket is exactly the block
+            // boundary: ↑ on the first Slaps song, ↓ on the last
+            // Banger. Those presses used to swap the master list
+            // across the boundary and then silently revert on the
+            // next normalize, because the bucket never changed.
+            // Now a boundary press changes the BUCKET through the
+            // same write path triage uses (setSongBucket →
+            // reconcileMasterList), so the established seating
+            // rule applies — promotion seats at the END of the
+            // block above, demotion at the START of the block
+            // below — and Refine, which derives its lists from
+            // the same triageMap + master list, agrees. Presses
+            // inside a block keep the plain reorder. (The ↓ on
+            // the last rankable row stays disabled, as before:
+            // below Slaps sits Mid, which carries no rank and no
+            // arrows — a one-way demotion out of the ranked
+            // region is not this control's job.)
+            const aboveBucket =
+              idx > 0 ? triageMap[rankedSongs[idx - 1].id] : undefined;
+            const belowBucket =
+              idx < rankedSongs.length - 1
+                ? triageMap[rankedSongs[idx + 1].id]
+                : undefined;
+            const handleMoveUp = () => {
+              triggerHaptic(10);
+              if (
+                aboveBucket !== undefined &&
+                aboveBucket !== 'unknown' &&
+                aboveBucket !== bucket
+              ) {
+                setSongBucket(song.id, aboveBucket);
+              } else {
+                moveMasterSong(idx, 'up');
+              }
+            };
+            const handleMoveDown = () => {
+              triggerHaptic(10);
+              if (
+                belowBucket !== undefined &&
+                belowBucket !== 'unknown' &&
+                belowBucket !== bucket
+              ) {
+                setSongBucket(song.id, belowBucket);
+              } else {
+                moveMasterSong(idx, 'down');
+              }
+            };
             
             return (
               <div key={song.id} className="bg-slate-50 border border-slate-200 rounded-2xl p-2.5 flex items-center justify-between gap-3 hover:border-blue-300 transition-colors">
@@ -127,16 +180,16 @@ export default function Step3Master({
                   {/* ONLY SHOW UP/DOWN ARROWS FOR TOP TWO BUCKETS */}
                   {isRankable && (
                     <div className="flex items-center gap-1 ml-1">
-                      <button 
-                        onClick={() => { triggerHaptic(10); moveMasterSong(idx, 'up'); }} 
-                        disabled={idx === 0} 
+                      <button
+                        onClick={handleMoveUp}
+                        disabled={idx === 0}
                         className="w-7 h-7 rounded-lg bg-white hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-white text-slate-800 font-black text-sm flex items-center justify-center border border-slate-300 cursor-pointer shadow-2xs transition-colors"
                       >
                         ↑
                       </button>
-                      <button 
-                        onClick={() => { triggerHaptic(10); moveMasterSong(idx, 'down'); }} 
-                        disabled={idx >= lastRankableIndex} 
+                      <button
+                        onClick={handleMoveDown}
+                        disabled={idx >= lastRankableIndex}
                         className="w-7 h-7 rounded-lg bg-white hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-white text-slate-800 font-black text-sm flex items-center justify-center border border-slate-300 cursor-pointer shadow-2xs transition-colors"
                       >
                         ↓

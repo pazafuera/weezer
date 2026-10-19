@@ -28,6 +28,7 @@ export default function Step05Orientation() {
     accountCreated,
     setAccountCreated,
     userProfile,
+    userId,
   } = useWeezer();
 
   useEffect(() => {
@@ -145,12 +146,19 @@ export default function Step05Orientation() {
           Start Sorting
         </button>
 
-        <button
-          onClick={() => navigateTo('login', 'signup')}
-          className="w-full bg-white hover:bg-slate-50 text-slate-600 font-bold py-3 px-6 rounded-2xl transition-all cursor-pointer text-xs border border-slate-200 text-center"
-        >
-          Create an Account First
-        </button>
+        {/* Only for signed-out arrivals: this rendered for
+            everyone, including signed-in users — and on the
+            account-created banner screen itself, where it sent
+            the brand-new user back to a login card that
+            instantly bounced them to the dashboard. */}
+        {!userId && (
+          <button
+            onClick={() => navigateTo('login', 'signup')}
+            className="w-full bg-white hover:bg-slate-50 text-slate-600 font-bold py-3 px-6 rounded-2xl transition-all cursor-pointer text-xs border border-slate-200 text-center"
+          >
+            Create an Account First
+          </button>
+        )}
       </div>
     </div>
   );

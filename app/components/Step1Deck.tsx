@@ -272,7 +272,7 @@ function buildSectionMilestone(
       ...base,
       kind: 'blue',
       headline: 'Sure, everyone loves the Blue Album.',
-      body: "Okay, now let's get uncomfortable. Pinkerton.",
+      body: 'but Pinkerton is much more controversial.',
       compel: null,
     };
   }
@@ -1565,9 +1565,12 @@ export default function Step1Deck({
   // milestone diet, owner Oct 17). What renders under a
   // milestone card's copy depends on the CARD and on who is
   // sorting:
-  //   Blue card:      Keep sorting (primary) — no Save prompt
-  //                   yet, even for guests; the owner's flow
-  //                   puts the first one on the Pinkerton card.
+  //   Blue card:      "Continue Sorting" (primary) — no Save
+  //                   prompt yet, even for guests; the owner's
+  //                   flow puts the first one on the Pinkerton
+  //                   card. The label is the owner's wording
+  //                   for this card only (Oct 18), passed in as
+  //                   keepLabel by the caller.
   //   Pinkerton card: Save (primary) · Keep sorting for
   //                   guests; Keep (primary) for signed-in.
   //   Singles + album cards: the Pinkerton stack, plus the
@@ -1590,9 +1593,11 @@ export default function Step1Deck({
   const renderMilestoneActions = ({
     showSave,
     showRefine,
+    keepLabel,
   }: {
     showSave: boolean;
     showRefine: boolean;
+    keepLabel?: string;
   }) => (
     <div className="w-full max-w-sm flex flex-col items-center gap-1.5">
       {showSave && isGuest && (
@@ -1606,7 +1611,7 @@ export default function Step1Deck({
             : 'w-full bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm px-6 py-3.5 rounded-full shadow-md transition transform hover:scale-105 cursor-pointer border-2 border-amber-200 whitespace-nowrap'
         }
       >
-        {isGuest ? 'Keep sorting as a guest' : 'Keep sorting'}
+        {keepLabel ?? (isGuest ? 'Keep sorting as a guest' : 'Keep sorting')}
       </button>
       {showRefine && refineEligible && (
         <button
@@ -2344,6 +2349,10 @@ export default function Step1Deck({
                 showRefine:
                   milestonePending.kind === 'singles' ||
                   milestonePending.kind === 'album',
+                keepLabel:
+                  milestonePending.kind === 'blue'
+                    ? 'Continue Sorting'
+                    : undefined,
               })}
             </div>
           </DeckCardShell>

@@ -187,11 +187,15 @@ export default function AppShell({
   const activeFriendsCount = Array.isArray(friendsList) ? friendsList.length : 0;
 
   // One nav row. Rows share one uniform height (py-4 = 48px at
-  // the text-xs line height) and touch — no gap between rows;
-  // the rounded row shape is the only separation. The current
-  // step is marked by a pale blue tint (#E0F2FE, the app's
-  // progress-track blue) with brand-blue text — there are no
-  // arrow indicators anywhere in the menu.
+  // the text-xs line height) and touch — no gap between rows.
+  // Inactive rows are inset rounded shapes; the current step is
+  // marked by a pale blue tint (#E0F2FE, the app's
+  // progress-track blue) with brand-blue text, worn as a
+  // full-width square-cornered rectangle in the same shape
+  // language as the section header bands: it bleeds edge to
+  // edge through the nav's p-2 (-mx-2 out, horizontal padding
+  // grown from px-3.5 to px-[22px] so the text does not move).
+  // There are no arrow indicators anywhere in the menu.
   const renderNavButton = (item: NavItem) => {
     const isActive = step === item.step;
     const isDisabled = item.disabled;
@@ -206,12 +210,12 @@ export default function AppShell({
             navigateTo(item.step);
           }
         }}
-        className={`w-full flex items-center justify-between px-3.5 py-4 rounded-xl text-xs font-black transition-all ${
+        className={`flex items-center justify-between py-4 text-xs font-black transition-all ${
           isDisabled
-            ? 'opacity-40 cursor-not-allowed text-slate-400 bg-slate-50'
+            ? 'w-full px-3.5 rounded-xl opacity-40 cursor-not-allowed text-slate-400 bg-slate-50'
             : isActive
-            ? 'bg-[#E0F2FE] text-[#0072CE] cursor-pointer'
-            : 'text-slate-700 hover:bg-slate-100 cursor-pointer'
+            ? '-mx-2 px-[22px] bg-[#E0F2FE] text-[#0072CE] cursor-pointer'
+            : 'w-full px-3.5 rounded-xl text-slate-700 hover:bg-slate-100 cursor-pointer'
         }`}
       >
         <span>{item.label}</span>
@@ -266,7 +270,7 @@ export default function AppShell({
     return (
       <div key={title} className="mt-6 first:mt-0">
         {/* The header sits IN a full-width band: a quiet
-            bg-slate-100 strip that bleeds edge to edge through
+            bg-slate-200 strip that bleeds edge to edge through
             the nav's p-2 (-mx-2 out, px-2 back in, so the header
             text keeps its px-3.5 alignment with the rows). The
             band's edge is the section delineation — it replaced
@@ -280,7 +284,7 @@ export default function AppShell({
             from the first row's text — still the tightest gap.
             Rows inside carry no gap at all (see
             renderNavButton). */}
-        <div className="-mx-2 bg-slate-100 px-2">
+        <div className="-mx-2 bg-slate-200 px-2">
           <p className="px-3.5 py-2 text-xs font-black text-slate-900">
             {title}
           </p>

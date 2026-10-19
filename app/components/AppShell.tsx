@@ -82,6 +82,23 @@ export default function AppShell({
     }
   }, [menuOpen, userId, refreshFriends]);
 
+  // ESCAPE closes the topmost shell layer — menu, help sheet,
+  // bucket sheet. None of them had a keyboard dismissal (the
+  // account drawer, which has its own Escape handling, sits
+  // above all three: while it's open, this handler stands down
+  // and lets the drawer's handler take the key).
+  useEffect(() => {
+    if (!menuOpen && !helpOpen && !bucketsOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || accountDrawerOpen) return;
+      if (bucketsOpen) setBucketsOpen(false);
+      else if (helpOpen) setHelpOpen(false);
+      else if (menuOpen) setMenuOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [menuOpen, helpOpen, bucketsOpen, accountDrawerOpen]);
+
   // UNIFIED PROGRESSION STATE — one rule shared with dashboard, navigateTo, URL guard.
   const progress = getProgressState(triageMap, masterList);
 

@@ -83,6 +83,16 @@ export default function Step1_5Matchups({
     }, 400);
   };
 
+  // The cards are role="button" divs — give them the keyboard
+  // behaviour the role promises (they were tap/click-only, so a
+  // keyboard user had no way to pick at all).
+  const handleCardKeyDown = (e: React.KeyboardEvent, idx: 0 | 1) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handlePick(idx);
+    }
+  };
+
   if (!currentPair) return null;
 
   return (
@@ -97,8 +107,9 @@ export default function Step1_5Matchups({
 
       <div className="flex-1 flex flex-col gap-4 relative min-h-0">
         {/* OPTION A */}
-        <div 
+        <div
           onClick={() => handlePick(0)}
+          onKeyDown={(e) => handleCardKeyDown(e, 0)}
           role="button"
           tabIndex={0}
           className={`flex-1 rounded-3xl border-2 px-4 pt-4 pb-10 sm:px-6 sm:pt-6 sm:pb-12 flex flex-col items-center justify-center transition-all duration-300 cursor-pointer overflow-hidden ${
@@ -125,8 +136,9 @@ export default function Step1_5Matchups({
         </div>
 
         {/* OPTION B */}
-        <div 
+        <div
           onClick={() => handlePick(1)}
+          onKeyDown={(e) => handleCardKeyDown(e, 1)}
           role="button"
           tabIndex={0}
           className={`flex-1 rounded-3xl border-2 px-4 pt-10 pb-4 sm:px-6 sm:pt-12 sm:pb-6 flex flex-col items-center justify-center transition-all duration-300 cursor-pointer overflow-hidden ${
@@ -149,11 +161,19 @@ export default function Step1_5Matchups({
       </div>
       
       <div className="text-center mt-6 shrink-0">
-        <button 
-          onClick={() => onComplete(songs)} 
-          className="text-xs font-bold text-slate-400 underline hover:text-slate-600 cursor-pointer"
+        {/* The only exit this interstitial has — before any pick it
+            is honestly "Skip Pre-Sort"; after picks exist, the same
+            control abandons the session and its results are lost,
+            so the label says exactly that instead of inviting a
+            tap under a false name. (Abandoning loses only the
+            matchup session; the bucket work outside persists.) */}
+        <button
+          onClick={() => onComplete(songs)}
+          className="min-h-[44px] px-4 text-sm font-black text-slate-500 underline underline-offset-4 hover:text-slate-700 cursor-pointer"
         >
-          Skip Pre-Sort
+          {round <= 1
+            ? 'Skip Pre-Sort'
+            : `Exit and discard ${round - 1} pick${round - 1 === 1 ? '' : 's'}`}
         </button>
       </div>
     </div>

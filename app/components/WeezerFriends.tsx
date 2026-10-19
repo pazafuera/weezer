@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/utils/supabase';
 import { useWeezer } from '../context/WeezerContext';
+import { DashboardBackButton } from './SharedUI';
 
 interface FriendProfile {
   id: string;
@@ -16,7 +17,7 @@ interface FriendProfile {
 
 export default function WeezerFriends() {
   const router = useRouter();
-  const { userId, refreshPendingRequests } = useWeezer();
+  const { userId, refreshPendingRequests, navigateTo } = useWeezer();
 
   const [friends, setFriends] = useState<FriendProfile[]>([]);
   const [incomingRequests, setIncomingRequests] = useState<FriendProfile[]>([]);
@@ -217,9 +218,51 @@ export default function WeezerFriends() {
     }
   };
 
+  // Signed-out (reachable via a ?step=friends deep link — the step
+  // is not auth-guarded): say so plainly and offer the sign-in,
+  // instead of the old behaviour where the list span "Loading
+  // matchups..." forever (loadFriendsAndRequests never runs
+  // without a user) and the Send form silently ate submissions.
+  // page.tsx gates the app behind its own loading spinner, so by
+  // the time this renders, a null userId is a settled signed-out.
+  if (!userId) {
+    return (
+      <div className="pb-32 animate-in fade-in duration-500">
+        <div className="-mt-4 sm:-mt-6 lg:-mt-8 -mx-4 sm:-mx-6 lg:-mx-8 mb-6 border-b border-slate-200 overflow-hidden bg-slate-900 shadow-xs">
+          <img
+            src="/img/rideordie.png"
+            alt="Weezer Ride or Die Friends"
+            className="w-full h-40 sm:h-56 md:h-64 object-cover object-center block"
+          />
+        </div>
+        <div className="max-w-2xl mx-auto px-4 space-y-8">
+          <div>
+            <DashboardBackButton onClick={() => navigateTo('dashboard')} />
+          </div>
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm space-y-3 text-center">
+            <h2 className="text-xl font-black text-slate-950 tracking-tight">
+              Fan Friends needs an account
+            </h2>
+            <p className="text-sm font-bold text-slate-500 max-w-md mx-auto">
+              Comparing your rankings with friends only works when you&apos;re
+              signed in.
+            </p>
+            <button
+              type="button"
+              onClick={() => navigateTo('login')}
+              className="bg-[#0072CE] hover:bg-blue-600 text-white font-black px-6 py-3 rounded-xl transition-colors cursor-pointer"
+            >
+              Sign In / Create Account
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="pb-32 animate-in fade-in duration-500">
-      
+
       {/* FULL-BLEED HERO IMAGE (FLUSH TO HEADER & SIDE EDGES) */}
       <div className="-mt-4 sm:-mt-6 lg:-mt-8 -mx-4 sm:-mx-6 lg:-mx-8 mb-6 border-b border-slate-200 overflow-hidden bg-slate-900 shadow-xs">
         <img
@@ -231,7 +274,14 @@ export default function WeezerFriends() {
 
       {/* MAIN CONTENT CONTAINER */}
       <div className="max-w-2xl mx-auto px-4 space-y-8">
-        
+
+        {/* BACK TO DASHBOARD — this step previously had no exit of
+            its own at all; the only ways out were the header logo
+            and the flyout menu. */}
+        <div>
+          <DashboardBackButton onClick={() => navigateTo('dashboard')} />
+        </div>
+
         {/* HEADER TEXT */}
         <div className="text-center space-y-3">
           <h2 className="text-3xl sm:text-4xl font-black text-slate-950 tracking-tight">

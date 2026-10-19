@@ -2,7 +2,11 @@
 
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { supabase } from '@/utils/supabase';
-import { useWeezer, isRealBucket } from '../context/WeezerContext';
+import {
+  useWeezer,
+  isRealBucket,
+  countBucketedSongs,
+} from '../context/WeezerContext';
 import type { TriageValue } from '../context/WeezerContext';
 import {
   Song,
@@ -162,6 +166,10 @@ export default function Step4Wrapped({
   globalConsensus?: string[];
 }) {
   const { userProfile, friendsList } = useWeezer();
+
+  // RATED count for the thin-Thread note below: real buckets only —
+  // a "Don't Know It" mark is not a rating and doesn't feed the Thread.
+  const ratedCount = countBucketedSongs(triageMap);
   const [activeArchIndex, setActiveArchIndex] = useState(0);
   const [activeEraIndex, setActiveEraIndex] = useState(0);
   const [showAllAlbums, setShowAllAlbums] = useState(false);
@@ -1047,6 +1055,27 @@ export default function Step4Wrapped({
             Your Weezer Taste, Unraveled.
           </p>
         </div>
+
+        {/* THIN-THREAD NOTE — when the Thread is compiled from fewer
+            than 25 rated songs, the page says so up top, before the
+            cards: a Thread on a handful of ratings is a sketch, and
+            it sharpens as more songs get sorted. Plain, not
+            apologetic. At 25+ rated the note does not render. */}
+        {ratedCount < 25 && (
+          <div className="max-w-2xl mx-auto w-full bg-white border border-slate-200 rounded-2xl px-5 py-4 text-center shadow-xs">
+            <p className="text-sm font-semibold text-slate-600 leading-relaxed">
+              This Thread is built on the {ratedCount} song
+              {ratedCount === 1 ? '' : 's'} you&apos;ve rated so far. It
+              sharpens as you sort more.{' '}
+              <button
+                onClick={() => setStep('triage')}
+                className="font-black text-[#0072CE] hover:underline cursor-pointer"
+              >
+                Keep sorting →
+              </button>
+            </p>
+          </div>
+        )}
 
         {/* 1. HERO ROW: ANTHEM + VIBE ENCAPSULATED */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">

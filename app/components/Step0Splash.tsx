@@ -15,10 +15,10 @@ export default function Step0Splash() {
   const { navigateTo } = useWeezer();
 
   return (
-    <div className="max-w-xl mx-auto text-center py-2 sm:py-6 space-y-6 animate-in fade-in duration-500">
-      
+    <div className="max-w-xl mx-auto text-center py-0 sm:py-4 space-y-4 sm:space-y-5 animate-in fade-in duration-500">
+
       {/* HERO SECTION */}
-      <div className="space-y-3 pt-2">
+      <div className="space-y-2">
         <div>
           <h1 className="text-3xl sm:text-4xl font-black text-slate-950 tracking-tight leading-tight">
             30 Years of Debates.
@@ -31,7 +31,7 @@ export default function Step0Splash() {
       </div>
 
       {/* OVERLAPPING ALBUM ARTWORK FAN VISUAL */}
-      <div className="py-3 flex items-center justify-center pointer-events-none select-none">
+      <div className="py-1 flex items-center justify-center pointer-events-none select-none">
         <div className="flex items-center justify-center">
           {ALBUM_PREVIEWS.map((album, idx) => (
             <div
@@ -49,7 +49,7 @@ export default function Step0Splash() {
       </div>
 
       {/* STACKED REASONS TO PARTICIPATE */}
-      <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 space-y-3 max-w-md mx-auto text-left">
+      <div className="bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3 space-y-3 max-w-md mx-auto text-left">
         
         {/* REASON 1: BUILD YOUR CANON */}
         <div className="flex items-center gap-3.5">
@@ -143,11 +143,6 @@ export default function Step0Splash() {
         >
           Start Ranking as a Guest
         </button>
-
-        <p className="text-xs font-semibold text-slate-500 leading-snug pt-1">
-          Rank the songs you know — 25 songs gets you your Wrapped in
-          about 5 minutes. The full 206 takes most fans 20–30.
-        </p>
 
         <p className="text-[11px] font-bold text-slate-400 pt-1">
           Already have an account?{' '}

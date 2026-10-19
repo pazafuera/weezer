@@ -22,6 +22,7 @@ export default function Step2Refine({
   onKeepSorting,
   autoStartMatchups,
   initialStageIdx = 0,
+  onStageChange,
 }: {
   bucketRanks: Record<BucketType, Song[]>;
   triageMap: Record<string, TriageValue>;
@@ -31,8 +32,17 @@ export default function Step2Refine({
   onKeepSorting: () => void;
   autoStartMatchups: boolean;
   initialStageIdx?: number;
+  onStageChange?: (idx: number) => void;
 }) {
   const [stageIdx, setStageIdx] = useState(initialStageIdx);
+
+  // Stage moves go through here so the context copy stays current:
+  // a return landing (Final Review's Back) reads it back as
+  // initialStageIdx and lands on the stage the user left.
+  const goToStage = (idx: number) => {
+    setStageIdx(idx);
+    onStageChange?.(idx);
+  };
 
   const [showMatchups, setShowMatchups] = useState(false);
 
@@ -51,7 +61,7 @@ export default function Step2Refine({
         (stage, idx) => idx <= 1 && (bucketRanks[stage.bucket] || []).length >= 2
       );
       if (firstMatchupStage >= 0) {
-        setStageIdx(firstMatchupStage);
+        goToStage(firstMatchupStage);
         setShowMatchups(true);
       }
     }
@@ -78,8 +88,7 @@ export default function Step2Refine({
     triggerHaptic(20);
     window.scrollTo(0, 0);
     if (stageIdx < REFINEMENT_STAGES.length - 1) {
-      const nextIdx = stageIdx + 1;
-      setStageIdx(nextIdx);
+      goToStage(stageIdx + 1);
       setShowMatchups(false);
     } else {
       handleFinishBucketRanking();
@@ -90,7 +99,7 @@ export default function Step2Refine({
     triggerHaptic(15);
     window.scrollTo(0, 0);
     if (stageIdx > 0) {
-      setStageIdx(prev => prev - 1);
+      goToStage(stageIdx - 1);
       setShowMatchups(false);
     } else if (onBackToTriage) {
       onBackToTriage();

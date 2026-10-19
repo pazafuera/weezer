@@ -99,6 +99,7 @@ export default function WeezerRankerPage() {
           onKeepSorting={() => navigateTo('triage')}
           autoStartMatchups={autoStartMatchups}
           initialStageIdx={refineStageIdx}
+          onStageChange={setRefineStageIdx}
         />
       )}
 

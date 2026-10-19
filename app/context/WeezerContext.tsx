@@ -926,7 +926,13 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
 
     const guardedStep = resolveGuardedStep(targetStep, triageMap, masterList); if (guardedStep === 'rank_buckets') {
       setBucketRanks(getDerivedBucketRanks(triageMap, masterList));
-      setRefineStageIdx(0);
+      // Fresh entries start at stage 0; RETURN landings (Final
+      // Review's Back) keep the stage the user left — Step2Refine
+      // writes its stage back here as it moves, so a return lands
+      // where the work was, not four Next-taps away from it.
+      if (!isReturn) {
+        setRefineStageIdx(0);
+      }
       // Matchup default (owner-approved, Oct 18): the flag is SET on
       // every Refine landing, never left over from an earlier entry —
       // a fresh, intentional entry arms the matchup pre-sort, but only

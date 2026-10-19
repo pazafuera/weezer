@@ -969,8 +969,19 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   const returnFromStep = (fromStep: AppStep, fallback: AppStep = 'splash') => {
     const recorded = returnStepRef.current[fromStep];
     delete returnStepRef.current[fromStep];
-    const target: AppStep =
+    let target: AppStep =
       recorded && recorded !== fromStep ? recorded : fallback;
+    // If that destination is itself locked from here — the classic
+    // case is Fan Stats cold-opened by deep link, whose 'wrapped'
+    // fallback a zero-progress user hasn't unlocked — the guard
+    // would silently rewrite it to triage/rank_buckets: a "Back"
+    // landing on a step the user has never seen, with no
+    // explanation. Land on the dashboard instead — always
+    // reachable, and the honest destination for a Back with
+    // nowhere recorded (or nowhere reachable) to go.
+    if (resolveGuardedStep(target, triageMap, masterList) !== target) {
+      target = 'dashboard';
+    }
     navigateInternal(target, undefined, true);
   };
 

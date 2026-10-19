@@ -226,6 +226,44 @@ export default function Login() {
     text: string;
   } | null>(null);
 
+  // Password reset (UAT P-4): the same Supabase reset flow the
+  // account drawer uses, surfaced here for users who are locked
+  // OUT — the drawer copy is unreachable until you can sign in.
+  const [resetSending, setResetSending] = useState(false);
+
+  const handleForgotPassword = async () => {
+    if (!email) {
+      setMessage({
+        type: 'error',
+        text: 'Enter your email address above first — the reset link goes there.',
+      });
+      return;
+    }
+    setResetSending(true);
+    setMessage(null);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo:
+          typeof window !== 'undefined' ? window.location.origin : undefined,
+      });
+      if (error) throw error;
+      // Neutral confirmation — does not reveal whether an account
+      // exists for the email (same wording policy as the drawer).
+      setMessage({
+        type: 'success',
+        text: 'If an account exists for that email, a password reset link is on its way. Check your inbox.',
+      });
+    } catch (error: unknown) {
+      const err = error as { error_description?: string; message?: string } | null;
+      setMessage({
+        type: 'error',
+        text: err?.error_description || err?.message || 'Could not send the reset email.',
+      });
+    } finally {
+      setResetSending(false);
+    }
+  };
+
   // If already logged in, redirect to main application view
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -444,6 +482,18 @@ export default function Login() {
                   minLength={6}
                   className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#0072CE] focus:ring-2 focus:ring-blue-100 outline-none transition-all font-bold text-slate-900 text-base"
                 />
+                {authMode === 'login' && (
+                  <div className="text-right mt-1.5">
+                    <button
+                      type="button"
+                      onClick={handleForgotPassword}
+                      disabled={resetSending}
+                      className="text-[11px] font-bold text-[#0072CE] hover:underline disabled:opacity-50 cursor-pointer"
+                    >
+                      {resetSending ? 'Sending…' : 'Forgot password?'}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 

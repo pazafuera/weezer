@@ -544,10 +544,17 @@ export default function Step1Triage({
             🔒 Categorize All Songs ({categorizedCount}/{FULL_SONG_POOL.length})
           </button>
         )}
+        {/* The partial-sort forward path (UAT P-7): a real
+            secondary button, not the 11px underlined link it was —
+            the enabled way forward was the least visible element
+            on the screen, under a big disabled lock pill. Same
+            action (handleFinishTriage's partial path), ≥44px
+            target, visually secondary to the amber primary that
+            replaces the lock pill at full completion. */}
         {hasPartialTriage && !isGutCheckComplete && (
           <button
             onClick={handleFinishTriage}
-            className="text-[11px] font-semibold text-slate-300/90 hover:text-white underline underline-offset-2 decoration-slate-500 bg-slate-950/60 rounded-full px-3 py-1 backdrop-blur-sm transition-colors cursor-pointer whitespace-nowrap"
+            className="min-h-[44px] flex items-center bg-white hover:bg-slate-50 text-slate-900 border border-slate-300 shadow-lg font-black text-xs px-5 rounded-full transition-all active:scale-[0.98] cursor-pointer whitespace-nowrap"
           >
             Continue with {bucketedCount} of {FULL_SONG_POOL.length} bucketed →
           </button>

@@ -90,7 +90,7 @@ export default function FanStats({
 }: {
   userMasterList?: Song[];
 }) {
-  const { communityMasterLists = [], communityTriageMaps = [], refreshCommunityData, closeFanStats } = useWeezer();
+  const { communityMasterLists = [], communityTriageMaps = [], refreshCommunityData, closeFanStats, communityLoaded } = useWeezer();
   const [expandedTribe, setExpandedTribe] = useState<string | null>(null);
 
   // If context hasn't loaded data yet when user jumps straight to Fan Stats, trigger background fetch
@@ -386,9 +386,34 @@ export default function FanStats({
   // with placeholder values, a PLACEHOLDER badge, and a disclaimer.
   if (!communityStats) {
     return (
-      <div className="py-20 text-center space-y-3">
-        <div className="w-8 h-8 border-4 border-[#0072CE] border-t-transparent rounded-full animate-spin mx-auto" />
-        <p className="text-sm font-bold text-slate-500">Aggregating Fan Data...</p>
+      <div className="pb-32 animate-in fade-in duration-500">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-2">
+          {/* The Back renders in EVERY state of this step — the
+              loading branch used to return before it, so a stuck
+              load left the header and menu as the only exits. */}
+          <div className="flex items-center justify-between">
+            <button onClick={() => closeFanStats()} className="text-xs font-black text-slate-400 hover:text-slate-600 transition-colors flex items-center gap-1 cursor-pointer">
+              ← Back
+            </button>
+          </div>
+          {communityLoaded ? (
+            /* The fetch settled and there is genuinely nothing:
+               say so, instead of spinning "Aggregating…" forever
+               (the pre-launch / RPC-failure reality until now). */
+            <div className="py-20 text-center space-y-3">
+              <p className="text-xl font-black text-slate-950">No fan data yet</p>
+              <p className="text-sm font-bold text-slate-500 max-w-sm mx-auto leading-snug">
+                Global Fan Stats fills in as fans finish and share
+                their rankings. Check back once some rankings are in.
+              </p>
+            </div>
+          ) : (
+            <div className="py-20 text-center space-y-3">
+              <div className="w-8 h-8 border-4 border-[#0072CE] border-t-transparent rounded-full animate-spin mx-auto" />
+              <p className="text-sm font-bold text-slate-500">Aggregating Fan Data...</p>
+            </div>
+          )}
+        </div>
       </div>
     );
   }

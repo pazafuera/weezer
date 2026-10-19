@@ -278,6 +278,10 @@ interface WeezerContextType {
   communityMasterLists: Song[][];
   communityTriageMaps: Record<string, TriageValue>[];
   loadingCommunity: boolean;
+  /** True once the first community fetch has SETTLED (data or
+   *  error) — lets consumers tell "still loading" apart from
+   *  "loaded, and there is genuinely nothing yet". */
+  communityLoaded: boolean;
   refreshCommunityData: () => Promise<void>;
 
   // Actions
@@ -452,6 +456,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   const [communityMasterLists, setCommunityMasterLists] = useState<Song[][]>([]);
   const [communityTriageMaps, setCommunityTriageMaps] = useState<Record<string, TriageValue>[]>([]);
   const [loadingCommunity, setLoadingCommunity] = useState<boolean>(false);
+  const [communityLoaded, setCommunityLoaded] = useState<boolean>(false);
 
   const setStep = (newStep: AppStep) => {
     setStepState(newStep);
@@ -489,6 +494,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
       console.error('Error fetching background community data:', err);
     } finally {
       setLoadingCommunity(false);
+      setCommunityLoaded(true);
     }
   };
 
@@ -1070,6 +1076,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         communityMasterLists,
         communityTriageMaps,
         loadingCommunity,
+        communityLoaded,
         refreshCommunityData,
         syncRankingsToDatabase,
         updateAndSyncBucketRanks,

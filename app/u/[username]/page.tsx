@@ -183,11 +183,16 @@ export default function PublicProfilePage() {
 
         if (cards && cards.length > 0) {
           setAllFriends(
-            cards.map((c: any) => ({
-              id: c.id,
-              username: c.username,
-              display_name: c.display_name || c.username,
-            }))
+            cards
+              // Accepted friends only — the RPC also returns
+              // pending contacts, who don't belong in a "your
+              // friends" switcher.
+              .filter((c: any) => c.status === 'accepted')
+              .map((c: any) => ({
+                id: c.id,
+                username: c.username,
+                display_name: c.display_name || c.username,
+              }))
           );
         }
       }
@@ -293,23 +298,35 @@ export default function PublicProfilePage() {
         
         {/* TOP BAR: BREADCRUMB TO FAN FRIENDS */}
         <div className="flex items-center justify-between pt-1">
-          <button
-            onClick={() => router.push('/?step=friends')}
+          {/* A plain anchor (full load) on purpose: router.push
+              changes the URL but the app provider only parses
+              ?step= once, at ITS mount — a client-side push home
+              landed on splash/dashboard while the URL said
+              friends. A fresh load parses it for real. */}
+          <a
+            href="/?step=friends"
             className="inline-flex items-center gap-1.5 text-xs font-black text-[#0072CE] hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-3.5 py-2 rounded-full transition-colors cursor-pointer border border-blue-200/60"
           >
             ← Back to Fan Friends
-          </button>
+          </a>
         </div>
 
         {/* LIGHT FRIENDS CAROUSEL SWITCHER */}
         {allFriends.length > 1 && (
           <div className="bg-white border border-slate-200 rounded-2xl p-2.5 flex items-center justify-between shadow-xs">
-            <button
-              onClick={handlePrevFriend}
-              className="p-1.5 hover:bg-slate-100 rounded-xl transition-colors text-slate-600 font-black text-xs cursor-pointer flex items-center gap-1 shrink-0"
-            >
-              ← Prev
-            </button>
+            {/* Prev/Next only make sense when the profile being
+                viewed IS in the list — at index −1 (a non-friend's
+                public profile) the modulo math jumped to
+                arbitrary friends. The chips stay: those taps are
+                explicit. */}
+            {currentFriendIdx !== -1 && (
+              <button
+                onClick={handlePrevFriend}
+                className="p-1.5 hover:bg-slate-100 rounded-xl transition-colors text-slate-600 font-black text-xs cursor-pointer flex items-center gap-1 shrink-0"
+              >
+                ← Prev
+              </button>
+            )}
 
             {/* AVATAR CHIPS */}
             <div className="flex items-center gap-1.5 overflow-x-auto px-2 max-w-[280px] sm:max-w-md no-scrollbar">
@@ -331,12 +348,14 @@ export default function PublicProfilePage() {
               })}
             </div>
 
-            <button
-              onClick={handleNextFriend}
-              className="p-1.5 hover:bg-slate-100 rounded-xl transition-colors text-slate-600 font-black text-xs cursor-pointer flex items-center gap-1 shrink-0"
-            >
-              Next →
-            </button>
+            {currentFriendIdx !== -1 && (
+              <button
+                onClick={handleNextFriend}
+                className="p-1.5 hover:bg-slate-100 rounded-xl transition-colors text-slate-600 font-black text-xs cursor-pointer flex items-center gap-1 shrink-0"
+              >
+                Next →
+              </button>
+            )}
           </div>
         )}
 
@@ -352,12 +371,12 @@ export default function PublicProfilePage() {
             <div className="text-5xl">🔍</div>
             <h2 className="text-2xl font-black text-slate-900">Profile Not Found</h2>
             <p className="text-xs font-bold text-slate-500 max-w-sm mx-auto">{errorMsg}</p>
-            <button
-              onClick={() => router.push('/?step=friends')}
-              className="bg-[#0072CE] text-white px-6 py-3 rounded-xl font-black text-xs shadow-md cursor-pointer"
+            <a
+              href="/?step=friends"
+              className="inline-block bg-[#0072CE] text-white px-6 py-3 rounded-xl font-black text-xs shadow-md cursor-pointer"
             >
               Back to Fan Friends
-            </button>
+            </a>
           </div>
         ) : (
           <main className="space-y-6 animate-in fade-in duration-300">
@@ -373,7 +392,7 @@ export default function PublicProfilePage() {
             </div>
 
             {/* ENHANCED MATCH SCORECARD */}
-            {hasVisitorData && stats?.sharedSample ? (
+            {hasVisitorData && stats && stats.sharedSample >= 2 ? (
               <div className="bg-slate-950 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden border border-slate-800 text-white space-y-6">
                 
                 {/* SCORES AND NAMES ROW */}
@@ -432,14 +451,30 @@ export default function PublicProfilePage() {
                 <p className="text-xs font-semibold text-slate-500 mb-4 max-w-sm mx-auto">
                   Create your own Weezer ranking to unlock your compatibility score and see where you and {tName} disagree.
                 </p>
-                <button
-                  onClick={() => router.push('/')}
-                  className="bg-[#0072CE] text-white px-5 py-2.5 rounded-xl font-black text-xs shadow-md hover:bg-blue-600 transition-colors cursor-pointer"
+                {/* Full-load anchor, same reason as the Back
+                    link above: a client-side push home doesn't
+                    re-run the provider's entry logic. */}
+                <a
+                  href="/"
+                  className="inline-block bg-[#0072CE] text-white px-5 py-2.5 rounded-xl font-black text-xs shadow-md hover:bg-blue-600 transition-colors cursor-pointer"
                 >
                   Start Your Ranking
-                </button>
+                </a>
               </div>
-            ) : null}
+            ) : (
+              /* Signed in WITH rankings, but fewer than 2 shared
+                 top songs: the chain used to render null here —
+                 no scorecard, no word of explanation. */
+              <div className="bg-slate-50 border border-slate-200 rounded-3xl p-6 text-center shadow-sm">
+                <h3 className="text-lg font-black text-slate-900 mb-1">
+                  Not enough overlap to score — yet
+                </h3>
+                <p className="text-xs font-semibold text-slate-500 max-w-sm mx-auto">
+                  A match score needs at least 2 songs you&apos;ve both put
+                  in your top buckets. As your rankings grow, this fills in.
+                </p>
+              </div>
+            )}
 
             {/* THE BIGGEST FIGHT */}
             {hasVisitorData && stats?.biggestFight && (

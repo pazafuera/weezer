@@ -195,6 +195,9 @@ export default function AppShell({
   // language as the section header bands: it bleeds edge to
   // edge through the nav's p-2 (-mx-2 out, horizontal padding
   // grown from px-3.5 to px-[22px] so the text does not move).
+  // The active branch's w-full is load-bearing: without it the
+  // button shrink-wraps to its label and the tint wraps the
+  // text instead of spanning the flyout.
   // There are no arrow indicators anywhere in the menu.
   const renderNavButton = (item: NavItem) => {
     const isActive = step === item.step;
@@ -214,7 +217,7 @@ export default function AppShell({
           isDisabled
             ? 'w-full px-3.5 rounded-xl opacity-40 cursor-not-allowed text-slate-400 bg-slate-50'
             : isActive
-            ? '-mx-2 px-[22px] bg-[#E0F2FE] text-[#0072CE] cursor-pointer'
+            ? 'w-full -mx-2 px-[22px] bg-[#E0F2FE] text-[#0072CE] cursor-pointer'
             : 'w-full px-3.5 rounded-xl text-slate-700 hover:bg-slate-100 cursor-pointer'
         }`}
       >

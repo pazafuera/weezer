@@ -107,7 +107,7 @@ export default function WeezerRankerPage() {
           masterList={masterList}
           triageMap={triageMap}
           moveMasterSong={moveMasterSong}
-          setStep={setStep}
+          setStep={(s) => navigateTo(s)}
           onBack={() => {
             setAutoStartMatchups(false);
             closeMaster();
@@ -129,7 +129,15 @@ export default function WeezerRankerPage() {
               // this edit-intent exception must run last to survive.
               setAutoStartMatchups(false);
             } else {
-              setStep(s as any);
+              // Through navigateTo, not the raw setStep: the URL
+              // stays in sync, guards run, and a return origin is
+              // recorded for the tracked steps — a raw setStep did
+              // none of that, so refresh/share resurrected the
+              // Thread and Final Review's Back lost the Thread as
+              // its origin. (Targets from Wrapped are safe here:
+              // fan_stats/triage are unguarded, and master's unlock
+              // condition is identical to wrapped's.)
+              navigateTo(s as any);
             }
           }}
         />

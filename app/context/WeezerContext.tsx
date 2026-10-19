@@ -902,7 +902,14 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         // these steps) must not overwrite the recorded step with the
         // step itself. The OTHER tracked step's origin is left alone:
         // a tracked-to-tracked hop is a detour, not a fresh start.
-        if (step !== targetStep) {
+        // Login is never recorded as another step's origin: it is a
+        // detour, not a place a Back should return TO — the sign-up
+        // flow (login → orientation) otherwise overwrites
+        // orientation's real origin with 'login', and the login card
+        // auto-bounces a signed-in user to the dashboard, so the new
+        // user's first Back flashed the login card and dumped them
+        // on the dashboard instead of returning to the start.
+        if (step !== targetStep && step !== 'login') {
           returnStepRef.current[targetStep] = step;
         }
       } else {

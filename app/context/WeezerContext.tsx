@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useEffect, useRef, ReactNod
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/utils/supabase';
 import { BucketType, Song, FULL_SONG_POOL } from '../data/constants';
-import { sanitizeMasterList, reconcileMasterList, getRankedSongs } from '@/utils/rankingUtils';
+import { sanitizeMasterList, reconcileMasterList, getRankedSongs, sortByBucketBlock } from '@/utils/rankingUtils';
 
 
 export type AppStep =
@@ -287,6 +287,7 @@ interface WeezerContextType {
     updatedMap?: Record<string, TriageValue>
   ) => void;
   setSongBucket: (id: string, bucket: TriageValue) => void;
+  normalizeMasterList: () => void;
   moveMasterSong: (index: number, direction: 'up' | 'down') => void;
   handleMagicFill: () => void;
 }
@@ -839,6 +840,22 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     syncRankingsToDatabase(map, reconciled);
   };
 
+  // Final Review entry normalization (belt and braces): reconcile
+  // heals triage writes as they happen and sanitize heals saves at
+  // load, but this pass — the same sortByBucketBlock both of them
+  // use — guarantees the master step only ever receives a
+  // bucket-block-ordered list. No-op, and no sync, when the list is
+  // already normalized.
+  const normalizeMasterList = () => {
+    const normalized = sortByBucketBlock(masterList, triageMap);
+    const changed =
+      normalized.length !== masterList.length ||
+      normalized.some((song, i) => song.id !== masterList[i].id);
+    if (!changed) return;
+    setMasterList(normalized);
+    syncRankingsToDatabase(triageMap, normalized);
+  };
+
   const handleMagicFill = () => {
     const newMap: Record<string, TriageValue> = {};
     FULL_SONG_POOL.forEach((song) => {
@@ -1023,6 +1040,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         syncRankingsToDatabase,
         updateAndSyncBucketRanks,
         setSongBucket,
+        normalizeMasterList,
         moveMasterSong,
         handleMagicFill,
       }}

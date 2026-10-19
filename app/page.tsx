@@ -37,6 +37,7 @@ export default function WeezerRankerPage() {
     closeMaster,
     closeRefine,
     setSongBucket,
+    normalizeMasterList,
     userId,
   } = useWeezer();
 
@@ -90,7 +91,10 @@ export default function WeezerRankerPage() {
           bucketRanks={bucketRanks}
           triageMap={triageMap}
           onUpdateRanks={updateAndSyncBucketRanks}
-          handleFinishBucketRanking={() => setStep('master')}
+          handleFinishBucketRanking={() => {
+            normalizeMasterList();
+            setStep('master');
+          }}
           onBackToTriage={() => closeRefine()}
           autoStartMatchups={autoStartMatchups}
           initialStageIdx={refineStageIdx}

@@ -106,6 +106,7 @@ export default function StepDashboard() {
       isComplete: isTriageComplete,
       isCurrent: !isTriageComplete,
       isDisabled: false,
+      unlockHint: null as string | null,
       ctaText: getTriageCtaText(),
       action: () => navigateTo('triage'),
     },
@@ -116,6 +117,7 @@ export default function StepDashboard() {
       isComplete: isRefinedMasterComplete,
       isCurrent: isTriageComplete && !isRefinedMasterComplete,
       isDisabled: !progress.isRefineUnlocked,
+      unlockHint: "Unlocks once you've rated a song" as string | null,
       ctaText: isRefinedMasterComplete ? 'View →' : 'Start →',
       action: () => {
         if (!progress.isRefineUnlocked) return;
@@ -131,6 +133,7 @@ export default function StepDashboard() {
       isComplete: isRefinedMasterComplete,
       isCurrent: false,
       isDisabled: !progress.isMasterUnlocked,
+      unlockHint: 'Unlocks after Refine' as string | null,
       ctaText: 'View →',
       action: () => {
         if (!progress.isMasterUnlocked) return;
@@ -144,6 +147,7 @@ export default function StepDashboard() {
       isComplete: isRefinedMasterComplete,
       isCurrent: isRefinedMasterComplete,
       isDisabled: !progress.isWrappedUnlocked,
+      unlockHint: 'Unlocks after Refine' as string | null,
       ctaText: 'View →',
       action: () => {
         if (!progress.isWrappedUnlocked) return;
@@ -383,8 +387,15 @@ export default function StepDashboard() {
           >
             Refine
           </span>
-          <span className="text-xs font-black text-slate-400">
-            {!progress.isRefineUnlocked ? 'Locked 🔒' : '→'}
+          <span className="flex flex-col items-end shrink-0">
+            <span className="text-xs font-black text-slate-400">
+              {!progress.isRefineUnlocked ? 'Locked 🔒' : '→'}
+            </span>
+            {!progress.isRefineUnlocked && (
+              <span className="text-[10px] font-bold text-slate-400">
+                Unlocks once you&apos;ve rated a song
+              </span>
+            )}
           </span>
         </button>
         <button
@@ -410,8 +421,15 @@ export default function StepDashboard() {
           >
             Final Review
           </span>
-          <span className="text-xs font-black text-slate-400">
-            {!progress.isMasterUnlocked ? 'Locked 🔒' : '→'}
+          <span className="flex flex-col items-end shrink-0">
+            <span className="text-xs font-black text-slate-400">
+              {!progress.isMasterUnlocked ? 'Locked 🔒' : '→'}
+            </span>
+            {!progress.isMasterUnlocked && (
+              <span className="text-[10px] font-bold text-slate-400">
+                Unlocks after Refine
+              </span>
+            )}
           </span>
         </button>
       </div>
@@ -641,7 +659,21 @@ export default function StepDashboard() {
                       : 'text-slate-400 group-hover:text-[#0072CE]'
                   }`}
                 >
-                  {st.isDisabled ? 'Locked 🔒' : st.ctaText}
+                  {st.isDisabled ? (
+                    <>
+                      Locked 🔒
+                      {/* The unlock condition, not just the lock
+                          (UAT P-1b) — derived from the same guard
+                          that disabled the tile. */}
+                      {st.unlockHint && (
+                        <span className="block text-[10px] font-bold mt-0.5">
+                          {st.unlockHint}
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    st.ctaText
+                  )}
                 </span>
               </button>
             ))}

@@ -129,6 +129,13 @@ export default function AppShell({
     requiresAuth?: boolean;
     hideIf?: boolean;
     disabled?: boolean;
+    /** The unlock condition shown on the row while it is locked
+     *  (UAT P-1b) — derived from the same progression guard that
+     *  disables the row (getProgressState / resolveGuardedStep),
+     *  never invented: Refine's gate is one rated song; My
+     *  Rankings' and the Sweater Thread's gate is a refined list,
+     *  which Refine produces. */
+    unlockHint?: string;
     /** Which menu section carries the row (see the nav render below). */
     group?: 'ranking' | 'fanhood';
   }
@@ -156,18 +163,21 @@ export default function AppShell({
       label: 'Refine',
       step: 'rank_buckets',
       disabled: !progress.isRefineUnlocked,
+      unlockHint: "Unlocks once you've rated a song",
       group: 'ranking',
     },
     {
       label: 'My Rankings',
       step: 'master',
       disabled: !progress.isMasterUnlocked,
+      unlockHint: 'Unlocks after Refine',
       group: 'ranking',
     },
     {
       label: 'Sweater Thread',
       step: 'wrapped',
       disabled: !progress.isWrappedUnlocked,
+      unlockHint: 'Unlocks after Refine',
       group: 'fanhood',
     },
     {
@@ -243,6 +253,17 @@ export default function AppShell({
         }`}
       >
         <span>{item.label}</span>
+
+        {/* A locked row states its unlock condition (UAT P-1b):
+            quiet right-side small text, so the row's uniform
+            height is untouched — a greyed row with no reason was
+            half of the "stuck" feeling the guard notice (P-1a)
+            explains after the fact; this prevents it. */}
+        {isDisabled && item.unlockHint && (
+          <span className="text-[10px] font-bold text-slate-400 text-right">
+            {item.unlockHint}
+          </span>
+        )}
 
         {/* Fan Friends carries two counts: the highlighted pill
             is the ACTIVE friends count (friendsList is loaded

@@ -246,7 +246,11 @@ interface WeezerContextType {
   accountCreated: boolean;
   setAccountCreated: (val: boolean) => void;
   initialAuthMode: AuthModeType;
-  navigateTo: (targetStep: AppStep, authMode?: AuthModeType) => void;
+  navigateTo: (
+    targetStep: AppStep,
+    authMode?: AuthModeType,
+    opts?: { preserveOrigins?: boolean }
+  ) => void;
   closeLogin: () => void;
   closeOrientation: () => void;
   closeFanStats: () => void;
@@ -920,7 +924,8 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   const navigateInternal = (
     targetStep: AppStep,
     authMode?: AuthModeType,
-    isReturn: boolean = false
+    isReturn: boolean = false,
+    preserveOrigins: boolean = false
   ) => {
     // Origin bookkeeping for the return-tracked steps. A return
     // navigation (the close* exits) skips it entirely:
@@ -945,6 +950,12 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         if (step !== targetStep && step !== 'login') {
           returnStepRef.current[targetStep] = step;
         }
+      } else if (preserveOrigins) {
+        // A detour navigation (the help sheet's tutorial replay):
+        // the user is being pulled away mid-visit, not moving on,
+        // so the origins recorded for the tracked steps they were
+        // visiting survive — their Backs afterward still return
+        // where they should (UAT P-3).
       } else {
         // Any navigation to an ordinary step consumes every recorded
         // origin — the user has moved on, and a later visit to a
@@ -992,8 +1003,12 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const navigateTo = (targetStep: AppStep, authMode?: AuthModeType) => {
-    navigateInternal(targetStep, authMode, false);
+  const navigateTo = (
+    targetStep: AppStep,
+    authMode?: AuthModeType,
+    opts?: { preserveOrigins?: boolean }
+  ) => {
+    navigateInternal(targetStep, authMode, false, opts?.preserveOrigins);
   };
 
   /**

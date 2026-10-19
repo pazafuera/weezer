@@ -44,7 +44,11 @@ export default function AppShell({
     if (step === 'triage') {
       window.dispatchEvent(new CustomEvent('weezer:replay-tutorial'));
     }
-    navigateTo('triage');
+    // preserveOrigins (UAT P-3): a replay is a detour, not a move
+    // on — without it this navigation wiped every recorded return
+    // origin, and Backs on tracked steps visited before the replay
+    // fell back to their hardcoded destinations afterward.
+    navigateTo('triage', undefined, { preserveOrigins: true });
   };
 
   const {

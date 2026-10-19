@@ -46,13 +46,13 @@ export default function Step05Orientation() {
     // itself, and can never cover content: the scroll region's own
     // bottom padding is all the end clearance it needs.
     <div className="h-full flex flex-col max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex-1 overflow-y-auto px-4 space-y-6 pb-8">
+      <div className="flex-1 overflow-y-auto px-4 space-y-4 pb-4">
       {/* BACK BUTTON — returns to the step the user came from
           (closeOrientation), not a hardcoded home: a user who opened
           How It Works from the dashboard goes back to the dashboard.
           Falls back to splash on a cold arrival (first run, deep
           link), which is where first-run users came from anyway. */}
-      <div className="pt-4 flex items-center justify-start">
+      <div className="pt-2 flex items-center justify-start">
         <button
           onClick={closeOrientation}
           className="text-xs font-black text-slate-400 hover:text-slate-600 transition-colors flex items-center gap-1 cursor-pointer"
@@ -61,26 +61,24 @@ export default function Step05Orientation() {
         </button>
       </div>
 
-      {/* GUEST HEADER */}
-      <div className="text-center space-y-2">
-        <h1 className="text-3xl sm:text-5xl font-black text-slate-950 tracking-tighter">
-          The Rules of <span className="text-[#0072CE]">Engagement.</span>
+      {/* HEADER — the title now carries the whole explanation
+          (owner: "How the Project Works", one line, no subtitle;
+          the old "How this works" sub-heading went with it — it
+          only repeated the title). */}
+      <div className="text-center">
+        <h1 className="text-2xl sm:text-5xl font-black text-slate-950 tracking-tighter whitespace-nowrap">
+          How the Project Works
         </h1>
-        <p className="text-xs sm:text-sm font-bold text-slate-500 uppercase tracking-widest max-w-md mx-auto">
-          You're ready to get ranking.
-        </p>
       </div>
 
-      {/* HOW THIS WORKS — the process first, buckets second */}
-      <div className="space-y-3 pt-2">
-        <h2 className="text-base sm:text-xl font-black text-slate-950 tracking-tight text-center">
-          How this works
-        </h2>
-        <div className="bg-white border border-slate-200/90 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
+      {/* THE PROCESS — sort, refine, Thread. The buckets
+          themselves are taught in the deck tutorial, not here. */}
+      <div>
+        <div className="bg-white border border-slate-200/90 rounded-3xl p-4 sm:p-6 shadow-sm space-y-3">
           {PROCESS_STEPS.map((step, idx) => (
             <div
               key={step.title}
-              className={`flex items-start gap-3.5 ${idx > 0 ? 'pt-4 border-t border-slate-100' : ''}`}
+              className={`flex items-start gap-3.5 ${idx > 0 ? 'pt-3 border-t border-slate-100' : ''}`}
             >
               <div className="w-11 h-11 rounded-2xl border bg-blue-100 text-[#0072CE] border-blue-300 flex items-center justify-center text-lg font-black shrink-0 shadow-sm">
                 {idx + 1}

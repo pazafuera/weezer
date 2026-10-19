@@ -368,10 +368,12 @@ function CompatibilityThumbnailItem({
   songs,
   friends,
   subtitle,
+  onFindFriends,
 }: {
   songs: ShareSong[];
   friends: FriendLike[];
   subtitle?: string;
+  onFindFriends?: () => void;
 }) {
   const [selectedKey, setSelectedKey] = useState('');
   const controls = (
@@ -379,18 +381,39 @@ function CompatibilityThumbnailItem({
       <label className="mb-1 block text-[10px] font-black uppercase tracking-wider text-slate-400">
         Compare with
       </label>
-      <select
-        value={selectedKey}
-        onChange={(e) => setSelectedKey(e.target.value)}
-        className="w-full rounded-xl bg-white border border-slate-300 px-3 py-2.5 text-sm font-bold text-slate-900"
-      >
-        <option value="">Choose a friend…</option>
-        {friends.map((f, i) => (
-          <option key={friendKey(f, i)} value={friendKey(f, i)}>
-            {friendLabel(f)}
-          </option>
-        ))}
-      </select>
+      {friends.length === 0 ? (
+        /* No friends: the picker used to render empty and the
+           Download stayed disabled with no explanation and no
+           way forward. Say what's missing and offer the trip. */
+        <div className="space-y-2">
+          <p className="text-sm font-bold text-slate-500 leading-snug">
+            Taste Match compares your rankings with a friend&apos;s —
+            you don&apos;t have any Fan Friends yet.
+          </p>
+          {onFindFriends && (
+            <button
+              type="button"
+              onClick={onFindFriends}
+              className="text-sm font-black text-[#0072CE] underline underline-offset-4 cursor-pointer"
+            >
+              Find friends →
+            </button>
+          )}
+        </div>
+      ) : (
+        <select
+          value={selectedKey}
+          onChange={(e) => setSelectedKey(e.target.value)}
+          className="w-full rounded-xl bg-white border border-slate-300 px-3 py-2.5 text-sm font-bold text-slate-900"
+        >
+          <option value="">Choose a friend…</option>
+          {friends.map((f, i) => (
+            <option key={friendKey(f, i)} value={friendKey(f, i)}>
+              {friendLabel(f)}
+            </option>
+          ))}
+        </select>
+      )}
     </div>
   );
   return (
@@ -445,10 +468,12 @@ function CompatibilityLibraryItem({
   songs,
   friends,
   subtitle,
+  onFindFriends,
 }: {
   songs: ShareSong[];
   friends: FriendLike[];
   subtitle?: string;
+  onFindFriends?: () => void;
 }) {
   const [selectedKey, setSelectedKey] = useState('');
   const controls = (
@@ -456,18 +481,36 @@ function CompatibilityLibraryItem({
       <label className="mb-1 block text-[10px] font-black uppercase tracking-wider text-slate-400">
         Compare with
       </label>
-      <select
-        value={selectedKey}
-        onChange={(e) => setSelectedKey(e.target.value)}
-        className="w-full rounded-xl bg-white border border-slate-300 px-3 py-2.5 text-sm font-bold text-slate-900"
-      >
-        <option value="">Choose a friend…</option>
-        {friends.map((f, i) => (
-          <option key={friendKey(f, i)} value={friendKey(f, i)}>
-            {friendLabel(f)}
-          </option>
-        ))}
-      </select>
+      {friends.length === 0 ? (
+        <div className="space-y-2">
+          <p className="text-sm font-bold text-slate-500 leading-snug">
+            Taste Match compares your rankings with a friend&apos;s —
+            you don&apos;t have any Fan Friends yet.
+          </p>
+          {onFindFriends && (
+            <button
+              type="button"
+              onClick={onFindFriends}
+              className="text-sm font-black text-[#0072CE] underline underline-offset-4 cursor-pointer"
+            >
+              Find friends →
+            </button>
+          )}
+        </div>
+      ) : (
+        <select
+          value={selectedKey}
+          onChange={(e) => setSelectedKey(e.target.value)}
+          className="w-full rounded-xl bg-white border border-slate-300 px-3 py-2.5 text-sm font-bold text-slate-900"
+        >
+          <option value="">Choose a friend…</option>
+          {friends.map((f, i) => (
+            <option key={friendKey(f, i)} value={friendKey(f, i)}>
+              {friendLabel(f)}
+            </option>
+          ))}
+        </select>
+      )}
     </div>
   );
   return (
@@ -496,6 +539,7 @@ export default function ShareablesGallery({
   tierSection,
   variant = 'full',
   onStartSorting,
+  onFindFriends,
 }: {
   /** Ranked songs only (already filtered to bucketed songs). */
   songs: ShareSong[];
@@ -514,6 +558,8 @@ export default function ShareablesGallery({
    *  hosts pass it; without it the empty state is text-only and
    *  the one action it recommends isn't offered on the page. */
   onStartSorting?: () => void;
+  /** Zero-friends forward path for the Taste Match card. */
+  onFindFriends?: () => void;
 }) {
   if (songs.length === 0) {
     return (
@@ -546,7 +592,7 @@ export default function ShareablesGallery({
         <ThumbnailItem shortTitle="Era DNA" filename="my-weezer-era-dna.png">
           <EraDnaCardVisual songs={songs} subtitle={subtitle} />
         </ThumbnailItem>
-        <CompatibilityThumbnailItem songs={songs} friends={friends} subtitle={subtitle} />
+        <CompatibilityThumbnailItem songs={songs} friends={friends} subtitle={subtitle} onFindFriends={onFindFriends} />
         {tierSection ? <TierThumbnailItem tierSection={tierSection} /> : null}
       </div>
     );
@@ -575,7 +621,7 @@ export default function ShareablesGallery({
         >
           <EraDnaCardVisual songs={songs} subtitle={subtitle} />
         </LibraryItem>
-        <CompatibilityLibraryItem songs={songs} friends={friends} subtitle={subtitle} />
+        <CompatibilityLibraryItem songs={songs} friends={friends} subtitle={subtitle} onFindFriends={onFindFriends} />
       </div>
       {tierSection}
     </div>

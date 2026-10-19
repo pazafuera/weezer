@@ -264,6 +264,11 @@ interface WeezerContextType {
 
   // Friend Requests & Social State
   friendsList: any[];
+  /** Accepted friends WITH their profile + master list, from
+   *  get_my_friend_cards() — the shape the Taste Match card
+   *  actually reads. (friendsList above is raw friendships rows:
+   *  ids and status only, no usernames or rankings.) */
+  friendCards: any[];
   pendingRequestsCount: number;
   refreshPendingRequests: () => Promise<void>;
   refreshFriends: () => Promise<void>;
@@ -405,6 +410,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
 
   // Social & Friends State
   const [friendsList, setFriendsList] = useState<any[]>([]);
+  const [friendCards, setFriendCards] = useState<any[]>([]);
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
 
   // Navigation & Auth Mode State
@@ -570,6 +576,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         setUserId(null);
         setUserProfile(null);
         setFriendsList([]);
+        setFriendCards([]);
         setPendingRequestsCount(0);
       }
     });
@@ -601,6 +608,27 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
       if (friendshipsData) {
         setFriendsList(friendshipsData);
       }
+
+      // 3. Friend CARDS for Taste Match: raw friendships rows carry
+      // no usernames and no rankings, so the compatibility card
+      // read every friend as "Friend" with no songs and reported
+      // "hasn't ranked enough yet" for everyone, forever. The
+      // get_my_friend_cards() RPC (the same one Fan Friends uses)
+      // returns the other side's profile + master list per
+      // friendship; keep the accepted ones in the card's shape.
+      const { data: cards } = await supabase.rpc('get_my_friend_cards');
+      if (Array.isArray(cards)) {
+        setFriendCards(
+          cards
+            .filter((c: any) => c.status === 'accepted')
+            .map((c: any) => ({
+              id: c.id,
+              username: c.username,
+              display_name: c.display_name || c.username,
+              master_list: Array.isArray(c.master_list) ? c.master_list : [],
+            }))
+        );
+      }
     } catch (err) {
       console.error('Error fetching friends:', err);
     }
@@ -612,6 +640,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (!userId) {
       setFriendsList([]);
+      setFriendCards([]);
       setPendingRequestsCount(0);
       return;
     }
@@ -1036,6 +1065,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     setTriageMap({});
     setMasterList([]);
     setFriendsList([]);
+    setFriendCards([]);
     setPendingRequestsCount(0);
     setBucketRanks({ banger: [], slaps: [], mid: [], skip: [], trash: [] });
     localStorage.removeItem('weezer_ranker_state');
@@ -1066,6 +1096,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         setUserProfile,
         handleSignOut,
         friendsList,
+        friendCards,
         pendingRequestsCount,
         refreshPendingRequests,
         refreshFriends,

@@ -161,11 +161,11 @@ export default function Step4Wrapped({
   masterList: Song[];
   triageMap: Record<string, TriageValue>;
   setStep: (
-    s: 'master' | 'triage' | 'rank_buckets' | 'wrapped' | 'fan_stats'
+    s: 'master' | 'triage' | 'rank_buckets' | 'wrapped' | 'fan_stats' | 'friends'
   ) => void;
   globalConsensus?: string[];
 }) {
-  const { userProfile, friendsList } = useWeezer();
+  const { userProfile, friendCards } = useWeezer();
 
   // RATED count for the thin-Thread note below: real buckets only —
   // a "Don't Know It" mark is not a rating and doesn't feed the Thread.
@@ -1967,11 +1967,12 @@ export default function Step4Wrapped({
           <ShareablesGallery
             songs={rankedSongs}
             triageMap={triageMap}
-            friends={friendsList ?? []}
+            friends={friendCards ?? []}
             subtitle={userProfile?.username ? `@${userProfile.username}` : undefined}
             tierSection={tierSection}
             variant="thumbnails"
             onStartSorting={() => setStep('triage')}
+            onFindFriends={() => setStep('friends')}
           />
         </div>
       </main>

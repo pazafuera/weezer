@@ -27,7 +27,7 @@ const BUCKET_POINTS: Record<string, number> = {
  * (K = 5 toward the global mean).
  */
 export default function StepShareables() {
-  const { masterList, triageMap, friendsList, userProfile, navigateTo } = useWeezer();
+  const { masterList, triageMap, friendCards, userProfile, navigateTo } = useWeezer();
   // Only real buckets feed the cards — an 'unknown' mark is not a rating.
   const ranked = masterList.filter((s) => isRealBucket(triageMap[s.id]));
   const subtitle = userProfile?.username ? `@${userProfile.username}` : undefined;
@@ -138,10 +138,11 @@ export default function StepShareables() {
         <ShareablesGallery
           songs={ranked}
           triageMap={triageMap}
-          friends={friendsList ?? []}
+          friends={friendCards ?? []}
           subtitle={subtitle}
           tierSection={tierSection}
           onStartSorting={() => navigateTo('triage')}
+          onFindFriends={() => navigateTo('friends')}
         />
       </div>
     </div>

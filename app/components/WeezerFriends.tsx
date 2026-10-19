@@ -235,6 +235,61 @@ export default function WeezerFriends() {
     }
   };
 
+  // Cancel an OUTGOING request (UAT P-13): the row's "Pending..."
+  // pill used to be static forever — no way to take a request
+  // back. Same delete and same error treatment as Decline: the
+  // friendships row goes away, and the other side's inbox count
+  // settles on their next load.
+  const handleCancelRequest = async (friendshipId?: string) => {
+    if (!friendshipId) return;
+    try {
+      const { error } = await supabase
+        .from('friendships')
+        .delete()
+        .eq('id', friendshipId);
+
+      if (error) {
+        console.error('Error cancelling request:', error);
+        setErrorMsg("Couldn't cancel that request — please try again.");
+        return;
+      }
+
+      refreshPendingRequests();
+      loadFriendsAndRequests();
+    } catch (err) {
+      console.error('Error cancelling request:', err);
+      setErrorMsg("Couldn't cancel that request — please try again.");
+    }
+  };
+
+  // Unfriend (UAT P-13): removing an accepted friend deletes the
+  // same friendships row. One tap, like Decline — there is no
+  // confirm pattern on this page to extend, and inventing a
+  // modal system for it was explicitly out of scope. The
+  // friendship is symmetric (one row serves both sides), so the
+  // removal lands for both users at once.
+  const handleUnfriend = async (friendshipId?: string) => {
+    if (!friendshipId) return;
+    try {
+      const { error } = await supabase
+        .from('friendships')
+        .delete()
+        .eq('id', friendshipId);
+
+      if (error) {
+        console.error('Error removing friend:', error);
+        setErrorMsg("Couldn't remove that friend — please try again.");
+        return;
+      }
+
+      refreshPendingRequests();
+      loadFriendsAndRequests();
+    } catch (err) {
+      console.error('Error removing friend:', err);
+      setErrorMsg("Couldn't remove that friend — please try again.");
+    }
+  };
+
   // Signed-out (reachable via a ?step=friends deep link — the step
   // is not auth-guarded): say so plainly and offer the sign-in,
   // instead of the old behaviour where the list span "Loading
@@ -444,16 +499,32 @@ export default function WeezerFriends() {
                   </div>
 
                   {friend.status === 'pending_outgoing' ? (
-                    <span className="bg-slate-100 text-slate-500 text-[10px] font-black uppercase tracking-wider px-3 py-2 rounded-xl shrink-0">
-                      Pending...
-                    </span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="bg-slate-100 text-slate-500 text-[10px] font-black uppercase tracking-wider px-3 py-2 rounded-xl">
+                        Pending...
+                      </span>
+                      <button
+                        onClick={() => handleCancelRequest(friend.friendshipId)}
+                        className="bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-black px-3 py-2 rounded-xl transition-colors cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                    </div>
                   ) : (
-                    <button
-                      onClick={() => router.push(`/u/${friend.username}`)}
-                      className="bg-slate-900 hover:bg-slate-800 text-white text-[10px] font-black uppercase tracking-widest px-4 py-2.5 rounded-xl transition-colors cursor-pointer shrink-0"
-                    >
-                      Compare
-                    </button>
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      <button
+                        onClick={() => router.push(`/u/${friend.username}`)}
+                        className="bg-slate-900 hover:bg-slate-800 text-white text-[10px] font-black uppercase tracking-widest px-4 py-2.5 rounded-xl transition-colors cursor-pointer"
+                      >
+                        Compare
+                      </button>
+                      <button
+                        onClick={() => handleUnfriend(friend.friendshipId)}
+                        className="text-[10px] font-bold text-slate-400 hover:text-rose-500 transition-colors cursor-pointer px-1 py-0.5"
+                      >
+                        Unfriend
+                      </button>
+                    </div>
                   )}
                 </div>
               ))}

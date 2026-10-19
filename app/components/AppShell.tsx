@@ -246,8 +246,9 @@ export default function AppShell({
     );
   };
 
-  // Menu sections — flat groups under full-size headers, no
-  // boxes. The header matches the guest card's headline in size
+  // Menu sections — flat groups under full-size headers, each
+  // header carried in a full-width background band, no boxes.
+  // The header matches the guest card's headline in size
   // and weight (text-xs font-black — "Why Bother creating an
   // account?" carries text-xs font-black text-amber-950; here
   // the ink is slate-900, the drawer's heading color). "The
@@ -263,16 +264,27 @@ export default function AppShell({
     if (items.length === 0) return null;
 
     return (
-      <div key={title}>
-        {/* The header binds DOWN to its rows: pt-5 gives the
-            section break its air (20px from the separator rule
-            above to the header text), pb-1 keeps only 4px
-            between the header and the first row's box — the
-            tightest gap in the nav. Rows inside carry no gap
-            at all (see renderNavButton). */}
-        <p className="px-3.5 pt-5 pb-1 text-xs font-black text-slate-900">
-          {title}
-        </p>
+      <div key={title} className="mt-6 first:mt-0">
+        {/* The header sits IN a full-width band: a quiet
+            bg-slate-100 strip that bleeds edge to edge through
+            the nav's p-2 (-mx-2 out, px-2 back in, so the header
+            text keeps its px-3.5 alignment with the rows). The
+            band's edge is the section delineation — it replaced
+            the separator hairlines that used to precede each
+            header. Spacing: mt-6 on the section wrapper is the
+            air ABOVE the band (the largest gap in the nav; the
+            first section needs none — the panel above it carries
+            its own margin and the nav's p-2 tops it). Inside the
+            band the text gets py-2; below the band, the first
+            row's own py-4 is all that separates the header text
+            from the first row's text — still the tightest gap.
+            Rows inside carry no gap at all (see
+            renderNavButton). */}
+        <div className="-mx-2 bg-slate-100 px-2">
+          <p className="px-3.5 py-2 text-xs font-black text-slate-900">
+            {title}
+          </p>
+        </div>
         <div>{items.map((item) => renderNavButton(item))}</div>
       </div>
     );
@@ -536,22 +548,18 @@ export default function AppShell({
                 </div>
               )}
 
-              {/* NAV — flat sections under full-size headers,
-                  divided by horizontal rules: one under the guest
-                  card / account panel, one between the two
-                  sections, one above the Help row. While the
-                  Ranking Project is unfinished (sorting or
-                  refinement incomplete) it leads, right under the
-                  panel; once both are complete it drops below My
-                  Fanhood Unraveled. Help stays last in both
-                  states. */}
+              {/* NAV — flat sections, each headed by a full-width
+                  header band (see renderNavSection): the band
+                  delineates the sections, so no separator rules
+                  precede the headers — the one rule left in this
+                  column is above the Help row. While the Ranking
+                  Project is unfinished (sorting or refinement
+                  incomplete) it leads, right under the panel; once
+                  both are complete it drops below My Fanhood
+                  Unraveled. Help stays last in both states. */}
               <nav className="p-2">
-                <div className="border-t border-slate-200" />
-                {orderedSections.map((section, index) => (
+                {orderedSections.map((section) => (
                   <React.Fragment key={section.title}>
-                    {index > 0 && (
-                      <div className="border-t border-slate-200 mt-5" />
-                    )}
                     {renderNavSection(section.title, section.items)}
                   </React.Fragment>
                 ))}

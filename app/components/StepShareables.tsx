@@ -5,6 +5,7 @@ import { useWeezer, isRealBucket } from '../context/WeezerContext';
 import { ALBUMS_BY_ID, ALBUM_NAME_TO_ID, FULL_SONG_POOL } from '../data/constants';
 import TierListChart from './TierListChart';
 import { ShareablesGallery } from './shareables';
+import { DashboardBackButton } from './SharedUI';
 
 const BUCKET_POINTS: Record<string, number> = {
   banger: 5,
@@ -26,7 +27,7 @@ const BUCKET_POINTS: Record<string, number> = {
  * (K = 5 toward the global mean).
  */
 export default function StepShareables() {
-  const { masterList, triageMap, friendsList, userProfile } = useWeezer();
+  const { masterList, triageMap, friendsList, userProfile, navigateTo } = useWeezer();
   // Only real buckets feed the cards — an 'unknown' mark is not a rating.
   const ranked = masterList.filter((s) => isRealBucket(triageMap[s.id]));
   const subtitle = userProfile?.username ? `@${userProfile.username}` : undefined;
@@ -120,7 +121,12 @@ export default function StepShareables() {
   return (
     <div className="pb-24 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="max-w-5xl mx-auto px-4 space-y-6">
+        {/* This step previously had no exit of its own — header
+            logo or flyout only. Same pill as triage and Friends. */}
         <div className="pt-1">
+          <DashboardBackButton onClick={() => navigateTo('dashboard')} />
+        </div>
+        <div>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight">
             Shareables
           </h1>
@@ -135,6 +141,7 @@ export default function StepShareables() {
           friends={friendsList ?? []}
           subtitle={subtitle}
           tierSection={tierSection}
+          onStartSorting={() => navigateTo('triage')}
         />
       </div>
     </div>

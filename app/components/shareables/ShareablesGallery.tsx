@@ -495,6 +495,7 @@ export default function ShareablesGallery({
   subtitle,
   tierSection,
   variant = 'full',
+  onStartSorting,
 }: {
   /** Ranked songs only (already filtered to bucketed songs). */
   songs: ShareSong[];
@@ -509,6 +510,10 @@ export default function ShareablesGallery({
    *  the library page. 'thumbnails': a compact thumbnail grid that
    *  opens each card full-size in a modal — the Sweater Thread. */
   variant?: 'full' | 'thumbnails';
+  /** Empty-state forward path: where "Start sorting" goes. Both
+   *  hosts pass it; without it the empty state is text-only and
+   *  the one action it recommends isn't offered on the page. */
+  onStartSorting?: () => void;
 }) {
   if (songs.length === 0) {
     return (
@@ -517,6 +522,15 @@ export default function ShareablesGallery({
         <p className="mt-1 text-sm font-semibold text-slate-400">
           Bucket and rank some songs first — your cards will appear here.
         </p>
+        {onStartSorting && (
+          <button
+            type="button"
+            onClick={onStartSorting}
+            className="mt-5 bg-[#0072CE] hover:bg-blue-600 text-white font-black text-sm px-6 py-3 rounded-full transition-colors cursor-pointer"
+          >
+            Start sorting →
+          </button>
+        )}
       </div>
     );
   }

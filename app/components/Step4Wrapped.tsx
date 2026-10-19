@@ -1971,6 +1971,7 @@ export default function Step4Wrapped({
             subtitle={userProfile?.username ? `@${userProfile.username}` : undefined}
             tierSection={tierSection}
             variant="thumbnails"
+            onStartSorting={() => setStep('triage')}
           />
         </div>
       </main>

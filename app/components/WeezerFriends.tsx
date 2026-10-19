@@ -191,30 +191,47 @@ export default function WeezerFriends() {
   const handleAcceptRequest = async (friendshipId?: string) => {
     if (!friendshipId) return;
     try {
-      await supabase
+      // Supabase reports write failures in the returned error, not
+      // by throwing — check it, or a failed accept looks identical
+      // to a successful one until the card quietly comes back.
+      const { error } = await supabase
         .from('friendships')
         .update({ status: 'accepted' })
         .eq('id', friendshipId);
+
+      if (error) {
+        console.error('Error accepting request:', error);
+        setErrorMsg("Couldn't accept that request — please try again.");
+        return;
+      }
 
       refreshPendingRequests();
       loadFriendsAndRequests();
     } catch (err) {
       console.error('Error accepting request:', err);
+      setErrorMsg("Couldn't accept that request — please try again.");
     }
   };
 
   const handleDeclineRequest = async (friendshipId?: string) => {
     if (!friendshipId) return;
     try {
-      await supabase
+      const { error } = await supabase
         .from('friendships')
         .delete()
         .eq('id', friendshipId);
+
+      if (error) {
+        console.error('Error declining request:', error);
+        setErrorMsg("Couldn't decline that request — please try again.");
+        return;
+      }
 
       refreshPendingRequests();
       loadFriendsAndRequests();
     } catch (err) {
       console.error('Error declining request:', err);
+      setErrorMsg("Couldn't decline that request — please try again.");
     }
   };
 

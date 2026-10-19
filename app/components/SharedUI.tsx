@@ -33,6 +33,31 @@ export function HelpButton() {
   );
 }
 
+// DASHBOARD BACK BUTTON — the triage step's page-level exit,
+// carried at the LEFT of the progress row in both modes (the
+// deck's compact progress line in Step1Deck, the list's sticky
+// progress bar in Step1Triage), styled and sized identically
+// from this single component. The label names the destination,
+// per the app's honest-label pattern for back controls.
+// Unlike HelpButton it takes an onClick prop rather than
+// dispatching an event: step navigation is drilled from
+// page.tsx (the callers pass the existing onOpenGarage, which
+// is navigateTo('dashboard') — the normal navigation path,
+// guards and URL sync intact). A full 44px tall so the tap
+// target meets the platform minimum even though the progress
+// rows around it are compact.
+export function DashboardBackButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="min-h-[44px] shrink-0 flex items-center rounded-full bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700 font-black text-[11px] px-3.5 shadow-xs transition-all cursor-pointer"
+    >
+      ← Dashboard
+    </button>
+  );
+}
+
 // BULLETPROOF ARTWORK COMPONENT
 export function AlbumArtwork({ albumId, className = "" }: { albumId: string; className?: string }) {
   const album = ALBUMS_BY_ID[albumId];

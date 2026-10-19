@@ -8,7 +8,7 @@ import {
   TriageValue,
 } from '../context/WeezerContext';
 import { albumCoverSrc, resolveAlbumId } from './shareables/ShareCardShell';
-import { FlyingWIcon, AudioPreviewButton, HelpButton } from './SharedUI';
+import { FlyingWIcon, AudioPreviewButton, HelpButton, DashboardBackButton } from './SharedUI';
 import type { TriageSection } from './Step1Triage';
 
 /**
@@ -2256,6 +2256,15 @@ export default function Step1Deck({
       <div className="shrink-0 pt-2 space-y-1.5">
         <div className="flex items-center justify-between gap-2 text-[11px] font-black text-slate-700">
           <div className="flex items-center gap-2">
+            {/* PAGE EXIT — back to the dashboard (onOpenGarage
+                is page.tsx's navigateTo('dashboard'), the
+                normal navigation path). Page chrome in the
+                progress row: it rides above the card region,
+                so it never lands inside a milestone / end /
+                completion card, and the tutorial overlay
+                covers the whole deck root — this included —
+                while the tour is up. */}
+            <DashboardBackButton onClick={onOpenGarage} />
             <span className="uppercase tracking-wider">
               <strong className="text-[#0072CE] text-xs">
                 {categorizedCount}

@@ -7,7 +7,7 @@ import {
   countCategorizedSongs,
   TriageValue,
 } from '../context/WeezerContext';
-import { FlyingWIcon, AudioPreviewButton, HelpButton } from './SharedUI';
+import { FlyingWIcon, AudioPreviewButton, HelpButton, DashboardBackButton } from './SharedUI';
 import Step1Deck from './Step1Deck';
 
 export interface TriageSection {
@@ -265,6 +265,12 @@ export default function Step1Triage({
               side keeps Hide Sorted and the help button. */}
           <div className="flex justify-between items-center text-xs font-black text-slate-700">
             <div className="flex items-center gap-3">
+              {/* PAGE EXIT — back to the dashboard (onOpenGarage
+                  is page.tsx's navigateTo('dashboard'), the
+                  normal navigation path). Left of the progress
+                  content; the right side keeps Hide Sorted and
+                  the help button, undisturbed. */}
+              <DashboardBackButton onClick={onOpenGarage} />
               <span className="uppercase tracking-wider">
                 Progress: <strong className="text-[#0072CE] font-mono text-sm">{categorizedCount}</strong> / {FULL_SONG_POOL.length}
               </span>

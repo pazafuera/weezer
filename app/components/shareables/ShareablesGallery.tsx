@@ -105,11 +105,14 @@ function LibraryItem({
 /* the same single Download button.                                    */
 /* ------------------------------------------------------------------ */
 
-/** Natural width of the scrapbook card visuals (they render at
+/** Natural size of the scrapbook card visuals (they render at
  *  1080×1350, a 4:5 box). */
 const CARD_NATURAL_WIDTH = 1080;
-/** Fixed layout width used to thumbnail/modal the tier section, whose
- *  content is fluid — matches the width it gets on the library page. */
+const CARD_NATURAL_HEIGHT = 1350;
+/** Fixed layout width used to thumbnail the tier section, whose
+ *  content is fluid — matches the width it gets on the library page.
+ *  Thumbnail only: inside the modal the section renders fluid at
+ *  panel width instead (see TierThumbnailItem). */
 const TIER_NATURAL_WIDTH = 1024;
 
 /** Scale a fixed-natural-width visual down to fit its (responsive)
@@ -131,9 +134,11 @@ function useFitScale(naturalWidth: number) {
 }
 
 /** Centered modal: dark backdrop (click to close), a panel capped at
- *  92vh whose content scrolls, an ✕ button, and an optional pinned
- *  footer (the Download bar). Esc closes; body scroll is locked while
- *  open. */
+ *  92vh whose content scrolls, a high-contrast panel-anchored ✕
+ *  (light disc with a ≥44px tap target — readable over the cream
+ *  portrait cards and the tier chart's dark frame alike, and it
+ *  never scrolls away), and an optional pinned footer (the Download
+ *  bar). Esc closes; body scroll is locked while open. */
 function CardModal({
   title,
   onClose,
@@ -174,7 +179,7 @@ function CardModal({
           type="button"
           onClick={onClose}
           aria-label="Close"
-          className="absolute right-3 top-3 z-20 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-slate-900/80 text-base font-black text-white transition hover:bg-slate-900"
+          className="absolute right-3 top-3 z-20 flex h-11 w-11 cursor-pointer items-center justify-center rounded-full bg-white/95 text-base font-black text-slate-900 shadow-lg ring-1 ring-slate-900/25 transition hover:bg-white"
         >
           ✕
         </button>
@@ -229,11 +234,56 @@ function ThumbnailButton({
   );
 }
 
+/** The portrait card inside the modal, scaled to fit the modal's
+ *  content box — the ThumbnailButton fit pattern (useFitScale)
+ *  applied to the modal instead of the thumbnail box: the visual
+ *  renders at its natural 1080 width inside a wrapper sized to the
+ *  scaled box, so the whole card is visible with no panning or
+ *  scrolling in either axis.
+ *
+ *  The measuring box needs a definite width of its own — the modal
+ *  panel is shrink-to-fit, so a plain w-full box would measure the
+ *  collapsed panel rather than the space the modal actually offers.
+ *  The box therefore takes the full phone width the modal leaves for
+ *  content (viewport minus the backdrop's p-3 and the content's p-4,
+ *  wider p-6/p-6 padding at sm), capped at the card's natural width
+ *  so large screens keep the old natural-size render. At 390px the
+ *  box is 334px → scale ≈ 0.31 → card displays 334×417px. */
+function FitScaledCard({ children }: { children: ReactNode }) {
+  const { boxRef, scale } = useFitScale(CARD_NATURAL_WIDTH);
+  return (
+    <div
+      ref={boxRef}
+      className="w-[calc(100vw-3.5rem)] max-w-[1080px] sm:w-[calc(100vw-6rem)]"
+    >
+      <div
+        className="relative mx-auto overflow-hidden"
+        style={{
+          width: CARD_NATURAL_WIDTH * scale,
+          height: CARD_NATURAL_HEIGHT * scale,
+          visibility: scale > 0 ? 'visible' : 'hidden',
+        }}
+      >
+        <div
+          className="pointer-events-none absolute left-0 top-0"
+          style={{
+            width: CARD_NATURAL_WIDTH,
+            transform: `scale(${scale})`,
+            transformOrigin: 'top left',
+          }}
+        >
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /**
- * One thumbnail-grid asset: thumbnail, a modal with the card at
- * natural size, and the download — same pattern as LibraryItem: the
- * download renders from a hidden full-size off-screen copy, never
- * from the scaled thumbnail or the modal node.
+ * One thumbnail-grid asset: thumbnail, a modal with the card scaled
+ * to fit the screen, and the download — same pattern as LibraryItem:
+ * the download renders from a hidden full-size off-screen copy,
+ * never from the scaled thumbnail or the modal node.
  */
 function ThumbnailItem({
   shortTitle,
@@ -296,7 +346,7 @@ function ThumbnailItem({
           }
         >
           {controls && <div className="mb-4 max-w-sm">{controls}</div>}
-          <div className="mx-auto w-fit">{children}</div>
+          <FitScaledCard>{children}</FitScaledCard>
         </CardModal>
       )}
 
@@ -362,8 +412,11 @@ function CompatibilityThumbnailItem({
 
 /** Tier List thumbnail item: the tierSection node (chart + its own
  *  Songs/Albums toggle + its own save button) is the visual — scaled
- *  for the thumbnail, live at layout width inside the modal. The
- *  chart's own download button is the modal's download control. */
+ *  from a fixed 1024 layout width for the thumbnail, but FLUID at
+ *  panel width inside the modal, exactly how it renders on the
+ *  library page (scaling the fluid chart down instead would shrink
+ *  its chip text to unreadability). The chart's own download button
+ *  is the modal's download control, reached by vertical scroll. */
 function TierThumbnailItem({ tierSection }: { tierSection: ReactNode }) {
   const [open, setOpen] = useState(false);
   return (
@@ -378,7 +431,7 @@ function TierThumbnailItem({ tierSection }: { tierSection: ReactNode }) {
 
       {open && (
         <CardModal title="Tier List" onClose={() => setOpen(false)}>
-          <div style={{ width: TIER_NATURAL_WIDTH }}>{tierSection}</div>
+          {tierSection}
         </CardModal>
       )}
     </div>

@@ -311,17 +311,30 @@ export default function Step1Triage({
             {sections.map((section) => {
               const sortedInSection = section.songs.filter((s) => triageMap[s.id]).length;
               const isSectionDone = sortedInSection === section.songs.length;
+              // Under Hide Sorted a finished section unmounts
+              // entirely — its pill used to stay live and scroll
+              // to an element that doesn't exist (a silent no-op
+              // that reads as a dead control). Disable it and say
+              // why in the tooltip.
+              const isSectionHidden =
+                hideSorted && section.songs.every((s) => triageMap[s.id]);
 
               return (
                 <button
                   key={section.key}
                   onClick={() => scrollToSection(section.key)}
-                  className={`px-2.5 py-1 rounded-lg border shrink-0 transition-all cursor-pointer ${
-                    isSectionDone
-                      ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                      : sortedInSection > 0
-                      ? 'bg-blue-50 border-blue-200 text-[#0072CE]'
-                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'
+                  disabled={isSectionHidden}
+                  title={isSectionHidden ? 'Hidden by Hide Sorted' : undefined}
+                  className={`px-2.5 py-1 rounded-lg border shrink-0 transition-all ${
+                    isSectionHidden
+                      ? 'bg-slate-50 border-slate-200 text-slate-400 cursor-not-allowed opacity-60'
+                      : `cursor-pointer ${
+                          isSectionDone
+                            ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                            : sortedInSection > 0
+                            ? 'bg-blue-50 border-blue-200 text-[#0072CE]'
+                            : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'
+                        }`
                   }`}
                 >
                   {section.title} ({sortedInSection}/{section.songs.length})
@@ -377,6 +390,21 @@ export default function Step1Triage({
       <>
       {/* SONG SECTIONS (Blue → Pinkerton → Singles → remaining albums) */}
       <div className="space-y-8">
+        {/* Every section filtered out by Hide Sorted used to leave
+            a completely blank page body — no text, no controls.
+            Say what's true and name the way back. */}
+        {hideSorted &&
+          sections.every((sec) =>
+            sec.songs.every((s) => triageMap[s.id])
+          ) && (
+            <div className="bg-white border border-slate-200 border-dashed rounded-3xl p-10 text-center">
+              <p className="text-sm font-bold text-slate-500 leading-snug">
+                Every song is sorted, and Hide Sorted is on — so
+                there&apos;s nothing left to show here. Turn off Hide
+                Sorted to review or change a song.
+              </p>
+            </div>
+          )}
         {sections.map((section) => {
           const visibleSongs = hideSorted
             ? section.songs.filter((s) => !triageMap[s.id])
@@ -490,7 +518,17 @@ export default function Step1Triage({
 
       {/* FLOATING ACTION BUTTON */}
       <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-auto flex flex-col items-center gap-2">
-        {isGutCheckComplete ? (
+        {isGutCheckComplete && bucketedCount === 0 ? (
+          /* All 206 categorized but every one is Don't Know It:
+             Refine is still locked (≥1 real bucket required), so
+             the amber button guard-bounced straight back here —
+             an infinite, unexplained loop. State the unlock
+             condition instead. */
+          <div className="bg-slate-800/95 text-slate-200 font-extrabold text-xs sm:text-sm px-6 py-3.5 rounded-full border border-slate-700 shadow-xl backdrop-blur-md text-center max-w-md">
+            Refine Buckets unlocks with 1 song in a real bucket —
+            Don&apos;t Know It doesn&apos;t count
+          </div>
+        ) : isGutCheckComplete ? (
           <button
             onClick={handleFinishTriage}
             className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm sm:text-base px-8 py-4 rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.35)] transition transform hover:scale-105 cursor-pointer border-2 border-amber-200 flex items-center gap-2.5 whitespace-nowrap"
@@ -513,6 +551,14 @@ export default function Step1Triage({
           >
             Continue with {bucketedCount} of {FULL_SONG_POOL.length} bucketed →
           </button>
+        )}
+        {/* Songs categorized but none bucketed yet (all Don't Know
+            It so far): no Continue link exists and nothing said
+            why. One line names the unlock. */}
+        {!isGutCheckComplete && categorizedCount > 0 && bucketedCount === 0 && (
+          <span className="text-[11px] font-semibold text-slate-300/90 bg-slate-950/60 rounded-full px-3 py-1 backdrop-blur-sm whitespace-nowrap">
+            One song in a real bucket unlocks Refine — Don&apos;t Know It doesn&apos;t count
+          </span>
         )}
       </div>
       </>

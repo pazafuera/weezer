@@ -241,6 +241,12 @@ interface WeezerContextType {
   setRefineStageIdx: (idx: number) => void;
   autoStartMatchups: boolean;
   setAutoStartMatchups: (val: boolean) => void;
+  /** Set by the login page when an in-app sign-up completes: the
+   *  user lands on orientation under an "account created" banner
+   *  instead of the old signup_success step. Orientation clears it
+   *  on unmount (any exit) and on "Start Sorting". */
+  accountCreated: boolean;
+  setAccountCreated: (val: boolean) => void;
   initialAuthMode: AuthModeType;
   navigateTo: (targetStep: AppStep, authMode?: AuthModeType) => void;
   closeLogin: () => void;
@@ -408,8 +414,9 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   // of a hardcoded destination. navigateTo records the origin on the
   // way INTO a tracked step and clears every recorded origin on any
   // navigation to an ordinary (non-tracked) step (a completed sign-in
-  // routes to dashboard / signup_success and consumes its origin that
-  // way). Hopping between tracked steps — orientation's "Create an
+  // routes to dashboard and consumes its origin that way; a completed
+  // sign-up routes to orientation — itself tracked — so that hop is a
+  // detour under the rule below). Hopping between tracked steps — orientation's "Create an
   // Account First" into login — leaves the other step's origin intact,
   // so when the login X lands back on orientation, orientation's Back
   // still remembers where orientation itself was entered from. A ref,
@@ -417,6 +424,9 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   const returnStepRef = useRef<Partial<Record<AppStep, AppStep>>>({});
   const [refineStageIdx, setRefineStageIdx] = useState(0);
   const [autoStartMatchups, setAutoStartMatchups] = useState(false);
+  // Post-sign-up banner flag (see the interface note). Plain state:
+  // orientation renders from it, unlike the origin ref.
+  const [accountCreated, setAccountCreated] = useState(false);
 
   // Deep-link intent parsed from ?step= on initial load. It is applied
   // (with prerequisite guards) only after user/ranking state has loaded.
@@ -984,6 +994,8 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         setRefineStageIdx,
         autoStartMatchups,
         setAutoStartMatchups,
+        accountCreated,
+        setAccountCreated,
         initialAuthMode,
         navigateTo,
         closeLogin,

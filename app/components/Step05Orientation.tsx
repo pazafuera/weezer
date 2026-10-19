@@ -22,11 +22,25 @@ const PROCESS_STEPS: { title: string; desc: string }[] = [
 ];
 
 export default function Step05Orientation() {
-  const { navigateTo, closeOrientation } = useWeezer();
+  const {
+    navigateTo,
+    closeOrientation,
+    accountCreated,
+    setAccountCreated,
+    userProfile,
+  } = useWeezer();
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   }, []);
+
+  // The "account created" flag belongs to THIS arrival only: clear
+  // it when the page unmounts, whichever way the user leaves —
+  // "Start Sorting", Back, the menu. (The Start button also clears
+  // it explicitly, below.)
+  useEffect(() => {
+    return () => setAccountCreated(false);
+  }, [setAccountCreated]);
 
   return (
     // SCROLL REGION (iOS fix, Oct 17): this page is ~1,900px of plain
@@ -47,6 +61,22 @@ export default function Step05Orientation() {
     // bottom padding is all the end clearance it needs.
     <div className="h-full flex flex-col max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex-1 overflow-y-auto px-4 space-y-4 pb-4">
+      {/* ACCOUNT-CREATED BANNER — a fresh sign-up lands here (from
+          the login page) instead of the old signup_success step;
+          the flag rides in context and clears on any exit. */}
+      {accountCreated && (
+        <div className="pt-3 flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-2xl px-4 py-3">
+          <span className="w-8 h-8 shrink-0 bg-emerald-500 text-white rounded-full flex items-center justify-center font-black text-sm shadow-sm">
+            ✓
+          </span>
+          <p className="text-sm font-bold text-emerald-900 leading-snug">
+            Account created
+            {userProfile?.username ? `, @${userProfile.username}` : ''} —
+            your progress is saved.
+          </p>
+        </div>
+      )}
+
       {/* BACK BUTTON — returns to the step the user came from
           (closeOrientation), not a hardcoded home: a user who opened
           How It Works from the dashboard goes back to the dashboard.
@@ -106,7 +136,10 @@ export default function Step05Orientation() {
           comment): always visible, never scrolled to. */}
       <div className="shrink-0 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] bg-white/90 backdrop-blur-md border-t border-slate-200/90 space-y-2.5">
         <button
-          onClick={() => navigateTo('triage')}
+          onClick={() => {
+            setAccountCreated(false);
+            navigateTo('triage');
+          }}
           className="w-full bg-[#0072CE] hover:bg-blue-600 active:scale-[0.99] text-white font-black text-base sm:text-lg py-4 rounded-2xl shadow-[0_10px_25px_rgba(0,114,206,0.3)] transition-all cursor-pointer flex items-center justify-center"
         >
           Start Sorting

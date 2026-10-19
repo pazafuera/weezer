@@ -184,7 +184,7 @@ const COUNTRY_OPTIONS = [
 
 export default function Login() {
   const router = useRouter();
-  const { navigateTo, initialAuthMode, closeLogin } = useWeezer();
+  const { navigateTo, initialAuthMode, closeLogin, setAccountCreated } = useWeezer();
 
   // Auth Credentials State synced with context initialAuthMode
   const [email, setEmail] = useState('');
@@ -295,9 +295,15 @@ export default function Login() {
 
         if (authErr) throw authErr;
 
-        // Route immediately to success onboarding screen upon account creation
+        // Route immediately upon account creation: land on the
+        // orientation page under an "account created" banner (the
+        // accountCreated flag) instead of the old signup_success
+        // step (owner, Oct 18). The signup_success step itself is
+        // left in place — ?step=signup_success deep links still
+        // resolve to it — but no in-app flow routes there anymore.
         if (authData.session || authData.user) {
-          navigateTo('signup_success');
+          setAccountCreated(true);
+          navigateTo('orientation');
         } else {
           setMessage({
             type: 'success',

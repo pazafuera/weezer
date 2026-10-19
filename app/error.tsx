@@ -48,6 +48,15 @@ export default function Error({
         >
           Try again
         </button>
+        {/* If the crash is in the state itself, reset() re-renders
+            the same data and loops forever — a full reload at the
+            front door (smart entry) is the honest way out. */}
+        <a
+          href="/"
+          className="block mt-4 text-sm font-black text-slate-500 hover:text-[#0072CE] underline underline-offset-4"
+        >
+          ← Back to the RankingWeezer home page
+        </a>
       </div>
     </main>
   );

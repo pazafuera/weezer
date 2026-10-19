@@ -1985,6 +1985,18 @@ function SmartShareModule({ stats, top10, userProfile }: any) {
   const [showFallback, setShowFallback] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
 
+  // Escape dismisses the share fallback modal (which also gains a
+  // backdrop click below — until now its only exit was a small
+  // unlabelled ✕).
+  useEffect(() => {
+    if (!showFallback) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShowFallback(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [showFallback]);
+
   const shareData = {
     n: userProfile?.displayName || userProfile?.username || 'A Fan',
     t: top10[0]?.title || 'Undecided',
@@ -2091,13 +2103,20 @@ function SmartShareModule({ stats, top10, userProfile }: any) {
       </div>
 
       {showFallback && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white text-slate-950 rounded-3xl p-6 max-w-sm w-full shadow-2xl space-y-4">
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in"
+          onClick={() => setShowFallback(false)}
+        >
+          <div
+            className="bg-white text-slate-950 rounded-3xl p-6 max-w-sm w-full shadow-2xl space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex justify-between items-center mb-2">
               <h4 className="font-black text-slate-900 text-lg">Share Your Card</h4>
               <button
                 onClick={() => setShowFallback(false)}
-                className="text-slate-400 hover:text-slate-900 font-bold p-1 cursor-pointer"
+                aria-label="Close share options"
+                className="text-slate-400 hover:text-slate-900 font-bold min-w-[44px] min-h-[44px] flex items-center justify-center cursor-pointer"
               >
                 ✕
               </button>

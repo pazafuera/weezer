@@ -66,6 +66,26 @@ export default function Step3Master({
       </div>
 
       <div className="bg-white border border-slate-200 rounded-3xl p-3 sm:p-5 shadow-xs">
+        {rankedSongs.length === 0 ? (
+          /* Reachable in an edge state (a master list whose songs
+             are all un-bucketed after a data heal): the list used
+             to render as a blank white card with no explanation. */
+          <div className="py-10 text-center space-y-3">
+            <p className="text-base font-black text-slate-950">
+              Nothing to review yet
+            </p>
+            <p className="text-sm font-bold text-slate-500 max-w-sm mx-auto leading-snug">
+              Songs you put in real buckets during sorting and
+              Refine show up here for their final check.
+            </p>
+            <button
+              onClick={() => { triggerHaptic(15); onKeepSorting(); }}
+              className="bg-[#0072CE] hover:bg-blue-600 text-white font-black text-sm px-6 py-3 rounded-full transition-colors cursor-pointer"
+            >
+              Keep sorting →
+            </button>
+          </div>
+        ) : (
         <div className="space-y-1.5">
           {rankedSongs.map((song, idx) => {
             const bucket = triageMap[song.id];
@@ -128,6 +148,7 @@ export default function Step3Master({
             );
           })}
         </div>
+        )}
       </div>
 
       {/* FLOATING ACTION BAR — the Wrapped CTA plus Back (owner,

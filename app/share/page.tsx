@@ -9,12 +9,12 @@ type Props = {
 
 export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
   const dataParam = searchParams.data;
-  let ogImageUrl = 'https://famduel.com/img/social-preview.png';
+  let ogImageUrl = 'https://rankingweezer.com/img/garage-banner.jpg';
   let title = 'Weezer Taste DNA';
   let description = 'I ranked the Weezer canon. Who has better taste?';
 
   if (dataParam) {
-    ogImageUrl = `https://famduel.com/api/og?data=${dataParam}`;
+    ogImageUrl = `https://rankingweezer.com/api/og?data=${dataParam}`;
     const decoded = decodeShareData(dataParam);
     if (decoded) {
       title = `${decoded.n}'s Weezer Taste DNA`;
@@ -42,7 +42,7 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
 export default function SharePage({ searchParams }: Props) {
   const dataParam = searchParams.data;
   const decoded = dataParam ? decodeShareData(dataParam) : null;
-  const ogImageUrl = dataParam ? `/api/og?data=${dataParam}` : '/img/social-preview.png';
+  const ogImageUrl = dataParam ? `/api/og?data=${dataParam}` : '/img/garage-banner.jpg';
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-center p-4 selection:bg-amber-300">
@@ -56,8 +56,8 @@ export default function SharePage({ searchParams }: Props) {
           Do you have better taste? Unravel your own Taste DNA.
         </p>
         
-        <Link 
-          href="/weezer"
+        <Link
+          href="/"
           className="inline-block bg-[#0072CE] hover:bg-blue-600 text-white font-black py-4 px-8 rounded-full shadow-lg transition-transform hover:scale-105 active:scale-95"
         >
           Start My Ranking 🎸

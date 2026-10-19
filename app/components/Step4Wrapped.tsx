@@ -1991,7 +1991,7 @@ function SmartShareModule({ stats, top10, userProfile }: any) {
   };
 
   const encodedData = encodeShareData(shareData);
-  const publicShareUrl = `https://famduel.com/share?data=${encodedData}`;
+  const publicShareUrl = `https://rankingweezer.com/share?data=${encodedData}`;
   const ogImageUrl = `/api/og?data=${encodedData}`;
 
   const shareText = `My Weezer Anthem is "${shareData.t}" and my Top Album is ${shareData.a}. Who has better taste?`;

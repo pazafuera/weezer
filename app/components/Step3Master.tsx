@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 import { BucketType, Song, BUCKET_CONFIG } from '../data/constants';
-import { AudioPreviewButton, FlyingWIcon } from './SharedUI';
+import { AudioPreviewButton, FlyingWIcon, SortingIncompleteNotice } from './SharedUI';
 import { getRankedSongs } from '@/utils/rankingUtils';
 import type { TriageValue } from '../context/WeezerContext';
 
@@ -10,13 +10,15 @@ export default function Step3Master({
   triageMap, 
   moveMasterSong, 
   setStep,
-  onBack
+  onBack,
+  onKeepSorting
 }: {
   masterList: Song[]; 
   triageMap: Record<string, TriageValue>; 
   moveMasterSong: (idx: number, dir: 'up'|'down') => void; 
   setStep: (s: 'wrapped') => void;
   onBack: () => void;
+  onKeepSorting: () => void;
 }) {
   const triggerHaptic = (duration = 15) => {
     if (typeof window !== 'undefined' && 'vibrate' in navigator) try { navigator.vibrate(duration); } catch (e) {}
@@ -44,6 +46,12 @@ export default function Step3Master({
 
   return (
     <div className="space-y-6 pb-24">
+
+      {/* SORTING-INCOMPLETE NOTICE — in-flow above the header when
+          triage isn't finished (renders nothing at 206). In-flow
+          on purpose: the list derivation above and the fixed
+          floating action bar below are both untouched by it. */}
+      <SortingIncompleteNotice triageMap={triageMap} onKeepSorting={onKeepSorting} />
 
       {/* SHARP, SUCCINCT HEADER — no step pill, no top-left back
           link (owner, Oct 18): Back now lives in the floating bar

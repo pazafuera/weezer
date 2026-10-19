@@ -96,6 +96,7 @@ export default function WeezerRankerPage() {
             setStep('master');
           }}
           onBackToTriage={() => closeRefine()}
+          onKeepSorting={() => navigateTo('triage')}
           autoStartMatchups={autoStartMatchups}
           initialStageIdx={refineStageIdx}
         />
@@ -111,6 +112,7 @@ export default function WeezerRankerPage() {
             setAutoStartMatchups(false);
             closeMaster();
           }}
+          onKeepSorting={() => navigateTo('triage')}
         />
       )}
 

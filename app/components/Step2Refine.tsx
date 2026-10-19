@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { BucketType, Song, BUCKET_CONFIG, BUCKET_TRANSITIONS } from '../data/constants';
 import type { TriageValue } from '../context/WeezerContext';
-import { FlyingWIcon, AudioPreviewButton } from './SharedUI';
+import { FlyingWIcon, AudioPreviewButton, SortingIncompleteNotice } from './SharedUI';
 import Step1_5Matchups from './Step1_5Matchups';
 
 const REFINEMENT_STAGES: { bucket: BucketType; title: string; desc: string; nextBtn: string }[] = [
@@ -19,6 +19,7 @@ export default function Step2Refine({
   onUpdateRanks,
   handleFinishBucketRanking,
   onBackToTriage,
+  onKeepSorting,
   autoStartMatchups,
   initialStageIdx = 0,
 }: {
@@ -27,6 +28,7 @@ export default function Step2Refine({
   onUpdateRanks: (newRanks: Record<BucketType, Song[]>, newMap?: Record<string, TriageValue>) => void;
   handleFinishBucketRanking: () => void;
   onBackToTriage: () => void;
+  onKeepSorting: () => void;
   autoStartMatchups: boolean;
   initialStageIdx?: number;
 }) {
@@ -252,6 +254,12 @@ export default function Step2Refine({
 
   return (
     <div className="space-y-6 pb-24 relative">
+
+      {/* SORTING-INCOMPLETE NOTICE — tops every refine stage when
+          triage isn't finished (renders nothing at 206). The
+          matchups interstitial above replaces this whole view
+          while it runs; the notice is waiting here when it ends. */}
+      <SortingIncompleteNotice triageMap={triageMap} onKeepSorting={onKeepSorting} />
 
       {/* CUSTOM CONFIRMATION MODAL OVERLAY */}
       {pendingMove && (

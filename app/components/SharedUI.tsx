@@ -1,6 +1,8 @@
 'use client';
 import React, { useState, useRef, useEffect } from 'react';
-import { ALBUMS_BY_ID } from '../data/constants';
+import { ALBUMS_BY_ID, FULL_SONG_POOL } from '../data/constants';
+import { countCategorizedSongs } from '../context/WeezerContext';
+import type { TriageValue } from '../context/WeezerContext';
 
 // OFFICIAL WEEZER FLYING-W LOGO
 export function FlyingWIcon({ className = "w-8 h-5" }: { className?: string }) {
@@ -55,6 +57,48 @@ export function DashboardBackButton({ onClick }: { onClick: () => void }) {
     >
       ← Dashboard
     </button>
+  );
+}
+
+// SORTING-INCOMPLETE NOTICE — the slim amber heads-up at the top
+// of the Refine (rank_buckets) and My Rankings / Final Review
+// (master) steps when the user got there without finishing triage
+// (owner, Oct 18). Both steps unlock on partial sorting, and both
+// only ever show the songs sorted so far — the notice says so
+// plainly, offers the way back to triage, and otherwise gets out
+// of the way: it never blocks, and it is NOT dismissible (it
+// renders for exactly as long as the condition is true).
+// "Finished" = every catalog song categorized — a real bucket OR
+// a "Don't Know It" mark (countCategorizedSongs, the same signal
+// the menu and dashboard use); at a full 206 it renders nothing.
+// The Keep Sorting action is drilled from page.tsx as
+// navigateTo('triage') — the normal navigation path, guards and
+// URL sync intact — the same drilled-handler pattern as
+// DashboardBackButton above.
+export function SortingIncompleteNotice({
+  triageMap,
+  onKeepSorting,
+}: {
+  triageMap: Record<string, TriageValue>;
+  onKeepSorting: () => void;
+}) {
+  const sortedCount = countCategorizedSongs(triageMap);
+  if (sortedCount >= FULL_SONG_POOL.length) return null;
+  return (
+    <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 shadow-xs">
+      <p className="text-xs sm:text-sm font-semibold text-amber-900 leading-relaxed text-center">
+        Sorting isn&apos;t finished yet — {sortedCount} of {FULL_SONG_POOL.length} songs
+        sorted. You can keep going here, but this only covers the songs
+        you&apos;ve sorted so far.{' '}
+        <button
+          type="button"
+          onClick={onKeepSorting}
+          className="font-black text-[#0072CE] hover:underline cursor-pointer whitespace-nowrap"
+        >
+          Keep sorting →
+        </button>
+      </p>
+    </div>
   );
 }
 

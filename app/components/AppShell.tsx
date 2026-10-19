@@ -324,7 +324,7 @@ export default function AppShell({
             <div className="w-5 h-5 bg-[#0072CE] text-white rounded-md flex items-center justify-center">
               <FlyingWIcon className="w-3 h-3 text-white" />
             </div>
-            <span className="text-xs font-black text-slate-900 tracking-tight">
+            <span className="text-[10px] font-black text-slate-900 tracking-tight whitespace-nowrap">
               All My Favorite Songs • The Weezer Song Ranking Project
             </span>
           </div>

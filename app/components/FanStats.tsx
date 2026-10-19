@@ -49,10 +49,22 @@ const HorizontalCarousel = ({ children, itemCount }: { children: React.ReactNode
     setActiveIndex(Math.round(scrollLeft / clientWidth));
   };
 
+  // The dots are controls (UAT P-14): tapping one scrolls its
+  // item into place — the same clientWidth step handleScroll
+  // reads the active index from. They used to be plain divs
+  // styled exactly like tappable dots that did nothing.
+  const goToItem = (i: number) => {
+    if (!scrollRef.current) return;
+    scrollRef.current.scrollTo({
+      left: i * scrollRef.current.clientWidth,
+      behavior: 'smooth',
+    });
+  };
+
   return (
     <div className="relative w-full">
-      <div 
-        ref={scrollRef} 
+      <div
+        ref={scrollRef}
         onScroll={handleScroll}
         className="flex gap-4 overflow-x-auto snap-x snap-mandatory py-2 px-2 sm:px-4 scrollbar-none"
       >
@@ -61,7 +73,16 @@ const HorizontalCarousel = ({ children, itemCount }: { children: React.ReactNode
       {itemCount > 1 && (
         <div className="flex justify-center gap-1.5 mt-2 mb-2">
           {Array.from({ length: itemCount }).map((_, i) => (
-            <div key={i} className={`h-1.5 rounded-full transition-all duration-300 ${activeIndex === i ? 'w-4 bg-[#0072CE]' : 'w-1.5 bg-slate-300'}`} />
+            <button
+              key={i}
+              type="button"
+              onClick={() => goToItem(i)}
+              aria-label={`Go to item ${i + 1} of ${itemCount}`}
+              aria-current={activeIndex === i ? 'true' : undefined}
+              className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0072CE]"
+            >
+              <span className={`h-1.5 rounded-full transition-all duration-300 ${activeIndex === i ? 'w-4 bg-[#0072CE]' : 'w-1.5 bg-slate-300'}`} />
+            </button>
           ))}
         </div>
       )}
@@ -82,6 +103,19 @@ const PlaceholderBadge = () => (
 const PlaceholderNote = () => (
   <p className="text-[11px] font-bold text-slate-400 leading-relaxed mt-2">
     Placeholder — only a handful of fans so far. Real numbers land as more fans rank.
+  </p>
+);
+
+// The companion line for a block that is empty for a NON-thin
+// reason (UAT P-14): the sample can be healthy and still have
+// nothing that qualifies — no album carried by one song, no
+// pair of generational cohorts, no #1 with a co-loved deep
+// cut. Those blocks used to vanish outright; they now take the
+// same badge + note placeholder treatment, with a line that
+// stays true at any sample size.
+const EmptyBlockNote = () => (
+  <p className="text-[11px] font-bold text-slate-400 leading-relaxed mt-2">
+    Nothing qualifies for this one yet — it fills in as more fans rank.
   </p>
 );
 
@@ -692,6 +726,16 @@ export default function FanStats({
         </div>
 
         <div className="space-y-6">
+          {/* Every category filtered out (no song classifies yet)
+              used to leave this section as a header over empty
+              space (UAT P-14) — say so, with the page's badge +
+              note treatment. */}
+          {communityStats.anatomyCategories.length === 0 && (
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+              <PlaceholderBadge />
+              {thinSample ? <PlaceholderNote /> : <EmptyBlockNote />}
+            </div>
+          )}
           {communityStats.anatomyCategories.map((category) => (
             <div key={category.id} className={`w-full ${category.badgeBg} border-y py-6 my-2 shadow-xs`}>
               
@@ -839,7 +883,7 @@ export default function FanStats({
                 </HorizontalCarousel>
               </div>
             )}
-            {communityStats.loneBangers.length === 0 && thinSample && (
+            {communityStats.loneBangers.length === 0 && (
               <div className="bg-slate-50 rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-200">
                 <div className="text-center sm:text-left mb-5">
                   <h2 className="text-2xl font-black text-slate-900 tracking-tight leading-tight mb-2">
@@ -873,7 +917,7 @@ export default function FanStats({
                 <div className="mt-4">
                   <PlaceholderBadge />
                 </div>
-                <PlaceholderNote />
+                {thinSample ? <PlaceholderNote /> : <EmptyBlockNote />}
               </div>
             )}
 
@@ -905,7 +949,7 @@ export default function FanStats({
                 </div>
               </div>
             )}
-            {!communityStats.tasteTwin && thinSample && (
+            {!communityStats.tasteTwin && (
               <div className="bg-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-800">
                 <div className="text-center sm:text-left mb-6">
                   <span className="text-[10px] font-black uppercase tracking-widest text-amber-400 block mb-1">Correlation</span>
@@ -934,7 +978,7 @@ export default function FanStats({
                 <div className="mt-5">
                   <PlaceholderBadge />
                 </div>
-                <PlaceholderNote />
+                {thinSample ? <PlaceholderNote /> : <EmptyBlockNote />}
               </div>
             )}
 
@@ -979,7 +1023,7 @@ export default function FanStats({
                 </div>
               </div>
             )}
-            {!(communityStats.genClassicistSong && communityStats.genModernistSong) && thinSample && (
+            {!(communityStats.genClassicistSong && communityStats.genModernistSong) && (
               <div className="bg-slate-50 border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm flex-1">
                 <div className="text-center sm:text-left mb-5">
                   <h2 className="text-2xl font-black text-slate-900 tracking-tight leading-tight">Old vs. New</h2>
@@ -1021,7 +1065,7 @@ export default function FanStats({
                 <div className="mt-4">
                   <PlaceholderBadge />
                 </div>
-                <PlaceholderNote />
+                {thinSample ? <PlaceholderNote /> : <EmptyBlockNote />}
               </div>
             )}
 

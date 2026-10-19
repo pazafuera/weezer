@@ -186,8 +186,12 @@ export default function AppShell({
 
   const activeFriendsCount = Array.isArray(friendsList) ? friendsList.length : 0;
 
-  // One nav row. The current step is marked by the filled blue
-  // pill — there are no arrow indicators anywhere in the menu.
+  // One nav row. Rows share one uniform height (py-4 = 48px at
+  // the text-xs line height) and touch — no gap between rows;
+  // the rounded row shape is the only separation. The current
+  // step is marked by a pale blue tint (#E0F2FE, the app's
+  // progress-track blue) with brand-blue text — there are no
+  // arrow indicators anywhere in the menu.
   const renderNavButton = (item: NavItem) => {
     const isActive = step === item.step;
     const isDisabled = item.disabled;
@@ -202,11 +206,11 @@ export default function AppShell({
             navigateTo(item.step);
           }
         }}
-        className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-xs font-black transition-all ${
+        className={`w-full flex items-center justify-between px-3.5 py-4 rounded-xl text-xs font-black transition-all ${
           isDisabled
             ? 'opacity-40 cursor-not-allowed text-slate-400 bg-slate-50'
             : isActive
-            ? 'bg-[#0072CE] text-white shadow-xs cursor-pointer'
+            ? 'bg-[#E0F2FE] text-[#0072CE] cursor-pointer'
             : 'text-slate-700 hover:bg-slate-100 cursor-pointer'
         }`}
       >
@@ -215,12 +219,19 @@ export default function AppShell({
         {/* Fan Friends carries two counts: the highlighted pill
             is the ACTIVE friends count (friendsList is loaded
             with status='accepted' only); the amber pill keeps
-            the pending-requests signal next to it. */}
+            the pending-requests signal next to it. On the active
+            row the count pill goes white — its usual blue-100
+            would merge into the row's pale #E0F2FE tint. The
+            amber pill contrasts with the tint as-is. */}
         {item.step === 'friends' &&
           (activeFriendsCount > 0 || pendingRequestsCount > 0) && (
             <span className="flex items-center gap-1.5">
               {activeFriendsCount > 0 && (
-                <span className="bg-blue-100 text-[#0072CE] border border-blue-200 font-black text-[10px] px-2 py-0.5 rounded-full">
+                <span
+                  className={`${
+                    isActive ? 'bg-white' : 'bg-blue-100'
+                  } text-[#0072CE] border border-blue-200 font-black text-[10px] px-2 py-0.5 rounded-full`}
+                >
                   {activeFriendsCount}
                 </span>
               )}
@@ -253,12 +264,16 @@ export default function AppShell({
 
     return (
       <div key={title}>
-        <p className="px-3.5 pt-2 pb-1 text-xs font-black text-slate-900">
+        {/* The header binds DOWN to its rows: pt-5 gives the
+            section break its air (20px from the separator rule
+            above to the header text), pb-1 keeps only 4px
+            between the header and the first row's box — the
+            tightest gap in the nav. Rows inside carry no gap
+            at all (see renderNavButton). */}
+        <p className="px-3.5 pt-5 pb-1 text-xs font-black text-slate-900">
           {title}
         </p>
-        <div className="space-y-1">
-          {items.map((item) => renderNavButton(item))}
-        </div>
+        <div>{items.map((item) => renderNavButton(item))}</div>
       </div>
     );
   };
@@ -531,11 +546,11 @@ export default function AppShell({
                   Fanhood Unraveled. Help stays last in both
                   states. */}
               <nav className="p-2">
-                <div className="border-t border-slate-200 mb-1" />
+                <div className="border-t border-slate-200" />
                 {orderedSections.map((section, index) => (
                   <React.Fragment key={section.title}>
                     {index > 0 && (
-                      <div className="border-t border-slate-200 my-2" />
+                      <div className="border-t border-slate-200 mt-5" />
                     )}
                     {renderNavSection(section.title, section.items)}
                   </React.Fragment>

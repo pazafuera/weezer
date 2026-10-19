@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { BucketType, Song, BUCKET_CONFIG, BUCKET_TRANSITIONS } from '../data/constants';
 import type { TriageValue } from '../context/WeezerContext';
-import { FlyingWIcon, AudioPreviewButton, SortingIncompleteNotice } from './SharedUI';
+import { FlyingWIcon, AudioPreviewButton, SortingIncompleteNotice, DashboardBackButton } from './SharedUI';
 import Step1_5Matchups from './Step1_5Matchups';
 
 const REFINEMENT_STAGES: { bucket: BucketType; title: string; desc: string; nextBtn: string }[] = [
@@ -20,6 +20,7 @@ export default function Step2Refine({
   handleFinishBucketRanking,
   onBackToTriage,
   onKeepSorting,
+  onExitToDashboard,
   autoStartMatchups,
   initialStageIdx = 0,
   onStageChange,
@@ -30,6 +31,7 @@ export default function Step2Refine({
   handleFinishBucketRanking: () => void;
   onBackToTriage: () => void;
   onKeepSorting: () => void;
+  onExitToDashboard: () => void;
   autoStartMatchups: boolean;
   initialStageIdx?: number;
   onStageChange?: (idx: number) => void;
@@ -317,6 +319,25 @@ export default function Step2Refine({
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* STAGE CHROME (UAT P-10) — stages 1–4 only: a stage
+          indicator (where am I in the five-stage flow) and a
+          direct exit to the dashboard. Before this, the only
+          ways out of stages 1–4 were back-walking one stage at
+          a time or the app menu, and nothing said which stage
+          you were on. Stage 0 keeps its existing exits (its
+          bottom-bar Back is the origin-aware closeRefine), and
+          the matchups interstitial — which replaces this whole
+          view — keeps its own exit. The exit is the shared
+          DashboardBackButton: destination-labeled, 44px. */}
+      {stageIdx >= 1 && (
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-[11px] font-black uppercase tracking-wider text-slate-400 pl-1">
+            Stage {stageIdx + 1} of {REFINEMENT_STAGES.length}
+          </span>
+          <DashboardBackButton onClick={onExitToDashboard} />
         </div>
       )}
 

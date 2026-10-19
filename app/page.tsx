@@ -14,7 +14,7 @@ import Step4Wrapped from './components/Step4Wrapped';
 import StepShareables from './components/StepShareables';
 import FanStats from './components/FanStats';
 import WeezerFriends from './components/WeezerFriends';
-import Login from './login/page';
+import Login from './components/Login';
 
 export default function WeezerRankerPage() {
   const {

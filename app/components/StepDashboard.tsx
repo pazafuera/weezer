@@ -294,32 +294,52 @@ export default function StepDashboard() {
   // SWEATER THREAD PREVIEW CARD (sorting incomplete) — the Thread
   // card in its softened, honest form, below the progress card: what
   // exists so far is a sketch built on the songs rated to date, not
-  // the finished portrait. The card still leads to the Thread —
-  // navigateTo applies the usual progression guard when it's locked.
-  // (Once sorting is complete and the Thread is compiled, the dark
-  // "Unraveled" card in the return below takes this card's place and
-  // leads the page.)
-  const ThreadPreviewCard = () => (
-    <button
-      type="button"
-      onClick={() => navigateTo('wrapped')}
-      className="w-full text-left bg-white border border-slate-200/90 hover:border-blue-300 rounded-3xl p-5 shadow-xs transition-all cursor-pointer group space-y-2"
-    >
-      <h2 className="text-lg sm:text-xl font-black text-slate-950 tracking-tight group-hover:text-[#0072CE] transition-colors">
-        Your Sweater Thread
-      </h2>
-      <p className="text-xs sm:text-sm font-medium text-slate-500 leading-relaxed">
-        {bucketedCount === 0
-          ? 'Nothing rated yet — your Thread starts with your first sorted song, and it sharpens as you sort more.'
-          : `So far it's built on the ${bucketedCount} song${
-              bucketedCount === 1 ? '' : 's'
-            } you've rated — a sketch, not the portrait. It sharpens as you sort more.`}
-      </p>
-      <div className="pt-0.5 flex items-center text-xs font-black text-[#0072CE] group-hover:underline">
-        Peek at your Thread →
-      </div>
-    </button>
-  );
+  // the finished portrait. (Once sorting is complete and the Thread
+  // is compiled, the dark "Unraveled" card in the return below takes
+  // this card's place and leads the page.)
+  //
+  // The CTA always names the step it actually opens. The Thread
+  // unlocks only when a refined master list exists
+  // (progress.isWrappedUnlocked); below that, resolveGuardedStep
+  // would silently bounce a 'wrapped' request to rank_buckets
+  // (once any song is rated) or triage (nothing rated) — so a bare
+  // "Peek at your Thread" would promise a page the app won't show.
+  // Instead: nothing rated → the card offers sorting itself; rated
+  // but unrefined → it points at Refine, the step that unlocks the
+  // Thread; unlocked → the peek, as promised.
+  const ThreadPreviewCard = () => {
+    const threadCta: {
+      label: string;
+      step: Parameters<typeof navigateTo>[0];
+    } =
+      bucketedCount === 0
+        ? { label: 'Start sorting →', step: 'triage' }
+        : !progress.isWrappedUnlocked
+          ? { label: 'Refine to unlock your Thread →', step: 'rank_buckets' }
+          : { label: 'Peek at your Thread →', step: 'wrapped' };
+
+    return (
+      <button
+        type="button"
+        onClick={() => navigateTo(threadCta.step)}
+        className="w-full text-left bg-white border border-slate-200/90 hover:border-blue-300 rounded-3xl p-5 shadow-xs transition-all cursor-pointer group space-y-2"
+      >
+        <h2 className="text-lg sm:text-xl font-black text-slate-950 tracking-tight group-hover:text-[#0072CE] transition-colors">
+          Your Sweater Thread
+        </h2>
+        <p className="text-xs sm:text-sm font-medium text-slate-500 leading-relaxed">
+          {bucketedCount === 0
+            ? 'Nothing rated yet — your Thread starts with your first sorted song, and it sharpens as you sort more.'
+            : `So far it's built on the ${bucketedCount} song${
+                bucketedCount === 1 ? '' : 's'
+              } you've rated — a sketch, not the portrait. It sharpens as you sort more.`}
+        </p>
+        <div className="pt-0.5 flex items-center text-xs font-black text-[#0072CE] group-hover:underline">
+          {threadCta.label}
+        </div>
+      </button>
+    );
+  };
 
   // DONE SORTING? (sorting incomplete) — replaces What's Next in
   // this state. Quiet on purpose: Refine and Final Review stay one

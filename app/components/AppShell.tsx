@@ -108,14 +108,17 @@ export default function AppShell({
     requiresAuth?: boolean;
     hideIf?: boolean;
     disabled?: boolean;
-    /** 'ranking' puts the row in the "The Ranking Project" group (below). */
-    group?: 'ranking';
+    /** Which menu section carries the row (see the nav render below). */
+    group?: 'ranking' | 'fanhood';
   }
 
+  // Array order matters: each section's rows render in the
+  // relative order they appear here.
   const navItems: NavItem[] = [
     {
       label: 'Dashboard',
       step: 'dashboard',
+      group: 'fanhood',
     },
     {
       label: 'How It Works',
@@ -141,22 +144,26 @@ export default function AppShell({
       group: 'ranking',
     },
     {
-      label: 'My Sweater Thread',
+      label: 'Sweater Thread',
       step: 'wrapped',
       disabled: !progress.isWrappedUnlocked,
+      group: 'fanhood',
     },
     {
       label: 'Global Fan Stats',
       step: 'fan_stats',
+      group: 'fanhood',
+    },
+    {
+      label: 'Fan Friends',
+      step: 'friends',
+      requiresAuth: true,
+      group: 'fanhood',
     },
     {
       label: 'Shareables',
       step: 'shareables',
-    },
-    {
-      label: 'Compare with Friends',
-      step: 'friends',
-      requiresAuth: true,
+      group: 'fanhood',
     },
   ];
 
@@ -167,15 +174,14 @@ export default function AppShell({
     return true;
   });
 
-  // The Ranking Project group rows and the loose rows, each in
-  // their configured relative order. The group is rendered as
-  // one block (below) and placed by completion state; the loose
-  // list is the same in both states.
+  // The two sections' rows, each in their configured relative
+  // order. Both sections render identically wherever they sit;
+  // only their order in the nav changes (see the nav render).
   const rankingGroupItems = visibleNavItems.filter(
     (item) => item.group === 'ranking'
   );
-  const looseNavItems = visibleNavItems.filter(
-    (item) => item.group !== 'ranking'
+  const fanhoodGroupItems = visibleNavItems.filter(
+    (item) => item.group === 'fanhood'
   );
 
   const activeFriendsCount = Array.isArray(friendsList) ? friendsList.length : 0;
@@ -206,36 +212,68 @@ export default function AppShell({
       >
         <span>{item.label}</span>
 
-        {item.step === 'friends' && pendingRequestsCount > 0 && (
-          <span className="bg-amber-400 text-slate-950 font-black text-[10px] px-2 py-0.5 rounded-full">
-            {pendingRequestsCount}
-          </span>
-        )}
+        {/* Fan Friends carries two counts: the highlighted pill
+            is the ACTIVE friends count (friendsList is loaded
+            with status='accepted' only); the amber pill keeps
+            the pending-requests signal next to it. */}
+        {item.step === 'friends' &&
+          (activeFriendsCount > 0 || pendingRequestsCount > 0) && (
+            <span className="flex items-center gap-1.5">
+              {activeFriendsCount > 0 && (
+                <span className="bg-blue-100 text-[#0072CE] border border-blue-200 font-black text-[10px] px-2 py-0.5 rounded-full">
+                  {activeFriendsCount}
+                </span>
+              )}
+              {pendingRequestsCount > 0 && (
+                <span className="bg-amber-400 text-slate-950 font-black text-[10px] px-2 py-0.5 rounded-full">
+                  {pendingRequestsCount}
+                </span>
+              )}
+            </span>
+          )}
       </button>
     );
   };
 
-  // "The Ranking Project" group — How It Works, Sort, Refine and
-  // My Rankings in one bordered block under a sentence-case
-  // eyebrow. The block renders identically wherever it sits;
-  // only its position in the nav changes (see the nav render):
-  // at the top while sorting or refinement is unfinished, below
-  // the loose items once both are complete.
-  const renderRankingGroup = () => {
-    if (rankingGroupItems.length === 0) return null;
+  // Menu sections — flat groups under full-size headers, no
+  // boxes. The header matches the guest card's headline in size
+  // and weight (text-xs font-black — "Why Bother creating an
+  // account?" carries text-xs font-black text-amber-950; here
+  // the ink is slate-900, the drawer's heading color). "The
+  // Ranking Project" holds the sorting flow (How It Works, Sort,
+  // Refine, My Rankings); "My Fanhood Unraveled" holds the fan
+  // destinations (Dashboard, Sweater Thread, Global Fan Stats,
+  // Fan Friends, Shareables). A section renders identically
+  // wherever it sits; only the sections' order changes: the
+  // Ranking Project leads while sorting or refinement is
+  // unfinished and drops below My Fanhood Unraveled once both
+  // are complete.
+  const renderNavSection = (title: string, items: NavItem[]) => {
+    if (items.length === 0) return null;
 
     return (
-      <div
-        key="ranking-project-group"
-        className="rounded-2xl border border-slate-200 bg-slate-50/70 p-1.5 space-y-1"
-      >
-        <p className="px-2 pt-1 text-[9px] font-black tracking-widest text-slate-400">
-          The Ranking Project
+      <div key={title}>
+        <p className="px-3.5 pt-2 pb-1 text-xs font-black text-slate-900">
+          {title}
         </p>
-        {rankingGroupItems.map((groupItem) => renderNavButton(groupItem))}
+        <div className="space-y-1">
+          {items.map((item) => renderNavButton(item))}
+        </div>
       </div>
     );
   };
+
+  const orderedSections = (
+    rankingProjectComplete
+      ? [
+          { title: 'My Fanhood Unraveled', items: fanhoodGroupItems },
+          { title: 'The Ranking Project', items: rankingGroupItems },
+        ]
+      : [
+          { title: 'The Ranking Project', items: rankingGroupItems },
+          { title: 'My Fanhood Unraveled', items: fanhoodGroupItems },
+        ]
+  ).filter((section) => section.items.length > 0);
 
   return (
     <div className="min-h-screen bg-slate-100 font-sans text-slate-900 flex flex-col selection:bg-amber-300 selection:text-slate-950">
@@ -483,16 +521,25 @@ export default function AppShell({
                 </div>
               )}
 
-              {/* NAV — while the Ranking Project is unfinished
-                  (sorting or refinement incomplete) its group
-                  leads the nav, right under the guest card /
-                  account panel; once both are complete the same
-                  group drops below the loose items. The Help row
-                  under the nav stays last in both states. */}
-              <nav className="p-2 space-y-1">
-                {!rankingProjectComplete && renderRankingGroup()}
-                {looseNavItems.map((item) => renderNavButton(item))}
-                {rankingProjectComplete && renderRankingGroup()}
+              {/* NAV — flat sections under full-size headers,
+                  divided by horizontal rules: one under the guest
+                  card / account panel, one between the two
+                  sections, one above the Help row. While the
+                  Ranking Project is unfinished (sorting or
+                  refinement incomplete) it leads, right under the
+                  panel; once both are complete it drops below My
+                  Fanhood Unraveled. Help stays last in both
+                  states. */}
+              <nav className="p-2">
+                <div className="border-t border-slate-200 mb-1" />
+                {orderedSections.map((section, index) => (
+                  <React.Fragment key={section.title}>
+                    {index > 0 && (
+                      <div className="border-t border-slate-200 my-2" />
+                    )}
+                    {renderNavSection(section.title, section.items)}
+                  </React.Fragment>
+                ))}
               </nav>
 
               {/* HELP — utility row under the nav list (site-wide
@@ -500,6 +547,7 @@ export default function AppShell({
                   own in-body help button). Closes the menu and
                   opens the same help sheet. */}
               <div className="p-2 pt-0">
+                <div className="border-t border-slate-200 mb-1" />
                 <button
                   onClick={() => {
                     closeMenu();

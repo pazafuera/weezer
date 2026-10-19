@@ -43,11 +43,14 @@ export default function Step1Triage({
 }) {
   const [hideSorted, setHideSorted] = useState(false);
 
-  // Deck | List view toggle. Deck is the default; the choice persists
+  // Deck | List view mode. Deck is the default; the choice persists
   // in localStorage so it survives step navigation and remounts. Read
   // after mount (not in the initializer) to keep first paint identical
   // to the server render. Both views read/write the same triageMap
-  // through the same handlers, so switching never loses state.
+  // through the same handlers, so the mode never loses state. The
+  // toggle UI that used to switch modes in place is gone (owner,
+  // Oct 18) — the persisted preference and the deck default remain;
+  // users simply stay in their current view.
   const [viewMode, setViewMode] = useState<'deck' | 'list'>('deck');
   useEffect(() => {
     try {
@@ -57,14 +60,6 @@ export default function Step1Triage({
       /* localStorage unavailable — deck default stands */
     }
   }, []);
-  const changeViewMode = (mode: 'deck' | 'list') => {
-    setViewMode(mode);
-    try {
-      window.localStorage.setItem('weezer-triage-view-mode', mode);
-    } catch {
-      /* persistence is best-effort */
-    }
-  };
 
   const albumsGrouped = Array.from(new Set(FULL_SONG_POOL.map((s) => s.album)));
   // Categorized = bucketed + "Don't Know It" marks. The progress bar and
@@ -205,7 +200,7 @@ export default function Step1Triage({
             // way the list's sticky bar below does. Minimum height,
             // not fixed: on tall phones everything fits one screen,
             // but the deck's fixed-height song card can push the
-            // tray/toggle just below the fold on short screens — the
+            // tray just below the fold on short screens — the
             // owner accepted a little scroll there over a card too
             // short for two-line titles.
             'flex flex-col -m-4 sm:-m-6 lg:-m-8 min-h-[calc(100dvh-56px)] lg:min-h-[calc(100dvh-64px)]'
@@ -216,11 +211,16 @@ export default function Step1Triage({
       {/* STICKY PROGRESS & ALBUM QUICK-JUMP BAR (EXPANDED FOR DESKTOP) */}
       <div className="sticky top-[56px] lg:top-[64px] z-40 bg-slate-50/95 backdrop-blur-md border-b border-slate-200 py-3 px-4 shadow-xs -mx-4 sm:-mx-6 lg:-mx-8 -mt-4 sm:-mt-6 lg:-mt-8 mb-6 space-y-3">
         <div className="max-w-5xl lg:max-w-6xl mx-auto space-y-2">
-          {/* PROGRESS METRICS & HIDE SORTED TOGGLE */}
+          {/* PROGRESS METRICS & HIDE SORTED TOGGLE — the percent
+              rides with the count on the LEFT (owner); the right
+              side keeps Hide Sorted and the help button. */}
           <div className="flex justify-between items-center text-xs font-black text-slate-700">
-            <span className="uppercase tracking-wider">
-              Progress: <strong className="text-[#0072CE] font-mono text-sm">{categorizedCount}</strong> / {FULL_SONG_POOL.length}
-            </span>
+            <div className="flex items-center gap-3">
+              <span className="uppercase tracking-wider">
+                Progress: <strong className="text-[#0072CE] font-mono text-sm">{categorizedCount}</strong> / {FULL_SONG_POOL.length}
+              </span>
+              <span className="text-[#0072CE] font-mono text-sm font-black">{progressPercent}%</span>
+            </div>
 
             <div className="flex items-center gap-3">
               <label className="flex items-center gap-1.5 cursor-pointer text-[11px] font-extrabold text-slate-600 select-none">
@@ -232,7 +232,6 @@ export default function Step1Triage({
                 />
                 <span>Hide Sorted ({categorizedCount})</span>
               </label>
-              <span className="text-[#0072CE] font-mono text-sm font-black">{progressPercent}%</span>
               <HelpButton />
             </div>
           </div>
@@ -281,9 +280,9 @@ export default function Step1Triage({
       )}
 
       {/* HEADER — deck mode gets a compact variant (smaller headline,
-          one-line subhead, no toggle up here: the deck renders its own
-          small toggle at the bottom) so headline + card + actions fit
-          a single screen. List mode keeps the full header and toggle. */}
+          one-line subhead) so headline + card + actions fit a single
+          screen. List mode keeps the full header. (Neither header
+          carries a Deck | List toggle anymore — owner, Oct 18.) */}
       {viewMode === 'deck' ? (
         <div className="text-center px-4 pt-3 pb-1 shrink-0">
           <h1 className="text-3xl font-black text-slate-950 tracking-tighter leading-none">
@@ -301,24 +300,6 @@ export default function Step1Triage({
           <p className="text-sm font-bold text-slate-500 max-w-sm mx-auto leading-snug">
             Sort every song into a tier. Trust your first instinct, don&apos;t overthink it.
           </p>
-          {/* DECK | LIST TOGGLE — both views share the same triageMap */}
-          <div className="pt-2">
-            <div className="inline-flex bg-white border border-slate-300 rounded-full p-1 shadow-xs">
-              {(['deck', 'list'] as const).map((mode) => (
-                <button
-                  key={mode}
-                  onClick={() => changeViewMode(mode)}
-                  className={`px-4 py-1.5 rounded-full text-xs font-black capitalize transition-all cursor-pointer ${
-                    viewMode === mode
-                      ? 'bg-[#0072CE] text-white shadow-sm'
-                      : 'text-slate-500 hover:text-slate-800'
-                  }`}
-                >
-                  {mode}
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
       )}
 
@@ -329,7 +310,6 @@ export default function Step1Triage({
           sections={sections}
           handleSetBucket={handleSetBucket}
           handleFinishTriage={handleFinishTriage}
-          onSwitchToList={() => changeViewMode('list')}
           isGuest={isGuest}
           onCreateAccount={onCreateAccount}
           onOpenGarage={onOpenGarage}

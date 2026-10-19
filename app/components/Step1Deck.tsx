@@ -25,12 +25,12 @@ import type { TriageSection } from './Step1Triage';
  * AppShell header, as a MIN height) and the deck fills it as a flex
  * column: compact progress line → the fixed-height card (centered in
  * the remaining space) → the tray of tier tiles → one quiet Don't
- * Know It line → the Jump / Deck|List row. On tall phones
+ * Know It line → the Jump row. On tall phones
  * everything fits one screen; on short ones the page scrolls a
  * little — the owner accepted that in exchange for a song card tall
  * enough to hold a two-line title without pushing the preview button
  * off it. The milestone, completion and end-of-deck states replace
- * the card inside the same column at the same 392px floor — their
+ * the card inside the same column at the same 362px floor — their
  * shell is adaptive and grows past it when a state's content needs
  * the room (see DeckCardShell); the song card's height never moves.
  *
@@ -591,19 +591,21 @@ type CardAnimPhase =
  * height — it never grows or shrinks with content — so a song title
  * can never push the preview button off the card. The milestone,
  * completion and end-of-deck states render in the same shell with
- * `adaptive` set instead: a 392px MINIMUM height that grows to fit
+ * `adaptive` set instead: a 362px MINIMUM height that grows to fit
  * content (Overnight 3.5 — the milestone action stack's tallest
  * guest state runs ~569px of content at phone width, which no
- * spacing trim could fit into 392; a non-song state short enough
+ * spacing trim could fit into 362; a non-song state short enough
  * to fit renders identically to the fixed shell). The backing
  * layers are inset-0, so they scale with a taller shell and the
  * stacked-deck peek survives at any height.
  *
- * Slot budget (mobile-first, sums to the 392px height): card vertical
- * padding py-5 (40) + art slot h-32 (128) + gap-3 (12) + two-line
- * title slot h-[104px] (104 — two lines at the ladder's largest size,
- * text-5xl × leading-[1.05], is 100.8) + gap-3 (12) + meta line
- * text-sm (20) + gap-3 (12) + preview-button slot h-16 (64) = 392.
+ * Slot budget (mobile-first, sums to the 362px height — the card
+ * was 392 until the owner asked for it a little shorter so the
+ * bucket tray pulls up): card vertical padding py-4 (32) + art
+ * slot h-28 (112) + gap-2.5 (10) + two-line title slot h-[104px]
+ * (104 — two lines at the ladder's largest size, text-5xl ×
+ * leading-[1.05], is 100.8) + gap-2.5 (10) + meta line text-sm
+ * (20) + gap-2.5 (10) + preview-button slot h-16 (64) = 362.
  */
 function DeckCardShell({
   children,
@@ -614,13 +616,13 @@ function DeckCardShell({
   children: React.ReactNode;
   /**
    * Non-song states only (milestone / completion / end-of-deck):
-   * the shell's fixed 392px height becomes a 392px MINIMUM and
+   * the shell's fixed 362px height becomes a 362px MINIMUM and
    * the shell grows to fit its content (see the shell comment
    * above). Song cards never set it — their rendering path is
    * byte-for-byte the fixed shell. The inner content containers
-   * of adaptive states pair this with min-h-[392px] in place of
+   * of adaptive states pair this with min-h-[362px] in place of
    * h-full, so a state that fits still centers its content in
-   * exactly 392px, identically to before.
+   * exactly 362px, identically to before.
    */
   adaptive?: boolean;
   /**
@@ -699,7 +701,7 @@ function DeckCardShell({
     <div
       data-tutorial="card"
       className={`relative w-full ${
-        adaptive ? 'min-h-[392px]' : 'h-[392px]'
+        adaptive ? 'min-h-[362px]' : 'h-[362px]'
       } [perspective:1200px]${swaying ? ' deck-tutorial-sway' : ''}`}
     >
       <div
@@ -724,14 +726,14 @@ function DeckCardShell({
             cursor: swipe.isDragging ? 'grabbing' : 'grab',
           }}
           className={`relative ${
-            adaptive ? 'min-h-[392px]' : 'h-full'
+            adaptive ? 'min-h-[362px]' : 'h-full'
           } rounded-[28px] bg-[#d9eafa] border border-slate-200 shadow-xl select-none`}
         >
           {/* Directional stamps: all three are CENTERED OVER THE
               ALBUM ART (owner: the old corner stamps rotated
-              off-screen first and were hard to see). top-[84px] is
-              the art slot's vertical center — the content's py-5
-              (20px) plus half the h-32 art slot (64px). Opacity is
+              off-screen first and were hard to see). top-[72px] is
+              the art slot's vertical center — the content's py-4
+              (16px) plus half the h-28 art slot (56px). Opacity is
               proportional to drag distance (computed by the
               parent), and only the stamp for the current drag
               direction renders. NOT SORTED is the stamp motif in
@@ -741,7 +743,7 @@ function DeckCardShell({
             <span
               aria-hidden="true"
               style={{ opacity: swipe.stampOpacity }}
-              className="pointer-events-none absolute left-1/2 top-[84px] z-20 -translate-x-1/2 -translate-y-1/2 -rotate-12 rounded-lg border-[3px] border-slate-500 px-2.5 py-1 text-base font-black uppercase tracking-widest text-slate-600 bg-white/70"
+              className="pointer-events-none absolute left-1/2 top-[72px] z-20 -translate-x-1/2 -translate-y-1/2 -rotate-12 rounded-lg border-[3px] border-slate-500 px-2.5 py-1 text-base font-black uppercase tracking-widest text-slate-600 bg-white/70"
             >
               Not Sorted
             </span>
@@ -750,7 +752,7 @@ function DeckCardShell({
             <span
               aria-hidden="true"
               style={{ opacity: swipe.stampOpacity }}
-              className="pointer-events-none absolute left-1/2 top-[84px] z-20 -translate-x-1/2 -translate-y-1/2 -rotate-12 rounded-lg border-[3px] border-slate-500 px-2.5 py-1 text-lg font-black uppercase tracking-widest text-slate-600 bg-white/70"
+              className="pointer-events-none absolute left-1/2 top-[72px] z-20 -translate-x-1/2 -translate-y-1/2 -rotate-12 rounded-lg border-[3px] border-slate-500 px-2.5 py-1 text-lg font-black uppercase tracking-widest text-slate-600 bg-white/70"
             >
               Next
             </span>
@@ -759,7 +761,7 @@ function DeckCardShell({
             <span
               aria-hidden="true"
               style={{ opacity: swipe.stampOpacity }}
-              className="pointer-events-none absolute left-1/2 top-[84px] z-20 -translate-x-1/2 -translate-y-1/2 rotate-12 rounded-lg border-[3px] border-[#0072CE] px-2.5 py-1 text-lg font-black uppercase tracking-widest text-[#0072CE] bg-white/70"
+              className="pointer-events-none absolute left-1/2 top-[72px] z-20 -translate-x-1/2 -translate-y-1/2 rotate-12 rounded-lg border-[3px] border-[#0072CE] px-2.5 py-1 text-lg font-black uppercase tracking-widest text-[#0072CE] bg-white/70"
             >
               Back
             </span>
@@ -769,7 +771,7 @@ function DeckCardShell({
       ) : (
         <div
           className={`relative ${
-            adaptive ? 'min-h-[392px]' : 'h-full'
+            adaptive ? 'min-h-[362px]' : 'h-full'
           } rounded-[28px] bg-[#d9eafa] border border-slate-200 shadow-xl`}
         >
           {children}
@@ -875,7 +877,6 @@ export default function Step1Deck({
   sections,
   handleSetBucket,
   handleFinishTriage,
-  onSwitchToList,
   isGuest,
   onCreateAccount,
   onOpenGarage,
@@ -885,7 +886,6 @@ export default function Step1Deck({
   sections: TriageSection[];
   handleSetBucket: (id: string, bucket: TriageValue) => void;
   handleFinishTriage: () => void;
-  onSwitchToList: () => void;
   /** Auth/navigation plumbing (page.tsx → Step1Triage → here).
    *  isGuest and onCreateAccount are consumed by the milestone
    *  action stack and the end / completion card stacks below
@@ -2216,18 +2216,24 @@ export default function Step1Deck({
     >
       {/* COMPACT PROGRESS — one line + a slim bar. Same counts as the
           list header (categorizedCount / bucketedCount), so the two
-          views always agree. Right of the count sits the list
-          view's Hide Sorted checkbox (owner: it replaces the old
-          milestone-distance suffix — the milestone cards pace the
-          deck now, the line just reports progress). */}
+          views always agree. The percent rides with the count on the
+          LEFT (owner); the right side keeps the list view's Hide
+          Sorted checkbox (owner: it replaces the old milestone-
+          distance suffix — the milestone cards pace the deck now,
+          the line just reports progress) and the help button. */}
       <div className="shrink-0 pt-2 space-y-1.5">
         <div className="flex items-center justify-between gap-2 text-[11px] font-black text-slate-700">
-          <span className="uppercase tracking-wider">
-            <strong className="text-[#0072CE] text-xs">
-              {categorizedCount}
-            </strong>{' '}
-            of {total} sorted
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="uppercase tracking-wider">
+              <strong className="text-[#0072CE] text-xs">
+                {categorizedCount}
+              </strong>{' '}
+              of {total} sorted
+            </span>
+            <span className="text-[#0072CE] text-xs">
+              {progressPercent}%
+            </span>
+          </div>
           <div className="flex items-center gap-3 shrink-0">
             <label className="flex items-center gap-1.5 cursor-pointer text-[11px] font-extrabold text-slate-600 select-none normal-case tracking-normal">
               <input
@@ -2238,9 +2244,6 @@ export default function Step1Deck({
               />
               <span>Hide sorted</span>
             </label>
-            <span className="text-[#0072CE] text-xs">
-              {progressPercent}%
-            </span>
             <HelpButton />
           </div>
         </div>
@@ -2271,7 +2274,7 @@ export default function Step1Deck({
 
       {/* CARD REGION — flex-1 and centered; the milestone,
           completion and end-of-deck states replace the card right
-          here, in the adaptive shell (392px floor, grows to fit —
+          here, in the adaptive shell (362px floor, grows to fit —
           see DeckCardShell). */}
       <div className="relative flex-1 min-h-0 flex items-center justify-center py-2">
         {milestonePending ? (
@@ -2281,8 +2284,7 @@ export default function Step1Deck({
              already landed in act(), so "Keep sorting" simply
              hands the screen back. Not swipeable (no swipe prop,
              like the completion card); the tray hides while it
-             shows (inSongState is false) and the footer toggle
-             pill below keeps Deck/List reachable. The card leads
+             shows (inSongState is false). The card leads
              IN-FLOW with the section album's cover art (the
              singles card keeps the award seal, MilestoneRibbon),
              then the section's copy as built at fire time:
@@ -2296,12 +2298,12 @@ export default function Step1Deck({
              under it, and the Refine text link (25+ real
              buckets) at the very bottom of the singles and
              album cards. The shell here is ADAPTIVE (Overnight
-             3.5): the tallest stacks can't fit 392px at phone
+             3.5): the tallest stacks can't fit 362px at phone
              width, so the card grows to fit them in flow instead
              of the stack painting outside the card's bounds;
-             stacks that fit render in exactly 392px, as before. */
+             stacks that fit render in exactly 362px, as before. */
           <DeckCardShell adaptive>
-            <div className="min-h-[392px] flex flex-col items-center justify-center text-center px-6 py-3 sm:px-8 sm:py-4 space-y-1.5 sm:space-y-2">
+            <div className="min-h-[362px] flex flex-col items-center justify-center text-center px-6 py-3 sm:px-8 sm:py-4 space-y-1.5 sm:space-y-2">
               {milestoneCover ? (
                 <>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -2361,7 +2363,7 @@ export default function Step1Deck({
              link that used to close this stack.) Signed-in users
              see no Save, just the Refine button. */
           <DeckCardShell adaptive>
-            <div className="min-h-[392px] flex flex-col items-center justify-center text-center p-6 sm:p-8 space-y-5">
+            <div className="min-h-[362px] flex flex-col items-center justify-center text-center p-6 sm:p-8 space-y-5">
               <div className="text-4xl">🏆</div>
               <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-950">
                 All {total} songs sorted
@@ -2392,7 +2394,7 @@ export default function Step1Deck({
              lead; its "Create a free account" is the tappable link
              inside the sentence. Signed-in users see no line. */
           <DeckCardShell swipe={swipeProps} adaptive>
-            <div className="min-h-[392px] flex flex-col items-center justify-center text-center p-6 sm:p-8 space-y-5">
+            <div className="min-h-[362px] flex flex-col items-center justify-center text-center p-6 sm:p-8 space-y-5">
               <div className="text-4xl">🎴</div>
               <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-950">
                 That&apos;s the whole deck
@@ -2463,10 +2465,10 @@ export default function Step1Deck({
              no layout height and never competes with the progress
              line above the card. */
           <DeckCardShell swipe={swipeProps} swaying={tutorialSwaying}>
-            <div className="relative h-full flex flex-col items-center text-center px-5 py-5 gap-3">
+            <div className="relative h-full flex flex-col items-center text-center px-5 py-4 gap-2.5">
               {/* STATIC STAMP — same anchor as the drag stamps
-                  (the art slot's center: py-5 + half of h-32 =
-                  top-[84px]), rendered only while no drag stamp
+                  (the art slot's center: py-4 + half of h-28 =
+                  top-[72px]), rendered only while no drag stamp
                   is up. It sits over the art; the preview button
                   lives in the card's bottom slot, far below the
                   stamp's band, so they can never overlap.
@@ -2477,19 +2479,19 @@ export default function Step1Deck({
               {shownStamp && stampKind === null && (
                 <span
                   aria-hidden="true"
-                  className={`pointer-events-none absolute left-1/2 top-[84px] z-10 -translate-x-1/2 -translate-y-1/2 -rotate-[10deg] rounded-lg border-[3px] px-3 py-1 font-black uppercase tracking-widest opacity-90 bg-white/60 ${shownStamp.size} ${shownStamp.ink}`}
+                  className={`pointer-events-none absolute left-1/2 top-[72px] z-10 -translate-x-1/2 -translate-y-1/2 -rotate-[10deg] rounded-lg border-[3px] px-3 py-1 font-black uppercase tracking-widest opacity-90 bg-white/60 ${shownStamp.size} ${shownStamp.ink}`}
                 >
                   {shownStamp.text}
                 </span>
               )}
-              {/* ART — a fixed 128px slot; it no longer flexes or
+              {/* ART — a fixed 112px slot; it no longer flexes or
                   shrinks to make room for the title. */}
-              <div className="h-32 w-full flex items-center justify-center">
+              <div className="h-28 w-full flex items-center justify-center">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={albumCoverSrc(resolveAlbumId(currentSong))}
                   alt={`${currentSong.album} cover art`}
-                  className="h-32 w-32 object-cover rounded-xl shadow-lg border-[3px] border-white ring-1 ring-slate-900/10"
+                  className="h-28 w-28 object-cover rounded-xl shadow-lg border-[3px] border-white ring-1 ring-slate-900/10"
                 />
               </div>
               {/* TITLE — a fixed two-line slot. line-clamp-2 caps the
@@ -2522,8 +2524,11 @@ export default function Step1Deck({
       {/* ACTIONS — pinned at the bottom of the column: the mock's
           light tray holds ONLY the five tier tiles; Don't Know It
           sits on one quiet centered line below the tray (owner,
-          Oct 16); the Jump row beneath that also carries the
-          Deck | List toggle on the same line. There's no Undo
+          Oct 16); the Jump row sits beneath that. (The Deck | List
+          toggle that used to ride in the Jump row — and as a footer
+          pill in the non-song states — is gone, owner Oct 18: users
+          stay in their persisted view; the view-mode preference
+          itself still lives in Step1Triage.) There's no Undo
           button (owner, Oct 16) — swipe right or the U key steps
           back one card. */}
       {inSongState && (
@@ -2593,50 +2598,10 @@ export default function Step1Deck({
                 <path d="m6 9 6 6 6-6" />
               </svg>
             </div>
-            {/* DECK | LIST TOGGLE — rides in the Jump row (owner,
-                Oct 16): same white pill with the blue active
-                segment, shrunk to share one line. In list mode the
-                toggle stays up in the header instead. */}
-            <div className="inline-flex shrink-0 bg-white border border-slate-200 rounded-full p-1 shadow-sm">
-              <button
-                className="px-3.5 py-1.5 rounded-full text-sm font-bold bg-[#0072CE] text-white shadow-sm"
-                aria-current="true"
-              >
-                Deck
-              </button>
-              <button
-                onClick={onSwitchToList}
-                className="px-3.5 py-1.5 rounded-full text-sm font-bold text-slate-600 hover:text-slate-900 transition-all cursor-pointer"
-              >
-                List
-              </button>
-            </div>
           </div>
           <p className="hidden sm:block text-center text-[10px] font-semibold text-slate-300 pt-1.5">
             Keys 1–5 pick a tier · U goes back
           </p>
-        </div>
-      )}
-
-      {/* MILESTONE / COMPLETION / END FOOTER — there's no actions
-          block in those states, but the toggle still needs a home:
-          the same inline pill, centered at the column bottom. */}
-      {!inSongState && (
-        <div className="shrink-0 flex justify-center pb-3">
-          <div className="inline-flex bg-white border border-slate-200 rounded-full p-1 shadow-sm">
-            <button
-              className="px-3.5 py-1.5 rounded-full text-sm font-bold bg-[#0072CE] text-white shadow-sm"
-              aria-current="true"
-            >
-              Deck
-            </button>
-            <button
-              onClick={onSwitchToList}
-              className="px-3.5 py-1.5 rounded-full text-sm font-bold text-slate-600 hover:text-slate-900 transition-all cursor-pointer"
-            >
-              List
-            </button>
-          </div>
         </div>
       )}
 

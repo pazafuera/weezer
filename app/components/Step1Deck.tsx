@@ -913,6 +913,16 @@ export default function Step1Deck({
   // first uncategorized song (see effectivePosition below). One
   // past the last index is the end-of-deck card.
   const [position, setPosition] = useState<number | null>(null);
+  // COMPLETION DISMISSAL — once every song is categorized, the
+  // completion card takes over the card region and (before this)
+  // nothing could bring a song card back in deck mode: no path
+  // existed to re-check or change a verdict except leaving for
+  // the list or the dashboard. "Review or change a song" on the
+  // card sets this and lands on the last song; the deck then
+  // browses normally (the completion state yields to position
+  // again). Session-only by design — a fresh visit to a finished
+  // deck opens on the completion card, as it should.
+  const [completionDismissed, setCompletionDismissed] = useState(false);
   // Session-only marks for songs the user swiped past while they
   // were unsorted. React state only — never persisted, never
   // written to the triage map.
@@ -1154,6 +1164,10 @@ export default function Step1Deck({
   // card stays there. Toggling OFF stays on the current card —
   // except at the end card, which steps back to the last song.
   const toggleHideSorted = (on: boolean) => {
+    // While a milestone card owns the screen, the toggle sits
+    // behind it — flipping it would silently reposition the deck
+    // underneath a card the user hasn't answered yet.
+    if (milestonePending) return;
     setHideSorted(on);
     if (on) {
       if (atEnd) return;
@@ -1539,7 +1553,10 @@ export default function Step1Deck({
     let idx = startIdx;
     if (hideSorted) {
       // Under Hide Sorted the jump lands on the section's first
-      // UNSORTED song; a fully sorted section is a no-op.
+      // UNSORTED song. A fully sorted section used to be a silent
+      // no-op — the tap looked broken. The user asked for this
+      // album by name, so land on its first song anyway (the
+      // toggle reasserts itself on the next navigation).
       const sectionIds = new Set(section.songs.map((s) => s.id));
       idx = -1;
       for (
@@ -1552,12 +1569,15 @@ export default function Step1Deck({
           break;
         }
       }
-      if (idx === -1) return;
+      if (idx === -1) idx = startIdx;
     }
     // Plain first song of the section otherwise — the deck is a
     // browser, so a jump lands on the section's start whether or
-    // not its songs are sorted yet.
+    // not its songs are sorted yet. A jump also dismisses the
+    // completion card: at 206 categorized the card outranks
+    // position, so without this the jump landed nowhere visible.
     setMilestonePending(null);
+    setCompletionDismissed(true);
     setPosition(idx);
   };
 
@@ -2392,7 +2412,7 @@ export default function Step1Deck({
               })}
             </div>
           </DeckCardShell>
-        ) : isComplete ? (
+        ) : isComplete && !completionDismissed ? (
           /* COMPLETION — every song categorized (the same count the
              list's "Categorize All Songs" lock runs on). Takes
              precedence over the end card: a fully sorted deck has
@@ -2418,12 +2438,37 @@ export default function Step1Deck({
                 fine-tune your rankings.
               </p>
               {isGuest && <SaveProgressButton onClick={onCreateAccount} />}
+              {bucketedCount >= 1 ? (
+                <button
+                  onClick={handleFinishTriage}
+                  className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm sm:text-base px-8 py-4 rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.35)] transition transform hover:scale-105 cursor-pointer border-2 border-amber-200 inline-flex items-center gap-2.5 whitespace-nowrap"
+                >
+                  <FlyingWIcon className="w-6 h-4 text-slate-950" />
+                  <span>Next Step: Refine Buckets</span>
+                </button>
+              ) : (
+                /* Every song marked Don't Know It: Refine is still
+                   locked (it needs ≥1 real bucket), so the button
+                   would guard-bounce straight back to this card
+                   forever. Say what's needed instead of looping. */
+                <p className="text-sm font-bold text-amber-800 bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 leading-snug max-w-sm mx-auto">
+                  Refine Buckets unlocks when at least one song is in
+                  a real bucket — Don&apos;t Know It marks don&apos;t
+                  count. Re-bucket one song below to keep going.
+                </p>
+              )}
+              {/* The way back IN: before this, a finished deck had
+                  no path back to a song card — this card outranked
+                  position, so there was no way to re-check or
+                  change a single verdict in deck mode. */}
               <button
-                onClick={handleFinishTriage}
-                className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm sm:text-base px-8 py-4 rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.35)] transition transform hover:scale-105 cursor-pointer border-2 border-amber-200 inline-flex items-center gap-2.5 whitespace-nowrap"
+                onClick={() => {
+                  setCompletionDismissed(true);
+                  setPosition(deckLength - 1);
+                }}
+                className="text-sm font-extrabold text-slate-600 bg-white border border-slate-300 rounded-full px-6 py-3.5 hover:bg-slate-100 transition-all cursor-pointer whitespace-nowrap"
               >
-                <FlyingWIcon className="w-6 h-4 text-slate-950" />
-                <span>Next Step: Refine Buckets</span>
+                Review or change a song
               </button>
             </div>
           </DeckCardShell>
@@ -2481,10 +2526,26 @@ export default function Step1Deck({
               )}
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-1">
                 <button
-                  onClick={goBack}
+                  onClick={() => {
+                    if (hideSorted && backTarget === -1) {
+                      // Nowhere unsorted behind (e.g. a finished
+                      // deck browsed after dismissing the
+                      // completion card): toggling Hide Sorted off
+                      // steps back to the last song — the button
+                      // used to just do nothing here.
+                      toggleHideSorted(false);
+                    } else {
+                      goBack();
+                    }
+                  }}
                   className="text-sm font-extrabold text-slate-600 bg-white border border-slate-300 rounded-full px-6 py-3.5 hover:bg-slate-100 transition-all cursor-pointer whitespace-nowrap"
                 >
-                  ← Back to the last card
+                  {/* Under Hide Sorted, Back lands on the last
+                      UNSORTED card — the label used to promise
+                      "the last card" and land somewhere else. */}
+                  {hideSorted && backTarget !== -1
+                    ? '← Back to the last unsorted card'
+                    : '← Back to the last card'}
                 </button>
                 {bucketedCount >= THREAD_SHORT_PATH_GOAL && (
                   <button

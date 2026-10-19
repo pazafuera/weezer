@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useWeezer, getProgressState, countBucketedSongs } from '../context/WeezerContext';
+import { useWeezer, getProgressState, countBucketedSongs, countCategorizedSongs } from '../context/WeezerContext';
 import { BUCKET_CONFIG, FULL_SONG_POOL, BucketType, ALBUM_NAME_TO_ID } from '../data/constants';
 import { AlbumArtwork } from './SharedUI';
 import WeezerOnboardingModal from './WeezerOnboardingModal';
@@ -43,12 +43,22 @@ export default function StepDashboard() {
   const isRefinedMasterComplete = progress.isMasterUnlocked;
 
   // Garage session module (Overnight 5): categorized = triageMap keys
-  // (same count as UnifiedCatalogProgressModule); bucketed = real buckets
+  // (the count the merged progress card headlines); bucketed = real buckets
   // only, via the context counter — the two counts are never conflated.
   const bucketedCount = countBucketedSongs(triageMap);
   const remainingCount = totalSongs - triageSortedCount;
   const showGuestSaveHero = userId === null && triageSortedCount >= 1;
   const showRefineCallout = bucketedCount >= 25 && !progress.isWrappedUnlocked;
+
+  // Sorting complete = every catalog song categorized — a real bucket
+  // OR a "Don't Know It" mark. The same signal the nav menu's Ranking
+  // Project group flips on (countCategorizedSongs vs the full pool),
+  // NOT the completionist isTriageComplete flag above, which demands
+  // all 206 in real buckets. The dashboard's state anatomy keys off
+  // this: incomplete → the one job is getting back to sorting;
+  // complete → the Thread leads and What's Next is the checklist.
+  const categorizedCount = countCategorizedSongs(triageMap);
+  const isSortingComplete = categorizedCount >= totalSongs;
 
   // The Garage's existing refine action — same calls as the stage-2 hero
   // and the Refine Buckets card in the What's Next grid.
@@ -135,26 +145,66 @@ export default function StepDashboard() {
     },
   ];
 
-  // REUSABLE UNIFIED CATALOG & PROGRESS CARD MODULE
-  const UnifiedCatalogProgressModule = () => (
+  // MERGED PROGRESS CARD — the ONE dashboard card that carries the
+  // sorted count. (It was two cards: the "{n} of 206 sorted" session
+  // module and this "YOUR PROGRESS" catalog module, each stating the
+  // count.) Contents: the count headline, the progress bar + percent,
+  // the sorting action — with the session module's Refine callout
+  // folded into the action zone when it applies — the Catalog
+  // Completion strip, and the bucket tallies. The count appears once.
+  const MergedProgressCard = () => (
     <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs space-y-4">
-      {/* TOP: OVERALL PROGRESS */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <span className="text-sm sm:text-base font-black uppercase tracking-widest text-slate-400">
-            Your Progress
+      {/* TOP: COUNT HEADLINE + PROGRESS BAR */}
+      <div className="space-y-2.5">
+        <p className="text-base sm:text-lg font-black text-slate-950 tracking-tight">
+          {triageSortedCount} of {totalSongs} sorted — {remainingCount} to go.
+        </p>
+        <div className="flex items-center gap-3">
+          <div className="flex-1 bg-slate-100 h-3 rounded-full overflow-hidden p-0.5 border border-slate-200/60">
+            <div
+              className="h-full bg-[#0072CE] rounded-full transition-all duration-700 ease-out"
+              style={{ width: `${triagePct}%` }}
+            />
+          </div>
+          <span className="text-xs font-black text-[#0072CE] shrink-0">
+            {triagePct}%
           </span>
-          <span className="text-xs font-black text-[#0072CE]">
-            {triageSortedCount} / {totalSongs} Songs ({triagePct}%)
-          </span>
-        </div>
-        <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden p-0.5 border border-slate-200/60">
-          <div
-            className="h-full bg-[#0072CE] rounded-full transition-all duration-700 ease-out"
-            style={{ width: `${triagePct}%` }}
-          />
         </div>
       </div>
+
+      {/* ACTION ZONE: RESUME SORTING — OR THE REFINE CALLOUT (the
+          session module's, folded in: at 25+ bucketed with no Thread
+          compiled yet, refining is offered alongside resuming). */}
+      {showRefineCallout ? (
+        <div className="space-y-3">
+          <p className="text-xs sm:text-sm font-medium text-slate-500 leading-relaxed">
+            Enough sorted to refine — run the matchups and your Thread can be compiled.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <button
+              onClick={handleStartRefining}
+              className="w-full sm:w-auto bg-[#0072CE] hover:bg-blue-700 active:scale-95 text-white font-black text-xs sm:text-sm px-5 py-3 rounded-2xl transition-all shadow-md cursor-pointer"
+            >
+              Start refining
+            </button>
+            <button
+              onClick={() => navigateTo('triage')}
+              className="w-full sm:w-auto bg-white border-2 border-slate-200 hover:border-slate-300 active:scale-95 text-slate-700 font-black text-xs sm:text-sm px-5 py-3 rounded-2xl transition-all cursor-pointer"
+            >
+              Resume sorting
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div>
+          <button
+            onClick={() => navigateTo('triage')}
+            className="w-full sm:w-auto bg-[#0072CE] hover:bg-blue-700 active:scale-95 text-white font-black text-xs sm:text-sm px-5 py-3 rounded-2xl transition-all shadow-md cursor-pointer"
+          >
+            {triageSortedCount === 0 ? 'Start sorting' : 'Resume sorting'}
+          </button>
+        </div>
+      )}
 
       {/* MIDDLE: CATALOG COMPLETION CAROUSEL */}
       <div className="space-y-2 pt-2 border-t border-slate-100">
@@ -162,12 +212,6 @@ export default function StepDashboard() {
           <h3 className="text-base sm:text-lg font-black text-slate-950 tracking-tight">
             Catalog Completion
           </h3>
-          <button
-            onClick={() => navigateTo('triage')}
-            className="text-xs font-black text-[#0072CE] hover:underline cursor-pointer"
-          >
-            Sort Songs →
-          </button>
         </div>
 
         <div className="flex gap-2.5 overflow-x-auto pb-1 pt-1 no-scrollbar -mx-1 px-1">
@@ -247,6 +291,106 @@ export default function StepDashboard() {
     </div>
   );
 
+  // SWEATER THREAD PREVIEW CARD (sorting incomplete) — the Thread
+  // card in its softened, honest form, below the progress card: what
+  // exists so far is a sketch built on the songs rated to date, not
+  // the finished portrait. The card still leads to the Thread —
+  // navigateTo applies the usual progression guard when it's locked.
+  // (Once sorting is complete and the Thread is compiled, the dark
+  // "Unraveled" card in the return below takes this card's place and
+  // leads the page.)
+  const ThreadPreviewCard = () => (
+    <button
+      type="button"
+      onClick={() => navigateTo('wrapped')}
+      className="w-full text-left bg-white border border-slate-200/90 hover:border-blue-300 rounded-3xl p-5 shadow-xs transition-all cursor-pointer group space-y-2"
+    >
+      <h2 className="text-lg sm:text-xl font-black text-slate-950 tracking-tight group-hover:text-[#0072CE] transition-colors">
+        Your Sweater Thread
+      </h2>
+      <p className="text-xs sm:text-sm font-medium text-slate-500 leading-relaxed">
+        {bucketedCount === 0
+          ? 'Nothing rated yet — your Thread starts with your first sorted song, and it sharpens as you sort more.'
+          : `So far it's built on the ${bucketedCount} song${
+              bucketedCount === 1 ? '' : 's'
+            } you've rated — a sketch, not the portrait. It sharpens as you sort more.`}
+      </p>
+      <div className="pt-0.5 flex items-center text-xs font-black text-[#0072CE] group-hover:underline">
+        Peek at your Thread →
+      </div>
+    </button>
+  );
+
+  // DONE SORTING? (sorting incomplete) — replaces What's Next in
+  // this state. Quiet on purpose: Refine and Final Review stay one
+  // tap away for anyone who means to stop here, but nothing here
+  // competes with finishing the sort — no checkmarks, no status
+  // lines. Same destinations and lock rules as the What's Next
+  // grid's tiles.
+  const DoneSortingSection = () => (
+    <div className="space-y-2 pt-1">
+      <h2 className="text-base sm:text-lg font-black text-slate-950 tracking-tight">
+        Done Sorting?
+      </h2>
+      <div className="space-y-2">
+        <button
+          type="button"
+          disabled={!progress.isRefineUnlocked}
+          onClick={
+            !progress.isRefineUnlocked
+              ? (e) => e.preventDefault()
+              : handleStartRefining
+          }
+          className={`w-full flex items-center justify-between gap-3 px-4 py-3 rounded-2xl border text-left transition-all ${
+            !progress.isRefineUnlocked
+              ? 'opacity-40 bg-slate-100 border-slate-200 cursor-not-allowed pointer-events-none select-none'
+              : 'bg-white border-slate-200 hover:border-slate-300 cursor-pointer group shadow-xs'
+          }`}
+        >
+          <span
+            className={`text-sm font-black ${
+              !progress.isRefineUnlocked
+                ? 'text-slate-400'
+                : 'text-slate-900 group-hover:text-[#0072CE] transition-colors'
+            }`}
+          >
+            Refine
+          </span>
+          <span className="text-xs font-black text-slate-400">
+            {!progress.isRefineUnlocked ? 'Locked 🔒' : '→'}
+          </span>
+        </button>
+        <button
+          type="button"
+          disabled={!progress.isMasterUnlocked}
+          onClick={
+            !progress.isMasterUnlocked
+              ? (e) => e.preventDefault()
+              : () => navigateTo('master')
+          }
+          className={`w-full flex items-center justify-between gap-3 px-4 py-3 rounded-2xl border text-left transition-all ${
+            !progress.isMasterUnlocked
+              ? 'opacity-40 bg-slate-100 border-slate-200 cursor-not-allowed pointer-events-none select-none'
+              : 'bg-white border-slate-200 hover:border-slate-300 cursor-pointer group shadow-xs'
+          }`}
+        >
+          <span
+            className={`text-sm font-black ${
+              !progress.isMasterUnlocked
+                ? 'text-slate-400'
+                : 'text-slate-900 group-hover:text-[#0072CE] transition-colors'
+            }`}
+          >
+            Final Review
+          </span>
+          <span className="text-xs font-black text-slate-400">
+            {!progress.isMasterUnlocked ? 'Locked 🔒' : '→'}
+          </span>
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="pb-24 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* PROFILE SETUP MODAL */}
@@ -283,9 +427,6 @@ export default function StepDashboard() {
                 {userProfile?.displayName || userProfile?.username || 'Guest'}
               </span>
             </h1>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-0.5">
-              Welcome! You&apos;re <b>In The Garage.</b>
-            </p>
           </div>
         </div>
 
@@ -309,41 +450,11 @@ export default function StepDashboard() {
           </div>
         )}
 
-        {/* SESSION MODULE: RESUME SORTING / REFINE CALLOUT */}
-        <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs space-y-3">
-          <p className="text-sm sm:text-base font-black text-slate-950 tracking-tight">
-            {triageSortedCount} of {totalSongs} sorted — {remainingCount} to go.
-          </p>
-
-          {showRefineCallout ? (
-            <>
-              <p className="text-xs sm:text-sm font-medium text-slate-500 leading-relaxed">
-                Enough sorted to refine — run the matchups and your Thread can be compiled.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <button
-                  onClick={handleStartRefining}
-                  className="w-full sm:w-auto bg-[#0072CE] hover:bg-blue-700 active:scale-95 text-white font-black text-xs sm:text-sm px-5 py-3 rounded-2xl transition-all shadow-md cursor-pointer"
-                >
-                  Start refining
-                </button>
-                <button
-                  onClick={() => navigateTo('triage')}
-                  className="w-full sm:w-auto bg-white border-2 border-slate-200 hover:border-slate-300 active:scale-95 text-slate-700 font-black text-xs sm:text-sm px-5 py-3 rounded-2xl transition-all cursor-pointer"
-                >
-                  Resume sorting
-                </button>
-              </div>
-            </>
-          ) : (
-            <button
-              onClick={() => navigateTo('triage')}
-              className="w-full sm:w-auto bg-[#0072CE] hover:bg-blue-700 active:scale-95 text-white font-black text-xs sm:text-sm px-5 py-3 rounded-2xl transition-all shadow-md cursor-pointer"
-            >
-              {triageSortedCount === 0 ? 'Start sorting' : 'Resume sorting'}
-            </button>
-          )}
-        </div>
+        {/* PROGRESS CARD — INCOMPLETE STATE: HIGH, RIGHT UNDER THE
+            TOP BANNERS. While sorting is unfinished, getting back to
+            sorting is the dashboard's one job. (In the complete state
+            the same card renders lower, as a summary — see below.) */}
+        {!isSortingComplete && <MergedProgressCard />}
 
         {/* PROFILE COMPLETION BANNER (SIGNED-IN, NO USERNAME SET) */}
         {userId && !userProfile?.username && (
@@ -397,8 +508,11 @@ export default function StepDashboard() {
           </div>
         )}
 
-        {isRefinedMasterComplete && (
-          /* STAGE 3: ALL STEPS DONE - SWEATER THREAD HERO LINK */
+        {isSortingComplete && isRefinedMasterComplete && (
+          /* STAGE 3: SORTING COMPLETE + REFINED - SWEATER THREAD HERO
+             LINK. The dark card only leads once sorting is complete;
+             in the incomplete state the softened ThreadPreviewCard
+             below takes its place. */
           <button
             type="button"
             onClick={() => navigateTo('wrapped')}
@@ -421,11 +535,15 @@ export default function StepDashboard() {
           </button>
         )}
 
-        {/* STAGE 1 (INCOMPLETE TRIAGE): RENDER UNIFIED MODULE HIGH UP */}
-        {!isTriageComplete && <UnifiedCatalogProgressModule />}
+        {/* COMPLETE: THE PROGRESS CARD AS SUMMARY, ABOVE WHAT'S NEXT.
+            INCOMPLETE: THE SWEATER THREAD PREVIEW, BELOW THE PROGRESS
+            CARD (WHICH RENDERS HIGH IN THIS STATE — SEE ABOVE). */}
+        {isSortingComplete ? <MergedProgressCard /> : <ThreadPreviewCard />}
 
-        {/* WHAT'S NEXT SECTION (INCLUDES COMMUNITY & SOCIAL CARDS) */}
-        <div className="space-y-3 pt-2">
+        {/* WHAT'S NEXT (SORTING COMPLETE) — IN THE INCOMPLETE STATE
+            THE QUIET "DONE SORTING?" SECTION RENDERS INSTEAD. */}
+        {isSortingComplete ? (
+          <div className="space-y-3 pt-2">
           <h2 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight">
             What&apos;s Next
           </h2>
@@ -565,10 +683,10 @@ export default function StepDashboard() {
               Open Library →
             </span>
           </button>
-        </div>
-
-        {/* STAGES 2 & 3 (TRIAGE DONE): UNIFIED MODULE PUSHED LOWER ON PAGE */}
-        {isTriageComplete && <UnifiedCatalogProgressModule />}
+          </div>
+        ) : (
+          <DoneSortingSection />
+        )}
       </div>
     </div>
   );

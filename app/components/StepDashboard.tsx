@@ -235,10 +235,19 @@ export default function StepDashboard() {
             const resolvedId = firstSong?.albumId || ALBUM_NAME_TO_ID[albumName] || 'unknown';
 
             return (
-              <div
+              // A real <button> (UAT P-9): the tile was a div with
+              // an onClick — mouse-only, invisible to keyboards.
+              // As a button it is focusable and Enter/Space fire
+              // the same album jump; the focus ring wears the
+              // app's brand blue. (The bucket tally strip below
+              // stays inert on purpose — it is a readout, not a
+              // control.)
+              <button
+                type="button"
                 key={albumName}
                 onClick={() => handleAlbumClick(albumName)}
-                className="w-[115px] sm:w-[125px] shrink-0 bg-slate-50 border border-slate-200/80 hover:border-blue-300 rounded-2xl p-2.5 shadow-2xs flex flex-col items-center text-center cursor-pointer group transition-all"
+                aria-label={`Jump to ${albumName} in Sort — ${sortedCount} of ${albumSongs.length} sorted`}
+                className="w-[115px] sm:w-[125px] shrink-0 bg-slate-50 border border-slate-200/80 hover:border-blue-300 rounded-2xl p-2.5 shadow-2xs flex flex-col items-center text-center cursor-pointer group transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0072CE] focus-visible:ring-offset-1"
               >
                 <div className="relative mb-1.5">
                   <AlbumArtwork
@@ -272,7 +281,7 @@ export default function StepDashboard() {
                     style={{ width: `${albumPct}%` }}
                   />
                 </div>
-              </div>
+              </button>
             );
           })}
         </div>

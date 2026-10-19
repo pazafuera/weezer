@@ -653,7 +653,7 @@ export default function AppShell({
                     Replay the deck tutorial
                   </span>
                   <span className="block text-xs font-medium text-slate-500 mt-0.5">
-                    The five-step tour of the deck, one more time.
+                    The eight-step tour of the deck, one more time.
                   </span>
                 </span>
                 <span className="text-[#0072CE] font-black text-sm">→</span>

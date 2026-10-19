@@ -43,6 +43,7 @@ function LibraryItem({
   const exportRef = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [failed, setFailed] = useState(false);
   const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const download = async () => {
@@ -54,6 +55,13 @@ function LibraryItem({
       setSaved(true);
       if (savedTimer.current) clearTimeout(savedTimer.current);
       savedTimer.current = setTimeout(() => setSaved(false), 2500);
+    } catch {
+      // A failed render used to be indistinguishable from success
+      // that "didn't take" — the button just went back to
+      // 'Download'. Say it failed, on the same button.
+      setFailed(true);
+      if (savedTimer.current) clearTimeout(savedTimer.current);
+      savedTimer.current = setTimeout(() => setFailed(false), 2500);
     } finally {
       setBusy(false);
     }
@@ -82,10 +90,10 @@ function LibraryItem({
         onClick={download}
         disabled={busy || downloadDisabled}
         className={`w-full text-white font-black text-xs py-3 px-3 rounded-xl transition cursor-pointer disabled:opacity-50 ${
-          saved ? 'bg-emerald-500' : 'bg-[#0072CE] hover:bg-blue-600'
+          failed ? 'bg-rose-500' : saved ? 'bg-emerald-500' : 'bg-[#0072CE] hover:bg-blue-600'
         }`}
       >
-        {busy ? 'Generating Image...' : saved ? '✓ Saved!' : '📸 Download'}
+        {busy ? 'Generating Image...' : failed ? "Couldn't generate — try again" : saved ? '✓ Saved!' : '📸 Download'}
       </button>
 
       {/* Hidden full-size export copy (TierListChart pattern) */}
@@ -302,6 +310,7 @@ function ThumbnailItem({
   const exportRef = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [failed, setFailed] = useState(false);
   const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const download = async () => {
@@ -312,6 +321,10 @@ function ThumbnailItem({
       setSaved(true);
       if (savedTimer.current) clearTimeout(savedTimer.current);
       savedTimer.current = setTimeout(() => setSaved(false), 2500);
+    } catch {
+      setFailed(true);
+      if (savedTimer.current) clearTimeout(savedTimer.current);
+      savedTimer.current = setTimeout(() => setFailed(false), 2500);
     } finally {
       setBusy(false);
     }
@@ -337,10 +350,10 @@ function ThumbnailItem({
                 onClick={download}
                 disabled={busy || downloadDisabled}
                 className={`w-full text-white font-black text-xs py-3 px-3 rounded-xl transition cursor-pointer disabled:opacity-50 ${
-                  saved ? 'bg-emerald-500' : 'bg-[#0072CE] hover:bg-blue-600'
+                  failed ? 'bg-rose-500' : saved ? 'bg-emerald-500' : 'bg-[#0072CE] hover:bg-blue-600'
                 }`}
               >
-                {busy ? 'Generating Image...' : saved ? '✓ Saved!' : '📸 Download'}
+                {busy ? 'Generating Image...' : failed ? "Couldn't generate — try again" : saved ? '✓ Saved!' : '📸 Download'}
               </button>
             </div>
           }

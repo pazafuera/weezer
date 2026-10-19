@@ -94,6 +94,7 @@ export default function TierListChart({
 }: TierListChartProps) {
   const exportRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [exportFailed, setExportFailed] = useState(false);
   const [viewMode, setViewMode] = useState<'songs' | 'albums'>('songs');
 
   const currentTiers = viewMode === 'songs' ? SONG_TIERS : ALBUM_TIERS;
@@ -123,6 +124,7 @@ export default function TierListChart({
 
   const handleExport = async () => {
     if (!exportRef.current) return;
+    setExportFailed(false);
     setIsExporting(true);
     
     setTimeout(async () => {
@@ -170,6 +172,11 @@ export default function TierListChart({
 
       } catch (err) {
         console.error('Failed to export tier list', err);
+        // The failure used to exist only in the console — the
+        // button just went back to its label. Show it, briefly,
+        // on the button itself (same pattern as the gallery).
+        setExportFailed(true);
+        setTimeout(() => setExportFailed(false), 2500);
       } finally {
         setIsExporting(false);
       }
@@ -356,9 +363,9 @@ export default function TierListChart({
       <button
         onClick={handleExport}
         disabled={isExporting}
-        className="w-full bg-[#0072CE] hover:bg-blue-600 active:scale-98 text-white font-black py-3.5 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+        className={`w-full ${exportFailed ? 'bg-rose-500' : 'bg-[#0072CE] hover:bg-blue-600'} active:scale-98 text-white font-black py-3.5 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer`}
       >
-        <span>{isExporting ? 'Generating Image...' : '📸 Save Tier List as Image'}</span>
+        <span>{isExporting ? 'Generating Image...' : exportFailed ? "Couldn't generate — try again" : '📸 Save Tier List as Image'}</span>
       </button>
     </div>
   );

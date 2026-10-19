@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/utils/supabase';
 import { useWeezer } from '../context/WeezerContext';
-import { DashboardBackButton } from './SharedUI';
 
 interface FriendProfile {
   id: string;
@@ -308,9 +307,6 @@ export default function WeezerFriends() {
           />
         </div>
         <div className="max-w-2xl mx-auto px-4 space-y-8">
-          <div>
-            <DashboardBackButton onClick={() => navigateTo('dashboard')} />
-          </div>
           <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm space-y-3 text-center">
             <h2 className="text-xl font-black text-slate-950 tracking-tight">
               Fan Friends needs an account
@@ -347,12 +343,9 @@ export default function WeezerFriends() {
       {/* MAIN CONTENT CONTAINER */}
       <div className="max-w-2xl mx-auto px-4 space-y-8">
 
-        {/* BACK TO DASHBOARD — this step previously had no exit of
-            its own at all; the only ways out were the header logo
-            and the flyout menu. */}
-        <div>
-          <DashboardBackButton onClick={() => navigateTo('dashboard')} />
-        </div>
+        {/* No in-page exit pill: the "← Dashboard" pill that
+            sat here was removed app-wide at the owner's call
+            (Oct 19) — the app menu is the way to the dashboard. */}
 
         {/* HEADER TEXT */}
         <div className="text-center space-y-3">

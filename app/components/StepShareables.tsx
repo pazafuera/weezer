@@ -5,7 +5,6 @@ import { useWeezer, isRealBucket } from '../context/WeezerContext';
 import { ALBUMS_BY_ID, ALBUM_NAME_TO_ID, FULL_SONG_POOL } from '../data/constants';
 import TierListChart from './TierListChart';
 import { ShareablesGallery } from './shareables';
-import { DashboardBackButton } from './SharedUI';
 
 const BUCKET_POINTS: Record<string, number> = {
   banger: 5,
@@ -121,11 +120,9 @@ export default function StepShareables() {
   return (
     <div className="pb-24 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="max-w-5xl mx-auto px-4 space-y-6">
-        {/* This step previously had no exit of its own — header
-            logo or flyout only. Same pill as triage and Friends. */}
-        <div className="pt-1">
-          <DashboardBackButton onClick={() => navigateTo('dashboard')} />
-        </div>
+        {/* No in-page exit pill: the "← Dashboard" pill that
+            sat here was removed app-wide at the owner's call
+            (Oct 19) — the app menu is the way to the dashboard. */}
         <div>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight">
             Shareables

@@ -103,7 +103,6 @@ export default function WeezerRankerPage() {
           }}
           onBackToTriage={() => closeRefine()}
           onKeepSorting={() => navigateTo('triage')}
-          onExitToDashboard={() => navigateTo('dashboard')}
           autoStartMatchups={autoStartMatchups}
           initialStageIdx={refineStageIdx}
           onStageChange={setRefineStageIdx}

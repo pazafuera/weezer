@@ -1192,6 +1192,8 @@ export default function Step1Deck({
 
   const act = (value: TriageValue) => {
     if (!currentSong || milestonePending) return;
+    // The write is landing — the unmount flush stands down.
+    pendingSortRef.current = null;
     const song = currentSong;
     const idx = effectivePosition;
     handleSetBucket(song.id, value);
@@ -1337,10 +1339,30 @@ export default function Step1Deck({
     timersRef.current.push(id);
   };
 
+  // PENDING SORT FLUSH — a control-sort's write lands at the
+  // flip's midpoint (~600ms after the tap: stamp beat + flip).
+  // Until then the deck's exits (the Dashboard pill, the menu)
+  // stay live, and unmounting cleared the timers — the verdict
+  // was silently LOST (the user saw the stamp land; nothing was
+  // ever written). Track the in-flight sort and flush its write
+  // on unmount. The flush is a bare write: no position advance,
+  // no milestone ceremony (the moment has passed; the list
+  // records the verdict identically).
+  const pendingSortRef = useRef<{ songId: string; value: TriageValue } | null>(
+    null
+  );
+  const handleSetBucketRef = useRef(handleSetBucket);
+  handleSetBucketRef.current = handleSetBucket;
+
   useEffect(() => {
     const timers = timersRef.current;
     return () => {
       timers.forEach((id) => window.clearTimeout(id));
+      const pending = pendingSortRef.current;
+      if (pending) {
+        pendingSortRef.current = null;
+        handleSetBucketRef.current(pending.songId, pending.value);
+      }
     };
   }, []);
 
@@ -1375,6 +1397,7 @@ export default function Step1Deck({
   const flipAct = (value: TriageValue) => {
     if (phase !== 'idle' || !currentSong || milestonePending) return;
     noteUserInteraction();
+    pendingSortRef.current = { songId: currentSong.id, value };
     setFlipTarget(value);
     setSortStamp(value);
     setPhase('stamp');

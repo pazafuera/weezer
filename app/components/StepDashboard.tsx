@@ -440,7 +440,12 @@ export default function StepDashboard() {
           <div>
             <h1 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight">
               My Name Is{' '}
-              <span className="line-through text-[#0072CE] mr-1.5">
+              {/* The joke, kept quiet: "Jonas" stays struck
+                  through but takes the title's own black ink —
+                  the display name beside it is the ONLY blue
+                  element on the line (two blue chunks side by
+                  side read as links / a glitch). */}
+              <span className="line-through text-slate-950 mr-1.5">
                 Jonas
               </span>
               <span className="text-[#0072CE]">

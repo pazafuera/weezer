@@ -245,6 +245,14 @@ interface WeezerContextType {
    *  on unmount (any exit) and on "Start Sorting". */
   accountCreated: boolean;
   setAccountCreated: (val: boolean) => void;
+  /** Set when the progression guard rewrote a requested
+   *  destination (navigateTo or a ?step= deep link): the step the
+   *  user asked for and the step they actually landed on. The
+   *  landing step renders a dismissible notice naming the unlock
+   *  condition (UAT P-1) — a guard bounce is never silent. Any
+   *  landing that was not rewritten clears it. */
+  guardNotice: { requested: AppStep; landed: AppStep } | null;
+  dismissGuardNotice: () => void;
   initialAuthMode: AuthModeType;
   navigateTo: (
     targetStep: AppStep,
@@ -441,6 +449,15 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   // orientation renders from it, unlike the origin ref.
   const [accountCreated, setAccountCreated] = useState(false);
 
+  // Guard-rewrite notice (see the interface note). Plain state:
+  // page.tsx renders the notice from it on the landing step.
+  const [guardNotice, setGuardNotice] = useState<{
+    requested: AppStep;
+    landed: AppStep;
+  } | null>(null);
+
+  const dismissGuardNotice = () => setGuardNotice(null);
+
   // Deep-link intent parsed from ?step= on initial load. It is applied
   // (with prerequisite guards) only after user/ranking state has loaded.
   const [deepLinkIntent, setDeepLinkIntent] = useState<{
@@ -556,6 +573,9 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     const guarded = resolveGuardedStep(resolved, triageMap, masterList);
     if (guarded !== resolved) {
       replaceStepInUrl(guarded);
+      // A guard-rewritten deep link gets the same explanation as a
+      // guard-rewritten navigateTo (UAT P-1).
+      setGuardNotice({ requested: resolved, landed: guarded });
     }
 
     setStepState(guarded);
@@ -989,6 +1009,17 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
       );
     }
 
+    // Guard-rewrite notice (UAT P-1): if the guard rewrote the
+    // requested destination, record the pair so the landing step
+    // can explain itself. Any landing that was NOT rewritten
+    // clears it — the notice belongs to one landing only and
+    // never trails the user around the app.
+    if (guardedStep !== targetStep) {
+      setGuardNotice({ requested: targetStep, landed: guardedStep });
+    } else {
+      setGuardNotice(null);
+    }
+
     setStep(guardedStep);
 
     if (typeof window !== 'undefined') {
@@ -1096,6 +1127,8 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         setAutoStartMatchups,
         accountCreated,
         setAccountCreated,
+        guardNotice,
+        dismissGuardNotice,
         initialAuthMode,
         navigateTo,
         closeLogin,

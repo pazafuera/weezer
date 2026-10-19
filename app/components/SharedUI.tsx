@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ALBUMS_BY_ID, FULL_SONG_POOL } from '../data/constants';
 import { countCategorizedSongs } from '../context/WeezerContext';
-import type { TriageValue } from '../context/WeezerContext';
+import type { AppStep, TriageValue } from '../context/WeezerContext';
 
 // OFFICIAL WEEZER FLYING-W LOGO
 export function FlyingWIcon({ className = "w-8 h-5" }: { className?: string }) {
@@ -98,6 +98,66 @@ export function SortingIncompleteNotice({
           Keep sorting →
         </button>
       </p>
+    </div>
+  );
+}
+
+// GUARD NOTICE — the explanation that appears on a landing the
+// progression guard rewrote (UAT P-1). Before this, tapping a
+// locked destination (My Rankings, the Sweater Thread, Refine)
+// silently landed the user on an earlier step with no word about
+// why — the single mechanism behind most "I keep getting stuck"
+// reports. The notice names the page the user asked for, the
+// condition that unlocks it, and where they are instead. It is
+// dismissible, and context clears it on the next navigation that
+// isn't itself a rewrite, so it explains one landing and leaves.
+// Copy is derived from the guard map (resolveGuardedStep): the
+// only rewrites that exist are rank_buckets → triage and
+// master/wrapped → rank_buckets or triage, and every string
+// below is true for its pair — the unlock gate for My Rankings
+// and the Sweater Thread is a refined list, and Refine is the
+// step that produces it; the gate for Refine is one rated song,
+// and the Gut Check (triage) is where rating happens.
+const GUARD_REQUESTED_NAMES: Partial<Record<AppStep, string>> = {
+  master: 'My Rankings',
+  wrapped: 'Your Sweater Thread',
+  rank_buckets: 'Refine',
+};
+
+function guardNoticeText(requested: AppStep, landed: AppStep): string {
+  if (requested === 'rank_buckets') {
+    return "Refine unlocks once you've rated a song — you're in the Gut Check, where that happens.";
+  }
+  const name = GUARD_REQUESTED_NAMES[requested] ?? 'That page';
+  if (landed === 'rank_buckets') {
+    return `${name} unlocks once you've refined your rankings — you're in Refine, the step that unlocks it.`;
+  }
+  return `${name} unlocks once you've refined your rankings — that starts with sorting songs here in the Gut Check.`;
+}
+
+export function GuardNotice({
+  notice,
+  onDismiss,
+}: {
+  notice: { requested: AppStep; landed: AppStep } | null;
+  onDismiss: () => void;
+}) {
+  if (!notice) return null;
+  return (
+    <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 shadow-xs flex items-start gap-2 mb-4">
+      <p className="flex-1 text-xs sm:text-sm font-semibold text-amber-900 leading-relaxed">
+        {guardNoticeText(notice.requested, notice.landed)}
+      </p>
+      <button
+        type="button"
+        onClick={onDismiss}
+        aria-label="Dismiss"
+        className="shrink-0 w-8 h-8 -mr-1.5 -mt-1 flex items-center justify-center rounded-full text-amber-700 hover:bg-amber-100 transition-colors cursor-pointer"
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
     </div>
   );
 }

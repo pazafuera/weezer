@@ -3,6 +3,7 @@
 import React from 'react';
 import { useWeezer } from './context/WeezerContext';
 import AppShell from './components/AppShell';
+import { GuardNotice } from './components/SharedUI';
 
 import Step0Splash from './components/Step0Splash';
 import Step05Orientation from './components/Step05Orientation';
@@ -33,6 +34,8 @@ export default function WeezerRankerPage() {
     autoStartMatchups,
     setAutoStartMatchups,
     navigateTo,
+    guardNotice,
+    dismissGuardNotice,
     closeMaster,
     closeRefine,
     setSongBucket,
@@ -64,6 +67,12 @@ export default function WeezerRankerPage() {
 
   return (
     <AppShell fullWidth={step === 'wrapped'}>
+      {/* Guard-rewrite explanation (UAT P-1): renders only when
+          the guard rewrote the landing the user just arrived on
+          (rewrites land on triage or rank_buckets; context clears
+          the notice on the next non-rewrite navigation). */}
+      <GuardNotice notice={guardNotice} onDismiss={dismissGuardNotice} />
+
       {step === 'splash' && <Step0Splash />}
 
       {step === 'login' && <Login />}

@@ -44,22 +44,11 @@ export default function Step3Master({
 
   return (
     <div className="space-y-6 pb-24">
-      
-      {/* LOCAL BACK NAVIGATION */}
-      <div className="px-4 pt-2">
-        <button 
-          onClick={() => { triggerHaptic(15); onBack(); }}
-          className="text-xs font-black text-slate-400 hover:text-slate-600 transition-colors flex items-center gap-1 cursor-pointer"
-        >
-          ← Back
-        </button>
-      </div>
 
-      {/* SHARP, SUCCINCT HEADER */}
-      <div className="text-center space-y-2 px-4 mb-8">
-        <span className="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md border bg-blue-100 text-[#0072CE] border-blue-200">
-          Step 3 of 3
-        </span>
+      {/* SHARP, SUCCINCT HEADER — no step pill, no top-left back
+          link (owner, Oct 18): Back now lives in the floating bar
+          at the bottom, next to the Wrapped button. */}
+      <div className="text-center space-y-2 px-4 mb-8 pt-2">
         <h1 className="text-3xl font-black text-slate-950 tracking-tight">
           Final Review
         </h1>
@@ -133,11 +122,20 @@ export default function Step3Master({
         </div>
       </div>
 
-      {/* FLOATING ACTION BUTTON */}
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-auto">
-        <button 
-          onClick={() => { triggerHaptic(20); setStep('wrapped'); }} 
-          className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm px-8 py-4 rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.35)] transition transform hover:scale-105 cursor-pointer border-2 border-amber-200 flex items-center gap-2.5 whitespace-nowrap"
+      {/* FLOATING ACTION BAR — the Wrapped CTA plus Back (owner,
+          Oct 18: the top-left back link moved down here). Back runs
+          the same onBack the top link used — page.tsx wires it to
+          closeMaster, the origin-aware return. */}
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-auto flex items-center gap-2 max-w-[calc(100vw-1rem)]">
+        <button
+          onClick={() => { triggerHaptic(15); onBack(); }}
+          className="bg-white hover:bg-slate-100 text-slate-700 font-black text-sm px-4 py-4 rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.35)] transition cursor-pointer border-2 border-slate-200 whitespace-nowrap shrink-0"
+        >
+          ← Back
+        </button>
+        <button
+          onClick={() => { triggerHaptic(20); setStep('wrapped'); }}
+          className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm px-5 sm:px-8 py-4 rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.35)] transition transform hover:scale-105 cursor-pointer border-2 border-amber-200 flex items-center gap-2.5 whitespace-nowrap shrink-0"
         >
           <FlyingWIcon className="w-6 h-4 text-slate-950" />
           <span>Generate Weezer Wrapped →</span>

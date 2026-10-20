@@ -468,6 +468,18 @@ export default function FanStats({
           </button>
         </div>
 
+        {/* SAMPLE-DATA BANNER — a standing disclosure for the
+            seeded-test-fan era (synthetic-fans plan §E.6): code-gated
+            (it renders for exactly as long as this release is the
+            state of the page), slim, and NOT dismissible — the same
+            amber disclosure register as SortingIncompleteNotice. It
+            ships with the seed run and retires with it. */}
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 shadow-xs">
+          <p className="text-xs sm:text-sm font-semibold text-amber-900 leading-relaxed text-center">
+            Heads up: this page is running on sample data from seeded test fans while the community grows. Real rankings take over as fans join.
+          </p>
+        </div>
+
         {/* HERO */}
         <div className="text-center mb-6">
           <h1 className="text-5xl sm:text-6xl md:text-7xl font-black text-slate-950 tracking-tighter leading-none mb-3">
@@ -1079,6 +1091,7 @@ export default function FanStats({
             {METHODOLOGY_PLAIN_RULES.map((rule) => (
               <li key={rule.slice(0, 24)}>{rule}</li>
             ))}
+            <li>While the community is small, the sample includes seeded test fans (testfan_*), who are excluded from search, friends, and public pages.</li>
           </ul>
           <p className="mt-3 text-xs font-bold text-slate-400">
             Methodology v{METHODOLOGY_VERSION} — tribes and labels are for fun.

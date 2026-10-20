@@ -9,7 +9,7 @@ import {
 } from '../context/WeezerContext';
 import { albumCoverSrc, resolveAlbumId } from './shareables/ShareCardShell';
 import { FlyingWIcon, AudioPreviewButton, HelpButton } from './SharedUI';
-import type { TriageSection } from './Step1Triage';
+import type { CommunityScopeStats, TriageSection } from './Step1Triage';
 
 /**
  * Deck mode — an alternate, one-song-at-a-time view of the Gut Check.
@@ -177,8 +177,14 @@ interface SectionMilestone {
   /** The dashboard factoid (singles + album cards only): one
    *  big figure over a one-line label, computed from the
    *  sorter's real buckets at fire time. Null on the Blue and
-   *  Pinkerton cards — their snark is the content. */
-  factoid: { figure: string; label: string } | null;
+   *  Pinkerton cards — their snark is the content.
+   *  `communityLine` is the factoid's subordinate community
+   *  mirror line (synthetic-fans plan §E.2): the pooled fan
+   *  top-bucket share over the same scope, or null when the
+   *  community base is below its floor (see the floor
+   *  constants beside factoidFor) or the figure is the
+   *  zero-rated Don't Know It variant, which has no mirror. */
+  factoid: { figure: string; label: string; communityLine: string | null } | null;
   /** The section album's cover art (album sections, Blue and
    *  Pinkerton): leads the card in place of the award ribbon.
    *  Null on the singles card, which keeps the ribbon. */
@@ -216,25 +222,67 @@ const loveStats = (
   return { rated, share: rated > 0 ? loved / rated : 0 };
 };
 
+// COMMUNITY MIRROR FLOOR (synthetic-fans plan §E.3) — the
+// factoid's community line exists only when the scope's pooled
+// community base is real: at least COMMUNITY_LINE_MIN_CONTRIBUTORS
+// qualified community submissions contributing at least
+// COMMUNITY_LINE_MIN_SCOPE_RATINGS real-bucket ratings within
+// the scope. The constants are tied to the seeded-test-fan
+// era's end: while the seeds are live (~250 qualified fans) the
+// floor clears easily and the line is simply on; as real fans
+// replace the seeds, a scope that can no longer clear the floor
+// loses the line silently — the line retires itself below the
+// floor rather than ever printing a "community" number built
+// on a handful of fans.
+const COMMUNITY_LINE_MIN_CONTRIBUTORS = 30;
+const COMMUNITY_LINE_MIN_SCOPE_RATINGS = 50;
+
+// The community mirror line under the factoid (synthetic-fans
+// plan §E.2/E.5): the pooled community top-bucket share over
+// the card's scope, worded as a flat mirror of the sorter's own
+// label. Small subordinate text only — never a second figure.
+// Null (silently absent, no placeholder) when there are no
+// stats — community data hasn't loaded yet — or the floor
+// above doesn't clear.
+const communityLineFor = (
+  stats: CommunityScopeStats | null | undefined
+): string | null => {
+  if (!stats) return null;
+  if (
+    stats.contributors < COMMUNITY_LINE_MIN_CONTRIBUTORS ||
+    stats.scopeRatings < COMMUNITY_LINE_MIN_SCOPE_RATINGS
+  ) {
+    return null;
+  }
+  return `Fans put ${Math.round(stats.share * 100)}% of these in their top buckets.`;
+};
+
 // The milestone factoid over a set of songs: the headline
 // figure is the top-bucket share of the RATED songs (the
 // loveStats share, as a whole percent). A set with zero rated
 // songs — every song marked Don't Know It — has no share to
 // show, so the figure is the Don't Know It count itself. The
 // caller supplies both labels (they name the scope: one album,
-// or everything rated so far).
+// or everything rated so far). The optional community stats
+// add the mirror line under the percent variant only — the
+// Don't Know It figure has no community mirror worth printing.
 const factoidFor = (
   songs: Song[],
   map: Record<string, TriageValue>,
   percentLabel: string,
-  unknownLabel: string
-): { figure: string; label: string } => {
+  unknownLabel: string,
+  communityStats?: CommunityScopeStats | null
+): { figure: string; label: string; communityLine: string | null } => {
   const { rated, share } = loveStats(songs, map);
   if (rated > 0) {
-    return { figure: `${Math.round(share * 100)}%`, label: percentLabel };
+    return {
+      figure: `${Math.round(share * 100)}%`,
+      label: percentLabel,
+      communityLine: communityLineFor(communityStats),
+    };
   }
   const unknown = songs.filter((s) => map[s.id] === 'unknown').length;
-  return { figure: `${unknown}`, label: unknownLabel };
+  return { figure: `${unknown}`, label: unknownLabel, communityLine: null };
 };
 
 /**
@@ -247,12 +295,17 @@ const factoidFor = (
  * the same way the song cards resolve theirs; the singles
  * card keeps the award ribbon. The singles and album cards
  * carry the factoid in place of the old prose Thread nugget —
- * one stat off the sorter's real buckets, nothing else.
+ * one stat off the sorter's real buckets, nothing else. The
+ * optional communityScopeStatsFor (Step1Triage computes it
+ * from the context's community triage maps) feeds the
+ * factoid's subordinate community mirror line; omitted or
+ * not-yet-loaded data simply means no line.
  */
 function buildSectionMilestone(
   section: TriageSection,
   map: Record<string, TriageValue>,
-  sections: TriageSection[]
+  sections: TriageSection[],
+  communityScopeStatsFor?: (songs: Song[]) => CommunityScopeStats
 ): SectionMilestone {
   const firstSong = section.songs[0];
   const cover =
@@ -334,7 +387,8 @@ function buildSectionMilestone(
         ratedSoFar,
         map,
         "of your rated songs landed in your top buckets",
-        "songs marked Don't Know It — they won't count against you"
+        "songs marked Don't Know It — they won't count against you",
+        communityScopeStatsFor ? communityScopeStatsFor(ratedSoFar) : null
       ),
       compel: 'Now for the deep cuts. One album at a time.',
     };
@@ -360,7 +414,8 @@ function buildSectionMilestone(
       section.songs,
       map,
       `of the ${section.title} songs you rated made your top buckets`,
-      `${section.title} songs marked Don't Know It — they don't count against you`
+      `${section.title} songs marked Don't Know It — they don't count against you`,
+      communityScopeStatsFor ? communityScopeStatsFor(section.songs) : null
     ),
     compel:
       albumsRemaining > 0
@@ -884,6 +939,7 @@ export default function Step1Deck({
   isGuest,
   onCreateAccount,
   onOpenGarage,
+  communityScopeStatsFor,
   pendingJumpSectionKey,
   onJumpApplied,
 }: {
@@ -899,6 +955,15 @@ export default function Step1Deck({
    *  consumed via onJumpApplied so it can never re-fire. */
   pendingJumpSectionKey: string | null;
   onJumpApplied: () => void;
+  /** Community mirror data for the milestone factoids
+   *  (synthetic-fans plan §E.2): pooled community top-bucket
+   *  stats for a scope's songs, computed by Step1Triage from
+   *  the context's communityTriageMaps and passed into
+   *  buildSectionMilestone when a milestone fires. Optional —
+   *  when it's absent (or the community data hasn't loaded,
+   *  so the stats come back empty) the factoids simply carry
+   *  no community line. */
+  communityScopeStatsFor?: (songs: Song[]) => CommunityScopeStats;
   /** Auth/navigation plumbing (page.tsx → Step1Triage → here).
    *  isGuest and onCreateAccount are consumed by the milestone
    *  action stack and the end / completion card stacks below
@@ -1261,7 +1326,12 @@ export default function Step1Deck({
           return next;
         });
         setMilestonePending(
-          buildSectionMilestone(section, prospective, sections)
+          buildSectionMilestone(
+            section,
+            prospective,
+            sections,
+            communityScopeStatsFor
+          )
         );
       }
     }
@@ -2398,8 +2468,10 @@ export default function Step1Deck({
              headline always; body / compel only when the card
              has them (the Blue card is two lines, the Pinkerton
              card's snark IS its headline); the factoid — one big
-             figure and a one-line label — on the singles and
-             album cards. Below the copy sits the card's ACTION
+             figure and a one-line label, plus its subordinate
+             community mirror line when the pooled fan base
+             clears its floor — on the singles and album cards.
+             Below the copy sits the card's ACTION
              STACK (renderMilestoneActions): the Save button from
              the Pinkerton card on (guests only), the Keep button
              under it, and the Refine text link (25+ real
@@ -2439,6 +2511,11 @@ export default function Step1Deck({
                   <span className="text-sm font-bold text-slate-500 leading-snug max-w-sm mx-auto">
                     {milestoneFactoid.label}
                   </span>
+                  {milestoneFactoid.communityLine && (
+                    <span className="text-xs font-bold text-slate-400 leading-snug max-w-sm mx-auto">
+                      {milestoneFactoid.communityLine}
+                    </span>
+                  )}
                 </div>
               )}
               {milestonePending.compel && (

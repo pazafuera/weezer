@@ -5,8 +5,11 @@ import { BucketType, BUCKET_CONFIG, FULL_SONG_POOL, SINGLE_SONG_IDS, Song } from
 import {
   countBucketedSongs,
   countCategorizedSongs,
+  isRealBucket,
   TriageValue,
+  useWeezer,
 } from '../context/WeezerContext';
+import { isQualifiedSubmission } from '../lib/fanStatsMethodology';
 import { FlyingWIcon, AudioPreviewButton, HelpButton } from './SharedUI';
 import Step1Deck from './Step1Deck';
 
@@ -22,6 +25,20 @@ export interface TriageSection {
   songs: Song[];
   /** Mixed-album sections label every row with its album. */
   showAlbumPerRow: boolean;
+}
+
+/** Pooled community top-bucket stats over one milestone-card
+ *  scope (synthetic-fans plan §E.2): across qualified community
+ *  submissions only, the share of the scope's real-bucket ratings
+ *  that landed in the top buckets (Banger + Slaps), how many of
+ *  those submissions contributed at least one rating in scope,
+ *  and the scope's total real-bucket rating count. Step1Deck's
+ *  factoid code turns this into the card's subordinate community
+ *  line when — and only when — its floor clears. */
+export interface CommunityScopeStats {
+  share: number;
+  contributors: number;
+  scopeRatings: number;
 }
 
 export default function Step1Triage({
@@ -41,6 +58,44 @@ export default function Step1Triage({
   onCreateAccount: () => void;
   onOpenGarage: () => void;
 }) {
+  // Community triage maps, loaded by the context at startup —
+  // the data behind the deck milestone cards' community mirror
+  // line (synthetic-fans plan §E.2). Empty until the fetch lands;
+  // the deck treats empty stats as "no line", never a placeholder.
+  const { communityTriageMaps = [] } = useWeezer();
+
+  // The pooled community top-bucket share over a card's exact
+  // scope: sum of Banger+Slaps ratings on the scope's songs ÷
+  // sum of all real-bucket ratings on them, across QUALIFIED
+  // submissions only (the methodology module's own gate — a
+  // submission needs ≥10 valid ratings to count at all). Pooling
+  // (not averaging per-fan shares) mirrors how Fan Stats itself
+  // aggregates. Handed to Step1Deck, which passes it into
+  // buildSectionMilestone; the floor that decides whether the
+  // line prints at all lives beside the factoid code there.
+  const communityScopeStatsFor = (songs: Song[]): CommunityScopeStats => {
+    let loved = 0;
+    let rated = 0;
+    let contributors = 0;
+    for (const map of communityTriageMaps) {
+      if (!isQualifiedSubmission(map)) continue;
+      let mapRated = 0;
+      for (const song of songs) {
+        const value = map[song.id];
+        if (!isRealBucket(value)) continue;
+        mapRated += 1;
+        rated += 1;
+        if (value === 'banger' || value === 'slaps') loved += 1;
+      }
+      if (mapRated > 0) contributors += 1;
+    }
+    return {
+      share: rated > 0 ? loved / rated : 0,
+      contributors,
+      scopeRatings: rated,
+    };
+  };
+
   const [hideSorted, setHideSorted] = useState(false);
 
   // Deck | List view mode. Deck is the default; the choice persists
@@ -438,6 +493,7 @@ export default function Step1Triage({
           isGuest={isGuest}
           onCreateAccount={onCreateAccount}
           onOpenGarage={onOpenGarage}
+          communityScopeStatsFor={communityScopeStatsFor}
           pendingJumpSectionKey={
             viewModeResolved && effectiveMode === 'deck' ? pendingJumpKey : null
           }

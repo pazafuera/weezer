@@ -557,11 +557,14 @@ export default function FanStats({
               <div className="bg-slate-800/80 p-5 rounded-2xl border border-slate-700/50">
                 <span className="text-[10px] font-black uppercase text-rose-500 block mb-1">Most Divisive — Top 5</span>
                 {communityStats.divisiveTop.length > 0 ? (
-                  <ul className="mt-2 space-y-2">
-                    {communityStats.divisiveTop.map((m) => (
-                      <li key={m.id} className="flex items-baseline justify-between gap-3">
-                        <span className="text-sm font-black text-white leading-tight truncate">{m.song.title}</span>
-                        <span className="text-[10px] font-bold text-slate-400 shrink-0">Divisive among {m.count} ratings</span>
+                  <ul className="mt-1">
+                    {communityStats.divisiveTop.map((m, i) => (
+                      <li key={m.id} className={`flex gap-2 py-2.5 ${i > 0 ? 'border-t border-slate-700/50' : ''}`}>
+                        <span className="text-sm font-black text-white leading-tight shrink-0">{i + 1}.</span>
+                        <div className="min-w-0">
+                          <span className="block text-sm font-black text-white leading-tight">{m.song.title}</span>
+                          <span className="block text-[10px] font-bold text-slate-400 mt-0.5">{Math.round(m.pBanger * 100)}% Banger · {Math.round(m.pTrash * 100)}% Trash</span>
+                        </div>
                       </li>
                     ))}
                   </ul>

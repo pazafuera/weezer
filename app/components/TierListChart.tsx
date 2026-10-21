@@ -4,6 +4,8 @@ import React, { useRef, useState, useMemo } from 'react';
 import { toPng } from 'html-to-image';
 import { ALBUM_NAME_TO_ID, BucketType } from '../data/constants';
 import { AlbumArtwork } from './SharedUI';
+import { displayFont, handFont } from './shareables/fonts';
+import { POSTER_BLUE } from './shareables/ShareCardShell';
 
 interface RankedSong {
   id: string;
@@ -54,23 +56,23 @@ const ALBUM_COLORS: Record<string, { bg: string; text: string }> = {
 
 const DEFAULT_COLOR = { bg: 'bg-slate-800', text: 'text-slate-100' };
 
-// 206 Songs Distribution Cutoffs
+// 206 Songs Distribution Cutoffs — five tiers (S/A/B/C/F) since
+// Oct 2026: the D tier was dropped (the user's call) so the rows line
+// up one-to-one with the five buckets below; F takes the whole bottom.
 const SONG_TIERS = [
   { label: 'S', color: 'bg-[#FF7F7F]', text: 'text-red-950', max: 10 },
   { label: 'A', color: 'bg-[#FFBF7F]', text: 'text-orange-950', max: 35 },
   { label: 'B', color: 'bg-[#FFFF7F]', text: 'text-yellow-950', max: 80 },
   { label: 'C', color: 'bg-[#7FFF7F]', text: 'text-green-950', max: 130 },
-  { label: 'D', color: 'bg-[#7FBFFF]', text: 'text-blue-950', max: 175 },
   { label: 'F', color: 'bg-[#BF7FFF]', text: 'text-purple-950', max: 206 },
 ];
 
-// Album Ranking Cutoffs
+// Album Ranking Cutoffs (same five-row shape: C ≤13, F takes the rest)
 const ALBUM_TIERS = [
   { label: 'S', color: 'bg-[#FF7F7F]', text: 'text-red-950', max: 2 },
   { label: 'A', color: 'bg-[#FFBF7F]', text: 'text-orange-950', max: 5 },
   { label: 'B', color: 'bg-[#FFFF7F]', text: 'text-yellow-950', max: 9 },
   { label: 'C', color: 'bg-[#7FFF7F]', text: 'text-green-950', max: 13 },
-  { label: 'D', color: 'bg-[#7FBFFF]', text: 'text-blue-950', max: 16 },
   { label: 'F', color: 'bg-[#BF7FFF]', text: 'text-purple-950', max: 99 },
 ];
 
@@ -136,7 +138,7 @@ export default function TierListChart({
         const dataUrl = await toPng(exportRef.current!, {
           quality: 1.0,
           pixelRatio: 2,
-          backgroundColor: '#0f172a',
+          backgroundColor: POSTER_BLUE,
         });
         
         const filename = `${username ? `${username}-` : ''}weezer-${viewMode}-tiers.png`;
@@ -192,7 +194,7 @@ export default function TierListChart({
         >
           {/* TIER BADGE */}
           <div className={`w-full h-full flex items-center justify-center ${tier.color}`}>
-            <span className={`text-2xl sm:text-4xl font-black ${tier.text}`}>
+            <span className={`text-2xl sm:text-4xl ${displayFont.className} ${tier.text}`}>
               {tier.label}
             </span>
           </div>
@@ -311,7 +313,7 @@ export default function TierListChart({
       <div className="bg-slate-900 rounded-2xl p-3 sm:p-5 shadow-xl border border-slate-800 space-y-4 w-full overflow-hidden">
         {/* HEADER */}
         <div className="text-center mb-2">
-          <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+          <h2 className={`text-2xl sm:text-3xl text-white tracking-wide ${displayFont.className}`}>
             {title}
           </h2>
           <p className="text-xs sm:text-sm font-bold text-slate-400 mt-0.5 uppercase tracking-widest">
@@ -323,37 +325,40 @@ export default function TierListChart({
         {renderTierGrid(false)}
       </div>
 
-      {/* HIDDEN EXPORT CHART (Pre-rendered explicitly for Image Capture) */}
+      {/* HIDDEN EXPORT CHART (Pre-rendered explicitly for Image Capture).
+          Same 1024px frame and mechanics as always; the field is now
+          the poster kit's bright blue (Abby's direction) with the
+          chart grid seated on it as the canonical dark tier panel. */}
       <div className="absolute left-[-9999px] top-[-9999px] opacity-0 pointer-events-none">
-        <div ref={exportRef} className="w-[1024px] bg-[#0f172a] p-8">
-          
+        <div ref={exportRef} className="w-[1024px] p-8" style={{ backgroundColor: POSTER_BLUE }}>
+
           {/* BRANDING HEADER FOR EXPORT */}
-          <div className="flex items-start justify-between border-b-2 border-slate-800 pb-6 mb-8">
+          <div className="flex items-start justify-between border-b-2 border-white/50 pb-6 mb-8">
             <div className="flex-1 pr-8">
-              <h2 className="text-6xl font-black text-white tracking-tight leading-none mb-2">
+              <h2 className={`text-6xl text-white leading-none mb-2 ${displayFont.className}`}>
                 All My Favorite Songs
               </h2>
-              <h3 className="text-2xl font-black text-slate-300 uppercase tracking-widest mb-4">
+              <h3 className="text-2xl font-black text-white/85 uppercase tracking-widest mb-4">
                 The Weezer Song Ranking Project
               </h3>
-              <p className="text-xl font-bold text-amber-400">
+              <p className="text-xl font-bold text-white">
                 {subtitleLine}
               </p>
             </div>
-            
+
             {/* CALL TO ACTION BADGE */}
-            <div className="text-left bg-slate-800/80 border border-slate-700 rounded-2xl p-5 shadow-lg shrink-0 w-[320px]">
-              <p className="text-sm font-bold text-slate-300 leading-snug">
+            <div className="text-left bg-white rounded-2xl p-5 shadow-lg shrink-0 w-[320px]">
+              <p className="text-sm font-bold text-slate-700 leading-snug">
                 {'Make your own Weezer Song rankings list at '}<span className="text-[#0072CE] font-black">RankingWeezer.com</span>{' and connect with @usernames to compare your tastes side-by-side.'}
               </p>
             </div>
           </div>
-          
+
           {/* Renders full wrap desktop version */}
           {renderTierGrid(true)}
-          
-          {/* SUBTLE FOOTER */}
-          <div className="text-center pt-6 text-slate-500 font-bold text-sm tracking-widest uppercase">
+
+          {/* FOOTER */}
+          <div className={`text-center pt-6 text-white text-3xl ${handFont.className}`}>
             Generated via RankingWeezer.com
           </div>
         </div>

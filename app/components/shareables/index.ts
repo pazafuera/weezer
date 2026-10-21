@@ -9,6 +9,7 @@ export {
   GuitarSilhouette,
   VinylDisc,
   FactsBurst,
+  MusicNotesDoodle,
   albumCoverSrc,
   distinctAlbumIds,
   resolveAlbumId,

@@ -3,16 +3,15 @@
 import { forwardRef } from 'react';
 import { ALBUMS_BY_ID } from '../../data/constants';
 import {
-  BrushStroke,
   FlyingW,
+  MusicNotesDoodle,
+  POSTER_BLUE,
   SaveImageButton,
-  ScrapbookVisual,
-  Tape,
-  distinctAlbumIds,
+  VinylDisc,
   resolveAlbumId,
   useShareableDownload,
 } from './ShareCardShell';
-import { handFont, markerFont } from './fonts';
+import { displayFont, handFont } from './fonts';
 
 /** Triage values: the app's BucketType plus the 'unknown'
  *  ("Don't Know It") mark, so the context's triage map can be passed
@@ -46,57 +45,68 @@ function albumTag(song: ShareSong): string {
   return short.toUpperCase();
 }
 
-const ROW_H = 76;
-
 export const Top10CardVisual = forwardRef<
   HTMLDivElement,
   { songs: ShareSong[]; subtitle?: string }
->(function Top10CardVisual({ songs, subtitle }, ref) {
+>(function Top10CardVisual({ songs }, ref) {
   const top = songs.slice(0, 10);
 
   return (
-    <ScrapbookVisual ref={ref} subtitle={subtitle} artAlbumIds={distinctAlbumIds(top)}>
-      <div className="absolute bottom-[190px] left-[184px] right-[60px] top-[128px]">
-        {/* header — title block left, big tilted W + challenge bubble right */}
-        <div className="relative h-[228px]">
-          <div className="absolute left-0 top-[-24px]">
-            <div className={`text-[76px] leading-[1.0] text-slate-900 ${markerFont.className}`}>
-              My Top 10
-            </div>
-            <div className="relative mt-1 inline-block">
-              <span className={`relative z-10 text-[76px] leading-[1.0] text-slate-900 ${markerFont.className}`}>
-                Weezer Songs
-              </span>
-              <BrushStroke
-                color="#fbbf24"
-                className="absolute -bottom-2 left-0 z-0 h-[22px] w-full"
-              />
-            </div>
-          </div>
-          <FlyingW className="absolute right-0 top-[-16px] h-[105px] w-[190px] rotate-[8deg] text-[#0072CE]" />
-          <div className="absolute right-0 top-[148px] rotate-1 rounded-2xl rounded-br-sm bg-white px-5 py-2.5 shadow-lg">
-            <span className={`whitespace-nowrap text-[33px] leading-none text-slate-800 ${handFont.className}`}>
-              Undone by my rankings? Getchoo a list of your own.
-            </span>
-          </div>
-        </div>
+    <div
+      ref={ref}
+      className="relative h-[1350px] w-[1080px] overflow-hidden text-white"
+      style={{ backgroundColor: POSTER_BLUE }}
+    >
+      {/* hand-drawn music notes, as in Abby's mock */}
+      <MusicNotesDoodle className="absolute left-[16px] top-[16px] z-20 w-[240px] -rotate-6" />
+      <MusicNotesDoodle className="absolute right-[10px] top-[1030px] z-20 w-[230px] rotate-[14deg]" />
 
-        {/* list on a sheet of notebook paper, taped to the page */}
-        <div className="relative mt-5 rotate-[-0.4deg] rounded-[4px] bg-[#fdfaf0] px-8 pb-3 pt-5 shadow-[0_20px_40px_rgba(60,45,10,0.28)]">
-          <Tape className="absolute -top-4 left-10 z-10 h-8 w-28 -rotate-6" />
-          <Tape className="absolute -top-4 right-10 z-10 h-8 w-28 rotate-3" />
-          {top.map((song, i) => (
-            <div
-              key={song.id}
-              className={`flex items-center gap-5 ${i > 0 ? 'border-t-2 border-dashed border-slate-300/70' : ''}`}
-              style={{ height: ROW_H }}
-            >
+      {/* vinyl-record header: a big black disc with a gray label,
+          the title set over it in chunky display type */}
+      <VinylDisc
+        labelColor="#d4d8db"
+        className="absolute left-1/2 top-[-120px] h-[700px] w-[700px] -translate-x-1/2 shadow-[0_24px_60px_rgba(2,60,90,0.35)]"
+      />
+      <div className="absolute inset-x-0 top-[104px] z-10 text-center">
+        <h2
+          className={`text-[160px] leading-none text-white ${displayFont.className}`}
+        >
+          MY TOP 10
+        </h2>
+        <p
+          className={`mt-[2px] text-[66px] font-bold leading-none text-white ${handFont.className}`}
+        >
+          Weezer Songs
+        </p>
+      </div>
+
+      {/* the shipped challenge bubble, kept verbatim, restyled as a
+          white speech bubble over the disc's lower edge */}
+      <div className="absolute right-[80px] top-[438px] z-20 rotate-2 rounded-2xl rounded-br-sm bg-white px-5 py-2.5 shadow-lg">
+        <span
+          className={`whitespace-nowrap text-[33px] leading-none text-slate-800 ${handFont.className}`}
+        >
+          Undone by my rankings? Getchoo a list of your own.
+        </span>
+      </div>
+
+      {/* the ranked list on a white paper panel, centered title over
+          album tag, as in Abby's mock; rank numbers stay — the
+          ranking is the content */}
+      <div className="absolute left-[96px] right-[96px] top-[500px] z-10 bg-white px-[40px] pb-[18px] pt-[24px] shadow-[0_24px_48px_rgba(2,60,90,0.35)]">
+        {top.map((song, i) => (
+          <div
+            key={song.id}
+            className="flex h-[66px] flex-col items-center justify-center"
+          >
+            <div className="flex items-baseline justify-center gap-[14px]">
               <span
-                className={`w-14 shrink-0 text-center text-[44px] leading-none text-[#0072CE] ${markerFont.className}`}
+                className={`text-[30px] leading-none ${displayFont.className}`}
+                style={{ color: POSTER_BLUE }}
               >
                 {i + 1}
               </span>
-              <span className="min-w-0 flex-1 text-[30px] font-extrabold uppercase leading-[1.05] tracking-tight text-slate-900">
+              <span className="text-[29px] font-extrabold uppercase leading-none tracking-tight text-slate-900">
                 {song.title}
               </span>
               {song.isBSide && (
@@ -104,20 +114,34 @@ export const Top10CardVisual = forwardRef<
                   B-Side
                 </span>
               )}
-              <span className="w-[150px] shrink-0 text-right text-[20px] font-bold uppercase tracking-wider text-slate-500">
-                {albumTag(song)}
-              </span>
             </div>
-          ))}
-          {top.length === 0 && (
-            <p className={`py-16 text-center text-[34px] text-slate-500 ${handFont.className}`}>
-              Rank some songs and your Top 10 appears here.
-            </p>
-          )}
-        </div>
-
+            <span className="mt-[5px] text-[19px] font-bold uppercase leading-none tracking-[0.14em] text-slate-500">
+              {albumTag(song)}
+            </span>
+          </div>
+        ))}
+        {top.length === 0 && (
+          <p
+            className={`py-16 text-center text-[34px] text-slate-500 ${handFont.className}`}
+          >
+            Rank some songs and your Top 10 appears here.
+          </p>
+        )}
       </div>
-    </ScrapbookVisual>
+
+      {/* project masthead + the card's existing CTA, restyled */}
+      <div className="absolute inset-x-12 bottom-[92px] z-10 flex items-center justify-center gap-[14px]">
+        <FlyingW className="h-[26px] w-[48px] text-white" />
+        <span className="text-[22px] font-black uppercase tracking-[0.22em] text-white/95">
+          All My Favorite Songs · The Weezer Song Ranking Project
+        </span>
+      </div>
+      <p
+        className={`absolute inset-x-12 bottom-[30px] z-10 text-center text-[44px] font-bold leading-none text-white ${handFont.className}`}
+      >
+        JOIN THE DEBATE AT RANKINGWEEZER.COM
+      </p>
+    </div>
   );
 });
 
@@ -132,7 +156,7 @@ export function Top10Card({
   const { ref, busy, download } = useShareableDownload('weezer-top-10');
   return (
     <div>
-      <div className="flex justify-center overflow-hidden rounded-3xl bg-[#e9e2cc]">
+      <div className="flex justify-center overflow-hidden rounded-3xl bg-[#dff1f8]">
         <div style={{ transform: 'scale(0.32)', transformOrigin: 'top center', height: 432, width: 1080 * 0.32 }}>
           <Top10CardVisual ref={ref} songs={songs} subtitle={subtitle} />
         </div>

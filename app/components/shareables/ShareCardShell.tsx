@@ -424,6 +424,37 @@ export function FactsBurst({
   );
 }
 
+/** Hand-drawn black music notes doodle, as in Abby's mockups — a
+ *  beamed pair plus a single flagged eighth note. Decorative only. */
+export function MusicNotesDoodle({
+  className = '',
+  style,
+}: {
+  className?: string;
+  style?: CSSProperties;
+}) {
+  return (
+    <svg
+      viewBox="0 0 320 300"
+      className={className}
+      style={style}
+      fill="#000"
+      aria-hidden="true"
+    >
+      {/* beamed pair */}
+      <rect x="82" y="118" width="8" height="126" />
+      <rect x="172" y="94" width="8" height="126" />
+      <polygon points="82,118 180,94 180,126 82,150" />
+      <ellipse cx="58" cy="252" rx="27" ry="19" transform="rotate(-18 58 252)" />
+      <ellipse cx="148" cy="228" rx="27" ry="19" transform="rotate(-18 148 228)" />
+      {/* single flagged eighth note */}
+      <rect x="271" y="64" width="8" height="104" />
+      <path d="M271 64 C 302 76, 310 104, 298 134 C 304 102, 294 84, 271 74 Z" />
+      <ellipse cx="250" cy="176" rx="24" ry="17" transform="rotate(-18 250 176)" />
+    </svg>
+  );
+}
+
 /** Primary button for standalone cards (matches the tier card's). */
 export function SaveImageButton({
   onClick,

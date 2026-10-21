@@ -9,6 +9,13 @@ const nextConfig = {
       // Allows production builds to finish even if type errors exist
       ignoreBuildErrors: true,
     },
+    env: {
+      // Build stamp for the stale-build self-check
+      // (components/BuildVersionCheck): Vercel sets
+      // VERCEL_GIT_COMMIT_SHA during the build; empty anywhere
+      // else, which disables the check.
+      NEXT_PUBLIC_BUILD_ID: process.env.VERCEL_GIT_COMMIT_SHA || '',
+    },
   };
   
   module.exports = nextConfig;

@@ -2,6 +2,7 @@ import './globals.css';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { WeezerProvider } from './context/WeezerContext';
+import BuildVersionCheck from './components/BuildVersionCheck';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -50,6 +51,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
+        <BuildVersionCheck />
         <WeezerProvider>{children}</WeezerProvider>
       </body>
     </html>

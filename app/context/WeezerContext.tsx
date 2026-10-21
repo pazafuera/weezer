@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/utils/supabase';
 import { BucketType, Song, FULL_SONG_POOL } from '../data/constants';
@@ -608,7 +608,18 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   // FETCH & REFRESH FRIENDS + PENDING REQUESTS
-  const refreshFriends = async () => {
+  // STABLE IDENTITY (useCallback on userId): consumers fire this
+  // from effects that list it as a dependency — AppShell refreshes
+  // friends when the nav menu opens. As a plain per-render closure
+  // it changed identity on EVERY provider render, and because it
+  // setState's fresh arrays (friendsList, friendCards) its own
+  // completion re-rendered the provider, which re-fired those
+  // effects, which fetched again — a self-sustaining fetch →
+  // render → refetch loop that churned the whole tree several
+  // times a second and starved taps on the phone, trapping the
+  // menu open (no Escape key exists on touch to break out).
+  // Memoized on userId, the identity changes only at sign-in/out.
+  const refreshFriends = useCallback(async () => {
     if (!userId) return;
     try {
       // 1. Fetch Pending Requests Count
@@ -654,7 +665,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     } catch (err) {
       console.error('Error fetching friends:', err);
     }
-  };
+  }, [userId]);
 
   const refreshPendingRequests = refreshFriends;
 

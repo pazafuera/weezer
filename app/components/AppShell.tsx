@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useWeezer, AppStep, getProgressState, countCategorizedSongs } from '../context/WeezerContext';
 import { FULL_SONG_POOL } from '../data/constants';
@@ -79,12 +79,47 @@ export default function AppShell({
     return () => window.removeEventListener('weezer:open-help', onOpenHelp);
   }, []);
 
-  // REFRESH FRIENDS DATA INSTANTLY WHEN MENU OPENS
+  // REFRESH FRIENDS DATA WHEN THE MENU OPENS — once per opening,
+  // on the closed→open transition only. The latest refreshFriends
+  // is held in a ref, so this effect never depends on the
+  // function's identity: listing a per-render closure here once
+  // meant every provider re-render — including the ones this very
+  // fetch causes when it setState's fresh friend arrays —
+  // re-fired the fetch, looping the whole app several times a
+  // second while the menu stood open. On the phone that churn
+  // starved every tap (✕, backdrop, nav rows) and the menu read
+  // as locked; touch has no Escape to break out with. Firing on
+  // the transition makes that loop impossible from this side,
+  // whatever the provider does.
+  const refreshFriendsRef = useRef(refreshFriends);
   useEffect(() => {
-    if (menuOpen && userId && refreshFriends) {
-      refreshFriends();
+    refreshFriendsRef.current = refreshFriends;
+  }, [refreshFriends]);
+  const menuWasOpenRef = useRef(false);
+  useEffect(() => {
+    const justOpened = menuOpen && !menuWasOpenRef.current;
+    menuWasOpenRef.current = menuOpen;
+    if (justOpened && userId) {
+      refreshFriendsRef.current?.();
     }
-  }, [menuOpen, userId, refreshFriends]);
+  }, [menuOpen, userId]);
+
+  // NO SHELL OVERLAY SURVIVES A STEP CHANGE. Every way of landing
+  // on a step — nav rows, dashboard tiles, guard bounces, deep
+  // links, sign-out — funnels through navigateTo → setStep, so
+  // tying the close to `step` itself (rather than trusting each
+  // button to remember to close first) is the structural
+  // guarantee: whatever path got the user here, arriving on a
+  // new step dismisses the menu, the help sheet, the bucket
+  // sheet, and the account drawer. Nothing that opens an overlay
+  // changes the step as part of opening it, so this never
+  // fights a flow that needs an overlay up.
+  useEffect(() => {
+    setMenuOpen(false);
+    setHelpOpen(false);
+    setBucketsOpen(false);
+    setAccountDrawerOpen(false);
+  }, [step]);
 
   // ESCAPE closes the topmost shell layer — menu, help sheet,
   // bucket sheet. None of them had a keyboard dismissal (the

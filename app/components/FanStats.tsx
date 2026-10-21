@@ -502,7 +502,7 @@ export default function FanStats({
             <div className="relative z-10 mb-6">
               <span className="text-[10px] font-black uppercase tracking-widest text-[#0072CE] block mb-1">The Divide</span>
               <h2 className="text-3xl font-black text-slate-950 tracking-tight leading-tight">Blue vs. Pinkerton</h2>
-              <p className="text-xs text-slate-500 mt-2 max-w-xs mx-auto text-balance">Based on qualified rankings from participating fans.</p>
+              <p className="text-xs text-slate-500 mt-2 max-w-xs mx-auto text-balance">From the fans who've ranked so far.</p>
             </div>
 
             {showDivide ? (
@@ -551,7 +551,7 @@ export default function FanStats({
                   <span className="text-[10px] font-black uppercase text-amber-400 block mb-1">Most Universally Loved</span>
                   <h3 className="text-xl lg:text-2xl font-black text-white text-balance leading-tight">{communityStats.mostLoved?.song?.title ?? '—'}</h3>
                 </div>
-                <p className="text-xs font-medium text-slate-400 mt-3 leading-snug">Highest ratio of positive ratings with the lowest disagreement.</p>
+                <p className="text-xs font-medium text-slate-400 mt-3 leading-snug">The song fans agree on most — nearly everybody loves it.</p>
               </div>
 
               <div className="bg-slate-800/80 p-5 rounded-2xl border border-slate-700/50">
@@ -574,7 +574,7 @@ export default function FanStats({
                       {Array.from({ length: 5 }).map((_, i) => (
                         <li key={i} className="flex items-baseline justify-between gap-3">
                           <span className="text-sm font-black text-slate-500 leading-tight truncate">—</span>
-                          <span className="text-[10px] font-bold text-slate-500 shrink-0">— ratings</span>
+                          <span className="text-[10px] font-bold text-slate-500 shrink-0">—% Banger · —% Trash</span>
                         </li>
                       ))}
                     </ul>
@@ -592,7 +592,7 @@ export default function FanStats({
                   <span className="text-[10px] font-black uppercase text-indigo-400 block mb-1">The Hidden Gem</span>
                   <h3 className="text-xl lg:text-2xl font-black text-white text-balance leading-tight">{communityStats.hiddenGem?.song?.title ?? '—'}</h3>
                 </div>
-                <p className="text-xs font-medium text-slate-400 mt-3 leading-snug">Included on fewer explicit lists, but ranked exceptionally high when it appears.</p>
+                <p className="text-xs font-medium text-slate-400 mt-3 leading-snug">Fewer fans rank it, but the ones who do rank it high.</p>
               </div>
 
               <div className="bg-slate-800/80 p-5 rounded-2xl border border-slate-700/50 flex flex-col justify-between">
@@ -602,8 +602,8 @@ export default function FanStats({
                 </div>
                 <p className="text-xs font-medium text-slate-400 mt-3 leading-snug">
                   {communityStats.enoughForPercentages && communityStats.mostRejected?.pTrash
-                    ? `${Math.round(communityStats.mostRejected.pTrash * 100)}% of participating fans put this in Trash.`
-                    : 'Put in Trash by more participating fans than any other song.'}
+                    ? `${Math.round(communityStats.mostRejected.pTrash * 100)}% of fans put this in Trash.`
+                    : 'More fans put this in Trash than any other song.'}
                 </p>
               </div>
             </div>
@@ -619,7 +619,7 @@ export default function FanStats({
             <div className="text-center sm:text-left mb-6 border-b border-slate-100 pb-4">
               <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 block mb-1">Consensus</span>
               <h2 className="text-3xl sm:text-4xl font-black text-slate-950 tracking-tight leading-tight">Community Top 10</h2>
-              <p className="text-[11px] font-bold text-slate-400 mt-1.5">Among participating fans · based on {communityStats.totalFans} qualified fan rankings</p>
+              <p className="text-[11px] font-bold text-slate-400 mt-1.5">Based on {communityStats.totalFans} fan rankings of 10 or more songs</p>
             </div>
             
             <div className="space-y-4 flex-1">
@@ -667,7 +667,7 @@ export default function FanStats({
             <div className="text-center sm:text-left mb-6 border-b border-slate-800 pb-4">
               <span className="text-[10px] font-black uppercase tracking-widest text-blue-400 block mb-1">Catalog Power</span>
               <h2 className="text-3xl sm:text-4xl font-black text-white tracking-tight leading-tight mb-1">Top Albums</h2>
-              <p className="text-[10px] font-bold text-slate-400">Weighted by positive sentiment and rankings</p>
+              <p className="text-[10px] font-bold text-slate-400">Ranked by how fans rated each album</p>
             </div>
             
             <div className="space-y-3 flex-1">
@@ -717,7 +717,7 @@ export default function FanStats({
         <div className="pt-8 sm:pt-10">
           <TierListChart 
             title="The Fan Club Tiers" 
-            subtitle="Community Consensus — Among Participating Fans"
+            subtitle="Community Consensus"
             rankedSongs={communityStats.globalTierListRankings} 
             
             // WE NOW PASS THE EXACT ID TO FIX THE ARTWORK HERE TOO
@@ -736,7 +736,7 @@ export default function FanStats({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center mb-8">
           <h2 className="text-4xl sm:text-5xl font-black text-slate-900 tracking-tight leading-tight">Anatomy of a Jam</h2>
           <p className="text-base font-medium text-slate-500 mt-2 max-w-xl mx-auto text-balance">
-            Every song has a specific demographic shape. We classified the catalog into distinct ranking patterns.
+            Every song gets its own reaction from fans. Here's the catalog, grouped by the patterns fans fall into.
           </p>
         </div>
 
@@ -808,12 +808,12 @@ export default function FanStats({
           {/* FAN TRIBES */}
           <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-200 h-full">
             <div className="text-center sm:text-left mb-6">
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1">Voting Behavior</span>
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1">How Fans Rank</span>
               <h2 className="text-3xl font-black text-slate-900 tracking-tight leading-tight">Fan Tribes</h2>
-              <p className="text-xs font-medium text-slate-500 mt-2">Where users fall based on their voting patterns.</p>
+              <p className="text-xs font-medium text-slate-500 mt-2">Where fans land, based on how they rank songs.</p>
               {!communityStats.enoughForPercentages && (
                 <p className="text-[11px] font-bold text-slate-400 mt-1">
-                  Percentages unlock at {MIN_DISPLAY_SAMPLE} qualified rankings — showing counts for now ({communityStats.totalFans} qualified).
+                  Percentages show once {MIN_DISPLAY_SAMPLE} fans have ranked enough to count — counts for now ({communityStats.totalFans} so far).
                 </p>
               )}
             </div>
@@ -940,10 +940,10 @@ export default function FanStats({
             {communityStats.tasteTwin && (
               <div className="bg-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-800">
                 <div className="text-center sm:text-left mb-6">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-amber-400 block mb-1">Correlation</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-amber-400 block mb-1">Goes Together</span>
                   <h2 className="text-2xl font-black text-white tracking-tight leading-tight">Taste Twins</h2>
                   <p className="text-xs text-slate-400 mt-2 text-balance">
-                    Fans who love the global #1 track almost always love this deep cut.
+                    Fans who love the community's #1 song almost always love this one too.
                   </p>
                 </div>
 
@@ -967,10 +967,10 @@ export default function FanStats({
             {!communityStats.tasteTwin && (
               <div className="bg-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-800">
                 <div className="text-center sm:text-left mb-6">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-amber-400 block mb-1">Correlation</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-amber-400 block mb-1">Goes Together</span>
                   <h2 className="text-2xl font-black text-white tracking-tight leading-tight">Taste Twins</h2>
                   <p className="text-xs text-slate-400 mt-2 text-balance">
-                    Fans who love the global #1 track almost always love this deep cut.
+                    Fans who love the community's #1 song almost always love this one too.
                   </p>
                 </div>
 

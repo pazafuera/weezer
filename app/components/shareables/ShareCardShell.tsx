@@ -321,10 +321,19 @@ export function PosterDomain() {
 }
 
 /**
- * Black electric-guitar silhouette (body left, neck running right and
- * off the edge), composed from overlapping shapes with the field
- * color carved back out for the waist and the top horn. Renders in a
- * 1080x400 box; the tribe name type sits on top of it.
+ * Black ACOUSTIC-guitar silhouette, drawn directly in card
+ * coordinates (viewBox 0 0 1080 1350 — the caller stretches it over
+ * the whole card): round lower bout, pinched waist, smaller upper
+ * bout, the soundhole carved out in field blue, a tapered neck
+ * running diagonally down-right, and a paddle headstock with 3+3
+ * tuner pegs. The outline is a Catmull-Rom-smoothed loop generated
+ * numerically, and the placement is verified against the Tribe
+ * card's text zones (name zone y 308–466, diagnosis zone y 782–849):
+ * only the body's smooth shoulder crosses the name zone's lower
+ * band; the soundhole clears it by 52px, the waist dip passes 2px
+ * below it, and the headstock (x 916–1057, y 650–760) clears the
+ * name zone by 184px and the diagnosis zone by 22px — nothing busy
+ * sits near any text, and no pegs trail the tribe name.
  */
 export function GuitarSilhouette({
   className = '',
@@ -335,23 +344,35 @@ export function GuitarSilhouette({
 }) {
   return (
     <svg
-      viewBox="0 0 1080 400"
+      viewBox="0 0 1080 1350"
       className={className}
       style={style}
       aria-hidden="true"
     >
-      {/* body + neck, one black mass */}
-      <ellipse cx="218" cy="272" rx="170" ry="110" fill="#000" />
-      <ellipse cx="308" cy="138" rx="124" ry="94" fill="#000" />
-      <polygon points="320,112 520,124 520,172 320,182" fill="#000" />
-      <rect x="470" y="128" width="520" height="34" fill="#000" />
-      <polygon points="990,116 1080,128 1080,178 990,168" fill="#000" />
-      <circle cx="1008" cy="106" r="9" fill="#000" />
-      <circle cx="1034" cy="106" r="9" fill="#000" />
-      <circle cx="1060" cy="106" r="9" fill="#000" />
-      {/* field-color carves: waist + horn notch */}
-      <ellipse cx="420" cy="310" rx="86" ry="68" fill={POSTER_BLUE} />
-      <ellipse cx="452" cy="56" rx="96" ry="54" fill={POSTER_BLUE} />
+      {/* body — smoothed acoustic outline */}
+      <path
+        d="M 528.8 558.3 C 528.2 539, 518 530.8, 507.6 518.3 C 497.3 505.8, 483.8 492.9, 466.6 483.1 C 449.4 473.3, 423.5 461.8, 404.2 459.3 C 384.9 456.8, 365.1 470.2, 350.7 468 C 336.4 465.9, 331.3 456.1, 318.3 446.5 C 305.3 436.9, 290.1 420.1, 272.8 410.3 C 255.6 400.5, 234.2 390.1, 214.9 387.5 C 195.6 385, 174.2 388.3, 157 395.2 C 139.8 402.2, 123.4 417.1, 111.7 429.2 C 99.9 441.3, 92 457.1, 86.4 467.9 C 80.8 478.6, 80.1 485.1, 78 494 C 75.9 502.9, 73.8 509, 74.1 521.2 C 74.4 533.3, 74.6 550.9, 79.9 567 C 85.1 583, 93.3 603.6, 105.7 617.4 C 118.1 631.2, 135.9 643.5, 154.4 649.7 C 172.8 655.9, 196.6 655.9, 216.4 654.7 C 236.2 653.4, 257.3 645, 273.1 642 C 289 639.1, 298 632.5, 311.8 636.9 C 325.6 641.2, 337.6 662, 356 668.2 C 374.5 674.4, 402.7 675.4, 422.5 674.2 C 442.3 672.9, 460 667.2, 474.8 660.5 C 489.6 653.8, 502.4 650.9, 511.4 633.8 C 520.4 616.8, 529.4 577.6, 528.8 558.3 Z"
+        fill="#000"
+      />
+      {/* neck */}
+      <path
+        d="M 515.9 563.5 L 928.3 672.7 L 920.6 706.1 L 502.1 623.5 Z"
+        fill="#000"
+      />
+      {/* headstock */}
+      <path
+        d="M 921.9 670.1 L 956.5 661.7 L 1012.9 671.2 L 1046.1 689.4 L 1057 713 L 1050.2 732.5 L 1021.9 743.5 L 956.5 733.1 L 915.9 706.2 Z"
+        fill="#000"
+      />
+      {/* tuner pegs, 3 + 3 */}
+      <circle cx="971.4" cy="658.1" r="8.5" fill="#000" />
+      <circle cx="1003.2" cy="662.5" r="8.5" fill="#000" />
+      <circle cx="1033.1" cy="674.7" r="8.5" fill="#000" />
+      <circle cx="952.7" cy="739.2" r="8.5" fill="#000" />
+      <circle cx="983.2" cy="749.2" r="8.5" fill="#000" />
+      <circle cx="1015.4" cy="751.4" r="8.5" fill="#000" />
+      {/* soundhole, carved in field blue */}
+      <circle cx="405.7" cy="569.7" r="51.3" fill={POSTER_BLUE} />
     </svg>
   );
 }

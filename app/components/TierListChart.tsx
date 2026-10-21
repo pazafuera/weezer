@@ -6,6 +6,13 @@ import { ALBUM_NAME_TO_ID, BucketType } from '../data/constants';
 import { AlbumArtwork } from './SharedUI';
 import { displayFont, handFont } from './shareables/fonts';
 import { POSTER_BLUE } from './shareables/ShareCardShell';
+import {
+  planTierCarouselSlices,
+  tierCarouselFilename,
+  TIER_CAROUSEL_HEIGHT,
+  TIER_CAROUSEL_WIDTH,
+} from './tierCarousel';
+import type { TierCarouselSlice } from './tierCarousel';
 
 interface RankedSong {
   id: string;
@@ -87,7 +94,113 @@ const BUCKET_TIER_LABEL: Record<BucketType, string> = {
   trash: 'F',
 };
 
-export default function TierListChart({ 
+/* ------------------------------------------------------------------ */
+/* Instagram carousel export: the chart still renders ONCE, exactly   */
+/* as before (1024px frame, pixelRatio 2, iOS double-render pass in   */
+/* the handler below). The rendered PNG is then sliced horizontally   */
+/* into 2048x2560 (4:5) images — Instagram's tallest portrait — with  */
+/* cuts only at tier-section / tile-row / footer boundaries measured  */
+/* from the export node's own layout, and short slices padded with    */
+/* the poster blue.                                                   */
+/* ------------------------------------------------------------------ */
+
+function loadRenderedImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error('Tier carousel: rendered image failed to load'));
+    image.src = src;
+  });
+}
+
+function canvasToPngBlob(canvas: HTMLCanvasElement): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) resolve(blob);
+      else reject(new Error('Tier carousel: slice canvas produced no image'));
+    }, 'image/png');
+  });
+}
+
+/** Safe cut offsets for one export node, in rendered-image pixels.
+ *  Boundaries are the tops of the chart grid, of each tier section,
+ *  and of each tile (grouped by the planner into row tops), plus the
+ *  top of the footer — so a cut never lands inside the header, a
+ *  tile, or the footer. */
+function measureTierCarouselCuts(
+  node: HTMLElement,
+  renderedHeight: number,
+): { allowedBoundaries: number[]; headerEnd: number; footerStart: number } {
+  const rootRect = node.getBoundingClientRect();
+  const scale = rootRect.height > 0 ? renderedHeight / rootRect.height : 2;
+  const topOf = (el: Element) =>
+    (el.getBoundingClientRect().top - rootRect.top) * scale;
+  const bottomOf = (el: Element) =>
+    (el.getBoundingClientRect().bottom - rootRect.top) * scale;
+
+  const header = node.querySelector('[data-tier-export-header]');
+  const grid = node.querySelector('[data-tier-export-grid]');
+  const footer = node.querySelector('[data-tier-export-footer]');
+
+  const boundaries = new Set<number>();
+  if (grid) boundaries.add(topOf(grid));
+  node
+    .querySelectorAll('[data-tier-export-section], [data-tier-export-tile]')
+    .forEach((el) => boundaries.add(topOf(el)));
+  if (footer) boundaries.add(topOf(footer));
+
+  return {
+    allowedBoundaries: Array.from(boundaries),
+    // The header zone runs until the chart grid starts (its bottom
+    // margin included); the first cut may not land inside it.
+    headerEnd: grid ? topOf(grid) : header ? bottomOf(header) : 0,
+    footerStart: footer ? topOf(footer) : renderedHeight,
+  };
+}
+
+async function sliceTierCarouselImage(
+  dataUrl: string,
+  node: HTMLElement,
+): Promise<{ blobs: Blob[]; slices: TierCarouselSlice[] }> {
+  const image = await loadRenderedImage(dataUrl);
+  const cuts = measureTierCarouselCuts(node, image.naturalHeight);
+  const slices = planTierCarouselSlices({
+    totalHeight: image.naturalHeight,
+    allowedBoundaries: cuts.allowedBoundaries,
+    headerEnd: cuts.headerEnd,
+    footerStart: cuts.footerStart,
+    maxSliceHeight: TIER_CAROUSEL_HEIGHT,
+  });
+
+  const blobs: Blob[] = [];
+  for (const slice of slices) {
+    const canvas = document.createElement('canvas');
+    canvas.width = TIER_CAROUSEL_WIDTH;
+    canvas.height = TIER_CAROUSEL_HEIGHT;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Tier carousel: canvas is not available');
+    // Pad first: any part of the canvas the source segment does not
+    // cover (a short final slice, or the gap up to the next safe cut)
+    // stays the poster blue the chart itself is framed in.
+    ctx.fillStyle = POSTER_BLUE;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(
+      image,
+      0,
+      slice.start,
+      image.naturalWidth,
+      slice.sourceHeight,
+      0,
+      0,
+      TIER_CAROUSEL_WIDTH,
+      slice.sourceHeight,
+    );
+    blobs.push(await canvasToPngBlob(canvas));
+  }
+  return { blobs, slices };
+}
+
+export default function TierListChart({
   title, 
   subtitle, 
   rankedSongs = [], 
@@ -141,36 +254,55 @@ export default function TierListChart({
           backgroundColor: POSTER_BLUE,
         });
         
-        const filename = `${username ? `${username}-` : ''}weezer-${viewMode}-tiers.png`;
+        const baseFilename = `${username ? `${username}-` : ''}weezer-${viewMode}-tiers.png`;
+
+        // Slice the one rendered chart into the ordered 4:5 set.
+        // A chart short enough for a single slice keeps the original
+        // filename and behaves exactly like the old single-PNG export.
+        const { blobs, slices } = await sliceTierCarouselImage(
+          dataUrl,
+          exportRef.current!,
+        );
+        const filenames = slices.map((_, index) =>
+          tierCarouselFilename(baseFilename, index, slices.length),
+        );
+        const files = blobs.map(
+          (blob, index) => new File([blob], filenames[index], { type: 'image/png' }),
+        );
 
         // CHECK FOR iOS / MOBILE DEVICE CAPABILITIES
-        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || 
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ||
                          (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
         if (isMobile && navigator.share) {
           try {
-            const fetchRes = await fetch(dataUrl);
-            const blob = await fetchRes.blob();
-            const file = new File([blob], filename, { type: 'image/png' });
-
-            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            if (navigator.canShare && navigator.canShare({ files })) {
               await navigator.share({
-                files: [file],
+                files,
                 title: 'My Weezer Tier List',
               });
               setIsExporting(false);
-              return; 
+              return;
             }
           } catch (shareErr) {
             console.error('Native sharing failed or was canceled', shareErr);
           }
         }
 
-        // STANDARD DESKTOP FALLBACK
-        const link = document.createElement('a');
-        link.download = filename;
-        link.href = dataUrl;
-        link.click();
+        // STANDARD DESKTOP FALLBACK — the whole set, in order.
+        for (let index = 0; index < blobs.length; index++) {
+          const blobUrl = URL.createObjectURL(blobs[index]);
+          const link = document.createElement('a');
+          link.download = filenames[index];
+          link.href = blobUrl;
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+          if (index < blobs.length - 1) {
+            await new Promise((r) => setTimeout(r, 250));
+          }
+        }
 
       } catch (err) {
         console.error('Failed to export tier list', err);
@@ -186,10 +318,11 @@ export default function TierListChart({
   };
 
   const renderTierGrid = (isExportMode: boolean) => (
-    <div className={`bg-black p-0.5 sm:p-1 flex flex-col gap-0.5 sm:gap-1 w-full rounded-xl overflow-hidden ${isExportMode ? '' : 'border border-slate-800'}`}>
+    <div data-tier-export-grid="true" className={`bg-black p-0.5 sm:p-1 flex flex-col gap-0.5 sm:gap-1 w-full rounded-xl overflow-hidden ${isExportMode ? '' : 'border border-slate-800'}`}>
       {processedTiers.map((tier) => (
-        <div 
-          key={tier.label} 
+        <div
+          key={tier.label}
+          data-tier-export-section="true"
           className={`grid ${isExportMode ? 'grid-cols-[6rem_1fr]' : 'grid-cols-[4rem_minmax(0,1fr)] sm:grid-cols-[6rem_minmax(0,1fr)]'} bg-black gap-0.5 sm:gap-1 min-h-[80px] w-full`}
         >
           {/* TIER BADGE */}
@@ -222,6 +355,7 @@ export default function TierListChart({
                     return (
                       <div
                         key={item.id}
+                        data-tier-export-tile="true"
                         className={`w-20 h-20 sm:w-24 sm:h-24 shrink-0 p-1 flex items-center justify-center ${
                           isExportMode ? '' : 'hover:scale-[1.02] transition-transform cursor-default'
                         }`}
@@ -241,6 +375,7 @@ export default function TierListChart({
                   return (
                     <div
                       key={item.id}
+                      data-tier-export-tile="true"
                       className={`w-20 h-20 sm:w-24 sm:h-24 shrink-0 flex items-center justify-center p-1 text-center select-none ${theme.bg} ${theme.text} ${
                         isExportMode ? '' : 'hover:scale-[1.02] transition-transform cursor-default'
                       }`}
@@ -333,7 +468,7 @@ export default function TierListChart({
         <div ref={exportRef} className="w-[1024px] p-8" style={{ backgroundColor: POSTER_BLUE }}>
 
           {/* BRANDING HEADER FOR EXPORT */}
-          <div className="flex items-start justify-between border-b-2 border-white/50 pb-6 mb-8">
+          <div data-tier-export-header="true" className="flex items-start justify-between border-b-2 border-white/50 pb-6 mb-8">
             <div className="flex-1 pr-8">
               <h2 className={`text-6xl text-white leading-none mb-2 ${displayFont.className}`}>
                 All My Favorite Songs
@@ -358,7 +493,7 @@ export default function TierListChart({
           {renderTierGrid(true)}
 
           {/* FOOTER */}
-          <div className={`text-center pt-6 text-white text-3xl ${handFont.className}`}>
+          <div data-tier-export-footer="true" className={`text-center pt-6 text-white text-3xl ${handFont.className}`}>
             Generated via RankingWeezer.com
           </div>
         </div>

@@ -9,6 +9,21 @@ import { TribeBadgeCardVisual } from './TribeBadgeCard';
 import { EraDnaCardVisual } from './EraDnaCard';
 import { TasteCompatibilityCardVisual, friendKey, friendLabel } from './TasteCompatibilityCard';
 import type { FriendLike } from './TasteCompatibilityCard';
+import TierListChart from '../TierListChart';
+import type { RankedAlbum as TierRankedAlbum, RankedSong as TierRankedSong } from '../TierListChart';
+
+/** Everything a tier-list card needs. The gallery builds its own
+ *  fixed-mode TierListChart instances from this data — Songs and
+ *  Albums are SEPARATE card entries, each pinned to one mode (no
+ *  toggle inside a card's preview, modal, or export). Hosts pass
+ *  data, never a pre-built chart node. */
+export interface TierChartData {
+  title: string;
+  subtitle: string;
+  username?: string;
+  rankedSongs: TierRankedSong[];
+  rankedAlbums: TierRankedAlbum[];
+}
 
 /**
  * One asset in the library: a scaled preview, an optional control row
@@ -446,12 +461,14 @@ function CompatibilityThumbnailItem({
   );
 }
 
-/** Tier List thumbnail item: the tierSection node (chart + its own
- *  Songs/Albums toggle + its own save button) is the visual — scaled
- *  from a fixed 1024 layout width for the thumbnail, but FLUID at
- *  panel width inside the modal, exactly how it renders on the
- *  library page (scaling the fluid chart down instead would shrink
- *  its chip text to unreadability).
+/** Tier List thumbnail item (one per mode — "Tier List — Songs" and
+ *  "Tier List — Albums"): the item builds its own TierListChart from
+ *  the shared tier data, pinned to its mode via fixedView (no toggle
+ *  anywhere in the card). The chart is the visual — scaled from a
+ *  fixed 1024 layout width for the thumbnail, but FLUID at panel
+ *  width inside the modal, exactly how it renders on the library
+ *  page (scaling the fluid chart down instead would shrink its chip
+ *  text to unreadability).
  *
  *  SAVE, PINNED (UAT P-11): the modal also carries a pinned footer
  *  Save (the CardModal footer pattern the portrait cards use), so
@@ -459,13 +476,22 @@ function CompatibilityThumbnailItem({
  *  chart. The pinned button is wired to the MODAL's own chart
  *  instance — it activates that instance's own save button (marked
  *  data-tier-save in TierListChart), so the export uses the modal
- *  chart's toggle state and its export node, not the library
- *  page's or the thumbnail's. A MutationObserver mirrors the
- *  instance's generating/failure state onto the pinned button so
- *  the feedback the chart shows on its own button is not lost.
- *  (Sharing ONE chart instance between page and modal remains
- *  deliberately undone — the owner approved the pin only.) */
-function TierThumbnailItem({ tierSection }: { tierSection: ReactNode }) {
+ *  chart's mode and its export node, not the thumbnail's. A
+ *  MutationObserver mirrors the instance's generating/failure state
+ *  onto the pinned button so the feedback the chart shows on its own
+ *  button is not lost. (Sharing ONE chart instance between thumbnail
+ *  and modal remains deliberately undone — the owner approved the
+ *  pin only.) */
+function TierThumbnailItem({
+  shortTitle,
+  tierCharts,
+  mode,
+}: {
+  shortTitle: string;
+  tierCharts: TierChartData;
+  mode: 'songs' | 'albums';
+}) {
+  const chart = <TierListChart {...tierCharts} fixedView={mode} />;
   const [open, setOpen] = useState(false);
   const modalChartRef = useRef<HTMLDivElement>(null);
   const [pinnedBusy, setPinnedBusy] = useState(false);
@@ -503,16 +529,16 @@ function TierThumbnailItem({ tierSection }: { tierSection: ReactNode }) {
   return (
     <div>
       <ThumbnailButton
-        shortTitle="Tier List"
+        shortTitle={shortTitle}
         naturalWidth={TIER_NATURAL_WIDTH}
         onOpen={() => setOpen(true)}
       >
-        <div style={{ width: TIER_NATURAL_WIDTH }}>{tierSection}</div>
+        <div style={{ width: TIER_NATURAL_WIDTH }}>{chart}</div>
       </ThumbnailButton>
 
       {open && (
         <CardModal
-          title="Tier List"
+          title={shortTitle}
           onClose={() => setOpen(false)}
           footer={
             <div className="border-t border-slate-200 bg-white p-4">
@@ -533,9 +559,39 @@ function TierThumbnailItem({ tierSection }: { tierSection: ReactNode }) {
             </div>
           }
         >
-          <div ref={modalChartRef}>{tierSection}</div>
+          <div ref={modalChartRef}>{chart}</div>
         </CardModal>
       )}
+    </div>
+  );
+}
+
+/** Library-page tier entry (the 'full' variant's tier cards): a
+ *  full-width section in the library's card chrome carrying one
+ *  fixed-mode chart — Songs and Albums each get their own entry,
+ *  and the chart's own Save button (carousel export included) is
+ *  the entry's download. No modal/pin here: the library layout
+ *  shows the chart itself, like the section it replaces. */
+function TierLibrarySection({
+  tierCharts,
+  mode,
+}: {
+  tierCharts: TierChartData;
+  mode: 'songs' | 'albums';
+}) {
+  return (
+    <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs">
+      <div className="mb-4">
+        <h3 className="font-black text-lg text-slate-950 leading-tight">
+          {mode === 'songs' ? 'Tier List — Songs' : 'Tier List — Albums'}
+        </h3>
+        <p className="text-xs font-semibold text-slate-400 mt-0.5">
+          {mode === 'songs'
+            ? 'Your full song tier list, S to F.'
+            : 'Your albums in tiers, S to F.'}
+        </p>
+      </div>
+      <TierListChart {...tierCharts} fixedView={mode} />
     </div>
   );
 }
@@ -615,7 +671,7 @@ export default function ShareablesGallery({
   triageMap,
   friends,
   subtitle,
-  tierSection,
+  tierCharts,
   variant = 'full',
   onStartSorting,
   onFindFriends,
@@ -625,10 +681,15 @@ export default function ShareablesGallery({
   triageMap: Record<string, Bucket>;
   friends: FriendLike[];
   subtitle?: string;
-  /** Optional tier-list section. In the 'full' variant it renders as a
-   *  full-width section under the card grid (the standalone library
-   *  page); in 'thumbnails' it becomes the "Tier List" grid item. */
-  tierSection?: ReactNode;
+  /** Optional tier-list data. The gallery renders it as TWO card
+   *  entries — "Tier List — Songs" and "Tier List — Albums" — each
+   *  pinned to its mode. In the 'full' variant they are full-width
+   *  sections under the card grid (the standalone library page); in
+   *  'thumbnails' they are two grid items opening modals with pinned
+   *  Saves. (Previously hosts passed one pre-built tierSection node
+   *  with a Songs/Albums toggle inside; that node is gone — the
+   *  gallery now owns the fixed-mode chart instances.) */
+  tierCharts?: TierChartData;
   /** 'full' (default): large previews with inline Download buttons —
    *  the library page. 'thumbnails': a compact thumbnail grid that
    *  opens each card full-size in a modal — the Sweater Thread. */
@@ -672,7 +733,12 @@ export default function ShareablesGallery({
           <EraDnaCardVisual songs={songs} subtitle={subtitle} />
         </ThumbnailItem>
         <CompatibilityThumbnailItem songs={songs} friends={friends} subtitle={subtitle} onFindFriends={onFindFriends} />
-        {tierSection ? <TierThumbnailItem tierSection={tierSection} /> : null}
+        {tierCharts ? (
+          <>
+            <TierThumbnailItem shortTitle="Tier List — Songs" tierCharts={tierCharts} mode="songs" />
+            <TierThumbnailItem shortTitle="Tier List — Albums" tierCharts={tierCharts} mode="albums" />
+          </>
+        ) : null}
       </div>
     );
   }
@@ -702,7 +768,12 @@ export default function ShareablesGallery({
         </LibraryItem>
         <CompatibilityLibraryItem songs={songs} friends={friends} subtitle={subtitle} onFindFriends={onFindFriends} />
       </div>
-      {tierSection}
+      {tierCharts && (
+        <div className="mt-6 space-y-6">
+          <TierLibrarySection tierCharts={tierCharts} mode="songs" />
+          <TierLibrarySection tierCharts={tierCharts} mode="albums" />
+        </div>
+      )}
     </div>
   );
 }

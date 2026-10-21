@@ -3,7 +3,6 @@
 import React, { useMemo } from 'react';
 import { useWeezer, isRealBucket } from '../context/WeezerContext';
 import { ALBUMS_BY_ID, ALBUM_NAME_TO_ID, FULL_SONG_POOL } from '../data/constants';
-import TierListChart from './TierListChart';
 import { ShareablesGallery } from './shareables';
 
 const BUCKET_POINTS: Record<string, number> = {
@@ -18,9 +17,10 @@ const BUCKET_POINTS: Record<string, number> = {
  * The Shareables asset library as a first-class app step (dashboard card,
  * menu item, and the end of the Sweater Thread all lead here / embed it).
  *
- * The Fan Club Tiers chart lives here now (moved out of the Sweater
- * Thread). Its inputs are derived from the same context data Step4Wrapped
- * used: songs carry their triage bucket through so explicitly bucketed
+ * The tier lists live here as two gallery cards (Songs and Albums,
+ * each pinned to its mode; the gallery builds the charts). Their
+ * inputs are derived from the same context data Step4Wrapped used:
+ * songs carry their triage bucket through so explicitly bucketed
  * songs land in their bucket's tier, and album ranks use the same
  * shrinkage-adjusted bucket-score average as the Wrapped stats
  * (K = 5 toward the global mean).
@@ -95,27 +95,20 @@ export default function StepShareables() {
     return parts[0];
   }, [userProfile]);
 
-  const tierSection =
-    ranked.length > 0 ? (
-      <div className="mt-6 bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs">
-        <div className="mb-4">
-          <h3 className="font-black text-lg text-slate-950 leading-tight">
-            Fan Club Tiers
-          </h3>
-          <p className="text-xs font-semibold text-slate-400 mt-0.5">
-            Your full tier list — songs or albums. Moved here from the
-            Sweater Thread.
-          </p>
-        </div>
-        <TierListChart
-          title="All My Favorite Songs: The Weezer Song Ranking Project"
-          subtitle={`${displayName}'s Personal Tier List`}
-          username={userProfile?.username}
-          rankedSongs={tierRankings}
-          rankedAlbums={rankedAlbums}
-        />
-      </div>
-    ) : null;
+  // Tier data for the gallery's two tier cards ("Tier List — Songs"
+  // and "Tier List — Albums"). The gallery builds its own fixed-mode
+  // charts from this; the old single "Fan Club Tiers" section with
+  // its Songs/Albums toggle no longer exists on this page.
+  const tierCharts =
+    ranked.length > 0
+      ? {
+          title: 'All My Favorite Songs: The Weezer Song Ranking Project',
+          subtitle: `${displayName}'s Personal Tier List`,
+          username: userProfile?.username,
+          rankedSongs: tierRankings,
+          rankedAlbums,
+        }
+      : undefined;
 
   return (
     <div className="pb-24 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -137,7 +130,7 @@ export default function StepShareables() {
           triageMap={triageMap}
           friends={friendCards ?? []}
           subtitle={subtitle}
-          tierSection={tierSection}
+          tierCharts={tierCharts}
           onStartSorting={() => navigateTo('triage')}
           onFindFriends={() => navigateTo('friends')}
         />

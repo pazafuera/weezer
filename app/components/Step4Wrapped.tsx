@@ -16,7 +16,6 @@ import {
   ALBUM_NAME_TO_ID,
 } from '../data/constants';
 import { FlyingWIcon, AlbumArtwork } from './SharedUI';
-import TierListChart from './TierListChart';
 import { encodeShareData } from '@/utils/shareHelper';
 import { ShareablesGallery } from './shareables';
 import {
@@ -263,8 +262,9 @@ export default function Step4Wrapped({
   // (same inputs: songs carry their triage bucket through so explicitly
   // bucketed songs land in their bucket's tier; album ranks use the
   // shrinkage-adjusted bucket-score average, K = 5 toward the global
-  // mean). The Thread's thumbnail gallery shows the chart as its
-  // "Tier List" item.
+  // mean). The Thread's thumbnail gallery shows the data as TWO items
+  // — "Tier List — Songs" and "Tier List — Albums" — each a fixed-mode
+  // chart the gallery builds from the tierCharts object below.
   // Only real buckets feed the cards — an 'unknown' mark is not a rating.
   const rankedSongs = masterList.filter((s) => isRealBucket(triageMap[s.id]));
 
@@ -325,26 +325,16 @@ export default function Step4Wrapped({
       .map((a, idx) => ({ id: a.id, album: a.album, rank: idx + 1 }));
   }, [triageMap]);
 
-  const tierSection =
-    rankedSongs.length > 0 ? (
-      <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs">
-        <div className="mb-4">
-          <h3 className="font-black text-lg text-slate-950 leading-tight">
-            Fan Club Tiers
-          </h3>
-          <p className="text-xs font-semibold text-slate-400 mt-0.5">
-            Your full tier list — songs or albums.
-          </p>
-        </div>
-        <TierListChart
-          title="All My Favorite Songs: The Weezer Song Ranking Project"
-          subtitle={`${displayNameStr}'s Personal Tier List`}
-          username={userProfile?.username}
-          rankedSongs={tierRankings}
-          rankedAlbums={tierRankedAlbums}
-        />
-      </div>
-    ) : null;
+  const tierCharts =
+    rankedSongs.length > 0
+      ? {
+          title: 'All My Favorite Songs: The Weezer Song Ranking Project',
+          subtitle: `${displayNameStr}'s Personal Tier List`,
+          username: userProfile?.username,
+          rankedSongs: tierRankings,
+          rankedAlbums: tierRankedAlbums,
+        }
+      : undefined;
 
   // EXPLICIT RANK MAPS
   const userRankMap = useMemo(() => {
@@ -1969,7 +1959,7 @@ export default function Step4Wrapped({
             triageMap={triageMap}
             friends={friendCards ?? []}
             subtitle={userProfile?.username ? `@${userProfile.username}` : undefined}
-            tierSection={tierSection}
+            tierCharts={tierCharts}
             variant="thumbnails"
             onStartSorting={() => setStep('triage')}
             onFindFriends={() => setStep('friends')}

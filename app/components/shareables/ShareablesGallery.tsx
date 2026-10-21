@@ -60,6 +60,10 @@ function LibraryItem({
   const [saved, setSaved] = useState(false);
   const [failed, setFailed] = useState(false);
   const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Preview fit: MEASURED scale (useFitScale, the thumbnail/modal
+  // pattern) — see the preview box below for why a fixed scale cut
+  // the cards off on the right.
+  const { boxRef, scale } = useFitScale(CARD_NATURAL_WIDTH);
 
   const download = async () => {
     if (busy || downloadDisabled) return;
@@ -84,11 +88,32 @@ function LibraryItem({
 
   return (
     <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs space-y-4">
-      {/* Scaled preview (visual only — exports never use this node) */}
-      <div className="relative h-[400px] overflow-hidden rounded-2xl bg-slate-100 border border-slate-200">
+      {/* Scaled preview (visual only — exports never use this node).
+          The scale is MEASURED from this box (useFitScale), so the
+          rendered width is always exactly the box width. It used to
+          be a fixed scale(0.296) with a fixed 400px height — i.e. a
+          rendered width of 1080 × 0.296 = 319.68px no matter how
+          narrow the real box was. On phones the box is ~256–289px
+          wide (viewport minus AppShell main p-4, the page's px-4,
+          this card's p-5 and the preview border), so the preview
+          overflowed its overflow-hidden box by up to ~64px and the
+          card's right edge — title type, framed art, footer —
+          clipped mid-word while the exported PNG stayed perfect.
+          Height follows the same measured scale (the card's 4:5
+          aspect), falling back to the old 400px until first measure. */}
+      <div
+        ref={boxRef}
+        className="relative overflow-hidden rounded-2xl bg-slate-100 border border-slate-200"
+        style={{ height: scale > 0 ? CARD_NATURAL_HEIGHT * scale : 400 }}
+      >
         <div
           className="pointer-events-none absolute left-0 top-0"
-          style={{ width: 1080, transform: 'scale(0.296)', transformOrigin: 'top left' }}
+          style={{
+            width: CARD_NATURAL_WIDTH,
+            transform: `scale(${scale})`,
+            transformOrigin: 'top left',
+            visibility: scale > 0 ? 'visible' : 'hidden',
+          }}
         >
           {children}
         </div>

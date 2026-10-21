@@ -298,6 +298,132 @@ export const ScrapbookVisual = forwardRef<
   );
 });
 
+/* ------------------------------------------------------------------ */
+/* Poster kit — Abby's visual language for the Tribe and Era DNA      */
+/* cards: a flat bright-blue field, black silhouette graphics, huge   */
+/* chunky display type, white framed elements and halftone texture.   */
+/* Cards still render at 1080x1350 (4:5), same as the scrapbook kit.  */
+/* ------------------------------------------------------------------ */
+
+/** The flat field blue sampled from Abby's mockups. */
+export const POSTER_BLUE = '#039AD1';
+
+/** Domain line in the top-right corner, as in the mockups. */
+export function PosterDomain() {
+  return (
+    <p
+      aria-hidden="true"
+      className={`absolute right-[48px] top-[30px] text-[42px] font-bold leading-none text-white ${handFont.className}`}
+    >
+      rankingweezer.com
+    </p>
+  );
+}
+
+/**
+ * Black electric-guitar silhouette (body left, neck running right and
+ * off the edge), composed from overlapping shapes with the field
+ * color carved back out for the waist and the top horn. Renders in a
+ * 1080x400 box; the tribe name type sits on top of it.
+ */
+export function GuitarSilhouette({
+  className = '',
+  style,
+}: {
+  className?: string;
+  style?: CSSProperties;
+}) {
+  return (
+    <svg
+      viewBox="0 0 1080 400"
+      className={className}
+      style={style}
+      aria-hidden="true"
+    >
+      {/* body + neck, one black mass */}
+      <ellipse cx="218" cy="272" rx="170" ry="110" fill="#000" />
+      <ellipse cx="308" cy="138" rx="124" ry="94" fill="#000" />
+      <polygon points="320,112 520,124 520,172 320,182" fill="#000" />
+      <rect x="470" y="128" width="520" height="34" fill="#000" />
+      <polygon points="990,116 1080,128 1080,178 990,168" fill="#000" />
+      <circle cx="1008" cy="106" r="9" fill="#000" />
+      <circle cx="1034" cy="106" r="9" fill="#000" />
+      <circle cx="1060" cy="106" r="9" fill="#000" />
+      {/* field-color carves: waist + horn notch */}
+      <ellipse cx="420" cy="310" rx="86" ry="68" fill={POSTER_BLUE} />
+      <ellipse cx="452" cy="56" rx="96" ry="54" fill={POSTER_BLUE} />
+    </svg>
+  );
+}
+
+/** Black vinyl disc with groove rings and a colored label — peeks
+ *  out from behind the Tribe card's framed album art. */
+export function VinylDisc({
+  labelColor,
+  className = '',
+  style,
+}: {
+  labelColor: string;
+  className?: string;
+  style?: CSSProperties;
+}) {
+  return (
+    <div
+      aria-hidden="true"
+      className={`rounded-full ${className}`}
+      style={{
+        background:
+          'repeating-radial-gradient(circle at center, #050505 0 3px, #1d1d1d 3px 6px)',
+        ...style,
+      }}
+    >
+      <div className="flex h-full w-full items-center justify-center">
+        <div
+          className="flex items-center justify-center rounded-full"
+          style={{ width: '34%', height: '34%', backgroundColor: labelColor }}
+        >
+          <div
+            className="rounded-full"
+            style={{ width: '30%', height: '30%', backgroundColor: POSTER_BLUE }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** White lightning-burst banner carrying the "THE FACTS:" label.
+ *  Sized by the caller; the label text sits in the bolt's wide left
+ *  section. */
+export function FactsBurst({
+  children,
+  className = '',
+  style,
+}: {
+  children: ReactNode;
+  className?: string;
+  style?: CSSProperties;
+}) {
+  return (
+    <div className={`relative ${className}`} style={style}>
+      <svg
+        viewBox="0 0 460 120"
+        preserveAspectRatio="none"
+        className="absolute inset-0 h-full w-full"
+        aria-hidden="true"
+      >
+        <polygon
+          points="2,34 282,34 244,60 458,60 130,102 164,72 2,72"
+          fill="#fff"
+        />
+      </svg>
+      <div className="relative z-10 flex h-full items-center pl-[26px]">
+        {children}
+      </div>
+    </div>
+  );
+}
+
 /** Primary button for standalone cards (matches the tier card's). */
 export function SaveImageButton({
   onClick,

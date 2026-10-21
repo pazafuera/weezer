@@ -1,26 +1,39 @@
 'use client';
 
-import { forwardRef } from 'react';
-import { ALBUMS_BY_ID } from '../../data/constants';
+import { forwardRef, Fragment } from 'react';
+import { albumCoverSrc, resolveAlbumId } from './ShareCardShell';
 import {
-  BrushStroke,
-  FlyingW,
-  Polaroid,
+  FactsBurst,
+  GuitarSilhouette,
+  POSTER_BLUE,
+  PosterDomain,
   SaveImageButton,
-  ScrapbookVisual,
-  distinctAlbumIds,
-  resolveAlbumId,
+  VinylDisc,
   useShareableDownload,
 } from './ShareCardShell';
-import { handFont, markerFont } from './fonts';
+import { displayFont, handFont } from './fonts';
 import type { Bucket, ShareSong } from './Top10Card';
 
-export type Tribe = { name: string; blurb: string; stat: string };
+export type Tribe = {
+  /** Canonical tribe key, e.g. '90s Purist' — keys TRIBE_INK. */
+  name: string;
+  /** The name as it renders on the card, exactly as locked:
+   *  '90s PURIST keeps its leading apostrophe and lowercase s. */
+  displayName: string;
+  /** First-person diagnosis line (copy sheet: Purist LOCKED, the
+   *  other five still DRAFTs awaiting the owner's edit). */
+  diagnosis: string;
+  /** First-person "THE FACTS" line, filled from the user's rankings. */
+  fact: string;
+};
 
 /**
  * Transparent, rule-based tribe assignment. Checked in precedence order;
  * the first matching rule wins. Rules use only year, isBSide, and album
- * spread — no hardcoded album titles.
+ * spread — no hardcoded album titles. The thresholds are the copy
+ * sheet's; the fact lines are the same computations as the old
+ * second-person stats, reworded into the sheet's first-person
+ * patterns (the words and the math can't drift apart).
  */
 export function computeTribe(
   songs: ShareSong[],
@@ -43,10 +56,10 @@ export function computeTribe(
     const early = top.filter(inYears(1994, 1996)).length;
     if (early / top.length >= 0.7) {
       return {
-        name: '90s Purist',
-        blurb:
-          'Your bangers live in 1994–1996. The Blue Album / Pinkerton era is sacred ground.',
-        stat: `${early} of your top ${top.length} bangers are from the 90s`,
+        name: "'90s Purist",
+        displayName: "'90s PURIST",
+        diagnosis: "I haven't emotionally left 1997.",
+        fact: `${early} of my top ${top.length} songs are from the '90s`,
       };
     }
   }
@@ -55,8 +68,9 @@ export function computeTribe(
   if (ranked.length >= 10 && bsides / ranked.length >= 0.4) {
     return {
       name: 'Deep-Cuts Digger',
-      blurb: 'B-sides, rarities, deluxe tracks — you live beyond the greatest hits.',
-      stat: `${bsides} of ${ranked.length} ranked songs are deep cuts`,
+      displayName: 'DEEP-CUTS DIGGER',
+      diagnosis: "The deep cuts aren't deep to me. They're home.",
+      fact: `${bsides} of my ${ranked.length} ranked songs are deep cuts`,
     };
   }
 
@@ -65,8 +79,9 @@ export function computeTribe(
     if (albums.size >= 6) {
       return {
         name: 'Catalog Completist',
-        blurb: 'Your love spreads across the whole catalog. No era left behind.',
-        stat: `Bangers spanning ${albums.size} albums`,
+        displayName: 'CATALOG COMPLETIST',
+        diagnosis: 'I refuse to leave a single era behind.',
+        fact: `My top songs span ${albums.size} different albums`,
       };
     }
   }
@@ -76,29 +91,32 @@ export function computeTribe(
     if (modern / top.length >= 0.6) {
       return {
         name: 'New School',
-        blurb: 'Pacific Daydream to Van Weezer — you ride with modern Weezer.',
-        stat: `${modern} of ${top.length} bangers from 2014+`,
+        displayName: 'NEW SCHOOL',
+        diagnosis: 'I like the new albums. Loudly, and in public.',
+        fact: `${modern} of my top ${top.length} songs are from 2014 or later`,
       };
     }
     const y2k = top.filter(inYears(2001, 2005)).length;
     if (y2k / top.length >= 0.6) {
       return {
         name: 'Y2K Rocker',
-        blurb: 'Green, Maladroit, Make Believe — the 2000s are your sweet spot.',
-        stat: `${y2k} of ${top.length} bangers from 2001–2005`,
+        displayName: 'Y2K ROCKER',
+        diagnosis: "The 2000s weren't a comeback. They were my era.",
+        fact: `${y2k} of my top ${top.length} songs are from 2001–2005`,
       };
     }
   }
 
   return {
     name: 'Banger Hunter',
-    blurb: 'You know what you like — and most of it slaps.',
-    stat: `${top.length} bangers and slaps ranked`,
+    displayName: 'BANGER HUNTER',
+    diagnosis: "I don't overthink it. If it slaps, it slaps.",
+    fact: `I ranked ${top.length} songs as bangers or slaps`,
   };
 }
 
 const TRIBE_INK: Record<string, string> = {
-  '90s Purist': '#0072CE',
+  "'90s Purist": '#0072CE',
   'Deep-Cuts Digger': '#7c3aed',
   'Catalog Completist': '#047857',
   'New School': '#ea580c',
@@ -126,96 +144,100 @@ function dominantAlbumId(songs: ShareSong[]): string | undefined {
 export const TribeBadgeCardVisual = forwardRef<
   HTMLDivElement,
   { songs: ShareSong[]; triageMap: Record<string, Bucket>; subtitle?: string }
->(function TribeBadgeCardVisual({ songs, triageMap, subtitle }, ref) {
+>(function TribeBadgeCardVisual({ songs, triageMap }, ref) {
   const tribe = computeTribe(songs, triageMap);
   const ink = (tribe && TRIBE_INK[tribe.name]) || '#141414';
-  const words = tribe ? tribe.name.toUpperCase().split(' ') : [];
-  const longest = words.reduce((a, w) => Math.max(a, w.length), 0);
-  const nameSize = longest <= 5 ? 178 : longest <= 8 ? 150 : 120;
   const domAlbumId = dominantAlbumId(songs);
-  const domAlbum = domAlbumId ? ALBUMS_BY_ID[domAlbumId] : undefined;
-  const topSongs = songs.filter(
-    (s) => triageMap[s.id] === 'banger' || triageMap[s.id] === 'slaps',
-  );
-  const artIds = distinctAlbumIds([...topSongs, ...songs]);
+  // The tribe name ALWAYS renders on one line (the copy sheet's layout
+  // rule) — auto-sized down from the mockup's scale until it fits.
+  const nameSize = tribe
+    ? Math.max(84, Math.min(158, Math.floor(1740 / tribe.displayName.length)))
+    : 0;
+  // Locked Purist flourish: the year is highlighted amber.
+  const diagnosisParts = tribe ? tribe.diagnosis.split('1997') : [];
 
   return (
-    <ScrapbookVisual ref={ref} subtitle={subtitle} artAlbumIds={artIds}>
-      <div className="absolute bottom-[190px] left-[184px] right-[60px] top-[140px]">
-        {!tribe ? (
+    <div
+      ref={ref}
+      className="relative h-[1350px] w-[1080px] overflow-hidden text-white"
+      style={{ backgroundColor: POSTER_BLUE }}
+    >
+      <PosterDomain />
+      {!tribe ? (
+        <div className="absolute inset-0 flex items-center justify-center px-[100px]">
           <p
-            className={`pt-64 text-center text-[54px] text-slate-700 ${handFont.className}`}
+            className={`text-center text-[56px] font-bold leading-tight ${handFont.className}`}
           >
             Rank some songs to earn your tribe badge!
           </p>
-        ) : (
-          <>
-            <div className="relative">
-              <p className="relative inline-block">
-                <span
-                  className={`relative z-10 text-[46px] tracking-wide text-slate-800 ${markerFont.className}`}
-                >
-                  MY FAN TRIBE
-                </span>
-                <BrushStroke
-                  color="#fbbf24"
-                  className="absolute -bottom-2 left-0 z-0 h-[18px] w-full"
-                />
-              </p>
-              <FlyingW
-                className="absolute right-0 top-[-12px] w-[150px] rotate-[8deg]"
-                style={{ color: ink }}
-              />
-            </div>
+        </div>
+      ) : (
+        <>
+          <p className="absolute inset-x-[80px] top-[104px] text-center text-[54px] font-light leading-[1.25]">
+            Based on my ranking of every Weezer song, I&apos;m a...
+          </p>
 
-            {/* The tribe name in huge marker type, tribe ink */}
-            <div className="mt-16 -rotate-2 text-center" style={{ color: ink }}>
-              {words.map((w) => (
-                <div
-                  key={w}
-                  className={`leading-[0.95] ${markerFont.className}`}
-                  style={{ fontSize: nameSize }}
-                >
-                  {w}
-                </div>
-              ))}
-            </div>
+          <GuitarSilhouette className="absolute left-0 top-[318px] h-[400px] w-[1080px]" />
+          <h2
+            className={`absolute inset-x-0 top-[400px] whitespace-nowrap text-center leading-none text-white ${displayFont.className}`}
+            style={{ fontSize: nameSize }}
+          >
+            {tribe.displayName}
+          </h2>
+          <p
+            className={`absolute inset-x-[60px] top-[596px] text-center text-[54px] font-bold leading-tight ${handFont.className}`}
+          >
+            {diagnosisParts.map((part, i) => (
+              <Fragment key={i}>
+                {part}
+                {i < diagnosisParts.length - 1 && (
+                  <span className="text-amber-400">1997</span>
+                )}
+              </Fragment>
+            ))}
+          </p>
 
-            <p
-              className={`mx-auto mt-12 max-w-[760px] text-center text-[48px] leading-tight text-slate-800 ${handFont.className}`}
-            >
-              {tribe.blurb}
-            </p>
-
-            <p
-              className={`mt-8 text-center text-[44px] leading-tight ${handFont.className}`}
-              style={{ color: ink }}
-            >
-              {tribe.stat}
-            </p>
-
-            <div className="absolute bottom-[36px] left-2 -rotate-2 rounded-2xl rounded-bl-sm bg-white px-5 py-3 shadow-lg">
-              <p
-                className={`text-[36px] leading-tight text-slate-700 ${handFont.className}`}
+          {/* THE FACTS — burst + the fact, left column */}
+          <div className="absolute left-[64px] top-[776px] w-[400px]">
+            <FactsBurst className="-ml-[30px] h-[104px] w-[420px] -rotate-2">
+              <span
+                className={`text-[48px] leading-none text-black ${displayFont.className}`}
               >
-                Certified by science.*
-                <br />
-                <span className="text-[27px] text-slate-500">*not science</span>
-              </p>
-            </div>
+                THE FACTS:
+              </span>
+            </FactsBurst>
+            <p className="mt-[28px] text-[46px] leading-[1.3]">{tribe.fact}</p>
+          </div>
 
-            {domAlbum && (
-              <Polaroid
-                albumId={domAlbumId}
-                caption={`${domAlbum.name} — patient zero`}
-                rotate={5}
-                className="absolute bottom-[6px] right-2 w-[228px]"
+          {/* Signature album: white frame, vinyl peeking out */}
+          {domAlbumId && (
+            <div className="absolute right-[64px] top-[752px] w-[430px]">
+              <VinylDisc
+                labelColor={ink}
+                className="absolute -right-[168px] top-1/2 h-[440px] w-[440px] -translate-y-1/2"
               />
-            )}
-          </>
-        )}
-      </div>
-    </ScrapbookVisual>
+              <div className="relative z-10 bg-white p-[14px] shadow-[0_24px_48px_rgba(2,60,90,0.35)]">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={albumCoverSrc(domAlbumId)}
+                  alt=""
+                  className="aspect-square w-full object-cover"
+                />
+              </div>
+            </div>
+          )}
+
+          <p className="absolute inset-x-[40px] bottom-[92px] text-center text-[27px] font-semibold uppercase leading-snug tracking-[0.14em] text-white/95">
+            All My Favorite Songs: The Weezer Song Ranking Project
+          </p>
+          <p
+            className={`absolute inset-x-[40px] bottom-[26px] text-center text-[46px] font-bold leading-none ${handFont.className}`}
+          >
+            find out what kind of fan YOU are at rankingweezer.com
+          </p>
+        </>
+      )}
+    </div>
   );
 });
 

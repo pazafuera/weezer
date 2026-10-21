@@ -4,13 +4,18 @@ export {
   BrushStroke,
   FlyingW,
   Polaroid,
+  POSTER_BLUE,
+  PosterDomain,
+  GuitarSilhouette,
+  VinylDisc,
+  FactsBurst,
   albumCoverSrc,
   distinctAlbumIds,
   resolveAlbumId,
   SaveImageButton,
   useShareableDownload,
 } from './ShareCardShell';
-export { markerFont, handFont } from './fonts';
+export { markerFont, handFont, displayFont } from './fonts';
 export { exportNodeAsPng } from './exportImage';
 export type { ExportMode } from './exportImage';
 export { default as Top10Card, Top10CardVisual } from './Top10Card';

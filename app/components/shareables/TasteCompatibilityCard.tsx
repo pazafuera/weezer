@@ -2,14 +2,14 @@
 
 import { forwardRef, useState } from 'react';
 import {
-  BrushStroke,
+  FactsBurst,
   FlyingW,
+  POSTER_BLUE,
+  PosterDomain,
   SaveImageButton,
-  ScrapbookVisual,
-  distinctAlbumIds,
   useShareableDownload,
 } from './ShareCardShell';
-import { handFont, markerFont } from './fonts';
+import { displayFont, handFont } from './fonts';
 import type { ShareSong } from './Top10Card';
 
 /**
@@ -68,7 +68,7 @@ export const TasteCompatibilityCardVisual = forwardRef<
   HTMLDivElement,
   TasteCompatibilityVisualProps
 >(function TasteCompatibilityCardVisual(
-  { songs, friends, selectedKey, onSelectChange, interactive, subtitle },
+  { songs, friends, selectedKey, onSelectChange, interactive },
   ref,
 ) {
   const myTopIds = songs.slice(0, 20).map((s) => s.id);
@@ -81,130 +81,150 @@ export const TasteCompatibilityCardVisual = forwardRef<
       ? Math.round((shared.length / myTopIds.length) * 100)
       : null;
   const tier = score !== null ? tierFor(score) : null;
-  const sharedSongs = shared
-    .map((id) => byId.get(id))
-    .filter((s): s is ShareSong => !!s);
-  const artIds = distinctAlbumIds([...sharedSongs, ...songs]);
+  const tierLabel = tier ? tier.label.toUpperCase() : '';
+  // The tier label sits in the white burst's wide left section —
+  // auto-sized (Lilita averages ~0.55em advance) so the longest
+  // label, HEALTHY DISAGREEMENT, still fits it.
+  const tierSize = tier
+    ? Math.max(30, Math.min(54, Math.floor(880 / tierLabel.length)))
+    : 0;
 
   return (
-    <ScrapbookVisual ref={ref} subtitle={subtitle} artAlbumIds={artIds}>
-      <div className="absolute bottom-[190px] left-[184px] right-[60px] top-[140px]">
-        <div className="flex items-start justify-between gap-6">
-          <p className="relative inline-block">
-            <span
-              className={`relative z-10 text-[56px] leading-none tracking-wide text-slate-900 ${markerFont.className}`}
-            >
-              TASTE COMPATIBILITY
-            </span>
-            <BrushStroke
-              color="#fbbf24"
-              className="absolute -bottom-2 left-0 z-0 h-[20px] w-full"
-            />
-          </p>
-          <FlyingW className="w-[150px] shrink-0 rotate-[8deg] text-[#0072CE]" />
-        </div>
+    <div
+      ref={ref}
+      className="relative h-[1350px] w-[1080px] overflow-hidden text-white"
+      style={{ backgroundColor: POSTER_BLUE }}
+    >
+      <PosterDomain />
 
-        {friends.length === 0 ? (
-          <p
-            className={`pt-56 text-center text-[54px] text-slate-700 ${handFont.className}`}
-          >
-            Add friends to compare taste!
-          </p>
-        ) : (
-          <>
+      <h2
+        className={`absolute inset-x-0 top-[92px] text-center text-[84px] leading-none text-white ${displayFont.className}`}
+      >
+        TASTE COMPATIBILITY
+      </h2>
+
+      {friends.length === 0 ? (
+        <p
+          className={`absolute inset-x-[80px] top-[560px] text-center text-[54px] font-bold leading-tight ${handFont.className}`}
+        >
+          Add friends to compare taste!
+        </p>
+      ) : (
+        <>
+          <div className="absolute left-[64px] right-[64px] top-[216px]">
             <p
-              className={`mt-8 text-[34px] text-slate-600 ${handFont.className}`}
+              className={`text-center text-[38px] font-bold leading-none ${handFont.className}`}
             >
               Compare with
             </p>
             {interactive ? (
-              <select
-                value={selectedKey}
-                onChange={(e) => onSelectChange?.(e.target.value)}
-                className="mt-1 w-full -rotate-[0.3deg] rounded-lg bg-white px-5 py-4 text-[34px] font-black text-slate-900 shadow-md"
-              >
-                <option value="">Choose a friend…</option>
-                {friends.map((f, i) => (
-                  <option key={friendKey(f, i)} value={friendKey(f, i)}>
-                    {friendLabel(f)}
-                  </option>
-                ))}
-              </select>
+              <div className="mx-auto mt-[12px] w-[700px] rounded-xl bg-white px-2 shadow-md">
+                <select
+                  value={selectedKey}
+                  onChange={(e) => onSelectChange?.(e.target.value)}
+                  className="w-full cursor-pointer bg-transparent px-4 py-4 text-[32px] font-black text-slate-900 outline-none"
+                >
+                  <option value="">Choose a friend…</option>
+                  {friends.map((f, i) => (
+                    <option key={friendKey(f, i)} value={friendKey(f, i)}>
+                      {friendLabel(f)}
+                    </option>
+                  ))}
+                </select>
+              </div>
             ) : (
-              <div className="mt-1 -rotate-[0.3deg] rounded-lg bg-white px-5 py-3 shadow-md">
-                <span className={`text-[42px] leading-none text-slate-800 ${handFont.className}`}>
+              <div className="mx-auto mt-[12px] w-[700px] rounded-xl bg-white px-5 py-3 text-center shadow-md">
+                <span
+                  className={`text-[42px] leading-none text-slate-800 ${handFont.className}`}
+                >
                   {friend ? friendLabel(friend) : 'Choose a friend…'}
                 </span>
               </div>
             )}
+          </div>
 
-            {!friend ? (
-              <p
-                className={`pt-40 text-center text-[48px] text-slate-600 ${handFont.className}`}
-              >
-                Pick a friend to see your match!
-              </p>
-            ) : score === null || !tier ? (
-              <p
-                className={`pt-40 text-center text-[48px] text-slate-600 ${handFont.className}`}
-              >
-                {friendLabel(friend)} hasn&apos;t ranked enough songs yet.
-              </p>
-            ) : (
-              <>
-                <div className="mt-10 text-center">
-                  <span
-                    className={`text-[210px] leading-none ${markerFont.className}`}
-                    style={{ color: tier.ink }}
-                  >
-                    {score}%
-                  </span>
-                  <p
-                    className={`mt-2 text-[42px] text-slate-700 ${handFont.className}`}
-                  >
-                    taste match with {friendLabel(friend)}
-                  </p>
-                  <p
-                    className={`mt-6 -rotate-2 text-[58px] leading-none ${markerFont.className}`}
-                    style={{ color: tier.ink }}
-                  >
-                    {tier.label.toUpperCase()}
-                  </p>
-                </div>
-
-                {shared.length > 0 && (
-                  <div className="mx-auto mt-12 max-w-[760px] -rotate-[0.4deg] bg-[#fffdf4] px-8 py-6 shadow-[0_16px_36px_rgba(60,45,10,0.28)]">
-                    <p
-                      className={`text-[38px] text-slate-700 ${handFont.className}`}
+          {!friend ? (
+            <p
+              className={`absolute inset-x-[80px] top-[560px] text-center text-[54px] font-bold leading-tight ${handFont.className}`}
+            >
+              Pick a friend to see your match!
+            </p>
+          ) : score === null || !tier ? (
+            <p
+              className={`absolute inset-x-[80px] top-[560px] text-center text-[54px] font-bold leading-tight ${handFont.className}`}
+            >
+              {friendLabel(friend)} hasn&apos;t ranked enough songs yet.
+            </p>
+          ) : (
+            <>
+              <div className="absolute inset-x-0 top-[356px] text-center">
+                <span
+                  className={`text-[176px] leading-none text-white ${displayFont.className}`}
+                >
+                  {score}%
+                </span>
+                <p
+                  className={`mt-[6px] text-[46px] font-bold leading-tight ${handFont.className}`}
+                >
+                  taste match with {friendLabel(friend)}
+                </p>
+                <div className="mt-[22px] flex justify-center">
+                  <FactsBurst className="h-[108px] w-[760px] -rotate-2">
+                    <span
+                      className={`w-[64%] text-center leading-none text-black ${displayFont.className}`}
+                      style={{ fontSize: tierSize }}
                     >
-                      You both love:
-                    </p>
-                    <ul className="mt-3">
-                      {shared.slice(0, 5).map((id) => {
-                        const s = byId.get(id);
-                        return (
-                          <li
-                            key={id}
-                            className="flex items-center gap-3 border-b border-dashed border-slate-300 py-2.5 last:border-0"
-                          >
-                            <span
-                              className={`h-4 w-4 shrink-0 rounded-full ${s?.albumColor || 'bg-slate-400'}`}
-                            />
-                            <span className="truncate text-[30px] font-black uppercase tracking-tight text-slate-900">
-                              {s?.title ?? id}
-                            </span>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </div>
-                )}
-              </>
-            )}
-          </>
-        )}
+                      {tierLabel}
+                    </span>
+                  </FactsBurst>
+                </div>
+              </div>
+
+              {shared.length > 0 && (
+                <div className="absolute left-[110px] right-[110px] top-[748px] bg-white px-[36px] py-[26px] shadow-[0_24px_48px_rgba(2,60,90,0.35)]">
+                  <p
+                    className={`text-[38px] leading-none text-slate-700 ${handFont.className}`}
+                  >
+                    You both love:
+                  </p>
+                  <ul className="mt-2">
+                    {shared.slice(0, 5).map((id) => {
+                      const s = byId.get(id);
+                      return (
+                        <li
+                          key={id}
+                          className="flex items-center gap-3 border-b border-dashed border-slate-300 py-[11px] last:border-0"
+                        >
+                          <span
+                            className={`h-4 w-4 shrink-0 rounded-full ${s?.albumColor || 'bg-slate-400'}`}
+                          />
+                          <span className="truncate text-[29px] font-black uppercase tracking-tight text-slate-900">
+                            {s?.title ?? id}
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
+            </>
+          )}
+        </>
+      )}
+
+      {/* project masthead + the card's existing CTA, restyled */}
+      <div className="absolute inset-x-12 bottom-[92px] flex items-center justify-center gap-[14px]">
+        <FlyingW className="h-[26px] w-[48px] text-white" />
+        <span className="text-[22px] font-black uppercase tracking-[0.22em] text-white/95">
+          All My Favorite Songs · The Weezer Song Ranking Project
+        </span>
       </div>
-    </ScrapbookVisual>
+      <p
+        className={`absolute inset-x-12 bottom-[30px] text-center text-[44px] font-bold leading-none text-white ${handFont.className}`}
+      >
+        JOIN THE DEBATE AT RANKINGWEEZER.COM
+      </p>
+    </div>
   );
 });
 

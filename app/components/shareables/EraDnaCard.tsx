@@ -167,12 +167,12 @@ export const EraDnaCardVisual = forwardRef<
             </span>
           </h2>
 
-          <p className="absolute inset-x-[60px] top-[424px] text-center text-[42px] leading-snug">
+          <p className="absolute inset-x-[64px] top-[424px] text-center text-[42px] leading-snug">
             {ERA_QUIPS[top.key]}
           </p>
 
           {/* All five eras, her bars: name + pct over a gray-blue track */}
-          <div className="absolute left-[72px] right-[72px] top-[512px]">
+          <div className="absolute left-[64px] right-[64px] top-[512px]">
             {withPct.map((d) => (
               <div key={d.key} className="mb-[24px] last:mb-0">
                 <div className="flex items-baseline justify-between">

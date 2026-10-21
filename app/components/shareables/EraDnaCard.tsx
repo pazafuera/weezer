@@ -1,8 +1,15 @@
 'use client';
 
 import { forwardRef } from 'react';
-import { BrushStroke, FlyingW, SaveImageButton, ScrapbookVisual, distinctAlbumIds, useShareableDownload } from './ShareCardShell';
-import { handFont, markerFont } from './fonts';
+import {
+  POSTER_BLUE,
+  PosterDomain,
+  SaveImageButton,
+  albumCoverSrc,
+  resolveAlbumId,
+  useShareableDownload,
+} from './ShareCardShell';
+import { displayFont, handFont } from './fonts';
 import type { ShareSong } from './Top10Card';
 import { FULL_SONG_POOL } from '../../data/constants';
 import { MIN_QUALIFYING_RATINGS } from '../../lib/fanStatsMethodology';
@@ -15,6 +22,27 @@ export const ERAS = [
   { key: 'new', label: '2021+', name: 'New Horizons', color: '#9333ea', test: (y: number) => y >= 2021 },
 ];
 
+/** Abby's brighter bar palette for the poster card — same era
+ *  identities as ERAS.color, pushed toward her mockup's fills. The
+ *  scrapbook-era ERAS.color values stay untouched for other uses. */
+const POSTER_ERA_COLORS: Record<string, string> = {
+  blue: '#0B6DAD',
+  y2k: '#C6D92D',
+  red: '#F23A2E',
+  comeback: '#F6CD5F',
+  new: '#8A44F2',
+};
+
+/** The album that fronts each era in the halftone strip when the
+ *  user's own ranked songs don't supply one. */
+const ERA_SIGNATURE_ALBUM: Record<string, string> = {
+  blue: 'blue',
+  y2k: 'green',
+  red: 'red',
+  comeback: 'white',
+  new: 'van-weezer',
+};
+
 const ERA_QUIPS: Record<string, string> = {
   blue: 'You romanticize 1994. Same, honestly.',
   y2k: 'Green Album summers, forever.',
@@ -23,10 +51,50 @@ const ERA_QUIPS: Record<string, string> = {
   new: 'Here for the new stuff. Bold.',
 };
 
+/** The user's most-ranked album inside one era (their signature for
+ *  that era), falling back to the era's signature album. */
+function eraArtId(
+  era: (typeof ERAS)[number],
+  songs: ShareSong[],
+): string {
+  const counts = new Map<string, number>();
+  let best: string | undefined;
+  let bestCount = 0;
+  for (const s of songs) {
+    if ((s.year || 0) > 0 && era.test(s.year)) {
+      const id = resolveAlbumId(s);
+      if (id) {
+        const c = (counts.get(id) ?? 0) + 1;
+        counts.set(id, c);
+        if (c > bestCount) {
+          best = id;
+          bestCount = c;
+        }
+      }
+    }
+  }
+  return best ?? ERA_SIGNATURE_ALBUM[era.key];
+}
+
+/** Black halftone dot screen over a cover, as in the mockup's strip. */
+function HalftoneOverlay() {
+  return (
+    <div
+      aria-hidden="true"
+      className="absolute inset-0"
+      style={{
+        backgroundImage:
+          'radial-gradient(circle, rgba(0,0,0,0.55) 1.8px, transparent 2.2px)',
+        backgroundSize: '8px 8px',
+      }}
+    />
+  );
+}
+
 export const EraDnaCardVisual = forwardRef<
   HTMLDivElement,
   { songs: ShareSong[]; subtitle?: string }
->(function EraDnaCardVisual({ songs, subtitle }, ref) {
+>(function EraDnaCardVisual({ songs }, ref) {
   // ERA DISTRIBUTION. `songs` is the user's RATED songs only (real
   // buckets — 'unknown' marks and unrated songs never reach this card).
   //
@@ -60,92 +128,93 @@ export const EraDnaCardVisual = forwardRef<
   const total = ratedTotal;
   const top = withPct.reduce((a, d) => (d.weight > a.weight ? d : a), withPct[0]);
   const topPct = top.pct;
-  const artIds = distinctAlbumIds([
-    ...songs.filter((s) => (s.year || 0) > 0 && top.test(s.year)),
-    ...songs,
-  ]);
+  const stripIds = ERAS.map((e) => eraArtId(e, songs));
 
   return (
-    <ScrapbookVisual ref={ref} subtitle={subtitle} artAlbumIds={artIds}>
-      <div className="absolute bottom-[190px] left-[184px] right-[60px] top-[140px]">
-        {total === 0 ? (
+    <div
+      ref={ref}
+      className="relative h-[1350px] w-[1080px] overflow-hidden text-white"
+      style={{ backgroundColor: POSTER_BLUE }}
+    >
+      <PosterDomain />
+      {total === 0 ? (
+        <div className="absolute inset-0 flex items-center justify-center px-[100px]">
           <p
-            className={`pt-64 text-center text-[54px] text-slate-700 ${handFont.className}`}
+            className={`text-center text-[56px] font-bold leading-tight ${handFont.className}`}
           >
             Rank some songs to map your Era DNA!
           </p>
-        ) : (
-          <>
-            <div className="flex items-start justify-between gap-6">
-              <p className="relative inline-block">
-                <span
-                  className={`relative z-10 text-[46px] tracking-wide text-slate-800 ${markerFont.className}`}
-                >
-                  MY ERA DNA
-                </span>
-                <BrushStroke
-                  color="#fbbf24"
-                  className="absolute -bottom-2 left-0 z-0 h-[18px] w-full"
-                />
-              </p>
-              <FlyingW className="w-[150px] shrink-0 rotate-[8deg] text-[#0072CE]" />
-            </div>
-            <h2
-              className={`mt-4 text-[118px] leading-[0.95] text-slate-900 ${markerFont.className}`}
-            >
-              YOU ARE {topPct}%{' '}
-              <span style={{ color: top.color }}>{top.name.toUpperCase()}</span>
-            </h2>
-            <div className="mt-5 inline-block -rotate-1 rounded-2xl rounded-bl-sm bg-white px-5 py-2.5 shadow-lg">
-              <span
-                className={`text-[42px] leading-none text-slate-800 ${handFont.className}`}
-              >
-                {ERA_QUIPS[top.key]}
-              </span>
-            </div>
+        </div>
+      ) : (
+        <>
+          <p
+            className={`absolute inset-x-0 top-[72px] text-center text-[58px] font-bold leading-none ${handFont.className}`}
+          >
+            My era DNA:
+          </p>
 
-            <div className="mt-9">
-              {withPct.map((d, i) => {
-                const pct = d.pct;
-                return (
+          <h2
+            className={`absolute inset-x-0 top-[148px] text-center leading-[1.0] ${displayFont.className}`}
+          >
+            <span className="block text-[116px] text-white">
+              YOU ARE {topPct}%
+            </span>
+            <span
+              className="block text-[110px]"
+              style={{ color: POSTER_ERA_COLORS[top.key] }}
+            >
+              {top.name.toUpperCase()}
+            </span>
+          </h2>
+
+          <p className="absolute inset-x-[60px] top-[424px] text-center text-[42px] leading-snug">
+            {ERA_QUIPS[top.key]}
+          </p>
+
+          {/* All five eras, her bars: name + pct over a gray-blue track */}
+          <div className="absolute left-[72px] right-[72px] top-[512px]">
+            {withPct.map((d) => (
+              <div key={d.key} className="mb-[24px] last:mb-0">
+                <div className="flex items-baseline justify-between">
+                  <p className="text-[34px] font-medium leading-none">{d.name}</p>
+                  <p className="text-[34px] font-semibold leading-none">{d.pct}%</p>
+                </div>
+                <div className="mt-[10px] h-[46px] overflow-hidden rounded-full bg-[#9DB3C4]">
                   <div
-                    key={d.key}
-                    className="mt-6"
-                    style={{ transform: `rotate(${i % 2 === 0 ? -0.4 : 0.3}deg)` }}
-                  >
-                    <div className="flex items-baseline justify-between">
-                      <p className="text-[30px] font-black uppercase tracking-tight text-slate-900">
-                        {d.name}{' '}
-                        <span className="text-[24px] font-bold text-slate-500">
-                          {d.label}
-                        </span>
-                      </p>
-                      <p
-                        className={`text-[38px] leading-none ${markerFont.className}`}
-                        style={{ color: d.color }}
-                      >
-                        {pct}%
-                      </p>
-                    </div>
-                    <div className="mt-2 h-[48px] overflow-hidden rounded-full bg-[#e0d4b2]">
-                      <div
-                        className="h-full rounded-full"
-                        style={{
-                          width: `${Math.max(pct, 2)}%`,
-                          backgroundColor: d.color,
-                          backgroundImage:
-                            'repeating-linear-gradient(45deg, rgba(255,255,255,0.16) 0 10px, transparent 10px 20px)',
-                        }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </>
-        )}
-      </div>
-    </ScrapbookVisual>
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${Math.max(d.pct, 6)}%`,
+                      backgroundColor: POSTER_ERA_COLORS[d.key],
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Halftone album strip along the bottom, one cover per era */}
+          <div className="absolute inset-x-0 bottom-[64px] flex h-[216px]">
+            {stripIds.map((id, i) => (
+              <div key={`${id}-${i}`} className="relative h-full flex-1 overflow-hidden">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={albumCoverSrc(id)}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
+                <HalftoneOverlay />
+              </div>
+            ))}
+          </div>
+
+          <p
+            className={`absolute inset-x-[40px] bottom-[12px] text-center text-[38px] font-bold leading-none ${handFont.className}`}
+          >
+            All My Favorite Songs: The Weezer Song Ranking Project
+          </p>
+        </>
+      )}
+    </div>
   );
 });
 

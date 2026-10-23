@@ -8,11 +8,12 @@ import { displayFont, handFont } from './shareables/fonts';
 import { POSTER_BLUE } from './shareables/ShareCardShell';
 import {
   planTierCarouselSlices,
+  planTierCarouselStamps,
   tierCarouselFilename,
   TIER_CAROUSEL_HEIGHT,
   TIER_CAROUSEL_WIDTH,
 } from './tierCarousel';
-import type { TierCarouselSlice } from './tierCarousel';
+import type { TierCarouselSection, TierCarouselSlice } from './tierCarousel';
 
 export interface RankedSong {
   id: string;
@@ -108,6 +109,14 @@ const BUCKET_TIER_LABEL: Record<BucketType, string> = {
 /* cuts only at tier-section / tile-row / footer boundaries measured  */
 /* from the export node's own layout, and short slices padded with    */
 /* the poster blue.                                                   */
+/*                                                                    */
+/* Tier labels: each tier's letter is centered over the tier's full   */
+/* height, so a mid-tier cut would leave the tier's opening segment   */
+/* label-less on its slice (the user's B tier, Oct 22). Two guards:   */
+/* the planner treats each glyph's measured band as a forbidden span */
+/* (no cut may split the letter itself), and every split-tier         */
+/* segment that doesn't carry the original glyph gets the label       */
+/* stamped onto its slice over the label column.                      */
 /* ------------------------------------------------------------------ */
 
 function loadRenderedImage(src: string): Promise<HTMLImageElement> {
@@ -128,17 +137,56 @@ function canvasToPngBlob(canvas: HTMLCanvasElement): Promise<Blob> {
   });
 }
 
-/** Safe cut offsets for one export node, in rendered-image pixels.
- *  Boundaries are the tops of the chart grid, of each tier section,
- *  and of each tile (grouped by the planner into row tops), plus the
- *  top of the footer — so a cut never lands inside the header, a
- *  tile, or the footer. */
-function measureTierCarouselCuts(
+/** One tier section's measured geometry + label typography, in
+ *  rendered-image pixels. The stamp pass repaints split tiers'
+ *  labels from these values, so they are read off the chart's own
+ *  DOM (computed styles included) rather than restated. */
+interface TierCarouselSectionLayout extends TierCarouselSection {
+  /** The label cell's computed background (the tier pastel). */
+  bandColor: string;
+  /** The glyph's computed color. */
+  letterColor: string;
+  /** The glyph's computed font family stack. */
+  fontFamily: string;
+  /** The glyph's computed font weight. */
+  fontWeight: string;
+  /** The glyph's font size in rendered-image pixels. */
+  fontSizePx: number;
+  /** The glyph's font size in CSS pixels (for document.fonts.load). */
+  fontSizeCssPx: number;
+}
+
+interface TierCarouselLayout {
+  allowedBoundaries: number[];
+  headerEnd: number;
+  footerStart: number;
+  /** The label column's x-extent in rendered-image pixels (every
+   *  tier row shares the grid's first column, so one measurement
+   *  serves all sections). */
+  labelColumn: { x: number; width: number };
+  sections: TierCarouselSectionLayout[];
+}
+
+/** Safe cut offsets + tier label geometry for one export node, in
+ *  rendered-image pixels. Boundaries are the tops of the chart grid,
+ *  of each tier section, and of each tile (grouped by the planner
+ *  into row tops), plus the top of the footer — so a cut never lands
+ *  inside the header, a tile, or the footer.
+ *
+ *  The glyph band is DERIVED from the label glyph element's own
+ *  rect: the badge cell spans the tier's full height and centers
+ *  the letter (flex), so the glyph's rect is exactly the band a cut
+ *  must not split. If the glyph element is ever missing, fall back
+ *  to the cell's middle half — wider than the real line box, i.e.
+ *  conservative in the safe direction. */
+function measureTierCarouselLayout(
   node: HTMLElement,
+  renderedWidth: number,
   renderedHeight: number,
-): { allowedBoundaries: number[]; headerEnd: number; footerStart: number } {
+): TierCarouselLayout {
   const rootRect = node.getBoundingClientRect();
   const scale = rootRect.height > 0 ? renderedHeight / rootRect.height : 2;
+  const scaleX = rootRect.width > 0 ? renderedWidth / rootRect.width : scale;
   const topOf = (el: Element) =>
     (el.getBoundingClientRect().top - rootRect.top) * scale;
   const bottomOf = (el: Element) =>
@@ -155,13 +203,78 @@ function measureTierCarouselCuts(
     .forEach((el) => boundaries.add(topOf(el)));
   if (footer) boundaries.add(topOf(footer));
 
+  const sections: TierCarouselSectionLayout[] = [];
+  let labelColumn = { x: 0, width: 0 };
+  node.querySelectorAll('[data-tier-export-section]').forEach((sectionEl) => {
+    const labelEl = sectionEl.querySelector('[data-tier-export-label]');
+    const glyphEl = sectionEl.querySelector('[data-tier-export-glyph]');
+    if (!labelEl) return;
+    const top = topOf(sectionEl);
+    const bottom = bottomOf(sectionEl);
+
+    const labelRect = labelEl.getBoundingClientRect();
+    if (labelColumn.width === 0) {
+      labelColumn = {
+        x: (labelRect.left - rootRect.left) * scaleX,
+        width: labelRect.width * scaleX,
+      };
+    }
+
+    let glyphStart: number;
+    let glyphEnd: number;
+    if (glyphEl) {
+      glyphStart = topOf(glyphEl);
+      glyphEnd = bottomOf(glyphEl);
+    } else {
+      const mid = (top + bottom) / 2;
+      const halfBand = (bottom - top) / 4;
+      glyphStart = mid - halfBand;
+      glyphEnd = mid + halfBand;
+    }
+
+    const labelStyle = window.getComputedStyle(labelEl);
+    const glyphStyle = glyphEl ? window.getComputedStyle(glyphEl) : labelStyle;
+    const fontSizeCssPx = parseFloat(glyphStyle.fontSize) || 36;
+    sections.push({
+      label: (glyphEl?.textContent ?? labelEl.textContent ?? '').trim(),
+      top,
+      bottom,
+      glyphStart,
+      glyphEnd,
+      bandColor: labelStyle.backgroundColor,
+      letterColor: glyphStyle.color,
+      fontFamily: glyphStyle.fontFamily,
+      fontWeight: glyphStyle.fontWeight,
+      fontSizePx: fontSizeCssPx * scale,
+      fontSizeCssPx,
+    });
+  });
+
   return {
     allowedBoundaries: Array.from(boundaries),
     // The header zone runs until the chart grid starts (its bottom
     // margin included); the first cut may not land inside it.
     headerEnd: grid ? topOf(grid) : header ? bottomOf(header) : 0,
     footerStart: footer ? topOf(footer) : renderedHeight,
+    labelColumn,
+    sections,
   };
+}
+
+/** Best-effort: make sure the display face is loaded before the
+ *  stamp pass draws with it on canvas. It already styles the chart
+ *  on screen and the html-to-image render, so this normally resolves
+ *  immediately; a failure must not fail the export. */
+async function ensureStampFont(layout: TierCarouselLayout): Promise<void> {
+  const first = layout.sections[0];
+  if (!first || typeof document === 'undefined' || !document.fonts) return;
+  try {
+    await document.fonts.load(
+      `${first.fontWeight} ${first.fontSizeCssPx}px ${first.fontFamily}`,
+    );
+  } catch {
+    /* the face is already in use by the page; proceed regardless */
+  }
 }
 
 async function sliceTierCarouselImage(
@@ -169,17 +282,33 @@ async function sliceTierCarouselImage(
   node: HTMLElement,
 ): Promise<{ blobs: Blob[]; slices: TierCarouselSlice[] }> {
   const image = await loadRenderedImage(dataUrl);
-  const cuts = measureTierCarouselCuts(node, image.naturalHeight);
+  const layout = measureTierCarouselLayout(
+    node,
+    image.naturalWidth,
+    image.naturalHeight,
+  );
   const slices = planTierCarouselSlices({
     totalHeight: image.naturalHeight,
-    allowedBoundaries: cuts.allowedBoundaries,
-    headerEnd: cuts.headerEnd,
-    footerStart: cuts.footerStart,
+    allowedBoundaries: layout.allowedBoundaries,
+    headerEnd: layout.headerEnd,
+    footerStart: layout.footerStart,
     maxSliceHeight: TIER_CAROUSEL_HEIGHT,
+    // No cut may split a tier's centered label glyph — otherwise
+    // the glyph's slice segment shows a letter cut in half, and
+    // the segment on the other side shows none at all.
+    forbiddenSpans: layout.sections.map((section) => ({
+      start: section.glyphStart,
+      end: section.glyphEnd,
+    })),
   });
+  // Every segment of a split tier that does not carry the tier's
+  // original glyph gets a stamped label (single-slice charts: none).
+  const stamps = planTierCarouselStamps(slices, layout.sections);
+  if (stamps.length > 0) await ensureStampFont(layout);
 
   const blobs: Blob[] = [];
-  for (const slice of slices) {
+  for (let sliceIndex = 0; sliceIndex < slices.length; sliceIndex++) {
+    const slice = slices[sliceIndex];
     const canvas = document.createElement('canvas');
     canvas.width = TIER_CAROUSEL_WIDTH;
     canvas.height = TIER_CAROUSEL_HEIGHT;
@@ -201,6 +330,29 @@ async function sliceTierCarouselImage(
       TIER_CAROUSEL_WIDTH,
       slice.sourceHeight,
     );
+    // Stamp split-tier labels over the label column, pixel-aligned
+    // with the measured column and the segment's extent in this
+    // slice, in the chart's own label typography.
+    for (const stamp of stamps) {
+      if (stamp.sliceIndex !== sliceIndex) continue;
+      const section = layout.sections[stamp.sectionIndex];
+      ctx.fillStyle = section.bandColor;
+      ctx.fillRect(
+        layout.labelColumn.x,
+        stamp.y,
+        layout.labelColumn.width,
+        stamp.height,
+      );
+      ctx.fillStyle = section.letterColor;
+      ctx.font = `${section.fontWeight} ${section.fontSizePx}px ${section.fontFamily}`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(
+        section.label,
+        layout.labelColumn.x + layout.labelColumn.width / 2,
+        stamp.y + stamp.height / 2,
+      );
+    }
     blobs.push(await canvasToPngBlob(canvas));
   }
   return { blobs, slices };
@@ -333,9 +485,12 @@ export default function TierListChart({
           data-tier-export-section="true"
           className={`grid ${isExportMode ? 'grid-cols-[6rem_1fr]' : 'grid-cols-[4rem_minmax(0,1fr)] sm:grid-cols-[6rem_minmax(0,1fr)]'} bg-black gap-0.5 sm:gap-1 min-h-[80px] w-full`}
         >
-          {/* TIER BADGE */}
-          <div className={`w-full h-full flex items-center justify-center ${tier.color}`}>
-            <span className={`text-2xl sm:text-4xl ${displayFont.className} ${tier.text}`}>
+          {/* TIER BADGE — the carousel slicer measures this cell
+              and the glyph span inside it: the letter is centered
+              over the tier's full height, so its band is protected
+              from cuts and split segments get a stamped label. */}
+          <div data-tier-export-label="true" className={`w-full h-full flex items-center justify-center ${tier.color}`}>
+            <span data-tier-export-glyph="true" className={`text-2xl sm:text-4xl ${displayFont.className} ${tier.text}`}>
               {tier.label}
             </span>
           </div>

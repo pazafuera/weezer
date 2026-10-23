@@ -24,6 +24,17 @@ export interface TierCarouselSlice {
   outputHeight: number;
 }
 
+/** A vertical span of the rendered chart that no cut may pass
+ *  through — in practice each tier label's glyph band: the tier's
+ *  letter is centered over the tier's full height, so a cut through
+ *  the band would split the letter itself between two slices. A cut
+ *  landing exactly on `start` or `end` is fine (the glyph stays
+ *  whole on one side). */
+export interface TierCarouselForbiddenSpan {
+  start: number;
+  end: number;
+}
+
 export interface TierCarouselPlanInput {
   /** Total height of the rendered chart image, in image pixels. */
   totalHeight: number;
@@ -35,6 +46,85 @@ export interface TierCarouselPlanInput {
   footerStart?: number;
   /** Maximum slice height (also the padded output height). */
   maxSliceHeight?: number;
+  /** Spans no cut may pass through (tier glyph bands). */
+  forbiddenSpans?: TierCarouselForbiddenSpan[];
+}
+
+/** One tier section's geometry in rendered-image pixels, measured
+ *  from the export node's layout. The glyph band is the label
+ *  letter's own rect: the letter is vertically centered in a label
+ *  cell that spans the tier's full height, so the band sits mid-tier. */
+export interface TierCarouselSection {
+  /** Tier label letter (e.g. 'B'). */
+  label: string;
+  /** Section top in image pixels. */
+  top: number;
+  /** Section bottom in image pixels. */
+  bottom: number;
+  /** Glyph band start (inclusive) in image pixels. */
+  glyphStart: number;
+  /** Glyph band end (exclusive) in image pixels. */
+  glyphEnd: number;
+}
+
+/** A label to stamp onto one slice: a tier was split by a cut and
+ *  this slice's segment of the tier does not contain the tier's
+ *  original (centered) glyph, so the segment gets its own label —
+ *  the tier's pastel band repainted over the label column for
+ *  exactly this segment's extent, letter centered within it. */
+export interface TierCarouselStamp {
+  /** Index into the sections array the stamp belongs to. */
+  sectionIndex: number;
+  /** Tier label letter to draw. */
+  label: string;
+  /** Slice the stamp is drawn on. */
+  sliceIndex: number;
+  /** Segment top within that slice's canvas, in image pixels. */
+  y: number;
+  /** Segment height within that slice's canvas, in image pixels. */
+  height: number;
+  /** Segment top in source-image pixels (y + slice.start). */
+  sourceY: number;
+}
+
+/**
+ * Plan the label stamps for a sliced chart.
+ *
+ * For every tier section × slice pair whose intersection is
+ * non-empty, exactly one complete glyph must be visible: either the
+ * slice fully contains the tier's original glyph band (the rendered
+ * letter shows as-is, no stamp) or the segment gets a stamp. With
+ * glyph-band protection in the slice planner the band is never
+ * split, so each segment either wholly contains it or does not
+ * touch it — and even if a band were split, the stamp repaints the
+ * label column for the whole segment, covering any partial glyph.
+ * A single-slice chart (short charts, the albums view) therefore
+ * always yields zero stamps.
+ */
+export function planTierCarouselStamps(
+  slices: TierCarouselSlice[],
+  sections: TierCarouselSection[],
+): TierCarouselStamp[] {
+  const stamps: TierCarouselStamp[] = [];
+  sections.forEach((section, sectionIndex) => {
+    slices.forEach((slice, sliceIndex) => {
+      const segTop = Math.max(section.top, slice.start);
+      const segBottom = Math.min(section.bottom, slice.end);
+      if (segTop >= segBottom) return;
+      const carriesGlyph =
+        section.glyphStart >= slice.start && section.glyphEnd <= slice.end;
+      if (carriesGlyph) return;
+      stamps.push({
+        sectionIndex,
+        label: section.label,
+        sliceIndex,
+        y: segTop - slice.start,
+        height: segBottom - segTop,
+        sourceY: segTop,
+      });
+    });
+  });
+  return stamps;
 }
 
 /**
@@ -85,6 +175,22 @@ export function planTierCarouselSlices(
     ),
   ).sort((a, b) => a - b);
 
+  // Glyph-band protection: a cut strictly inside a forbidden span
+  // would split a tier's centered letter between two slices, so
+  // such boundaries are unusable. Landing exactly on a span edge
+  // keeps the glyph whole and stays allowed.
+  const forbiddenSpans = (input.forbiddenSpans ?? [])
+    .map((span) => ({
+      start: Math.round(span.start),
+      end: Math.round(span.end),
+    }))
+    .filter((span) => span.end > span.start && span.start < totalHeight && span.end > 0)
+    .sort((a, b) => a.start - b.start);
+  const isForbiddenCut = (boundary: number) =>
+    forbiddenSpans.some(
+      (span) => boundary > span.start && boundary < span.end,
+    );
+
   const slices: TierCarouselSlice[] = [];
   let start = 0;
   while (totalHeight - start > maxSliceHeight) {
@@ -94,6 +200,7 @@ export function planTierCarouselSlices(
     for (const boundary of boundaries) {
       if (boundary < earliest) continue;
       if (boundary > limit) break;
+      if (isForbiddenCut(boundary)) continue;
       if (boundary > start) cut = boundary;
     }
     if (cut < 0) {

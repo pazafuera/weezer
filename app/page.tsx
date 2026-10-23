@@ -3,7 +3,7 @@
 import React from 'react';
 import { useWeezer } from './context/WeezerContext';
 import AppShell from './components/AppShell';
-import { GuardNotice } from './components/SharedUI';
+import { GuardNotice, SyncNotice } from './components/SharedUI';
 
 import Step0Splash from './components/Step0Splash';
 import Step05Orientation from './components/Step05Orientation';
@@ -36,6 +36,8 @@ export default function WeezerRankerPage() {
     navigateTo,
     guardNotice,
     dismissGuardNotice,
+    syncNotice,
+    dismissSyncNotice,
     closeMaster,
     closeRefine,
     setSongBucket,
@@ -72,6 +74,10 @@ export default function WeezerRankerPage() {
           (rewrites land on triage or rank_buckets; context clears
           the notice on the next non-rewrite navigation). */}
       <GuardNotice notice={guardNotice} onDismiss={dismissGuardNotice} />
+
+      {/* Save-failure notice (Oct 22 save-race fix): renders only
+          when a rankings write exhausted its retries. */}
+      <SyncNotice show={syncNotice} onDismiss={dismissSyncNotice} />
 
       {step === 'splash' && <Step0Splash />}
 

@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/utils/supabase';
 import { BucketType, Song, FULL_SONG_POOL } from '../data/constants';
 import { sanitizeMasterList, reconcileMasterList, getRankedSongs, sortByBucketBlock } from '@/utils/rankingUtils';
+import { createRankingsSyncQueue } from '../lib/rankingsSync';
+import type { RankingsSyncQueue } from '../lib/rankingsSync';
 
 
 export type AppStep =
@@ -253,6 +255,13 @@ interface WeezerContextType {
    *  landing that was not rewritten clears it. */
   guardNotice: { requested: AppStep; landed: AppStep } | null;
   dismissGuardNotice: () => void;
+  /** True when the latest rankings write has failed every retry:
+   *  page.tsx renders a dismissible notice (a save failure is never
+   *  silent — Oct 22 save-race fix). Clears on the next successful
+   *  write or on dismiss; the unsaved payload is retained and the
+   *  next edit or flush retries it. */
+  syncNotice: boolean;
+  dismissSyncNotice: () => void;
   initialAuthMode: AuthModeType;
   navigateTo: (
     targetStep: AppStep,
@@ -457,6 +466,16 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   } | null>(null);
 
   const dismissGuardNotice = () => setGuardNotice(null);
+
+  // Save-failure notice (see the interface note) + a ref mirror of
+  // userId so the sync queue's send — created once, below — always
+  // writes for the currently signed-in user.
+  const [syncNotice, setSyncNotice] = useState(false);
+  const dismissSyncNotice = () => setSyncNotice(false);
+  const userIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    userIdRef.current = userId;
+  }, [userId]);
 
   // Deep-link intent parsed from ?step= on initial load. It is applied
   // (with prerequisite guards) only after user/ranking state has loaded.
@@ -815,46 +834,100 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     }
   }
 
-  // Debounced database sync (performance): triage and ranking clicks
-  // can fire many saves per second. localStorage still writes
-  // immediately on every change; the Supabase upsert waits ~1s for a
-  // pause and always sends the LATEST state. A flush on tab hide/close
-  // sends any pending write right away, so a fast exit doesn't lose
-  // the last change.
-  const pendingSyncRef = useRef<{
+  // Database sync goes through a serialized queue (app/lib/
+  // rankingsSync.ts — see its header for the Oct 22 post-mortem).
+  // The old code fired debounced whole-row upserts with no
+  // in-flight guard and never read the result: two snapshots could
+  // race on the wire and the older one landing last reverted songs
+  // the user had just moved, and failures vanished silently. The
+  // queue serializes writes (single-flight, coalesce-to-latest),
+  // retries with backoff, keeps the payload until a write succeeds,
+  // and surfaces an exhausted failure via syncNotice. localStorage
+  // still writes immediately on every change (the guest store, and
+  // unchanged); the queue only governs the Supabase write.
+  type RankingsSyncPayload = {
     map: Record<string, TriageValue>;
     master: Song[];
-  } | null>(null);
-  const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  };
 
-  const flushSyncToDatabase = async () => {
-    if (syncTimerRef.current) {
-      clearTimeout(syncTimerRef.current);
-      syncTimerRef.current = null;
+  // One transport attempt. Resolves true ONLY on a confirmed write:
+  // supabase-js resolves with an `error` object on HTTP failures
+  // (expired token, RLS), so the error must be read, not caught.
+  const sendRankingsToDatabase = async (
+    payload: RankingsSyncPayload,
+    opts: { keepalive: boolean }
+  ): Promise<boolean> => {
+    const uid = userIdRef.current;
+    if (!uid) return false;
+    const row = {
+      user_id: uid,
+      triage_map: payload.map,
+      master_list: payload.master,
+      updated_at: new Date().toISOString(),
+    };
+    if (opts.keepalive) {
+      // The page is going away (hide/pagehide): write through a
+      // keepalive fetch so iOS doesn't kill the request when it
+      // discards the page mid-flush. Same PostgREST upsert the
+      // client performs, with the session's access token.
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (!token) return false;
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/weezer_rankings?on_conflict=user_id`,
+          {
+            method: 'POST',
+            keepalive: true,
+            headers: {
+              apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+              Prefer: 'resolution=merge-duplicates',
+            },
+            body: JSON.stringify(row),
+          }
+        );
+        return res.ok;
+      } catch {
+        return false;
+      }
     }
-    const pending = pendingSyncRef.current;
-    pendingSyncRef.current = null;
-    if (!pending || !userId) return;
     try {
-      await supabase.from('weezer_rankings').upsert(
-        {
-          user_id: userId,
-          triage_map: pending.map,
-          master_list: pending.master,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'user_id' }
-      );
+      const { error } = await supabase
+        .from('weezer_rankings')
+        .upsert(row, { onConflict: 'user_id' });
+      if (error) {
+        console.error('Error syncing rankings:', error);
+        return false;
+      }
+      return true;
     } catch (err) {
       console.error('Error syncing rankings:', err);
+      return false;
     }
   };
-  const flushSyncRef = useRef(flushSyncToDatabase);
-  flushSyncRef.current = flushSyncToDatabase;
+  const sendRankingsRef = useRef(sendRankingsToDatabase);
+  sendRankingsRef.current = sendRankingsToDatabase;
 
+  const syncQueueRef = useRef<RankingsSyncQueue<RankingsSyncPayload> | null>(
+    null
+  );
+  if (syncQueueRef.current === null) {
+    syncQueueRef.current = createRankingsSyncQueue<RankingsSyncPayload>({
+      send: (payload, opts) => sendRankingsRef.current(payload, opts),
+      onGiveUp: () => setSyncNotice(true),
+      onSuccess: () => setSyncNotice(false),
+    });
+  }
+
+  // Flush on tab hide/close as well as on the debounce: a fast exit
+  // sends any pending write right away, on the keepalive transport.
   useEffect(() => {
     const flush = () => {
-      void flushSyncRef.current();
+      void syncQueueRef.current?.flush({ keepalive: true });
     };
     const onVisibility = () => {
       if (document.visibilityState === 'hidden') flush();
@@ -876,11 +949,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
       JSON.stringify({ triageMap: map, masterList: master })
     );
     if (!userId) return;
-    pendingSyncRef.current = { map, master };
-    if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
-    syncTimerRef.current = setTimeout(() => {
-      void flushSyncRef.current();
-    }, 1000);
+    syncQueueRef.current?.enqueue({ map, master });
   };
 
   const updateAndSyncBucketRanks = (
@@ -1140,6 +1209,8 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         setAccountCreated,
         guardNotice,
         dismissGuardNotice,
+        syncNotice,
+        dismissSyncNotice,
         initialAuthMode,
         navigateTo,
         closeLogin,

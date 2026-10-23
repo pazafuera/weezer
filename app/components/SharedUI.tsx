@@ -136,6 +136,40 @@ export function GuardNotice({
   );
 }
 
+// Save-failure notice, same banner pattern as GuardNotice above:
+// renders when the rankings sync gives up after its retries (see
+// WeezerContext's syncNotice). The unsaved changes are retained
+// and retried on the next edit or flush — this banner exists so a
+// failed save is never silent (Oct 22 save-race fix).
+export function SyncNotice({
+  show,
+  onDismiss,
+}: {
+  show: boolean;
+  onDismiss: () => void;
+}) {
+  if (!show) return null;
+  return (
+    <div className="bg-rose-50 border border-rose-200 rounded-2xl px-4 py-3 shadow-xs flex items-start gap-2 mb-4">
+      <p className="flex-1 text-xs sm:text-sm font-semibold text-rose-900 leading-relaxed">
+        Your latest ranking changes haven&apos;t saved yet — check your
+        connection. They&apos;re still on this device and the app will keep
+        trying.
+      </p>
+      <button
+        type="button"
+        onClick={onDismiss}
+        aria-label="Dismiss"
+        className="shrink-0 w-8 h-8 -mr-1.5 -mt-1 flex items-center justify-center rounded-full text-rose-700 hover:bg-rose-100 transition-colors cursor-pointer"
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+  );
+}
+
 // BULLETPROOF ARTWORK COMPONENT
 export function AlbumArtwork({ albumId, className = "" }: { albumId: string; className?: string }) {
   const album = ALBUMS_BY_ID[albumId];

@@ -90,6 +90,43 @@ export function bandForTotal(total: number): DepthBand {
 }
 
 /* ------------------------------------------------------------------ */
+/* Fanhood titles (the verdict — LOCKED Oct 27, 2026, Mark's names)    */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The fanhood ladder: what a finished run's depth says you ARE, as
+ * opposed to the depth bands above, which name the PLACES the game
+ * sinks through (Buddy Holly, Pinkerton, Karl…). Mark's names,
+ * verbatim, locked Oct 27, 2026 after he rejected a song-title
+ * ladder as "more cheesy than clever" — plain fanhood titles, with
+ * Weezer OG reserved for the bedrock alone. The established fanhood
+ * (Thread, Shareables) is always read off the player's BEST depth
+ * through this same ladder.
+ */
+export interface FanhoodTier {
+  min: number;
+  /** Inclusive upper bound; Infinity for Weezer OG. */
+  max: number;
+  title: string;
+}
+
+export const FANHOOD_LADDER: FanhoodTier[] = [
+  { min: 0, max: 199, title: 'Casual Fan' },
+  { min: 200, max: 499, title: 'Just the Hits Fan' },
+  { min: 500, max: 1499, title: 'Member of the Fan Club' },
+  { min: 1500, max: 4999, title: 'Ride or Die Fan' },
+  { min: 5000, max: Infinity, title: 'Weezer OG' },
+];
+
+/** The fanhood title a depth earns — the game's verdict line. */
+export function titleForDepth(depth: number): string {
+  for (const tier of FANHOOD_LADDER) {
+    if (depth >= tier.min && depth <= tier.max) return tier.title;
+  }
+  return FANHOOD_LADDER[FANHOOD_LADDER.length - 1].title;
+}
+
+/* ------------------------------------------------------------------ */
 /* Song depths (seed table, derived from the catalog)                  */
 /* ------------------------------------------------------------------ */
 

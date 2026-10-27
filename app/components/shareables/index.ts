@@ -9,6 +9,7 @@ export {
   GuitarSilhouette,
   VinylDisc,
   FactsBurst,
+  MusicNotesDoodle,
   albumCoverSrc,
   distinctAlbumIds,
   resolveAlbumId,
@@ -23,6 +24,7 @@ export type { ShareSong, Bucket } from './Top10Card';
 export { default as TribeBadgeCard, TribeBadgeCardVisual, computeTribe } from './TribeBadgeCard';
 export type { Tribe } from './TribeBadgeCard';
 export { default as EraDnaCard, EraDnaCardVisual, ERAS } from './EraDnaCard';
+export { default as FanhoodCard, FanhoodCardVisual } from './FanhoodCard';
 export {
   default as TasteCompatibilityCard,
   TasteCompatibilityCardVisual,

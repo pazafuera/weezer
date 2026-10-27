@@ -15,15 +15,16 @@ import {
   openPromptExtremes,
   openSongDepth,
   openSongQualifies,
-  readLoreBest,
   tierForDepth,
-  writeLoreBest,
+  titleForDepth,
 } from '../data/loreGame';
-import type { LoreBest, RarityTier, RunItem } from '../data/loreGame';
+import type { RarityTier, RunItem } from '../data/loreGame';
 import {
   matchTableAnswer,
   resolveSongAnswer,
 } from '../lib/loreMatch';
+import { readFanhood, settleFanhoodRun } from '../lib/fanhood';
+import type { FanhoodDeepest, FanhoodRecord } from '../lib/fanhood';
 
 const QUESTION_SECONDS = 25;
 const PREVIEW_SECONDS = 3;
@@ -35,7 +36,6 @@ type Phase =
   | 'leaving'
   | 'plunging'
   | 'reveal'
-  | 'zoomout'
   | 'result';
 
 /** Generic wrong-guess lines, rotated per attempt (natural phrasing,
@@ -358,7 +358,6 @@ function DescentStage({
   reducedMotion,
   viewH,
   focusTop,
-  zoomed,
   fill,
   camMs,
   children,
@@ -379,8 +378,6 @@ function DescentStage({
   reducedMotion: boolean;
   viewH: number;
   focusTop: boolean;
-  /** End-of-run view: the whole column scaled to fit the window. */
-  zoomed?: boolean;
   /** Fill the parent box instead of using a fixed pixel height. */
   fill?: boolean;
   /** Camera transition duration (defaults to the plunge length). */
@@ -411,7 +408,6 @@ function DescentStage({
     Math.max(markerY - anchor, 0),
     STAGE_HEIGHT - effH
   );
-  const zoomScale = effH / STAGE_HEIGHT;
   const moveMs = reducedMotion ? 0 : (camMs ?? PLUNGE_MS);
   return (
     <div
@@ -459,12 +455,10 @@ function DescentStage({
         style={{
           height: STAGE_HEIGHT,
           transformOrigin: 'top center',
-          transform: zoomed
-            ? `translateY(0px) scale(${zoomScale})`
-            : `translateY(${-camY}px)`,
+          transform: `translateY(${-camY}px)`,
           transition: reducedMotion
             ? 'none'
-            : `transform ${zoomed ? 1200 : (camMs ?? PLUNGE_MS)}ms cubic-bezier(0.22, 0.9, 0.3, 1)`,
+            : `transform ${camMs ?? PLUNGE_MS}ms cubic-bezier(0.22, 0.9, 0.3, 1)`,
         }}
       >
         {DEPTH_BANDS.map((band, i) => {
@@ -521,9 +515,7 @@ function DescentStage({
           style={{ height: markerY }}
         />
 
-        {/* The player marker (in the zoomed view an unscaled
-            overlay chip marks the spot instead — see below) */}
-        {!zoomed && (
+        {/* The player marker */}
         <div
           className="absolute left-3.5 z-20"
           style={{
@@ -550,13 +542,12 @@ function DescentStage({
             </div>
           </div>
         </div>
-        )}
 
         {/* The falling answer tag (v7): the player's own answer,
             riding just above the marker for the whole plunge. Even
             where the world motion reads subtle, a labeled object
             travelling the full distance cannot be missed. */}
-        {fallingTag && !zoomed && (
+        {fallingTag && (
           <div
             className="absolute left-[76px] z-20"
             style={{
@@ -610,25 +601,6 @@ function DescentStage({
         )}
       </div>
 
-      {/* Zoomed view: an unscaled marker chip at the final depth,
-          so the landing spot stays readable at fit-to-window scale */}
-      {zoomed && (
-        <div
-          className="absolute left-3 z-20 flex items-center gap-[7px]"
-          style={{
-            top: markerY * zoomScale,
-            transform: 'translateY(-50%)',
-          }}
-        >
-          <div className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full border-[3px] border-[#111111] bg-[#FFD23F] text-[10px] font-black text-[#111111] shadow-[0_6px_18px_rgba(0,0,0,0.45)]">
-            =w=
-          </div>
-          <div className="whitespace-nowrap rounded-full bg-[#111111] px-2.5 py-1 text-[10.5px] font-black tracking-[0.05em] text-[#FFD23F] shadow-[0_4px_12px_rgba(0,0,0,0.4)]">
-            YOU · {total.toLocaleString()} DEEP
-          </div>
-        </div>
-      )}
-
       {/* The bottom-pinned card */}
       {children && (
         <div
@@ -679,7 +651,7 @@ export default function StepLore() {
   const [usedSongIds, setUsedSongIds] = useState<ReadonlySet<string>>(
     new Set()
   );
-  const [best, setBest] = useState<LoreBest | null>(null);
+  const [fanhood, setFanhood] = useState<FanhoodRecord | null>(null);
   const [isNewBest, setIsNewBest] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
   // Guessing loop (v4): a wrong guess never ends the question — it
@@ -712,9 +684,11 @@ export default function StepLore() {
   const item = run[index];
   const stageRef = useRef<HTMLDivElement>(null);
 
-  // The saved best, read on mount (localStorage is browser-only).
+  // The established fanhood, read on mount (localStorage is
+  // browser-only). Legacy best-score values migrate on read — see
+  // app/lib/fanhood.ts.
   useEffect(() => {
-    setBest(readLoreBest());
+    setFanhood(readFanhood());
   }, []);
 
   // Reduced motion: the plunge becomes an instant jump.
@@ -1011,16 +985,6 @@ export default function StepLore() {
     return () => cancelAnimationFrame(raf);
   }, [phase, plungeMs, reducedMotion, total]);
 
-  // End-of-run zoom-out: hold the fitted column, then the results.
-  useEffect(() => {
-    if (phase !== 'zoomout') return;
-    const t = setTimeout(
-      () => setPhase('result'),
-      reducedMotion ? 900 : 3200
-    );
-    return () => clearTimeout(t);
-  }, [phase, reducedMotion]);
-
   // A wrong guess leaves the cursor in the input, ready for the
   // next try.
   useEffect(() => {
@@ -1068,21 +1032,26 @@ export default function StepLore() {
     return () => clearInterval(timer);
   }, [phase, index]);
 
-  // Landing on the result: persist the best run.
+  // Landing on the result: settle the run against the established
+  // fanhood. A deeper run replaces the record — including this
+  // run's deepest single answer, the brag the Thread and the
+  // Shareables card quote; a shallower run leaves it standing.
   useEffect(() => {
     if (phase !== 'result') return;
-    const current = bandForTotal(total);
-    const previous = readLoreBest();
-    if (!previous || total > previous.depth) {
-      const nextBest = { depth: total, band: current.title };
-      writeLoreBest(nextBest);
-      setBest(nextBest);
-      setIsNewBest(previous !== null && total > previous.depth);
-    } else {
-      setBest(previous);
-      setIsNewBest(false);
-    }
-    // total is final when the result phase opens.
+    const top = [...answers]
+      .filter((a) => a.depthEarned > 0)
+      .sort((a, b) => b.depthEarned - a.depthEarned)[0];
+    const runDeepest: FanhoodDeepest | null = top
+      ? {
+          answer: top.headline,
+          promptLabel: top.questionPrompt,
+          depth: top.depthEarned,
+        }
+      : null;
+    const settled = settleFanhoodRun(total, runDeepest);
+    setFanhood(settled.record);
+    setIsNewBest(settled.isNewBest);
+    // total and answers are final when the result phase opens.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
 
@@ -1107,9 +1076,10 @@ export default function StepLore() {
 
   const next = () => {
     if (index + 1 >= run.length) {
-      // The run ends with the zoom-out: the whole column, the
-      // trail, and where the marker landed — then the results.
-      setPhase('zoomout');
+      // The run ends straight at the results — the zoom-out that
+      // used to sit between was cut in v8 (Mark rejected it from
+      // a screenshot: a skinny ribbon and a detached chip).
+      setPhase('result');
     } else {
       setIndex(index + 1);
       setInput('');
@@ -1399,10 +1369,10 @@ export default function StepLore() {
             stage below takes every remaining pixel of the body. */}
         <div className="px-4 sm:px-6 pt-3 pb-2 space-y-0.5">
           <h1 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight">
-            Weezer Lore
+            How Rare a Weezer Fan Are You?
           </h1>
           <p className="text-sm font-medium text-slate-500">
-            How deep is your fanhood?
+            Ten prompts. The rarer your answer, the deeper you dig.
           </p>
         </div>
 
@@ -1414,7 +1384,7 @@ export default function StepLore() {
           <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs space-y-3">
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-black text-slate-950 tracking-tight">
-                The lore game is locked
+                This game is locked
               </h2>
               <span className="text-sm">🔒</span>
             </div>
@@ -1470,12 +1440,13 @@ export default function StepLore() {
                 <p>Every prompt takes more than one right answer. Rivers Cuomo is worth a little. Jason Cropper is worth a fortune.</p>
                 <p>Type your answers. Spelling doesn&apos;t have to be perfect.</p>
               </div>
-              {best && (
+              {fanhood && (
                 <p
                   className={`text-xs sm:text-sm font-bold ${CARD_THEMES[0].strong}`}
                 >
-                  Your deepest run so far: {best.depth.toLocaleString()} —{' '}
-                  {best.band} level.
+                  Your fanhood so far: you&apos;re a{' '}
+                  {titleForDepth(fanhood.bestDepth)} —{' '}
+                  {fanhood.bestDepth.toLocaleString()} deep.
                 </p>
               )}
               <button
@@ -1534,50 +1505,40 @@ export default function StepLore() {
           </div>
         )}
 
-        {/* ZOOM-OUT — the whole descent at a glance: every layer,
-            the full trail, and the spot the marker landed. */}
-        {unlocked && phase === 'zoomout' && (
-          <div className="flex flex-1 flex-col">
-            <DescentStage
-              total={total}
-              burst={null}
-              shake={false}
-              animKey={0}
-              reducedMotion={reducedMotion}
-              viewH={560}
-              focusTop={false}
-              zoomed
-              fill
-            />
-          </div>
-        )}
-
         {/* RESULT */}
         {unlocked && phase === 'result' && (
           <>
           <div className="w-full space-y-6 px-4 sm:px-6 pb-10">
+            {/* THE VERDICT — the results lead with what the run
+                says you ARE: Mark's fanhood ladder (titleForDepth),
+                not the layer the marker landed in. The banner keeps
+                the final layer's art and its warm line underneath. */}
             <div
               className={`relative overflow-hidden rounded-3xl p-6 shadow-md space-y-3 ${BAND_STAGE[finalBandIdx].layer}`}
               style={BAND_STAGE[finalBandIdx].textureStyle}
             >
               <p className="text-[11px] font-black uppercase tracking-wider opacity-70">
-                You dug to {total.toLocaleString()}
+                You&apos;re a
               </p>
-              <h2 className="text-3xl sm:text-4xl font-black tracking-tight leading-none">
-                {finalBand.title} level
+              <h2 className="text-4xl sm:text-5xl font-black tracking-tight leading-none">
+                {titleForDepth(total)}
               </h2>
+              <p className="text-base sm:text-lg font-black">
+                {total.toLocaleString()} deep
+              </p>
               <p className="text-xs sm:text-sm font-medium leading-relaxed opacity-80">
                 {finalBand.line}
               </p>
               {isNewBest && (
                 <p className="text-xs font-black">
-                  Your deepest run yet. 🏆
+                  Your deepest run yet — this is your fanhood now. 🏆
                 </p>
               )}
-              {!isNewBest && best && best.depth > total && (
+              {!isNewBest && fanhood && fanhood.bestDepth > total && (
                 <p className="text-xs font-bold opacity-70">
-                  Your best stands at {best.depth.toLocaleString()} —{' '}
-                  {best.band} level.
+                  Your fanhood stands at{' '}
+                  {titleForDepth(fanhood.bestDepth)} —{' '}
+                  {fanhood.bestDepth.toLocaleString()} deep.
                 </p>
               )}
             </div>

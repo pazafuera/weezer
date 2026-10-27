@@ -245,7 +245,7 @@ export default function AppShell({
       // step itself renders the teaser, and the dashboard card
       // carries the fuller pitch; this row just carries the lock
       // and its reason, like every other locked row.
-      label: 'Weezer Lore',
+      label: 'How Rare a Weezer Fan Are You?',
       step: 'lore',
       disabled: !isLoreUnlocked(triageMap),
       unlockHint: 'Unlocks after Blue + Pinkerton',

@@ -24,6 +24,8 @@ import {
   normalizeUserVector,
   scoreArchetypes,
 } from '../lib/archetypes';
+import { isLoreUnlocked, titleForDepth } from '../data/loreGame';
+import { useFanhood } from '../lib/fanhood';
 
 // Bucket scores for the Fan Club Tiers album derivation below
 // (mirrors StepShareables).
@@ -149,6 +151,93 @@ function deriveRankClashes(comparisons: RankComparison[]): {
   }
 
   return { biggestBetrayal, hiddenGem };
+}
+
+/**
+ * THE FANHOOD STOP — the depth game's verdict, woven into the
+ * Thread. Once a fanhood is established (a finished run of How
+ * Rare a Weezer Fan Are You? — app/lib/fanhood.ts), the stop shows
+ * it: the title, the depth, and the best run's deepest answer.
+ * Before that, the stop is the invitation: the Thread is where a
+ * fan reads who they are, so it's where the game asks to be played
+ * (respecting the game's own unlock gate on the way in).
+ */
+function FanhoodStop({
+  triageMap,
+}: {
+  triageMap: Record<string, TriageValue>;
+}) {
+  const { navigateTo } = useWeezer();
+  const fanhood = useFanhood();
+  const unlocked = isLoreUnlocked(triageMap);
+
+  if (fanhood) {
+    return (
+      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl text-center">
+        <p className="text-[10px] font-black uppercase tracking-widest text-amber-300 block mb-3">
+          How Rare a Weezer Fan Are You?
+        </p>
+        <h3 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+          You&apos;re a {titleForDepth(fanhood.bestDepth)}
+        </h3>
+        <p className="mt-2 text-sm font-black text-[#7dd3fc] uppercase tracking-widest">
+          {fanhood.bestDepth.toLocaleString()} deep
+        </p>
+        {fanhood.deepest && (
+          <p className="mt-4 text-sm font-semibold text-slate-300 leading-relaxed">
+            Your deepest answer was {fanhood.deepest.answer} —{' '}
+            {fanhood.deepest.depth.toLocaleString()} deep.
+            <span className="block mt-1 text-xs font-bold text-slate-500">
+              {fanhood.deepest.promptLabel}
+            </span>
+          </p>
+        )}
+        <button
+          onClick={() => navigateTo('lore')}
+          className="mt-6 bg-[#0072CE] hover:bg-blue-600 text-white font-black text-sm px-6 py-3 rounded-full transition-colors cursor-pointer"
+        >
+          Dig deeper →
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm text-center">
+      <p className="text-[10px] font-black uppercase tracking-widest text-[#0072CE] block mb-3">
+        How Rare a Weezer Fan Are You?
+      </p>
+      <h3 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight">
+        Your fanhood hasn&apos;t been measured yet
+      </h3>
+      <p className="mt-3 text-sm font-semibold text-slate-500 leading-relaxed max-w-lg mx-auto">
+        Ten prompts, twenty-five seconds each. The rarer your answers,
+        the deeper you dig — and the game tells you what kind of fan
+        that makes you.
+      </p>
+      {unlocked ? (
+        <button
+          onClick={() => navigateTo('lore')}
+          className="mt-6 bg-[#0072CE] hover:bg-blue-600 text-white font-black text-sm px-6 py-3 rounded-full transition-colors cursor-pointer"
+        >
+          Play the game →
+        </button>
+      ) : (
+        <>
+          <p className="mt-3 text-xs font-bold text-slate-400">
+            The game unlocks once you&apos;ve sorted the Blue Album and
+            Pinkerton.
+          </p>
+          <button
+            onClick={() => navigateTo('triage')}
+            className="mt-5 bg-[#0072CE] hover:bg-blue-600 text-white font-black text-sm px-6 py-3 rounded-full transition-colors cursor-pointer"
+          >
+            Keep sorting →
+          </button>
+        </>
+      )}
+    </div>
+  );
 }
 
 export default function Step4Wrapped({
@@ -1936,6 +2025,11 @@ export default function Step4Wrapped({
             )}
           </div>
         </div>
+
+        {/* FANHOOD STOP — the depth game's verdict (or its
+            invitation), sitting with the share module and the
+            asset library it feeds. */}
+        <FanhoodStop triageMap={triageMap} />
 
         {/* 12. SMART SHARE MODULE */}
         <div className="max-w-xl mx-auto">

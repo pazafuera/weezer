@@ -9,6 +9,9 @@ import { TribeBadgeCardVisual } from './TribeBadgeCard';
 import { EraDnaCardVisual } from './EraDnaCard';
 import { TasteCompatibilityCardVisual, friendKey, friendLabel } from './TasteCompatibilityCard';
 import type { FriendLike } from './TasteCompatibilityCard';
+import { FanhoodCardVisual } from './FanhoodCard';
+import { useFanhood } from '../../lib/fanhood';
+import type { FanhoodRecord } from '../../lib/fanhood';
 import TierListChart from '../TierListChart';
 import type { RankedAlbum as TierRankedAlbum, RankedSong as TierRankedSong } from '../TierListChart';
 
@@ -621,6 +624,42 @@ function TierLibrarySection({
   );
 }
 
+/** The fanhood card items (both variants). The card exists ONLY
+ *  once a fanhood is established (a first finished run of the depth
+ *  game — see app/lib/fanhood.ts); the gallery reads the record
+ *  itself via useFanhood, so hosts pass nothing. */
+function FanhoodLibraryItem({
+  fanhood,
+  subtitle,
+}: {
+  fanhood: FanhoodRecord;
+  subtitle?: string;
+}) {
+  return (
+    <LibraryItem
+      title="Your Fanhood"
+      description="Your verdict from How Rare a Weezer Fan Are You?"
+      filename="my-weezer-fanhood.png"
+    >
+      <FanhoodCardVisual fanhood={fanhood} subtitle={subtitle} />
+    </LibraryItem>
+  );
+}
+
+function FanhoodThumbnailItem({
+  fanhood,
+  subtitle,
+}: {
+  fanhood: FanhoodRecord;
+  subtitle?: string;
+}) {
+  return (
+    <ThumbnailItem shortTitle="Fanhood" filename="my-weezer-fanhood.png">
+      <FanhoodCardVisual fanhood={fanhood} subtitle={subtitle} />
+    </ThumbnailItem>
+  );
+}
+
 /** Compatibility item holds the friend selection so the preview and the
  *  export copy render the same match. The picker sits under the preview
  *  at natural size. */
@@ -726,7 +765,23 @@ export default function ShareablesGallery({
   /** Zero-friends forward path for the Taste Match card. */
   onFindFriends?: () => void;
 }) {
+  // The fanhood card is the one asset that doesn't come from
+  // rankings: it renders off the established fanhood record, so it
+  // can exist even when no song is bucketed yet (a fan who marked
+  // the gate albums "Don't Know It" has a fanhood but no cards).
+  const fanhood = useFanhood();
   if (songs.length === 0) {
+    if (fanhood) {
+      return variant === 'thumbnails' ? (
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          <FanhoodThumbnailItem fanhood={fanhood} subtitle={subtitle} />
+        </div>
+      ) : (
+        <div className="grid gap-6 md:grid-cols-2">
+          <FanhoodLibraryItem fanhood={fanhood} subtitle={subtitle} />
+        </div>
+      );
+    }
     return (
       <div className="bg-white border border-slate-200/90 rounded-3xl p-10 text-center shadow-xs">
         <p className="text-xl font-black text-slate-950">No shareables yet</p>
@@ -748,6 +803,9 @@ export default function ShareablesGallery({
   if (variant === 'thumbnails') {
     return (
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+        {fanhood ? (
+          <FanhoodThumbnailItem fanhood={fanhood} subtitle={subtitle} />
+        ) : null}
         <ThumbnailItem shortTitle="Top 10 Songs" filename="my-weezer-top-10.png">
           <Top10CardVisual songs={songs} subtitle={subtitle} />
         </ThumbnailItem>
@@ -770,6 +828,9 @@ export default function ShareablesGallery({
   return (
     <div>
       <div className="grid gap-6 md:grid-cols-2">
+        {fanhood ? (
+          <FanhoodLibraryItem fanhood={fanhood} subtitle={subtitle} />
+        ) : null}
         <LibraryItem
           title="Top 10 Songs"
           description="Your ranked top 10 as a shareable graphic."

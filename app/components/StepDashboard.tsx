@@ -3,8 +3,9 @@
 import React, { useEffect, useState } from 'react';
 import { useWeezer, getProgressState, countBucketedSongs, countCategorizedSongs } from '../context/WeezerContext';
 import { BUCKET_CONFIG, FULL_SONG_POOL, BucketType, ALBUM_NAME_TO_ID } from '../data/constants';
-import { isLoreUnlocked, loreGateRemainingAlbums, readLoreBest } from '../data/loreGame';
-import type { LoreBest } from '../data/loreGame';
+import { isLoreUnlocked, loreGateRemainingAlbums, titleForDepth } from '../data/loreGame';
+import { readFanhood } from '../lib/fanhood';
+import type { FanhoodRecord } from '../lib/fanhood';
 import { AlbumArtwork } from './SharedUI';
 import WeezerOnboardingModal from './WeezerOnboardingModal';
 
@@ -363,19 +364,20 @@ export default function StepDashboard() {
     );
   };
 
-  // WEEZER LORE CARD — the depth game's dashboard home, in both
+  // FANHOOD GAME CARD — the depth game's dashboard home, in both
   // dashboard states. Locked: the teaser names the gate albums and
   // what remains — by album, never by count (the merged progress
   // card's Catalog Completion strip, directly above, already
   // carries every album's sorted count; restating them here would
   // be the duplicate-number sin the merged card exists to prevent).
-  // Unlocked: the pitch plus the fan's deepest run, once one exists.
+  // Unlocked: the pitch plus the fan's established fanhood, once a
+  // run has set one.
   const LoreGameCard = () => {
     const unlocked = isLoreUnlocked(triageMap);
     const remaining = loreGateRemainingAlbums(triageMap);
-    const [loreBest, setLoreBest] = useState<LoreBest | null>(null);
+    const [fanhood, setFanhood] = useState<FanhoodRecord | null>(null);
     useEffect(() => {
-      setLoreBest(readLoreBest());
+      setFanhood(readFanhood());
     }, []);
 
     if (!unlocked) {
@@ -387,16 +389,16 @@ export default function StepDashboard() {
         >
           <div className="flex items-center justify-between gap-2">
             <h2 className="text-lg sm:text-xl font-black text-slate-950 tracking-tight">
-              Weezer Lore
+              How Rare a Weezer Fan Are You?
             </h2>
-            <span className="text-xs font-black text-slate-400">Locked 🔒</span>
+            <span className="text-xs font-black text-slate-400 shrink-0">Locked 🔒</span>
           </div>
           <p className="text-xs sm:text-sm font-medium text-slate-500 leading-relaxed">
             {remaining.length === 2
-              ? 'How deep is your fanhood? The lore game unlocks once you\u2019ve sorted the Blue Album and Pinkerton.'
+              ? 'The game unlocks once you\u2019ve sorted the Blue Album and Pinkerton.'
               : remaining[0] === 'Pinkerton'
-                ? 'How deep is your fanhood? The Blue Album is sorted — Pinkerton is all that stands between you and the lore game.'
-                : 'How deep is your fanhood? Pinkerton is sorted — the Blue Album is all that stands between you and the lore game.'}
+                ? 'The Blue Album is sorted — Pinkerton is all that stands between you and the game.'
+                : 'Pinkerton is sorted — the Blue Album is all that stands between you and the game.'}
           </p>
           <div className="pt-0.5 flex items-center text-xs font-black text-[#0072CE] group-hover:underline">
             Keep sorting →
@@ -412,15 +414,15 @@ export default function StepDashboard() {
         className="w-full text-left bg-white border border-slate-200/90 hover:border-blue-300 rounded-3xl p-5 shadow-xs transition-all cursor-pointer group space-y-2"
       >
         <h2 className="text-lg sm:text-xl font-black text-slate-950 tracking-tight group-hover:text-[#0072CE] transition-colors">
-          Weezer Lore
+          How Rare a Weezer Fan Are You?
         </h2>
         <p className="text-xs sm:text-sm font-medium text-slate-500 leading-relaxed">
-          {loreBest
-            ? `How deep is your fanhood? Your deepest run dug to ${loreBest.depth.toLocaleString()} — ${loreBest.band} level.`
-            : 'How deep is your fanhood? Ten questions, twenty-five seconds each — the more obscure your answers, the deeper you dig.'}
+          {fanhood
+            ? `You\u2019re a ${titleForDepth(fanhood.bestDepth)} — your deepest run dug to ${fanhood.bestDepth.toLocaleString()}.`
+            : 'Ten prompts, twenty-five seconds each — the rarer your answers, the deeper you dig.'}
         </p>
         <div className="pt-0.5 flex items-center text-xs font-black text-[#0072CE] group-hover:underline">
-          {loreBest ? 'Dig deeper →' : 'Play the lore game →'}
+          {fanhood ? 'Dig deeper →' : 'Play the game →'}
         </div>
       </button>
     );
@@ -664,7 +666,7 @@ export default function StepDashboard() {
             CARD (WHICH RENDERS HIGH IN THIS STATE — SEE ABOVE). */}
         {isSortingComplete ? <MergedProgressCard /> : <ThreadPreviewCard />}
 
-        {/* WEEZER LORE — one card, both states (see LoreGameCard). */}
+        {/* FANHOOD GAME — one card, both states (see LoreGameCard). */}
         <LoreGameCard />
 
         {/* WHAT'S NEXT (SORTING COMPLETE) — IN THE INCOMPLETE STATE

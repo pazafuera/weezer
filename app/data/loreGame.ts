@@ -210,12 +210,39 @@ const GIRL_NAME_TOKENS: readonly string[] = [
   'elaine',
 ];
 
+/**
+ * First and last catalog song per album, in pool order (the canon
+ * lists each album's tracks in order). The B-Sides & Rarities set is
+ * a compilation, so the positional cases below exclude it — its
+ * first track is nobody's "album opener."
+ */
+const ALBUM_FIRST_LAST: { first: Map<string, string>; last: Map<string, string> } =
+  (() => {
+    const first = new Map<string, string>();
+    const last = new Map<string, string>();
+    for (const s of FULL_SONG_POOL) {
+      if (!first.has(s.album)) first.set(s.album, s.id);
+      last.set(s.album, s.id);
+    }
+    return { first, last };
+  })();
+
 /** True when the song satisfies a name-a-song prompt's constraint. */
 export function songQualifies(
   constraint: _SongConstraint,
   song: Song
 ): boolean {
   switch (constraint.kind) {
+    case 'opener':
+      return (
+        song.album !== 'B-Sides & Rarities' &&
+        ALBUM_FIRST_LAST.first.get(song.album) === song.id
+      );
+    case 'closer':
+      return (
+        song.album !== 'B-Sides & Rarities' &&
+        ALBUM_FIRST_LAST.last.get(song.album) === song.id
+      );
     case 'album-except':
       return (
         song.album === constraint.album && song.title !== constraint.excludeTitle
@@ -704,6 +731,521 @@ export function buildRun(rand: () => number = Math.random): LoreQuestion[] {
   }
 
   return picks.filter((q): q is LoreQuestion => q !== undefined);
+}
+
+/* ================================================================== */
+/* V2 — OPEN RARITY PROMPTS (the Krillion pivot, Oct 26, 2026)         */
+/*                                                                     */
+/* The playtest verdict on v1: fixed trivia "feels basic." V2 runs     */
+/* draw from the open prompts below instead — any valid answer        */
+/* counts, and the RARITY of the answer sets the depth. The 15        */
+/* prompts and their rarity tables come from the open-prompts file    */
+/* in the goal workspace (draft tables, Mark's markup pending). The   */
+/* v1 fixed bank above stays in the codebase: the visual rounds       */
+/* reuse three of its questions, and nothing else draws from it.      */
+/* ================================================================== */
+
+/** Rarity tier names, by the depth an answer earns. */
+export type RarityTier = 'Common' | 'Uncommon' | 'Rare' | 'Super rare';
+
+/**
+ * Tier for a depth. The content file's bands (Common 20–60,
+ * Uncommon 100–200, Rare 300–550, Super rare 700–1,200) leave gaps
+ * and a few of its own rows break them (The Rentals priced Common
+ * at 90, the Black Album Super rare at 650), so the tier is DERIVED
+ * from depth with gapless thresholds that reproduce every tier the
+ * file intends: Common <100, Uncommon 100–299, Rare 300–649,
+ * Super rare 650+.
+ */
+export function tierForDepth(depth: number): RarityTier {
+  if (depth >= 650) return 'Super rare';
+  if (depth >= 300) return 'Rare';
+  if (depth >= 100) return 'Uncommon';
+  return 'Common';
+}
+
+/** One row of an open prompt's rarity table (table-kind prompts). */
+export interface OpenAnswer {
+  /** The answer as displayed. */
+  text: string;
+  aliases: string[];
+  depth: number;
+  /** Shown on the reveal when this exact answer is the one played. */
+  note?: string;
+  /**
+   * Present ⇒ this row is a TRAP: a plausible-but-invalid answer.
+   * Naming it scores 0 and the reveal carries this correction.
+   */
+  trapNote?: string;
+}
+
+export interface OpenPrompt {
+  id: string;
+  prompt: string;
+  kind: 'table' | 'song';
+  /**
+   * Breadth order across the pool, 1 = broadest. Composition draws
+   * the run's first half from the broad end and its second half from
+   * the narrow end — the ramp the content file specifies (broad
+   * early: member, album, covers; narrow late: soundtrack,
+   * question-titles, guests).
+   */
+  ramp: number;
+  /** Table kind: the rarity table. */
+  answers?: OpenAnswer[];
+  /** Song kind: the constraint a typed song must satisfy... */
+  songConstraint?: _SongConstraint;
+  /** ...or membership in this explicit catalog set (curated calls). */
+  songIds?: readonly string[];
+  /** Song kind: per-song depth overrides on top of SONG_DEPTHS. */
+  depthOverrides?: Record<string, number>;
+  /** Song kind: catalog song id → its specific warm correction. */
+  songTraps?: Record<string, string>;
+  /** One warm line for the reveal. DRAFT — Mark's markup. */
+  loreLine: string;
+}
+
+/** True when a catalog song is a valid answer to an open song prompt. */
+export function openSongQualifies(prompt: OpenPrompt, song: Song): boolean {
+  if (prompt.songIds) return prompt.songIds.indexOf(song.id) !== -1;
+  if (prompt.songConstraint) return songQualifies(prompt.songConstraint, song);
+  return false;
+}
+
+/** The depth a song earns under one open prompt (override wins). */
+export function openSongDepth(prompt: OpenPrompt, song: Song): number {
+  const override = prompt.depthOverrides?.[song.id];
+  return override !== undefined ? override : songDepth(song);
+}
+
+export interface AnswerExtreme {
+  text: string;
+  depth: number;
+}
+
+const extremesCache = new Map<
+  string,
+  { common: AnswerExtreme; deepest: AnswerExtreme }
+>();
+
+/**
+ * The Krillion contrast for a prompt: the answer "most fans say"
+ * (shallowest valid) and the deepest answer there is. Every reveal
+ * shows both, hit or miss.
+ */
+export function openPromptExtremes(
+  prompt: OpenPrompt
+): { common: AnswerExtreme; deepest: AnswerExtreme } {
+  const cached = extremesCache.get(prompt.id);
+  if (cached) return cached;
+
+  let common: AnswerExtreme | undefined;
+  let deepest: AnswerExtreme | undefined;
+  const consider = (text: string, depth: number) => {
+    if (!common || depth < common.depth) common = { text, depth };
+    if (!deepest || depth > deepest.depth) deepest = { text, depth };
+  };
+
+  if (prompt.kind === 'table' && prompt.answers) {
+    for (const a of prompt.answers) {
+      if (a.trapNote) continue;
+      consider(a.text, a.depth);
+    }
+  } else {
+    for (const song of FULL_SONG_POOL) {
+      if (openSongQualifies(prompt, song)) {
+        consider(song.title, openSongDepth(prompt, song));
+      }
+    }
+  }
+
+  const result = {
+    common: common ?? { text: '', depth: 0 },
+    deepest: deepest ?? { text: '', depth: 0 },
+  };
+  extremesCache.set(prompt.id, result);
+  return result;
+}
+
+export const OPEN_PROMPTS: OpenPrompt[] = [
+  {
+    id: 'O1',
+    prompt: 'Name any Weezer band member.',
+    kind: 'table',
+    ramp: 1,
+    answers: [
+      { text: 'Rivers Cuomo', aliases: ['Rivers', 'Cuomo'], depth: 30 },
+      { text: 'Brian Bell', aliases: ['Brian', 'Bell'], depth: 45 },
+      { text: 'Patrick Wilson', aliases: ['Patrick', 'Pat', 'Wilson'], depth: 50 },
+      { text: 'Scott Shriner', aliases: ['Scott', 'Shriner'], depth: 55 },
+      { text: 'Matt Sharp', aliases: ['Matt', 'Sharp'], depth: 160 },
+      { text: 'Mikey Welsh', aliases: ['Mikey', 'Welsh'], depth: 420 },
+      {
+        text: 'Karl Koch',
+        aliases: ['Karl', 'Koch'],
+        depth: 700,
+        note: "Not an official member — but you knew that, didn't you.",
+      },
+      { text: 'Jason Cropper', aliases: ['Jason', 'Cropper'], depth: 950 },
+    ],
+    loreLine:
+      'Four men are in the band today — but the family tree has deeper roots.',
+  },
+  {
+    id: 'O4',
+    prompt: 'Name a Weezer album.',
+    kind: 'table',
+    ramp: 2,
+    answers: [
+      { text: 'The Blue Album', aliases: ['Blue', 'Blue Album'], depth: 25 },
+      { text: 'Pinkerton', aliases: [], depth: 45 },
+      { text: 'The Green Album', aliases: ['Green', 'Green Album'], depth: 50 },
+      { text: 'The White Album', aliases: ['White', 'White Album'], depth: 60 },
+      { text: 'The Red Album', aliases: ['Red', 'Red Album'], depth: 110 },
+      { text: 'Make Believe', aliases: [], depth: 130 },
+      { text: 'Raditude', aliases: [], depth: 160 },
+      { text: 'Hurley', aliases: [], depth: 180 },
+      { text: 'Van Weezer', aliases: [], depth: 300 },
+      {
+        text: 'EWBAITE',
+        aliases: ['Everything Will Be Alright in the End'],
+        depth: 320,
+      },
+      { text: 'OK Human', aliases: [], depth: 350 },
+      { text: 'Pacific Daydream', aliases: [], depth: 380 },
+      { text: 'The Black Album', aliases: ['Black', 'Black Album'], depth: 650 },
+      { text: 'The Teal Album', aliases: ['Teal', 'Teal Album'], depth: 700 },
+      { text: 'Death to False Metal', aliases: ['DTFM'], depth: 750 },
+      { text: 'SZNZ: Spring', aliases: ['SZNZ Spring', 'Spring'], depth: 800 },
+      { text: 'SZNZ: Summer', aliases: ['SZNZ Summer', 'Summer'], depth: 800 },
+      { text: 'SZNZ: Autumn', aliases: ['SZNZ Autumn', 'Autumn'], depth: 800 },
+      { text: 'SZNZ: Winter', aliases: ['SZNZ Winter', 'Winter'], depth: 800 },
+    ],
+    loreLine:
+      'The color albums are just where the catalog starts — it runs a lot deeper than the famous ones.',
+  },
+  {
+    id: 'O7',
+    prompt: 'Name a song Weezer has covered.',
+    kind: 'table',
+    ramp: 3,
+    answers: [
+      { text: 'Africa', aliases: [], depth: 30 },
+      { text: 'Take On Me', aliases: [], depth: 90 },
+      { text: 'Mr. Blue Sky', aliases: [], depth: 120 },
+      {
+        text: 'Everybody Wants to Rule the World',
+        aliases: ['Rule the World'],
+        depth: 200,
+      },
+      { text: 'No Scrubs', aliases: [], depth: 260 },
+      {
+        text: 'Sweet Dreams (Are Made of This)',
+        aliases: ['Sweet Dreams'],
+        depth: 300,
+      },
+      { text: 'Happy Together', aliases: [], depth: 350 },
+      { text: 'Billie Jean', aliases: [], depth: 380 },
+      { text: 'Stand by Me', aliases: [], depth: 420 },
+      { text: 'Paranoid', aliases: [], depth: 500 },
+      { text: 'Paranoid Android', aliases: [], depth: 550 },
+    ],
+    loreLine:
+      'A single covers album restarted the whole band — and it started as an internet meme.',
+  },
+  {
+    id: 'O2',
+    prompt: 'Name someone who has produced a Weezer record.',
+    kind: 'table',
+    ramp: 4,
+    answers: [
+      { text: 'Ric Ocasek', aliases: ['Ocasek'], depth: 40 },
+      { text: 'Jake Sinclair', aliases: ['Jake', 'Sinclair'], depth: 150 },
+      { text: 'Butch Walker', aliases: ['Butch', 'Walker'], depth: 170 },
+      { text: 'Rick Rubin', aliases: ['Rubin'], depth: 300 },
+      { text: 'Dave Sitek', aliases: ['Sitek'], depth: 380 },
+      { text: 'Suzy Shinn', aliases: ['Suzy', 'Shinn'], depth: 520 },
+      {
+        text: 'Robopop',
+        aliases: ['Daniel Omelio', 'Omelio', 'Daniel'],
+        depth: 780,
+      },
+      { text: 'Tyler Cole', aliases: ['Tyler', 'Cole'], depth: 850 },
+    ],
+    loreLine:
+      "The producer's chair has held everyone from a Cars frontman to half of TV on the Radio.",
+  },
+  {
+    id: 'O14',
+    prompt: 'Name a band or artist Weezer has covered.',
+    kind: 'table',
+    ramp: 5,
+    answers: [
+      { text: 'Toto', aliases: [], depth: 40 },
+      { text: 'a-ha', aliases: ['Aha'], depth: 90 },
+      { text: 'ELO', aliases: ['Electric Light Orchestra'], depth: 180 },
+      { text: 'TLC', aliases: [], depth: 240 },
+      { text: 'Tears for Fears', aliases: [], depth: 300 },
+      { text: 'The Eurythmics', aliases: ['Eurythmics'], depth: 320 },
+      { text: 'The Turtles', aliases: ['Turtles'], depth: 350 },
+      { text: 'Michael Jackson', aliases: ['Jackson'], depth: 380 },
+      { text: 'Radiohead', aliases: [], depth: 420 },
+      { text: 'Ben E. King', aliases: [], depth: 460 },
+      { text: 'Black Sabbath', aliases: ['Sabbath'], depth: 500 },
+    ],
+    loreLine:
+      'The covers run from Toto to Black Sabbath — one teal-colored album spans most of this list.',
+  },
+  {
+    id: 'O10',
+    prompt: 'Name a Weezer song with a place in the title.',
+    kind: 'song',
+    ramp: 6,
+    // Curated set — the judgment calls the content file blesses
+    // ("fans will argue — that's good"). "America," LA, California,
+    // the garage, the mall, La Brea: all places. Acapulco, the
+    // file's deepest example, is not in this app's 206-song
+    // catalog, so it can't be scored here (flagged in REPORT).
+    songIds: [
+      'mb_1', // Beverly Hills
+      'green_4', // Island in the Sun
+      'blue_8', // In the Garage
+      'blue_6', // Surf Wax America
+      'wh_1', // California Kids
+      'wh_8', // L.A. Girlz
+      'blk_4', // Living in L.A.
+      'blk_10', // California Snow
+      'pd_1', // Mexican Fender
+      'pd_9', // La Mancha Screwjob
+      'ew_6', // The British Are Coming
+      'okh_12', // La Brea Tar Pits
+      'rad_9', // In the Mall
+      'sz_su6', // Cuomoville
+    ],
+    depthOverrides: { mb_1: 25, green_4: 30, blue_8: 120 },
+    loreLine:
+      'Half this catalog happens within a mile of a garage in Los Angeles.',
+  },
+  {
+    id: 'O8',
+    prompt: 'Name the opening track of any Weezer album.',
+    kind: 'song',
+    ramp: 7,
+    songConstraint: { kind: 'opener' },
+    depthOverrides: { blue_1: 40, pink_1: 140, green_1: 380 },
+    songTraps: {
+      blue_10:
+        "Only in Dreams is the LAST song on the Blue Album — it closes records, it doesn't open them.",
+      blue_3:
+        'The World Has Turned and Left Me Here is track two. My Name Is Jonas opens the Blue Album.',
+    },
+    loreLine:
+      'First tracks are statements — Jonas and Tired of Sex are two very different ways to say hello.',
+  },
+  {
+    id: 'O9',
+    prompt: 'Name the closing track of any Weezer album.',
+    kind: 'song',
+    ramp: 8,
+    songConstraint: { kind: 'closer' },
+    depthOverrides: { blue_10: 90, pink_10: 210, red_10: 480, mb_12: 350 },
+    songTraps: {
+      blue_1:
+        "My Name Is Jonas is the FIRST song on the Blue Album — it opens records, it doesn't close them.",
+    },
+    loreLine:
+      'Closers are where this band parks its biggest feelings — Only in Dreams built that tradition.',
+  },
+  {
+    id: 'O3',
+    prompt:
+      "Name a Weezer side project, or a band a member plays in when he's not in Weezer.",
+    kind: 'table',
+    ramp: 9,
+    answers: [
+      { text: 'The Rentals', aliases: ['Rentals'], depth: 90 },
+      { text: 'The Special Goodness', aliases: ['Special Goodness'], depth: 420 },
+      { text: 'Goat Punishment', aliases: ['Goat'], depth: 600 },
+      { text: 'The Relationship', aliases: ['Relationship'], depth: 820 },
+      { text: 'Homie', aliases: [], depth: 880 },
+    ],
+    loreLine:
+      'Every man in this band has a second life somewhere else on the family tree.',
+  },
+  {
+    id: 'O6',
+    prompt: 'Name a Weezer B-side.',
+    kind: 'song',
+    ramp: 10,
+    songConstraint: { kind: 'b-side' },
+    loreLine:
+      "B-sides were the fan club's currency — the deeper cuts lived there.",
+  },
+  {
+    id: 'O12',
+    prompt: 'Name a song Rivers wrote about a real person.',
+    kind: 'song',
+    ramp: 11,
+    // Curated: the fan-club sisters, the B-side girls, the fan whose
+    // letter became Across the Sea, the girl behind Pink Triangle —
+    // and The Good Life, which is about Rivers himself.
+    songIds: ['bs_4', 'bs_5', 'bs_12', 'pink_5', 'pink_6', 'pink_8'],
+    depthOverrides: { bs_12: 700, bs_5: 800, bs_4: 900 },
+    loreLine:
+      'Rivers writes about real people — two of them ran his fan club.',
+  },
+  {
+    id: 'O5',
+    prompt: "Name a song with a girl's name in the title.",
+    kind: 'song',
+    ramp: 12,
+    songConstraint: { kind: 'girl-name-in-title' },
+    depthOverrides: { bs_12: 700, bs_5: 800, bs_4: 900 },
+    songTraps: {
+      blue_1:
+        "Jonas is a guy. Right band, wrong prompt — this one wants a girl's name.",
+    },
+    loreLine:
+      'Some categories are all deep water: the named girls in this catalog mostly lived on B-sides.',
+  },
+  {
+    id: 'O11',
+    prompt:
+      'Name someone who has sung or played on a Weezer record besides the four current members.',
+    kind: 'table',
+    ramp: 13,
+    answers: [
+      { text: 'Lil Wayne', aliases: ['Wayne'], depth: 120 },
+      { text: 'Michael Cera', aliases: ['Cera'], depth: 260 },
+      { text: 'Ryan Adams', aliases: ['Adams'], depth: 450 },
+      { text: 'Petra Haden', aliases: ['Petra', 'Haden'], depth: 800 },
+    ],
+    loreLine:
+      'Weezer records hide some unlikely names in the credits, if you read the small print.',
+  },
+  {
+    id: 'O15',
+    prompt: 'Name a Weezer song whose title asks a question.',
+    kind: 'song',
+    ramp: 14,
+    // The catalog's genuine question titles — phrased as questions,
+    // no punctuation tricks.
+    songIds: ['pink_4', 'wh_5', 'hur_5', 'sz_au3', 'sz_su5', 'sz_au5'],
+    loreLine:
+      'Not many titles in this catalog actually ask you anything — and the ones that do span every era.',
+  },
+  {
+    id: 'O13',
+    prompt:
+      'Name a Weezer song that appeared in a movie, or on a movie soundtrack.',
+    kind: 'song',
+    ramp: 15,
+    songIds: ['green_4', 'bs_3'],
+    depthOverrides: { green_4: 80, bs_3: 520 },
+    songTraps: {
+      blue_4:
+        "Buddy Holly's video is a Happy Days TV moment — beloved, but it was never in a movie.",
+    },
+    loreLine:
+      'A mid-90s movie soundtrack carried one of these years before most fans ever found it.',
+  },
+];
+
+/* ------------------------------------------------------------------ */
+/* Visual rounds — fixed questions with media reveals                  */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Three rounds reuse fixed questions from the v1 bank; what makes
+ * them visual is the reveal: after you answer, the moment itself
+ * shows up as a GIF. Media URLs are Tenor CDN links, verified live
+ * (HTTP 200, image/gif) on Oct 26, 2026 — prototype-grade sourcing,
+ * per the content file.
+ */
+export interface VisualRound {
+  id: string;
+  /** The v1 bank question this round reuses (prompt/spec/depth/lore). */
+  questionId: string;
+  mediaUrl: string;
+  mediaAlt: string;
+}
+
+export const VISUAL_ROUNDS: VisualRound[] = [
+  {
+    id: 'V1',
+    questionId: 'L3', // Name the song with the Happy Days video.
+    mediaUrl:
+      'https://media1.tenor.com/m/MTK1KCqCtRsAAAAd/buddy-holly-weezer.gif',
+    mediaAlt:
+      'Rivers singing inside the Happy Days diner in the Buddy Holly video',
+  },
+  {
+    id: 'V2',
+    questionId: 'L4', // What Weezer song has the Muppets in its video?
+    mediaUrl:
+      'https://media1.tenor.com/m/cM1wBPs30McAAAAd/muppets-weezer.gif',
+    mediaAlt: "The band posing with the Muppets in the Keep Fishin' video",
+  },
+  {
+    id: 'V3',
+    questionId: 'L6', // Finish the SNL line: "ride or ___."
+    mediaUrl:
+      'https://media1.tenor.com/m/1Z3gU-SZ7MwAAAAd/ride-or-die-weezer.gif',
+    mediaAlt:
+      'The SNL dinner-party argument about Weezer, mid-"ride or die"',
+  },
+];
+
+/** The bank question a visual round reuses. */
+export function visualRoundQuestion(round: VisualRound): LoreQuestion {
+  const q = LORE_QUESTIONS.find((x) => x.id === round.questionId);
+  if (!q) throw new Error(`Visual round ${round.id} lost its question`);
+  return q;
+}
+
+/* ------------------------------------------------------------------ */
+/* Run composition v2                                                  */
+/* ------------------------------------------------------------------ */
+
+export type RunItem =
+  | { kind: 'open'; prompt: OpenPrompt }
+  | { kind: 'visual'; round: VisualRound };
+
+/**
+ * Deals one v2 run: 8 open prompts + 2 visual rounds = 10. The open
+ * eight split across the pool's breadth ramp — four from the broad
+ * half (ramps 1–7), four from the narrow half (8–15) — each half
+ * dealt in ramp order, so the run narrows as it goes. The two
+ * visual rounds (drawn from the three) land at slots 4 and 8.
+ */
+export function buildRunV2(rand: () => number = Math.random): RunItem[] {
+  const byRamp = [...OPEN_PROMPTS].sort((a, b) => a.ramp - b.ramp);
+  const drawHalf = (pool: OpenPrompt[], count: number): OpenPrompt[] => {
+    const copy = [...pool];
+    const drawn: OpenPrompt[] = [];
+    while (drawn.length < count && copy.length > 0) {
+      drawn.push(copy.splice(Math.floor(rand() * copy.length), 1)[0]);
+    }
+    return drawn.sort((a, b) => a.ramp - b.ramp);
+  };
+
+  const openItems: RunItem[] = [
+    ...drawHalf(byRamp.slice(0, 7), 4),
+    ...drawHalf(byRamp.slice(7), 4),
+  ].map((prompt) => ({ kind: 'open' as const, prompt }));
+
+  const visualPool = [...VISUAL_ROUNDS];
+  const firstVisual = visualPool.splice(
+    Math.floor(rand() * visualPool.length),
+    1
+  )[0];
+  const secondVisual = visualPool.splice(
+    Math.floor(rand() * visualPool.length),
+    1
+  )[0];
+  openItems.splice(3, 0, { kind: 'visual', round: firstVisual });
+  openItems.splice(7, 0, { kind: 'visual', round: secondVisual });
+  return openItems;
 }
 
 /* ------------------------------------------------------------------ */

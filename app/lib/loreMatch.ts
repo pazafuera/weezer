@@ -60,7 +60,9 @@ export type SongConstraint =
   | { kind: 'b-side' }
   | { kind: 'never-on-studio-album' }
   | { kind: 'demo-or-unreleased' }
-  | { kind: 'girl-name-in-title' };
+  | { kind: 'girl-name-in-title' }
+  | { kind: 'opener' }
+  | { kind: 'closer' };
 
 /**
  * Normalizes an answer (typed or canonical) for comparison:
@@ -110,7 +112,7 @@ export function toleranceFor(normalizedTarget: string): number {
 }
 
 /** True when the input is within tolerance of the target (both normalized). */
-function withinTolerance(inputNorm: string, targetNorm: string): boolean {
+export function withinTolerance(inputNorm: string, targetNorm: string): boolean {
   if (inputNorm === targetNorm) return true;
   const tol = toleranceFor(targetNorm);
   if (tol === 0) return false;
@@ -182,6 +184,61 @@ export function songTitleVariants(title: string): string[] {
   const leadingParen = title.match(/^\([^)]*\)\s+(.+)$/);
   if (leadingParen) add(leadingParen[1]);
   return Array.from(variants);
+}
+
+/* ------------------------------------------------------------------ */
+/* Open-prompt table matching (v2 — the Krillion pivot)                */
+/* ------------------------------------------------------------------ */
+
+/**
+ * One row of an open prompt's rarity table, in matchable form. A row
+ * flagged `trap` is a plausible-but-invalid answer: naming it is a
+ * miss with its own specific correction, never a score.
+ */
+export interface TableAnswerEntry {
+  spec: LoreAnswerSpec;
+  trap?: boolean;
+}
+
+export type TableMatchResult =
+  | { status: 'match'; index: number }
+  | { status: 'trap'; index: number }
+  | { status: 'miss' };
+
+/**
+ * Judges a typed answer against one open prompt's whole table. The
+ * plausible-answer universe is the table itself, so the confusables
+ * guard works the same way it does for fixed questions: an exact hit
+ * on any row (real or trap) wins outright; a fuzzy input must be
+ * within tolerance of exactly one row, or it belongs to neither.
+ */
+export function matchTableAnswer(
+  rawInput: string,
+  entries: readonly TableAnswerEntry[]
+): TableMatchResult {
+  const input = normalizeAnswer(rawInput);
+  if (input === '') return { status: 'miss' };
+  const formsList = entries.map((e) => specForms(e.spec));
+
+  for (let i = 0; i < entries.length; i++) {
+    if (formsList[i].indexOf(input) !== -1) {
+      return entries[i].trap
+        ? { status: 'trap', index: i }
+        : { status: 'match', index: i };
+    }
+  }
+
+  const hits: number[] = [];
+  formsList.forEach((forms, i) => {
+    if (forms.some((f) => withinTolerance(input, f))) hits.push(i);
+  });
+  if (hits.length === 1) {
+    const i = hits[0];
+    return entries[i].trap
+      ? { status: 'trap', index: i }
+      : { status: 'match', index: i };
+  }
+  return { status: 'miss' };
 }
 
 export type SongMatchStatus = 'match' | 'duplicate' | 'miss';

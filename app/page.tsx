@@ -16,6 +16,7 @@ import StepShareables from './components/StepShareables';
 import FanStats from './components/FanStats';
 import WeezerFriends from './components/WeezerFriends';
 import Login from './components/Login';
+import StepLore from './components/StepLore';
 
 export default function WeezerRankerPage() {
   const {
@@ -162,6 +163,8 @@ export default function WeezerRankerPage() {
       {step === 'fan_stats' && <FanStats userMasterList={masterList} />}
 
       {step === 'friends' && <WeezerFriends />}
+
+      {step === 'lore' && <StepLore />}
     </AppShell>
   );
 }

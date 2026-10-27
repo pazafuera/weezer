@@ -731,3 +731,39 @@ export function loreGateRemainingAlbums(
 export function isLoreUnlocked(triageMap: Record<string, unknown>): boolean {
   return loreGateRemainingAlbums(triageMap).length === 0;
 }
+
+/* ------------------------------------------------------------------ */
+/* Best run (localStorage)                                             */
+/* ------------------------------------------------------------------ */
+
+/** The fan's deepest finished run, kept on this device. */
+export interface LoreBest {
+  depth: number;
+  band: string;
+}
+
+const LORE_BEST_KEY = 'weezer-lore-best';
+
+export function readLoreBest(): LoreBest | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(LORE_BEST_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<LoreBest>;
+    if (typeof parsed.depth === 'number' && typeof parsed.band === 'string') {
+      return { depth: parsed.depth, band: parsed.band };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export function writeLoreBest(best: LoreBest): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(LORE_BEST_KEY, JSON.stringify(best));
+  } catch {
+    /* storage unavailable — the best simply doesn't persist */
+  }
+}

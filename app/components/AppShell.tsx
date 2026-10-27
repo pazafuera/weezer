@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useWeezer, AppStep, getProgressState, countCategorizedSongs } from '../context/WeezerContext';
 import { FULL_SONG_POOL } from '../data/constants';
+import { isLoreUnlocked } from '../data/loreGame';
 import { FlyingWIcon } from './SharedUI';
 import WeezerAccountDrawer from './WeezerAccountDrawer';
 import BucketGuide from './BucketGuide';
@@ -229,6 +230,20 @@ export default function AppShell({
     {
       label: 'Shareables',
       step: 'shareables',
+      group: 'fanhood',
+    },
+    {
+      // The lore game (Oct 26 design): locked until the Blue Album
+      // and Pinkerton triage sections are both complete — the same
+      // section-complete rule the deck milestones use (every song
+      // in the section dealt with, bucket or "Don't Know It"). The
+      // step itself renders the teaser, and the dashboard card
+      // carries the fuller pitch; this row just carries the lock
+      // and its reason, like every other locked row.
+      label: 'Weezer Lore',
+      step: 'lore',
+      disabled: !isLoreUnlocked(triageMap),
+      unlockHint: 'Unlocks after Blue + Pinkerton',
       group: 'fanhood',
     },
   ];

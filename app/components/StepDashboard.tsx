@@ -1,8 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useWeezer, getProgressState, countBucketedSongs, countCategorizedSongs } from '../context/WeezerContext';
 import { BUCKET_CONFIG, FULL_SONG_POOL, BucketType, ALBUM_NAME_TO_ID } from '../data/constants';
+import { isLoreUnlocked, loreGateRemainingAlbums, readLoreBest } from '../data/loreGame';
+import type { LoreBest } from '../data/loreGame';
 import { AlbumArtwork } from './SharedUI';
 import WeezerOnboardingModal from './WeezerOnboardingModal';
 
@@ -361,6 +363,69 @@ export default function StepDashboard() {
     );
   };
 
+  // WEEZER LORE CARD — the depth game's dashboard home, in both
+  // dashboard states. Locked: the teaser names the gate albums and
+  // what remains — by album, never by count (the merged progress
+  // card's Catalog Completion strip, directly above, already
+  // carries every album's sorted count; restating them here would
+  // be the duplicate-number sin the merged card exists to prevent).
+  // Unlocked: the pitch plus the fan's deepest run, once one exists.
+  const LoreGameCard = () => {
+    const unlocked = isLoreUnlocked(triageMap);
+    const remaining = loreGateRemainingAlbums(triageMap);
+    const [loreBest, setLoreBest] = useState<LoreBest | null>(null);
+    useEffect(() => {
+      setLoreBest(readLoreBest());
+    }, []);
+
+    if (!unlocked) {
+      return (
+        <button
+          type="button"
+          onClick={() => navigateTo('triage')}
+          className="w-full text-left bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs transition-all cursor-pointer group space-y-2"
+        >
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-lg sm:text-xl font-black text-slate-950 tracking-tight">
+              Weezer Lore
+            </h2>
+            <span className="text-xs font-black text-slate-400">Locked 🔒</span>
+          </div>
+          <p className="text-xs sm:text-sm font-medium text-slate-500 leading-relaxed">
+            {remaining.length === 2
+              ? 'How deep is your fanhood? The lore game unlocks once you\u2019ve sorted the Blue Album and Pinkerton.'
+              : remaining[0] === 'Pinkerton'
+                ? 'How deep is your fanhood? The Blue Album is sorted — Pinkerton is all that stands between you and the lore game.'
+                : 'How deep is your fanhood? Pinkerton is sorted — the Blue Album is all that stands between you and the lore game.'}
+          </p>
+          <div className="pt-0.5 flex items-center text-xs font-black text-[#0072CE] group-hover:underline">
+            Keep sorting →
+          </div>
+        </button>
+      );
+    }
+
+    return (
+      <button
+        type="button"
+        onClick={() => navigateTo('lore')}
+        className="w-full text-left bg-white border border-slate-200/90 hover:border-blue-300 rounded-3xl p-5 shadow-xs transition-all cursor-pointer group space-y-2"
+      >
+        <h2 className="text-lg sm:text-xl font-black text-slate-950 tracking-tight group-hover:text-[#0072CE] transition-colors">
+          Weezer Lore
+        </h2>
+        <p className="text-xs sm:text-sm font-medium text-slate-500 leading-relaxed">
+          {loreBest
+            ? `How deep is your fanhood? Your deepest run dug to ${loreBest.depth.toLocaleString()} — ${loreBest.band} level.`
+            : 'How deep is your fanhood? Ten questions, twenty-five seconds each — the more obscure your answers, the deeper you dig.'}
+        </p>
+        <div className="pt-0.5 flex items-center text-xs font-black text-[#0072CE] group-hover:underline">
+          {loreBest ? 'Dig deeper →' : 'Play the lore game →'}
+        </div>
+      </button>
+    );
+  };
+
   // DONE SORTING? (sorting incomplete) — replaces What's Next in
   // this state. Quiet on purpose: Refine and Final Review stay one
   // tap away for anyone who means to stop here, but nothing here
@@ -598,6 +663,9 @@ export default function StepDashboard() {
             INCOMPLETE: THE SWEATER THREAD PREVIEW, BELOW THE PROGRESS
             CARD (WHICH RENDERS HIGH IN THIS STATE — SEE ABOVE). */}
         {isSortingComplete ? <MergedProgressCard /> : <ThreadPreviewCard />}
+
+        {/* WEEZER LORE — one card, both states (see LoreGameCard). */}
+        <LoreGameCard />
 
         {/* WHAT'S NEXT (SORTING COMPLETE) — IN THE INCOMPLETE STATE
             THE QUIET "DONE SORTING?" SECTION RENDERS INSTEAD. */}

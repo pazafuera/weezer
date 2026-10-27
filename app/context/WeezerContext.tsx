@@ -20,7 +20,8 @@ export type AppStep =
   | 'fan_stats'
   | 'friends'
   | 'login'
-  | 'shareables';
+  | 'shareables'
+  | 'lore';
 export type AuthModeType = 'signup' | 'login' | 'magic';
 
 /**
@@ -50,6 +51,7 @@ const KNOWN_APP_STEPS: readonly AppStep[] = [
   'friends',
   'login',
   'shareables',
+  'lore',
 ];
 
 /**

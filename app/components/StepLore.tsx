@@ -351,12 +351,15 @@ function DescentStage({
   displayTotal,
   burst,
   burstDelayMs,
+  fallingTag,
+  plunging,
   shake,
   animKey,
   reducedMotion,
   viewH,
   focusTop,
   zoomed,
+  fill,
   camMs,
   children,
 }: {
@@ -366,6 +369,11 @@ function DescentStage({
   burst: BurstInfo | null;
   /** When the burst pop starts, timed to finish as the marker lands. */
   burstDelayMs?: number;
+  /** The submitted answer, riding the marker down during the plunge. */
+  fallingTag?: string | null;
+  /** True while a plunge is in flight (the camera anchor drops so
+      the marker visibly falls on screen — see the v7 notes). */
+  plunging?: boolean;
   shake: boolean;
   animKey: number;
   reducedMotion: boolean;
@@ -373,21 +381,47 @@ function DescentStage({
   focusTop: boolean;
   /** End-of-run view: the whole column scaled to fit the window. */
   zoomed?: boolean;
+  /** Fill the parent box instead of using a fixed pixel height. */
+  fill?: boolean;
   /** Camera transition duration (defaults to the plunge length). */
   camMs?: number;
   children?: React.ReactNode;
 }) {
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [autoH, setAutoH] = useState(0);
+  useEffect(() => {
+    if (!fill) return;
+    const el = rootRef.current;
+    if (!el) return;
+    const measure = () => setAutoH(el.clientHeight);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [fill]);
+  const effH = fill && autoH > 0 ? autoH : viewH;
+
   const markerY = depthToY(total);
-  const anchor = focusTop ? 96 : viewH * 0.42;
+  // v7: while plunging, the anchor drops to 78% of the window, so
+  // the marker's SCREEN position falls as the column transitions —
+  // at the old fixed 42% anchor the marker stayed pinned and only
+  // the (mostly flat) layers drifted past, which read as no motion.
+  const anchor = focusTop ? 96 : plunging ? effH * 0.78 : effH * 0.42;
   const camY = Math.min(
     Math.max(markerY - anchor, 0),
-    STAGE_HEIGHT - viewH
+    STAGE_HEIGHT - effH
   );
-  const zoomScale = viewH / STAGE_HEIGHT;
+  const zoomScale = effH / STAGE_HEIGHT;
+  const moveMs = reducedMotion ? 0 : (camMs ?? PLUNGE_MS);
   return (
     <div
-      className="relative overflow-hidden rounded-3xl border border-slate-900/25 shadow-md"
-      style={{ height: viewH }}
+      ref={rootRef}
+      className={
+        fill
+          ? 'relative min-h-0 flex-1 overflow-hidden'
+          : 'relative overflow-hidden rounded-3xl border border-slate-900/25 shadow-md'
+      }
+      style={fill ? undefined : { height: viewH }}
     >
       <style>{`
         @keyframes lore-burst-pop {
@@ -490,7 +524,18 @@ function DescentStage({
         {/* The player marker (in the zoomed view an unscaled
             overlay chip marks the spot instead — see below) */}
         {!zoomed && (
-        <div className="absolute left-3.5 z-20" style={{ top: markerY }}>
+        <div
+          className="absolute left-3.5 z-20"
+          style={{
+            top: markerY,
+            // v7: the marker's own position transitions too — at the
+            // surface the camera is clamped at 0, so without this the
+            // marker teleported instead of falling on early answers.
+            transition: reducedMotion
+              ? 'none'
+              : `top ${moveMs}ms cubic-bezier(0.22, 0.9, 0.3, 1)`,
+          }}
+        >
           <div
             key={`shake-${animKey}`}
             className={shake && !reducedMotion ? 'lore-shake' : undefined}
@@ -507,11 +552,38 @@ function DescentStage({
         </div>
         )}
 
+        {/* The falling answer tag (v7): the player's own answer,
+            riding just above the marker for the whole plunge. Even
+            where the world motion reads subtle, a labeled object
+            travelling the full distance cannot be missed. */}
+        {fallingTag && !zoomed && (
+          <div
+            className="absolute left-[76px] z-20"
+            style={{
+              top: markerY,
+              transition: reducedMotion
+                ? 'none'
+                : `top ${moveMs}ms cubic-bezier(0.22, 0.9, 0.3, 1)`,
+            }}
+          >
+            <div style={{ transform: 'translateY(-260%)' }}>
+              <div className="whitespace-nowrap rounded-full bg-[#111111]/90 px-3 py-1.5 text-[11px] font-black tracking-wide text-white shadow-[0_10px_24px_rgba(0,0,0,0.45)]">
+                “{fallingTag}” ▼
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* The burst chip, riding the plunge */}
         {burst && (
           <div
             className="absolute left-[76px] z-20"
-            style={{ top: markerY }}
+            style={{
+              top: markerY,
+              transition: reducedMotion
+                ? 'none'
+                : `top ${moveMs}ms cubic-bezier(0.22, 0.9, 0.3, 1)`,
+            }}
           >
             <div style={{ transform: 'translateY(-135%)' }}>
               <div
@@ -561,7 +633,7 @@ function DescentStage({
       {children && (
         <div
           className="absolute inset-x-3 bottom-3 z-30 overflow-y-auto rounded-3xl shadow-[0_18px_40px_rgba(0,0,0,0.5)]"
-          style={{ maxHeight: viewH - 92 }}
+          style={{ maxHeight: effH - 92 }}
         >
           {children}
         </div>
@@ -628,6 +700,12 @@ export default function StepLore() {
   const [plungeMs, setPlungeMs] = useState(PLUNGE_MS);
   const [tickingTotal, setTickingTotal] = useState(0);
   const plungeFromRef = useRef(0);
+  // v7: the stage's geometry total lags the answers total during a
+  // plunge — it is only advanced a frame after the plunging phase
+  // paints, so the column/marker transitions start from a painted
+  // start value rather than a same-batch start=end commit.
+  const [stageTotal, setStageTotal] = useState(0);
+  const plungeTargetRef = useRef(0);
   const [openDigPromptId, setOpenDigPromptId] = useState<string | null>(null);
 
   const total = answers.reduce((sum, a) => sum + a.depthEarned, 0);
@@ -862,6 +940,7 @@ export default function StepLore() {
       () => {
         if (pendingRecord) {
           plungeFromRef.current = total;
+          plungeTargetRef.current = total + pendingRecord.depthEarned;
           setTickingTotal(total);
           setPlungeMs(plungeDurationForDepth(pendingRecord.depthEarned));
           setAnswers((prev) => [...prev, pendingRecord]);
@@ -882,10 +961,33 @@ export default function StepLore() {
     if (phase !== 'plunging') return;
     const t = setTimeout(
       () => setPhase('reveal'),
-      reducedMotion ? 40 : plungeMs
+      // +60ms: the target commit lands a frame into the phase
+      // (below), and the reveal should follow the fall, not tie it.
+      reducedMotion ? 40 : plungeMs + 60
     );
     return () => clearTimeout(t);
   }, [phase, plungeMs, reducedMotion]);
+
+  // v7: advance the stage geometry to the plunge target only after
+  // the plunging phase has painted at the start value (double rAF),
+  // so the column transform and the marker/tag `top` transitions
+  // observably run from start to end. Reduced motion jumps at once.
+  useEffect(() => {
+    if (phase !== 'plunging') return;
+    const target = plungeTargetRef.current;
+    if (reducedMotion || plungeDepth <= 0) {
+      setStageTotal(target);
+      return;
+    }
+    let raf2 = 0;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => setStageTotal(target));
+    });
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+    };
+  }, [phase, plungeDepth, reducedMotion]);
 
   // While the marker falls, the depth label counts up with it. The
   // count uses the same plunge duration; cleanup cancels the frame
@@ -996,6 +1098,8 @@ export default function StepLore() {
     setPlungeMs(PLUNGE_MS);
     setTickingTotal(0);
     plungeFromRef.current = 0;
+    plungeTargetRef.current = 0;
+    setStageTotal(0);
     setOpenDigPromptId(null);
     attemptsRef.current = 0;
     setPhase('preview');
@@ -1289,10 +1393,11 @@ export default function StepLore() {
   );
 
   return (
-    <div className="pb-24 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="max-w-2xl mx-auto px-4 space-y-6">
-        {/* HEADER */}
-        <div className="pt-1 space-y-1">
+    <div className="flex w-full flex-1 flex-col animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="flex w-full flex-1 flex-col">
+        {/* HEADER — a compact row: in the full-bleed layout the
+            stage below takes every remaining pixel of the body. */}
+        <div className="px-4 sm:px-6 pt-3 pb-2 space-y-0.5">
           <h1 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight">
             Weezer Lore
           </h1>
@@ -1305,6 +1410,7 @@ export default function StepLore() {
             by album, never by count: the dashboard's Catalog
             Completion strip already carries those numbers. */}
         {!unlocked && (
+          <div className="mx-auto w-full max-w-2xl px-4 sm:px-6 pb-8">
           <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs space-y-3">
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-black text-slate-950 tracking-tight">
@@ -1334,11 +1440,13 @@ export default function StepLore() {
               Go to the Gut Check →
             </button>
           </div>
+          </div>
         )}
 
         {/* INTRO — unlocked, not yet playing: the marker waits at
             the surface and the start card sits on the stage. */}
         {unlocked && phase === 'intro' && (
+          <div className="flex flex-1 flex-col">
           <DescentStage
             total={0}
             burst={null}
@@ -1347,6 +1455,7 @@ export default function StepLore() {
             reducedMotion={reducedMotion}
             viewH={480}
             focusTop={false}
+            fill
           >
             <div
               className={`rounded-3xl border p-5 space-y-3 text-left ${CARD_THEMES[0].root}`}
@@ -1377,17 +1486,27 @@ export default function StepLore() {
               </button>
             </div>
           </DescentStage>
+          </div>
         )}
 
         {/* PLAYING / LEAVING / PLUNGING / REVEAL — the descent is
             the stage. During 'plunging' the card is gone entirely:
             nothing stands between the player and the drop. */}
         {unlocked && item && (phase === 'preview' || phase === 'playing' || phase === 'leaving' || phase === 'plunging' || phase === 'reveal') && (
-          <div ref={stageRef}>
+          <div ref={stageRef} className="flex flex-1 flex-col">
             <DescentStage
-              total={total}
+              total={stageTotal}
               displayTotal={phase === 'plunging' ? tickingTotal : total}
               burstDelayMs={plungeMs}
+              plunging={phase === 'plunging'}
+              fallingTag={
+                phase === 'plunging' &&
+                lastRecord &&
+                lastRecord.depthEarned > 0
+                  ? lastRecord.headline
+                  : null
+              }
+              fill
               burst={
                 (phase === 'plunging' || phase === 'reveal') &&
                 lastRecord &&
@@ -1418,21 +1537,25 @@ export default function StepLore() {
         {/* ZOOM-OUT — the whole descent at a glance: every layer,
             the full trail, and the spot the marker landed. */}
         {unlocked && phase === 'zoomout' && (
-          <DescentStage
-            total={total}
-            burst={null}
-            shake={false}
-            animKey={0}
-            reducedMotion={reducedMotion}
-            viewH={560}
-            focusTop={false}
-            zoomed
-          />
+          <div className="flex flex-1 flex-col">
+            <DescentStage
+              total={total}
+              burst={null}
+              shake={false}
+              animKey={0}
+              reducedMotion={reducedMotion}
+              viewH={560}
+              focusTop={false}
+              zoomed
+              fill
+            />
+          </div>
         )}
 
         {/* RESULT */}
         {unlocked && phase === 'result' && (
           <>
+          <div className="w-full space-y-6 px-4 sm:px-6 pb-10">
             <div
               className={`relative overflow-hidden rounded-3xl p-6 shadow-md space-y-3 ${BAND_STAGE[finalBandIdx].layer}`}
               style={BAND_STAGE[finalBandIdx].textureStyle}
@@ -1607,6 +1730,7 @@ export default function StepLore() {
                 })}
               </div>
             </div>
+          </div>
           </>
         )}
       </div>

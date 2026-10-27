@@ -12,9 +12,14 @@ import BucketGuide from './BucketGuide';
 export default function AppShell({
   children,
   fullWidth = false,
+  fullBleed = false,
 }: {
   children: React.ReactNode;
   fullWidth?: boolean;
+  /** The child step owns the whole main area (no max-width, no
+      padding) — used by the Lore game's full-bleed stage. Header
+      and footer are untouched. */
+  fullBleed?: boolean;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [accountDrawerOpen, setAccountDrawerOpen] = useState(false);
@@ -474,9 +479,13 @@ export default function AppShell({
 
       {/* MAIN CONTENT AREA */}
       <main
-        className={`flex-1 w-full mx-auto p-4 sm:p-6 lg:p-8 transition-all duration-300 ${
-          fullWidth ? 'max-w-7xl' : 'max-w-5xl lg:max-w-6xl'
-        }`}
+        className={
+          fullBleed
+            ? 'flex flex-1 w-full flex-col transition-all duration-300'
+            : `flex-1 w-full mx-auto p-4 sm:p-6 lg:p-8 transition-all duration-300 ${
+                fullWidth ? 'max-w-7xl' : 'max-w-5xl lg:max-w-6xl'
+              }`
+        }
       >
         {children}
       </main>

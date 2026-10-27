@@ -69,7 +69,7 @@ export default function WeezerRankerPage() {
   const isGuest = userId === null;
 
   return (
-    <AppShell fullWidth={step === 'wrapped'}>
+    <AppShell fullWidth={step === 'wrapped'} fullBleed={step === 'lore'}>
       {/* Guard-rewrite explanation (UAT P-1): renders only when
           the guard rewrote the landing the user just arrived on
           (rewrites land on triage or rank_buckets; context clears

@@ -53,144 +53,447 @@ interface AnswerRecord {
 }
 
 /* ------------------------------------------------------------------ */
-/* The descent stage                                                   */
+/* The descent stage (v3 — the descent is the screen)                  */
 /* ------------------------------------------------------------------ */
 
 /**
- * Per-band layer styling, parallel to DEPTH_BANDS: the surface is
- * bright pop; the '90s layer is warm and xeroxed; the fan-club layer
- * is photocopy gray with halftone dots; the bottom is dense, dark
- * bedrock. CSS gradients only — no image assets.
+ * Per-band layer styling, parallel to DEPTH_BANDS, following the
+ * approved mock: bright radio-blue at the surface, flannel tan for
+ * the '90s layer, dark Pinkerton maroon, photocopied-note purple
+ * with ruled lines for the Fan Club, archive dark-green for Karl,
+ * and near-black bedrock. Each layer carries the mock's faint
+ * era-texture type.
  */
 const BAND_STAGE: {
   layer: string;
-  texture?: React.CSSProperties;
   chip: string;
   range: string;
+  texture: string;
+  textureStyle?: React.CSSProperties;
 }[] = [
   {
-    // Buddy Holly — the bright pop surface.
-    layer: 'bg-gradient-to-b from-sky-400 via-sky-500 to-[#0072CE] text-white',
-    chip: 'bg-white/20 text-white border-white/50',
-    range: 'text-sky-100',
+    // Buddy Holly — bright radio-blue.
+    layer: 'bg-gradient-to-b from-[#039AD1] to-[#0277b6] text-[#eaf7ff]',
+    chip: 'bg-white text-[#0277b6]',
+    range: 'text-white/70',
+    texture: "UNDONE · BUDDY HOLLY · SAY IT AIN'T SO · UNDONE ·",
   },
   {
-    // Sweater Song — warm '90s xerox paper.
-    layer: 'bg-[#f3e5c3] text-amber-950',
-    texture: {
-      backgroundImage:
-        'repeating-linear-gradient(0deg, rgba(120,72,20,0.07) 0 2px, transparent 2px 7px)',
-    },
-    chip: 'bg-amber-900/10 text-amber-900 border-amber-900/30',
-    range: 'text-amber-800/70',
+    // Sweater Song — flannel tan.
+    layer: 'bg-gradient-to-b from-[#f3e9d2] to-[#e7d7ae] text-[#4a3a17]',
+    chip: 'bg-[#4a3a17] text-[#f3e9d2]',
+    range: 'text-[#4a3a17]/60',
+    texture: "FLANNEL · '94 · MTV · THE RENTALS ·",
   },
   {
-    // Pinkerton — indigo night with a rose thread.
-    layer: 'bg-indigo-950 text-indigo-50',
-    texture: {
-      backgroundImage:
-        'repeating-linear-gradient(135deg, rgba(244,114,182,0.06) 0 10px, transparent 10px 20px)',
-    },
-    chip: 'bg-pink-400/15 text-pink-200 border-pink-300/40',
-    range: 'text-indigo-300',
+    // Pinkerton — dark maroon.
+    layer: 'bg-gradient-to-b from-[#5b2333] to-[#401826] text-[#f6d9de]',
+    chip: 'bg-[#f6d9de] text-[#5b2333]',
+    range: 'text-[#f6d9de]/60',
+    texture: 'EL SCORCHO · ACROSS THE SEA ·',
   },
   {
-    // Fan Club — photocopied newsletter gray, halftone dots.
-    layer: 'bg-[#e9e6de] text-slate-800',
-    texture: {
+    // Fan Club — photocopied-note purple, ruled lines.
+    layer: 'bg-[#3d348b] text-[#dcd6ff]',
+    chip: 'bg-[#dcd6ff] text-[#3d348b]',
+    range: 'text-[#dcd6ff]/60',
+    texture: 'MYKEL & CARLI · =w= · NEWSLETTER #1 ·',
+    textureStyle: {
       backgroundImage:
-        'radial-gradient(rgba(30,30,30,0.16) 1px, transparent 1.4px)',
-      backgroundSize: '9px 9px',
+        'repeating-linear-gradient(0deg, rgba(0,0,0,0.16) 0 1px, transparent 1px 26px)',
     },
-    chip: 'bg-black/10 text-slate-800 border-black/25',
-    range: 'text-slate-500',
   },
   {
-    // Karl — charcoal, dense with print texture.
-    layer: 'bg-slate-900 text-slate-100',
-    texture: {
-      backgroundImage:
-        'repeating-linear-gradient(0deg, rgba(255,255,255,0.05) 0 1px, transparent 1px 5px), radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1.4px)',
-      backgroundSize: 'auto, 7px 7px',
-    },
-    chip: 'bg-white/10 text-slate-100 border-white/30',
-    range: 'text-slate-400',
+    // Karl — archive dark-green.
+    layer: 'bg-gradient-to-b from-[#14261c] to-[#0c1a12] text-[#b9e7c9]',
+    chip: 'bg-[#b9e7c9] text-[#14261c]',
+    range: 'text-[#b9e7c9]/60',
+    texture: "KARL'S CORNER · THE FIFTH WEEZER · ARCHIVE ·",
   },
   {
-    // GOAT PUNISHMENT — near-black bedrock, amber seams.
-    layer: 'bg-[#0b0a08] text-amber-50',
-    texture: {
+    // GOAT PUNISHMENT — near-black bedrock.
+    layer: 'bg-[#060607] text-[#8f8fa3]',
+    chip: 'bg-[#26262e] text-[#c9c9d6] border border-[#3a3a46]',
+    range: 'text-[#8f8fa3]/70',
+    texture: '🐐 · NIRVANA COVERS · 1998 ·',
+    textureStyle: {
       backgroundImage:
-        'repeating-linear-gradient(45deg, rgba(245,158,11,0.07) 0 6px, transparent 6px 12px), radial-gradient(rgba(245,158,11,0.13) 1px, transparent 1.4px)',
-      backgroundSize: 'auto, 6px 6px',
+        'radial-gradient(120% 90% at 50% 0%, rgba(70,70,88,0.5) 0%, rgba(6,6,7,0) 70%)',
     },
-    chip: 'bg-amber-400/15 text-amber-300 border-amber-400/50',
-    range: 'text-amber-200/60',
   },
 ];
 
 /**
- * The fanhood cross-section as the stage: six full-width layers
- * stacked top (the hits) to bottom (the bedrock). The layer the
- * running total sits in expands to hold the player marker and
- * whatever card is passed in; after each answer the content plunges
- * — the wrapper re-mounts with a sink animation, and its travel
- * reads bigger the deeper the band it lands in.
+ * Card themes, re-skinned per depth band (mock frames 1 vs 3): a
+ * white card at the surface bands, a dark plum card through
+ * Pinkerton / Fan Club, the archive-green dark card at Karl, and a
+ * warm gold-accented dark card in the bedrock.
+ */
+interface CardTheme {
+  root: string;
+  label: string;
+  body: string;
+  strong: string;
+  timerTrack: string;
+  timerFill: string;
+  timerFillLow: string;
+  seconds: string;
+  secondsLow: string;
+  input: string;
+  dig: string;
+  contrast: string;
+  lore: string;
+  correctBox: string;
+  correctTitle: string;
+  correctSub: string;
+  trapBox: string;
+  trapTitle: string;
+  trapSub: string;
+  missBox: string;
+  missTitle: string;
+  missSub: string;
+  next: string;
+  img: string;
+}
+
+const CARD_THEMES: CardTheme[] = [
+  {
+    // Surface bands — the mock's light card.
+    root: 'bg-white text-slate-900 border-slate-200/90',
+    label: 'text-slate-400',
+    body: 'text-slate-500',
+    strong: 'text-slate-700',
+    timerTrack: 'bg-slate-100',
+    timerFill: 'bg-[#0072CE]',
+    timerFillLow: 'bg-amber-400',
+    seconds: 'text-slate-500',
+    secondsLow: 'text-amber-500',
+    input:
+      'bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-[#0072CE]',
+    dig: 'bg-[#0072CE] hover:bg-blue-700 text-white shadow-md',
+    contrast: 'text-slate-500',
+    lore: 'text-slate-500',
+    correctBox: 'bg-emerald-50 border-emerald-200',
+    correctTitle: 'text-emerald-900',
+    correctSub: 'text-emerald-700',
+    trapBox: 'bg-amber-50 border-amber-200',
+    trapTitle: 'text-amber-900',
+    trapSub: 'text-amber-800',
+    missBox: 'bg-slate-50 border-slate-200',
+    missTitle: 'text-slate-900',
+    missSub: 'text-slate-500',
+    next: 'bg-[#0072CE] hover:bg-blue-700 text-white shadow-md',
+    img: 'border-slate-200',
+  },
+  {
+    // Pinkerton / Fan Club — dark plum.
+    root: 'bg-[#211423] text-[#f6e8ee] border-[#4a2b3d]',
+    label: 'text-pink-200/50',
+    body: 'text-pink-100/60',
+    strong: 'text-pink-50',
+    timerTrack: 'bg-white/10',
+    timerFill: 'bg-pink-300',
+    timerFillLow: 'bg-amber-300',
+    seconds: 'text-pink-200/70',
+    secondsLow: 'text-amber-300',
+    input:
+      'bg-black/30 border-[#4a2b3d] text-white placeholder:text-pink-200/40 focus:border-pink-300',
+    dig: 'bg-pink-300 hover:bg-pink-200 text-[#401826] shadow-md',
+    contrast: 'text-pink-100/60',
+    lore: 'text-pink-100/60',
+    correctBox: 'bg-emerald-400/10 border-emerald-300/30',
+    correctTitle: 'text-emerald-200',
+    correctSub: 'text-emerald-200/70',
+    trapBox: 'bg-amber-400/10 border-amber-300/30',
+    trapTitle: 'text-amber-200',
+    trapSub: 'text-amber-200/80',
+    missBox: 'bg-white/5 border-white/15',
+    missTitle: 'text-pink-50',
+    missSub: 'text-pink-100/60',
+    next: 'bg-pink-300 hover:bg-pink-200 text-[#401826] shadow-md',
+    img: 'border-white/20',
+  },
+  {
+    // Karl — the mock's archive-green dark card.
+    root: 'bg-[#101418] text-[#eef3ee] border-[#2b3a30]',
+    label: 'text-[#7be495]/60',
+    body: 'text-[#b9e7c9]/60',
+    strong: 'text-[#eef3ee]',
+    timerTrack: 'bg-[#223028]',
+    timerFill: 'bg-[#7be495]',
+    timerFillLow: 'bg-amber-300',
+    seconds: 'text-[#b9e7c9]/70',
+    secondsLow: 'text-amber-300',
+    input:
+      'bg-[#0a0f0c] border-[#2b3a30] text-[#eef3ee] placeholder:text-[#7be495]/35 focus:border-[#7be495]',
+    dig: 'bg-[#7be495] hover:bg-[#93eda9] text-[#0c1a12] shadow-md',
+    contrast: 'text-[#b9e7c9]/60',
+    lore: 'text-[#b9e7c9]/60',
+    correctBox: 'bg-emerald-400/10 border-emerald-300/30',
+    correctTitle: 'text-emerald-200',
+    correctSub: 'text-emerald-200/70',
+    trapBox: 'bg-amber-400/10 border-amber-300/30',
+    trapTitle: 'text-amber-200',
+    trapSub: 'text-amber-200/80',
+    missBox: 'bg-white/5 border-white/15',
+    missTitle: 'text-[#eef3ee]',
+    missSub: 'text-[#b9e7c9]/60',
+    next: 'bg-[#7be495] hover:bg-[#93eda9] text-[#0c1a12] shadow-md',
+    img: 'border-[#2b3a30]',
+  },
+  {
+    // GOAT PUNISHMENT — warm dark card, gold accents (mock frame 2).
+    root: 'bg-[#12100a] text-[#f5ecd8] border-[#4a3f22]',
+    label: 'text-[#FFD23F]/50',
+    body: 'text-[#cbbf9f]/70',
+    strong: 'text-[#f5ecd8]',
+    timerTrack: 'bg-white/10',
+    timerFill: 'bg-[#FFD23F]',
+    timerFillLow: 'bg-amber-300',
+    seconds: 'text-[#cbbf9f]/80',
+    secondsLow: 'text-amber-300',
+    input:
+      'bg-black/40 border-[#4a3f22] text-[#f5ecd8] placeholder:text-[#cbbf9f]/40 focus:border-[#FFD23F]',
+    dig: 'bg-[#FFD23F] hover:bg-[#ffdb5c] text-[#111111] shadow-md',
+    contrast: 'text-[#cbbf9f]/70',
+    lore: 'text-[#cbbf9f]/70',
+    correctBox: 'bg-emerald-400/10 border-emerald-300/30',
+    correctTitle: 'text-emerald-200',
+    correctSub: 'text-emerald-200/70',
+    trapBox: 'bg-amber-400/10 border-amber-300/30',
+    trapTitle: 'text-amber-200',
+    trapSub: 'text-amber-200/80',
+    missBox: 'bg-white/5 border-white/15',
+    missTitle: 'text-[#f5ecd8]',
+    missSub: 'text-[#cbbf9f]/60',
+    next: 'bg-[#FFD23F] hover:bg-[#ffdb5c] text-[#111111] shadow-md',
+    img: 'border-[#4a3f22]',
+  },
+];
+
+/** Which card theme each depth band uses, parallel to DEPTH_BANDS. */
+const BAND_CARD_THEME = [0, 0, 1, 1, 2, 3];
+
+/* Stage geometry: the column is ~6x the visible window. Within a
+   band the marker interpolates across that layer's height (inset
+   10%–90% so it never hugs a boundary); the bedrock band, whose
+   depth range is open-ended, interpolates up to a soft cap. */
+const LAYER_HEIGHTS = [420, 460, 500, 520, 540, 560];
+const LAYER_TOPS: number[] = (() => {
+  const tops: number[] = [];
+  let acc = 0;
+  for (const h of LAYER_HEIGHTS) {
+    tops.push(acc);
+    acc += h;
+  }
+  return tops;
+})();
+const STAGE_HEIGHT = LAYER_HEIGHTS.reduce((a, b) => a + b, 0);
+const BEDROCK_DEPTH_CAP = 6500;
+const PLUNGE_MS = 900;
+
+function depthToY(depth: number): number {
+  for (let i = 0; i < DEPTH_BANDS.length; i++) {
+    const band = DEPTH_BANDS[i];
+    const isLast = i === DEPTH_BANDS.length - 1;
+    if (depth <= band.max || isLast) {
+      const span = isLast ? BEDROCK_DEPTH_CAP - band.min : band.max - band.min;
+      const t = Math.min(1, Math.max(0, (depth - band.min) / span));
+      return LAYER_TOPS[i] + LAYER_HEIGHTS[i] * (0.1 + 0.8 * t);
+    }
+  }
+  return STAGE_HEIGHT;
+}
+
+interface BurstInfo {
+  tier?: RarityTier;
+  depth: number;
+  headline: string;
+}
+
+/**
+ * The fanhood cross-section as a full-screen stage: a tall column of
+ * the six layers inside a clipped window. The player marker lives
+ * IN the column at the Y its total depth maps to, with a dashed
+ * trail from the surface; the camera is a translateY on the column
+ * (transitioned over ~900ms) that keeps the marker in frame — so a
+ * scoring answer visibly plunges marker and camera together, while
+ * a 0-point answer just shakes the marker in place. `children` is
+ * the bottom-pinned card (intro / question / reveal), themed by the
+ * caller to the band the player is currently in.
  */
 function DescentStage({
   total,
-  plungeKey,
+  burst,
+  shake,
+  animKey,
+  reducedMotion,
+  viewH,
+  focusTop,
   children,
 }: {
   total: number;
-  plungeKey: string | number;
+  burst: BurstInfo | null;
+  shake: boolean;
+  animKey: number;
+  reducedMotion: boolean;
+  viewH: number;
+  focusTop: boolean;
   children?: React.ReactNode;
 }) {
-  const current = bandForTotal(total);
+  const markerY = depthToY(total);
+  const anchor = focusTop ? 96 : viewH * 0.42;
+  const camY = Math.min(
+    Math.max(markerY - anchor, 0),
+    STAGE_HEIGHT - viewH
+  );
   return (
-    <div className="rounded-3xl overflow-hidden border border-slate-900/25 shadow-md">
+    <div
+      className="relative overflow-hidden rounded-3xl border border-slate-900/25 shadow-md"
+      style={{ height: viewH }}
+    >
       <style>{`
-        @keyframes lore-plunge {
-          0% { transform: translateY(-16px); opacity: 0.25; }
-          60% { transform: translateY(3px); opacity: 1; }
-          100% { transform: translateY(0); opacity: 1; }
+        @keyframes lore-burst-pop {
+          0% { transform: scale(0.5) rotate(4deg); opacity: 0; }
+          60% { transform: scale(1.08) rotate(-4deg); opacity: 1; }
+          100% { transform: scale(1) rotate(-3deg); opacity: 1; }
         }
-        .lore-plunge { animation: lore-plunge 0.75s cubic-bezier(0.22, 0.9, 0.3, 1) both; }
+        .lore-burst { animation: lore-burst-pop 0.45s cubic-bezier(0.22, 0.9, 0.3, 1) 0.35s both; }
+        @keyframes lore-shake {
+          0%, 100% { transform: translateX(0); }
+          20% { transform: translateX(-6px); }
+          40% { transform: translateX(5px); }
+          60% { transform: translateX(-4px); }
+          80% { transform: translateX(3px); }
+        }
+        .lore-shake { animation: lore-shake 0.45s ease-in-out both; }
+        @keyframes lore-card-in {
+          from { transform: translateY(14px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+        .lore-card-in { animation: lore-card-in 0.35s ease-out 0.15s both; }
+        @media (prefers-reduced-motion: reduce) {
+          .lore-burst, .lore-shake, .lore-card-in { animation: none !important; }
+        }
       `}</style>
-      {DEPTH_BANDS.map((band, i) => {
-        const style = BAND_STAGE[i];
-        const isCurrent = band.title === current.title;
-        const range =
-          band.max === Infinity
-            ? `${band.min.toLocaleString()}+ deep`
-            : `${band.min.toLocaleString()}–${band.max.toLocaleString()} deep`;
-        return (
-          <div
-            key={band.title}
-            className={`${style.layer} px-4 ${isCurrent ? 'py-3.5' : 'py-2'}`}
-            style={style.texture}
-          >
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-[11px] font-black uppercase tracking-wider">
-                {band.title} level
-              </span>
-              <span className={`text-[10px] font-bold ${style.range}`}>
-                {range}
-              </span>
-            </div>
-            {isCurrent && (
-              <div key={plungeKey} className="lore-plunge mt-2.5">
+
+      {/* The strata column (the camera) */}
+      <div
+        className="absolute inset-x-0 top-0"
+        style={{
+          height: STAGE_HEIGHT,
+          transform: `translateY(${-camY}px)`,
+          transition: reducedMotion
+            ? 'none'
+            : `transform ${PLUNGE_MS}ms cubic-bezier(0.22, 0.9, 0.3, 1)`,
+        }}
+      >
+        {DEPTH_BANDS.map((band, i) => {
+          const style = BAND_STAGE[i];
+          const unvisited = band.min > total;
+          const range =
+            band.max === Infinity
+              ? `${band.min.toLocaleString()}+`
+              : `${band.min.toLocaleString()}–${band.max.toLocaleString()}`;
+          return (
+            <div
+              key={band.title}
+              className={`absolute inset-x-0 overflow-hidden ${style.layer}`}
+              style={{
+                top: LAYER_TOPS[i],
+                height: LAYER_HEIGHTS[i],
+                filter: unvisited
+                  ? 'brightness(0.78) saturate(0.85)'
+                  : undefined,
+              }}
+            >
+              {style.textureStyle && (
+                <div className="absolute inset-0" style={style.textureStyle} />
+              )}
+              <div className="absolute inset-x-3.5 top-2.5 flex items-start justify-between gap-2">
                 <span
-                  className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-black ${style.chip}`}
+                  className={`inline-block rounded-full px-2 py-0.5 text-[9.5px] font-black tracking-[0.14em] ${style.chip}`}
                 >
-                  ▼ You — {total.toLocaleString()} deep · {band.title} level
+                  {band.title}
                 </span>
-                {children}
+                <span
+                  className={`text-[9.5px] font-extrabold tracking-[0.08em] ${style.range}`}
+                >
+                  {range}
+                </span>
               </div>
-            )}
+              <div className="pointer-events-none absolute left-2 top-16 whitespace-nowrap text-sm font-black tracking-[0.06em] opacity-[0.12]">
+                {style.texture}
+              </div>
+              {unvisited && (
+                <div className="absolute inset-x-0 bottom-2.5 text-center text-[10px] font-black tracking-[0.22em] opacity-50">
+                  {i === DEPTH_BANDS.length - 1
+                    ? '▼ THE BEDROCK ▼'
+                    : "▼ WHAT'S DOWN THERE? ▼"}
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        {/* The descent trail: surface to marker */}
+        <div
+          className="absolute left-[35px] top-0 z-10 w-0 border-l-[3px] border-dashed border-white/50"
+          style={{ height: markerY }}
+        />
+
+        {/* The player marker */}
+        <div className="absolute left-3.5 z-20" style={{ top: markerY }}>
+          <div
+            key={`shake-${animKey}`}
+            className={shake && !reducedMotion ? 'lore-shake' : undefined}
+          >
+            <div className="flex -translate-y-1/2 items-center gap-[7px]">
+              <div className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-full border-[3px] border-[#111111] bg-[#FFD23F] text-xs font-black text-[#111111] shadow-[0_6px_18px_rgba(0,0,0,0.45)]">
+                =w=
+              </div>
+              <div className="whitespace-nowrap rounded-full bg-[#111111] px-2.5 py-1 text-[10.5px] font-black tracking-[0.05em] text-[#FFD23F] shadow-[0_4px_12px_rgba(0,0,0,0.4)]">
+                YOU · {total.toLocaleString()} DEEP
+              </div>
+            </div>
           </div>
-        );
-      })}
+        </div>
+
+        {/* The burst chip, riding the plunge */}
+        {burst && (
+          <div
+            className="absolute left-[76px] z-20"
+            style={{ top: markerY }}
+          >
+            <div style={{ transform: 'translateY(-135%)' }}>
+              <div
+                key={`burst-${animKey}`}
+                className={`rounded-2xl bg-[#FFD23F] px-3 py-2.5 text-[#111111] shadow-[0_14px_34px_rgba(0,0,0,0.5)] ${
+                  reducedMotion ? '' : 'lore-burst'
+                }`}
+              >
+                <div className="whitespace-nowrap text-[10px] font-black tracking-[0.16em]">
+                  {burst.tier ? `${burst.tier.toUpperCase()} · ` : ''}+
+                  {burst.depth.toLocaleString()}
+                </div>
+                <div className="whitespace-nowrap text-lg font-black leading-tight">
+                  {burst.headline}!
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* The bottom-pinned card */}
+      {children && (
+        <div
+          className="absolute inset-x-3 bottom-3 z-30 overflow-y-auto rounded-3xl shadow-[0_18px_40px_rgba(0,0,0,0.5)]"
+          style={{ maxHeight: viewH - 92 }}
+        >
+          {children}
+        </div>
+      )}
     </div>
   );
 }
@@ -233,6 +536,7 @@ export default function StepLore() {
   );
   const [best, setBest] = useState<LoreBest | null>(null);
   const [isNewBest, setIsNewBest] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(false);
 
   const total = answers.reduce((sum, a) => sum + a.depthEarned, 0);
   const item = run[index];
@@ -241,6 +545,15 @@ export default function StepLore() {
   // The saved best, read on mount (localStorage is browser-only).
   useEffect(() => {
     setBest(readLoreBest());
+  }, []);
+
+  // Reduced motion: the plunge becomes an instant jump.
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setReducedMotion(mq.matches);
+    const onChange = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
   }, []);
 
   // When a reveal moves the player into a deeper layer, keep the
@@ -487,6 +800,14 @@ export default function StepLore() {
     .filter((a) => a.depthEarned > 0)
     .sort((a, b) => b.depthEarned - a.depthEarned)[0];
   const finalBand = bandForTotal(total);
+  const finalBandIdx = DEPTH_BANDS.findIndex(
+    (b) => b.title === finalBand.title
+  );
+  const currentBandIdx = DEPTH_BANDS.findIndex(
+    (b) => b.title === currentBandTitle
+  );
+  const theme = CARD_THEMES[BAND_CARD_THEME[currentBandIdx]];
+  const finalTheme = CARD_THEMES[BAND_CARD_THEME[finalBandIdx]];
 
   const itemPrompt =
     item?.kind === 'open'
@@ -505,7 +826,9 @@ export default function StepLore() {
     const isCommon =
       record.outcome === 'correct' && record.headline === record.commonText;
     return (
-      <div className="space-y-1 text-xs sm:text-sm font-medium text-slate-500 leading-relaxed">
+      <div
+        className={`space-y-1 text-xs sm:text-sm font-medium leading-relaxed ${theme.contrast}`}
+      >
         <p>
           {isCommon
             ? 'Most fans say exactly that.'
@@ -520,32 +843,62 @@ export default function StepLore() {
     );
   };
 
-  /** The question + answer card, rendered inside the current layer. */
+  /** The question + answer card, pinned to the bottom of the stage
+      and themed to the band the player is currently in. */
   const stageCard = item && (phase === 'playing' || phase === 'reveal') && (
-    <div className="bg-white text-slate-900 border border-slate-200/90 rounded-3xl p-5 shadow-md space-y-4 mt-3 text-left">
-      <h2 className="text-xl sm:text-2xl font-black text-slate-950 tracking-tight leading-snug">
-        {itemPrompt}
-      </h2>
+    <div
+      key={`${phase}-${index}`}
+      className={`rounded-3xl border p-4 sm:p-5 space-y-3.5 text-left ${theme.root} ${
+        reducedMotion ? '' : 'lore-card-in'
+      }`}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <span
+          className={`text-[10px] font-black uppercase tracking-[0.14em] ${theme.label}`}
+        >
+          Question {index + 1} of {run.length}
+          {item.kind === 'visual' ? ' · Visual round' : ''}
+        </span>
+        <span
+          className={`text-[10px] font-black uppercase tracking-[0.14em] ${theme.label}`}
+        >
+          {answers.filter((a) => a.outcome === 'correct').length} dug
+        </span>
+      </div>
+
+      {phase === 'playing' ? (
+        <h2 className="text-xl sm:text-2xl font-black tracking-tight leading-snug">
+          {itemPrompt}
+        </h2>
+      ) : (
+        <p className="text-sm font-bold leading-snug opacity-80">
+          {itemPrompt}
+        </p>
+      )}
 
       {phase === 'playing' && (
         <>
           <div className="space-y-1">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+              <span
+                className={`text-[10px] font-black uppercase tracking-wider ${theme.label}`}
+              >
                 Time left
               </span>
               <span
                 className={`text-xs font-black ${
-                  secondsLeft <= 6 ? 'text-amber-500' : 'text-slate-500'
+                  secondsLeft <= 6 ? theme.secondsLow : theme.seconds
                 }`}
               >
                 {secondsLeft}s
               </span>
             </div>
-            <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+            <div
+              className={`w-full h-2 rounded-full overflow-hidden ${theme.timerTrack}`}
+            >
               <div
                 className={`h-full rounded-full transition-all duration-200 ${
-                  secondsLeft <= 6 ? 'bg-amber-400' : 'bg-[#0072CE]'
+                  secondsLeft <= 6 ? theme.timerFillLow : theme.timerFill
                 }`}
                 style={{
                   width: `${(secondsLeft / QUESTION_SECONDS) * 100}%`,
@@ -571,11 +924,11 @@ export default function StepLore() {
               autoCorrect="off"
               autoCapitalize="off"
               spellCheck={false}
-              className="flex-1 text-base font-bold text-slate-900 bg-slate-50 border-2 border-slate-200 rounded-2xl px-4 py-3.5 outline-none focus:border-[#0072CE] placeholder:text-slate-400 placeholder:font-medium"
+              className={`flex-1 text-base font-bold border-2 rounded-2xl px-4 py-3.5 outline-none placeholder:font-medium ${theme.input}`}
             />
             <button
               type="submit"
-              className="bg-[#0072CE] hover:bg-blue-700 active:scale-95 text-white font-black text-sm px-6 py-3.5 rounded-2xl transition-all shadow-md cursor-pointer"
+              className={`font-black text-sm px-6 py-3.5 rounded-2xl transition-all active:scale-95 cursor-pointer ${theme.dig}`}
             >
               Dig
             </button>
@@ -586,53 +939,65 @@ export default function StepLore() {
       {phase === 'reveal' && lastRecord && (
         <div className="space-y-3">
           {lastRecord.outcome === 'correct' && (
-            <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 space-y-1">
-              <p className="text-lg font-black text-emerald-900">
+            <div
+              className={`border rounded-2xl p-3.5 space-y-1 ${theme.correctBox}`}
+            >
+              <p
+                className={`text-base sm:text-lg font-black ${theme.correctTitle}`}
+              >
                 ✓ {lastRecord.headline} — +
                 <CountUp value={lastRecord.depthEarned} />
                 {lastRecord.tier ? ` · ${lastRecord.tier}!` : ''}
               </p>
               {lastRecord.note && (
-                <p className="text-xs font-bold text-emerald-700">
+                <p className={`text-xs font-bold ${theme.correctSub}`}>
                   {lastRecord.note}
                 </p>
               )}
               {lastRecord.subline && (
-                <p className="text-xs font-bold text-emerald-700">
+                <p className={`text-xs font-bold ${theme.correctSub}`}>
                   {lastRecord.subline}
                 </p>
               )}
             </div>
           )}
           {lastRecord.outcome === 'trap' && (
-            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-1">
-              <p className="text-lg font-black text-amber-900">
+            <div
+              className={`border rounded-2xl p-3.5 space-y-1 ${theme.trapBox}`}
+            >
+              <p className={`text-base sm:text-lg font-black ${theme.trapTitle}`}>
                 {lastRecord.headline} — so close, and yet
               </p>
-              <p className="text-xs sm:text-sm font-bold text-amber-800 leading-relaxed">
+              <p
+                className={`text-xs sm:text-sm font-bold leading-relaxed ${theme.trapSub}`}
+              >
                 {lastRecord.trapNote}
               </p>
             </div>
           )}
           {lastRecord.outcome === 'duplicate' && (
-            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-1">
-              <p className="text-lg font-black text-amber-900">
+            <div
+              className={`border rounded-2xl p-3.5 space-y-1 ${theme.trapBox}`}
+            >
+              <p className={`text-base sm:text-lg font-black ${theme.trapTitle}`}>
                 {lastRecord.headline} — already played
               </p>
-              <p className="text-xs font-bold text-amber-700">
+              <p className={`text-xs font-bold ${theme.trapSub}`}>
                 {lastRecord.subline}
               </p>
             </div>
           )}
           {lastRecord.outcome === 'miss' && (
-            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-1">
-              <p className="text-lg font-black text-slate-900">
+            <div
+              className={`border rounded-2xl p-3.5 space-y-1 ${theme.missBox}`}
+            >
+              <p className={`text-base sm:text-lg font-black ${theme.missTitle}`}>
                 {lastRecord.headline
                   ? `It was ${lastRecord.headline}.`
                   : 'Nothing dug there.'}
               </p>
               {lastRecord.subline && (
-                <p className="text-xs font-bold text-slate-500">
+                <p className={`text-xs font-bold ${theme.missSub}`}>
                   {lastRecord.subline}
                 </p>
               )}
@@ -645,19 +1010,21 @@ export default function StepLore() {
               src={lastRecord.mediaUrl}
               alt={lastRecord.mediaAlt ?? ''}
               loading="lazy"
-              className="w-full rounded-2xl border border-slate-200 shadow-sm"
+              className={`w-full max-h-48 object-cover rounded-2xl border shadow-sm ${theme.img}`}
             />
           )}
 
           {contrastBlock(lastRecord)}
 
-          <p className="text-xs sm:text-sm font-medium text-slate-500 leading-relaxed">
+          <p
+            className={`text-xs sm:text-sm font-medium leading-relaxed ${theme.lore}`}
+          >
             {lastRecord.loreLine}
           </p>
           <button
             onClick={next}
             autoFocus
-            className="w-full sm:w-auto bg-[#0072CE] hover:bg-blue-700 active:scale-95 text-white font-black text-xs sm:text-sm px-5 py-3 rounded-2xl transition-all shadow-md cursor-pointer"
+            className={`w-full sm:w-auto font-black text-xs sm:text-sm px-5 py-3 rounded-2xl transition-all active:scale-95 cursor-pointer ${theme.next}`}
           >
             {index + 1 >= run.length
               ? 'See where you landed →'
@@ -716,83 +1083,116 @@ export default function StepLore() {
           </div>
         )}
 
-        {/* INTRO — unlocked, not yet playing */}
+        {/* INTRO — unlocked, not yet playing: the marker waits at
+            the surface and the start card sits on the stage. */}
         {unlocked && phase === 'intro' && (
-          <>
-            <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs space-y-3">
-              <h2 className="text-lg font-black text-slate-950 tracking-tight">
+          <DescentStage
+            total={0}
+            burst={null}
+            shake={false}
+            animKey={0}
+            reducedMotion={reducedMotion}
+            viewH={480}
+            focusTop={false}
+          >
+            <div
+              className={`rounded-3xl border p-5 space-y-3 text-left ${CARD_THEMES[0].root}`}
+            >
+              <h2 className="text-lg font-black tracking-tight">
                 Ten prompts. The rarer the answer, the deeper you dig.
               </h2>
-              <div className="space-y-1.5 text-xs sm:text-sm font-medium text-slate-500 leading-relaxed">
+              <div
+                className={`space-y-1.5 text-xs sm:text-sm font-medium leading-relaxed ${CARD_THEMES[0].body}`}
+              >
                 <p>Ten prompts, twenty-five seconds each. No way to lose — a miss just digs nothing.</p>
                 <p>Every prompt takes more than one right answer. Rivers Cuomo is worth a little. Jason Cropper is worth a fortune.</p>
                 <p>Type your answers. Spelling doesn&apos;t have to be perfect.</p>
               </div>
               {best && (
-                <p className="text-xs sm:text-sm font-bold text-slate-700">
+                <p
+                  className={`text-xs sm:text-sm font-bold ${CARD_THEMES[0].strong}`}
+                >
                   Your deepest run so far: {best.depth.toLocaleString()} —{' '}
                   {best.band} level.
                 </p>
               )}
               <button
                 onClick={startRun}
-                className="w-full sm:w-auto bg-[#0072CE] hover:bg-blue-700 active:scale-95 text-white font-black text-xs sm:text-sm px-5 py-3 rounded-2xl transition-all shadow-md cursor-pointer"
+                className={`w-full sm:w-auto font-black text-xs sm:text-sm px-5 py-3 rounded-2xl transition-all active:scale-95 cursor-pointer ${CARD_THEMES[0].dig}`}
               >
                 Start digging
               </button>
             </div>
-            <DescentStage total={0} plungeKey="intro" />
-          </>
+          </DescentStage>
         )}
 
         {/* PLAYING / REVEAL — the descent is the stage */}
         {unlocked && item && (phase === 'playing' || phase === 'reveal') && (
-          <>
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-black uppercase tracking-wider text-slate-400">
-                Prompt {index + 1} of {run.length}
-              </span>
-              <span className="text-xs font-black text-slate-500">
-                {answers.filter((a) => a.outcome === 'correct').length} dug so
-                far
-              </span>
-            </div>
-
-            <div ref={stageRef}>
-              <DescentStage total={total} plungeKey={answers.length}>
-                {stageCard}
-              </DescentStage>
-            </div>
-          </>
+          <div ref={stageRef}>
+            <DescentStage
+              total={total}
+              burst={
+                phase === 'reveal' && lastRecord && lastRecord.depthEarned > 0
+                  ? {
+                      tier: lastRecord.tier,
+                      depth: lastRecord.depthEarned,
+                      headline: lastRecord.headline,
+                    }
+                  : null
+              }
+              shake={
+                phase === 'reveal' &&
+                !!lastRecord &&
+                lastRecord.depthEarned === 0
+              }
+              animKey={answers.length}
+              reducedMotion={reducedMotion}
+              viewH={phase === 'reveal' ? 600 : 480}
+              focusTop={phase === 'reveal'}
+            >
+              {stageCard}
+            </DescentStage>
+          </div>
         )}
 
         {/* RESULT */}
         {unlocked && phase === 'result' && (
           <>
-            <div className="bg-slate-900 text-white rounded-3xl p-6 shadow-md border border-slate-800 space-y-3">
-              <p className="text-[11px] font-black uppercase tracking-wider text-slate-400">
+            <div
+              className={`relative overflow-hidden rounded-3xl p-6 shadow-md space-y-3 ${BAND_STAGE[finalBandIdx].layer}`}
+              style={BAND_STAGE[finalBandIdx].textureStyle}
+            >
+              <p className="text-[11px] font-black uppercase tracking-wider opacity-70">
                 You dug to {total.toLocaleString()}
               </p>
               <h2 className="text-3xl sm:text-4xl font-black tracking-tight leading-none">
                 {finalBand.title} level
               </h2>
-              <p className="text-xs sm:text-sm text-slate-300 font-medium leading-relaxed">
+              <p className="text-xs sm:text-sm font-medium leading-relaxed opacity-80">
                 {finalBand.line}
               </p>
               {isNewBest && (
-                <p className="text-xs font-black text-amber-400">
+                <p className="text-xs font-black">
                   Your deepest run yet. 🏆
                 </p>
               )}
               {!isNewBest && best && best.depth > total && (
-                <p className="text-xs font-bold text-slate-400">
+                <p className="text-xs font-bold opacity-70">
                   Your best stands at {best.depth.toLocaleString()} —{' '}
                   {best.band} level.
                 </p>
               )}
             </div>
 
-            <DescentStage total={total} plungeKey="result" />
+            <DescentStage
+              total={total}
+              burst={null}
+              shake={false}
+              animKey={0}
+              reducedMotion={reducedMotion}
+              viewH={480}
+              focusTop={false}
+            />
 
             <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs space-y-3">
               <h3 className="text-base font-black text-slate-950 tracking-tight">
@@ -830,7 +1230,7 @@ export default function StepLore() {
               <div className="flex flex-col sm:flex-row gap-2 pt-1">
                 <button
                   onClick={startRun}
-                  className="w-full sm:w-auto bg-[#0072CE] hover:bg-blue-700 active:scale-95 text-white font-black text-xs sm:text-sm px-5 py-3 rounded-2xl transition-all shadow-md cursor-pointer"
+                  className={`w-full sm:w-auto font-black text-xs sm:text-sm px-5 py-3 rounded-2xl transition-all active:scale-95 cursor-pointer ${finalTheme.dig}`}
                 >
                   Play again
                 </button>

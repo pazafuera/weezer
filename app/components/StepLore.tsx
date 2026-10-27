@@ -27,7 +27,23 @@ import {
 
 const QUESTION_SECONDS = 25;
 
-type Phase = 'intro' | 'playing' | 'reveal' | 'result';
+type Phase =
+  | 'intro'
+  | 'playing'
+  | 'leaving'
+  | 'plunging'
+  | 'reveal'
+  | 'zoomout'
+  | 'result';
+
+/** Generic wrong-guess lines, rotated per attempt (natural phrasing,
+    no stats-speak — Mark's copy rule). Trap and near-miss guesses
+    carry their own specific hints instead. */
+const GENERIC_HINTS = [
+  'Not that one — try again.',
+  'Nope. Have another go.',
+  'Still digging — try a different answer.',
+];
 
 interface AnswerRecord {
   outcome: 'correct' | 'miss' | 'duplicate' | 'trap';
@@ -330,6 +346,8 @@ function DescentStage({
   reducedMotion,
   viewH,
   focusTop,
+  zoomed,
+  camMs,
   children,
 }: {
   total: number;
@@ -339,6 +357,10 @@ function DescentStage({
   reducedMotion: boolean;
   viewH: number;
   focusTop: boolean;
+  /** End-of-run view: the whole column scaled to fit the window. */
+  zoomed?: boolean;
+  /** Camera transition duration (defaults to the plunge length). */
+  camMs?: number;
   children?: React.ReactNode;
 }) {
   const markerY = depthToY(total);
@@ -347,6 +369,7 @@ function DescentStage({
     Math.max(markerY - anchor, 0),
     STAGE_HEIGHT - viewH
   );
+  const zoomScale = viewH / STAGE_HEIGHT;
   return (
     <div
       className="relative overflow-hidden rounded-3xl border border-slate-900/25 shadow-md"
@@ -372,8 +395,13 @@ function DescentStage({
           to { transform: translateY(0); opacity: 1; }
         }
         .lore-card-in { animation: lore-card-in 0.35s ease-out 0.15s both; }
+        @keyframes lore-card-out {
+          from { transform: translateY(0); opacity: 1; }
+          to { transform: translateY(16px); opacity: 0; }
+        }
+        .lore-card-out { animation: lore-card-out 0.25s ease-in both; }
         @media (prefers-reduced-motion: reduce) {
-          .lore-burst, .lore-shake, .lore-card-in { animation: none !important; }
+          .lore-burst, .lore-shake, .lore-card-in, .lore-card-out { animation: none !important; }
         }
       `}</style>
 
@@ -382,10 +410,13 @@ function DescentStage({
         className="absolute inset-x-0 top-0"
         style={{
           height: STAGE_HEIGHT,
-          transform: `translateY(${-camY}px)`,
+          transformOrigin: 'top center',
+          transform: zoomed
+            ? `translateY(0px) scale(${zoomScale})`
+            : `translateY(${-camY}px)`,
           transition: reducedMotion
             ? 'none'
-            : `transform ${PLUNGE_MS}ms cubic-bezier(0.22, 0.9, 0.3, 1)`,
+            : `transform ${zoomed ? 1200 : (camMs ?? PLUNGE_MS)}ms cubic-bezier(0.22, 0.9, 0.3, 1)`,
         }}
       >
         {DEPTH_BANDS.map((band, i) => {
@@ -442,7 +473,9 @@ function DescentStage({
           style={{ height: markerY }}
         />
 
-        {/* The player marker */}
+        {/* The player marker (in the zoomed view an unscaled
+            overlay chip marks the spot instead — see below) */}
+        {!zoomed && (
         <div className="absolute left-3.5 z-20" style={{ top: markerY }}>
           <div
             key={`shake-${animKey}`}
@@ -458,6 +491,7 @@ function DescentStage({
             </div>
           </div>
         </div>
+        )}
 
         {/* The burst chip, riding the plunge */}
         {burst && (
@@ -484,6 +518,25 @@ function DescentStage({
           </div>
         )}
       </div>
+
+      {/* Zoomed view: an unscaled marker chip at the final depth,
+          so the landing spot stays readable at fit-to-window scale */}
+      {zoomed && (
+        <div
+          className="absolute left-3 z-20 flex items-center gap-[7px]"
+          style={{
+            top: markerY * zoomScale,
+            transform: 'translateY(-50%)',
+          }}
+        >
+          <div className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full border-[3px] border-[#111111] bg-[#FFD23F] text-[10px] font-black text-[#111111] shadow-[0_6px_18px_rgba(0,0,0,0.45)]">
+            =w=
+          </div>
+          <div className="whitespace-nowrap rounded-full bg-[#111111] px-2.5 py-1 text-[10.5px] font-black tracking-[0.05em] text-[#FFD23F] shadow-[0_4px_12px_rgba(0,0,0,0.4)]">
+            YOU · {total.toLocaleString()} DEEP
+          </div>
+        </div>
+      )}
 
       {/* The bottom-pinned card */}
       {children && (
@@ -537,6 +590,21 @@ export default function StepLore() {
   const [best, setBest] = useState<LoreBest | null>(null);
   const [isNewBest, setIsNewBest] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
+  // Guessing loop (v4): a wrong guess never ends the question — it
+  // wiggles the input and leaves a hint; only an acceptable answer
+  // (or the clock) ends it. Attempts live in a ref: counted, never
+  // displayed, reset per question.
+  const [hint, setHint] = useState<string | null>(null);
+  const [wiggle, setWiggle] = useState(0);
+  const attemptsRef = useRef(0);
+  const inputRef = useRef<HTMLInputElement>(null);
+  // Plunge choreography (v4): the finished record waits here while
+  // the card exits, and is committed (starting the plunge) only
+  // when the 'plunging' phase begins.
+  const [pendingRecord, setPendingRecord] = useState<AnswerRecord | null>(
+    null
+  );
+  const [plungeDepth, setPlungeDepth] = useState(0);
 
   const total = answers.reduce((sum, a) => sum + a.depthEarned, 0);
   const item = run[index];
@@ -568,12 +636,13 @@ export default function StepLore() {
     }
   }, [phase, currentBandTitle]);
 
-  const submitRef = useRef<(given: string, timedOut: boolean) => void>(
-    () => {}
-  );
+  const timeoutRef = useRef<() => void>(() => {});
 
-  const submitAnswer = (given: string, timedOut: boolean) => {
-    if (!item || phase !== 'playing') return;
+  /** Judges one answer exactly as the game always has — the record
+      it builds is the reveal's content when the question ends, and
+      the hint source when it doesn't. */
+  const evaluateAnswer = (given: string, timedOut: boolean) => {
+    if (!item) return null;
     let record: AnswerRecord;
 
     if (item.kind === 'visual') {
@@ -728,10 +797,100 @@ export default function StepLore() {
       }
     }
 
-    setAnswers((prev) => [...prev, record]);
-    setPhase('reveal');
+    return record;
   };
-  submitRef.current = submitAnswer;
+
+  /** Ends the question: the card exits first, then the plunge (or
+      the marker shake, on a 0-point timeout miss), then the reveal
+      pops up. The record is committed when the plunge starts, so
+      the marker doesn't move while the card is still leaving. */
+  const endQuestion = (record: AnswerRecord) => {
+    setHint(null);
+    setPendingRecord(record);
+    setPhase('leaving');
+  };
+
+  /** A wrong guess: wiggle the input, leave a hint, keep the clock
+      and the question exactly where they are. Traps hint with
+      their own correction; near-misses hint with the line the
+      reveal would have carried; anything else gets a generic. */
+  const wrongGuess = (record: AnswerRecord) => {
+    const attempt = attemptsRef.current;
+    attemptsRef.current += 1;
+    if (record.outcome === 'trap' && record.trapNote) {
+      setHint(record.trapNote);
+    } else if (record.subline) {
+      setHint(record.subline);
+    } else {
+      setHint(GENERIC_HINTS[attempt % GENERIC_HINTS.length]);
+    }
+    setInput('');
+    setWiggle((w) => w + 1);
+  };
+
+  const handleGuess = () => {
+    if (phase !== 'playing' || !item) return;
+    if (input.trim() === '') return;
+    const record = evaluateAnswer(input, false);
+    if (!record) return;
+    if (record.outcome === 'correct') {
+      endQuestion(record);
+    } else {
+      wrongGuess(record);
+    }
+  };
+
+  const handleTimeout = () => {
+    if (phase !== 'playing' || !item) return;
+    const record = evaluateAnswer('', true);
+    if (record) endQuestion(record);
+  };
+  timeoutRef.current = handleTimeout;
+
+  // Choreography sequencing: 'leaving' (card exit, ~250ms) commits
+  // the pending record and opens 'plunging'; 'plunging' runs the
+  // plunge's length (or a shorter beat for a 0-point shake), then
+  // the reveal pops in.
+  useEffect(() => {
+    if (phase !== 'leaving') return;
+    const t = setTimeout(
+      () => {
+        if (pendingRecord) {
+          setAnswers((prev) => [...prev, pendingRecord]);
+          setPlungeDepth(pendingRecord.depthEarned);
+          setPendingRecord(null);
+        }
+        setPhase('plunging');
+      },
+      reducedMotion ? 30 : 250
+    );
+    return () => clearTimeout(t);
+  }, [phase, pendingRecord, reducedMotion]);
+
+  useEffect(() => {
+    if (phase !== 'plunging') return;
+    const t = setTimeout(
+      () => setPhase('reveal'),
+      reducedMotion ? 40 : plungeDepth > 0 ? PLUNGE_MS : 550
+    );
+    return () => clearTimeout(t);
+  }, [phase, plungeDepth, reducedMotion]);
+
+  // End-of-run zoom-out: hold the fitted column, then the results.
+  useEffect(() => {
+    if (phase !== 'zoomout') return;
+    const t = setTimeout(
+      () => setPhase('result'),
+      reducedMotion ? 900 : 3200
+    );
+    return () => clearTimeout(t);
+  }, [phase, reducedMotion]);
+
+  // A wrong guess leaves the cursor in the input, ready for the
+  // next try.
+  useEffect(() => {
+    if (wiggle > 0) inputRef.current?.focus();
+  }, [wiggle]);
 
   // The 25-second clock, alive only while a question is open. It
   // runs off a deadline timestamp so a backgrounded tab can't stretch
@@ -748,7 +907,7 @@ export default function StepLore() {
       setSecondsLeft(left);
       if (left <= 0) {
         clearInterval(timer);
-        submitRef.current('', true);
+        timeoutRef.current();
       }
     }, 200);
     return () => clearInterval(timer);
@@ -778,15 +937,22 @@ export default function StepLore() {
     setInput('');
     setAnswers([]);
     setUsedSongIds(new Set());
+    setHint(null);
+    setPendingRecord(null);
+    attemptsRef.current = 0;
     setPhase('playing');
   };
 
   const next = () => {
     if (index + 1 >= run.length) {
-      setPhase('result');
+      // The run ends with the zoom-out: the whole column, the
+      // trail, and where the marker landed — then the results.
+      setPhase('zoomout');
     } else {
       setIndex(index + 1);
       setInput('');
+      setHint(null);
+      attemptsRef.current = 0;
       setPhase('playing');
     }
   };
@@ -845,11 +1011,15 @@ export default function StepLore() {
 
   /** The question + answer card, pinned to the bottom of the stage
       and themed to the band the player is currently in. */
-  const stageCard = item && (phase === 'playing' || phase === 'reveal') && (
+  const stageCard = item && (phase === 'playing' || phase === 'leaving' || phase === 'reveal') && (
     <div
-      key={`${phase}-${index}`}
+      key={index}
       className={`rounded-3xl border p-4 sm:p-5 space-y-3.5 text-left ${theme.root} ${
-        reducedMotion ? '' : 'lore-card-in'
+        reducedMotion
+          ? ''
+          : phase === 'leaving'
+            ? 'lore-card-out'
+            : 'lore-card-in'
       }`}
     >
       <div className="flex items-center justify-between gap-2">
@@ -866,7 +1036,7 @@ export default function StepLore() {
         </span>
       </div>
 
-      {phase === 'playing' ? (
+      {phase === 'playing' || phase === 'leaving' ? (
         <h2 className="text-xl sm:text-2xl font-black tracking-tight leading-snug">
           {itemPrompt}
         </h2>
@@ -876,7 +1046,7 @@ export default function StepLore() {
         </p>
       )}
 
-      {phase === 'playing' && (
+      {(phase === 'playing' || phase === 'leaving') && (
         <>
           <div className="space-y-1">
             <div className="flex items-center justify-between">
@@ -910,22 +1080,30 @@ export default function StepLore() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              submitAnswer(input, false);
+              handleGuess();
             }}
             className="flex flex-col sm:flex-row gap-2"
           >
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Type your answer"
-              autoFocus
-              autoComplete="off"
-              autoCorrect="off"
-              autoCapitalize="off"
-              spellCheck={false}
-              className={`flex-1 text-base font-bold border-2 rounded-2xl px-4 py-3.5 outline-none placeholder:font-medium ${theme.input}`}
-            />
+            <div
+              key={wiggle}
+              className={`flex-1 ${
+                wiggle > 0 && !reducedMotion ? 'lore-shake' : ''
+              }`}
+            >
+              <input
+                ref={inputRef}
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Type your answer"
+                autoFocus
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
+                className={`w-full text-base font-bold border-2 rounded-2xl px-4 py-3.5 outline-none placeholder:font-medium ${theme.input}`}
+              />
+            </div>
             <button
               type="submit"
               className={`font-black text-sm px-6 py-3.5 rounded-2xl transition-all active:scale-95 cursor-pointer ${theme.dig}`}
@@ -933,6 +1111,14 @@ export default function StepLore() {
               Dig
             </button>
           </form>
+
+          {hint && (
+            <p
+              className={`text-xs sm:text-sm font-bold leading-relaxed ${theme.body}`}
+            >
+              {hint}
+            </p>
+          )}
         </>
       )}
 
@@ -1104,7 +1290,7 @@ export default function StepLore() {
               <div
                 className={`space-y-1.5 text-xs sm:text-sm font-medium leading-relaxed ${CARD_THEMES[0].body}`}
               >
-                <p>Ten prompts, twenty-five seconds each. No way to lose — a miss just digs nothing.</p>
+                <p>Ten prompts, twenty-five seconds each. A wrong guess just wiggles — keep guessing till you land one or the clock runs out.</p>
                 <p>Every prompt takes more than one right answer. Rivers Cuomo is worth a little. Jason Cropper is worth a fortune.</p>
                 <p>Type your answers. Spelling doesn&apos;t have to be perfect.</p>
               </div>
@@ -1126,13 +1312,17 @@ export default function StepLore() {
           </DescentStage>
         )}
 
-        {/* PLAYING / REVEAL — the descent is the stage */}
-        {unlocked && item && (phase === 'playing' || phase === 'reveal') && (
+        {/* PLAYING / LEAVING / PLUNGING / REVEAL — the descent is
+            the stage. During 'plunging' the card is gone entirely:
+            nothing stands between the player and the drop. */}
+        {unlocked && item && (phase === 'playing' || phase === 'leaving' || phase === 'plunging' || phase === 'reveal') && (
           <div ref={stageRef}>
             <DescentStage
               total={total}
               burst={
-                phase === 'reveal' && lastRecord && lastRecord.depthEarned > 0
+                (phase === 'plunging' || phase === 'reveal') &&
+                lastRecord &&
+                lastRecord.depthEarned > 0
                   ? {
                       tier: lastRecord.tier,
                       depth: lastRecord.depthEarned,
@@ -1141,7 +1331,7 @@ export default function StepLore() {
                   : null
               }
               shake={
-                phase === 'reveal' &&
+                (phase === 'plunging' || phase === 'reveal') &&
                 !!lastRecord &&
                 lastRecord.depthEarned === 0
               }
@@ -1149,10 +1339,26 @@ export default function StepLore() {
               reducedMotion={reducedMotion}
               viewH={phase === 'reveal' ? 600 : 480}
               focusTop={phase === 'reveal'}
+              camMs={phase === 'reveal' ? 400 : PLUNGE_MS}
             >
-              {stageCard}
+              {phase === 'plunging' ? undefined : stageCard}
             </DescentStage>
           </div>
+        )}
+
+        {/* ZOOM-OUT — the whole descent at a glance: every layer,
+            the full trail, and the spot the marker landed. */}
+        {unlocked && phase === 'zoomout' && (
+          <DescentStage
+            total={total}
+            burst={null}
+            shake={false}
+            animKey={0}
+            reducedMotion={reducedMotion}
+            viewH={560}
+            focusTop={false}
+            zoomed
+          />
         )}
 
         {/* RESULT */}

@@ -741,8 +741,10 @@ export function buildRun(rand: () => number = Math.random): LoreQuestion[] {
 /* counts, and the RARITY of the answer sets the depth. The 15        */
 /* prompts and their rarity tables come from the open-prompts file    */
 /* in the goal workspace (draft tables, Mark's markup pending). The   */
-/* v1 fixed bank above stays in the codebase: the visual rounds       */
-/* reuse three of its questions, and nothing else draws from it.      */
+/* v1 fixed bank above stays in the codebase as reserve content:      */
+/* v2's visual rounds reused three of its questions, but v5 (Oct     */
+/* 27) removed single-answer questions from runs entirely — runs     */
+/* are ten open prompts, and nothing draws from the fixed bank.      */
 /* ================================================================== */
 
 /** Rarity tier names, by the depth an answer earns. */
@@ -1156,11 +1158,14 @@ export const OPEN_PROMPTS: OpenPrompt[] = [
 /* ------------------------------------------------------------------ */
 
 /**
- * Three rounds reuse fixed questions from the v1 bank; what makes
- * them visual is the reveal: after you answer, the moment itself
- * shows up as a GIF. Media URLs are Tenor CDN links, verified live
- * (HTTP 200, image/gif) on Oct 26, 2026 — prototype-grade sourcing,
- * per the content file.
+ * RESERVE CONTENT (v5): three rounds that reused fixed questions
+ * from the v1 bank, with the moment itself as a GIF on the reveal.
+ * Mark's call (Oct 27): every question with exactly one correct
+ * answer is out of the game — runs no longer deal these, and the
+ * GIFs went with their questions. The data stays, like the v1 bank,
+ * in case a media moment ever earns its way back. Media URLs are
+ * Tenor CDN links, verified live (HTTP 200, image/gif) on Oct 26,
+ * 2026 — prototype-grade sourcing, per the content file.
  */
 export interface VisualRound {
   id: string;
@@ -1204,19 +1209,18 @@ export function visualRoundQuestion(round: VisualRound): LoreQuestion {
 }
 
 /* ------------------------------------------------------------------ */
-/* Run composition v2                                                  */
+/* Run composition                                                     */
 /* ------------------------------------------------------------------ */
 
-export type RunItem =
-  | { kind: 'open'; prompt: OpenPrompt }
-  | { kind: 'visual'; round: VisualRound };
+export type RunItem = { kind: 'open'; prompt: OpenPrompt };
 
 /**
- * Deals one v2 run: 8 open prompts + 2 visual rounds = 10. The open
- * eight split across the pool's breadth ramp — four from the broad
- * half (ramps 1–7), four from the narrow half (8–15) — each half
- * dealt in ramp order, so the run narrows as it goes. The two
- * visual rounds (drawn from the three) land at slots 4 and 8.
+ * Deals one run: 10 open prompts, nothing else (v5 — Mark removed
+ * every single-answer question, visual rounds included). The ten
+ * split across the pool's breadth ramp — five from the broad half
+ * (ramps 1–7), five from the narrow half (8–15) — each half dealt
+ * in ramp order, so the run narrows as it goes: broad prompts early,
+ * narrow prompts late.
  */
 export function buildRunV2(rand: () => number = Math.random): RunItem[] {
   const byRamp = [...OPEN_PROMPTS].sort((a, b) => a.ramp - b.ramp);
@@ -1229,23 +1233,10 @@ export function buildRunV2(rand: () => number = Math.random): RunItem[] {
     return drawn.sort((a, b) => a.ramp - b.ramp);
   };
 
-  const openItems: RunItem[] = [
-    ...drawHalf(byRamp.slice(0, 7), 4),
-    ...drawHalf(byRamp.slice(7), 4),
+  return [
+    ...drawHalf(byRamp.slice(0, 7), 5),
+    ...drawHalf(byRamp.slice(7), 5),
   ].map((prompt) => ({ kind: 'open' as const, prompt }));
-
-  const visualPool = [...VISUAL_ROUNDS];
-  const firstVisual = visualPool.splice(
-    Math.floor(rand() * visualPool.length),
-    1
-  )[0];
-  const secondVisual = visualPool.splice(
-    Math.floor(rand() * visualPool.length),
-    1
-  )[0];
-  openItems.splice(3, 0, { kind: 'visual', round: firstVisual });
-  openItems.splice(7, 0, { kind: 'visual', round: secondVisual });
-  return openItems;
 }
 
 /* ------------------------------------------------------------------ */

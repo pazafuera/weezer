@@ -5,7 +5,6 @@ import { useWeezer } from '../context/WeezerContext';
 import { FULL_SONG_POOL } from '../data/constants';
 import {
   DEPTH_BANDS,
-  LORE_ANSWER_UNIVERSE,
   bandForTotal,
   buildRunV2,
   isLoreUnlocked,
@@ -15,12 +14,10 @@ import {
   openSongQualifies,
   readLoreBest,
   tierForDepth,
-  visualRoundQuestion,
   writeLoreBest,
 } from '../data/loreGame';
 import type { LoreBest, RarityTier, RunItem } from '../data/loreGame';
 import {
-  matchLoreAnswer,
   matchTableAnswer,
   resolveSongAnswer,
 } from '../lib/loreMatch';
@@ -61,9 +58,6 @@ interface AnswerRecord {
   commonDepth?: number;
   deepestText?: string;
   deepestDepth?: number;
-  /** Visual rounds: the moment itself, shown on the reveal. */
-  mediaUrl?: string;
-  mediaAlt?: string;
   loreLine: string;
   questionPrompt: string;
 }
@@ -169,7 +163,6 @@ interface CardTheme {
   missTitle: string;
   missSub: string;
   next: string;
-  img: string;
 }
 
 const CARD_THEMES: CardTheme[] = [
@@ -199,7 +192,6 @@ const CARD_THEMES: CardTheme[] = [
     missTitle: 'text-slate-900',
     missSub: 'text-slate-500',
     next: 'bg-[#0072CE] hover:bg-blue-700 text-white shadow-md',
-    img: 'border-slate-200',
   },
   {
     // Pinkerton / Fan Club — dark plum.
@@ -227,7 +219,6 @@ const CARD_THEMES: CardTheme[] = [
     missTitle: 'text-pink-50',
     missSub: 'text-pink-100/60',
     next: 'bg-pink-300 hover:bg-pink-200 text-[#401826] shadow-md',
-    img: 'border-white/20',
   },
   {
     // Karl — the mock's archive-green dark card.
@@ -255,7 +246,6 @@ const CARD_THEMES: CardTheme[] = [
     missTitle: 'text-[#eef3ee]',
     missSub: 'text-[#b9e7c9]/60',
     next: 'bg-[#7be495] hover:bg-[#93eda9] text-[#0c1a12] shadow-md',
-    img: 'border-[#2b3a30]',
   },
   {
     // GOAT PUNISHMENT — warm dark card, gold accents (mock frame 2).
@@ -283,7 +273,6 @@ const CARD_THEMES: CardTheme[] = [
     missTitle: 'text-[#f5ecd8]',
     missSub: 'text-[#cbbf9f]/60',
     next: 'bg-[#FFD23F] hover:bg-[#ffdb5c] text-[#111111] shadow-md',
-    img: 'border-[#4a3f22]',
   },
 ];
 
@@ -645,36 +634,7 @@ export default function StepLore() {
     if (!item) return null;
     let record: AnswerRecord;
 
-    if (item.kind === 'visual') {
-      const q = visualRoundQuestion(item.round);
-      const spec = q.spec;
-      if (!spec) return;
-      const result = matchLoreAnswer(given, spec, LORE_ANSWER_UNIVERSE);
-      const depth = q.depth ?? 0;
-      record =
-        result.status === 'match'
-          ? {
-              outcome: 'correct',
-              headline: spec.answer,
-              subline: '',
-              tier: tierForDepth(depth),
-              depthEarned: depth,
-              mediaUrl: item.round.mediaUrl,
-              mediaAlt: item.round.mediaAlt,
-              loreLine: q.loreLine,
-              questionPrompt: q.prompt,
-            }
-          : {
-              outcome: 'miss',
-              headline: spec.answer,
-              subline: timedOut ? 'Time ran out.' : '',
-              depthEarned: 0,
-              mediaUrl: item.round.mediaUrl,
-              mediaAlt: item.round.mediaAlt,
-              loreLine: q.loreLine,
-              questionPrompt: q.prompt,
-            };
-    } else if (item.prompt.kind === 'table' && item.prompt.answers) {
+    if (item.prompt.kind === 'table' && item.prompt.answers) {
       const prompt = item.prompt;
       const tableAnswers = item.prompt.answers;
       const extremes = openPromptExtremes(prompt);
@@ -975,12 +935,7 @@ export default function StepLore() {
   const theme = CARD_THEMES[BAND_CARD_THEME[currentBandIdx]];
   const finalTheme = CARD_THEMES[BAND_CARD_THEME[finalBandIdx]];
 
-  const itemPrompt =
-    item?.kind === 'open'
-      ? item.prompt.prompt
-      : item?.kind === 'visual'
-        ? visualRoundQuestion(item.round).prompt
-        : '';
+  const itemPrompt = item ? item.prompt.prompt : '';
 
   /** The Krillion contrast, shown on every open-prompt reveal. */
   const contrastBlock = (record: AnswerRecord) => {
@@ -1027,7 +982,6 @@ export default function StepLore() {
           className={`text-[10px] font-black uppercase tracking-[0.14em] ${theme.label}`}
         >
           Question {index + 1} of {run.length}
-          {item.kind === 'visual' ? ' · Visual round' : ''}
         </span>
         <span
           className={`text-[10px] font-black uppercase tracking-[0.14em] ${theme.label}`}
@@ -1188,16 +1142,6 @@ export default function StepLore() {
                 </p>
               )}
             </div>
-          )}
-
-          {lastRecord.mediaUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={lastRecord.mediaUrl}
-              alt={lastRecord.mediaAlt ?? ''}
-              loading="lazy"
-              className={`w-full max-h-48 object-cover rounded-2xl border shadow-sm ${theme.img}`}
-            />
           )}
 
           {contrastBlock(lastRecord)}

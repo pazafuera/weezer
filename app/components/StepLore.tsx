@@ -5,10 +5,13 @@ import { useWeezer } from '../context/WeezerContext';
 import { FULL_SONG_POOL } from '../data/constants';
 import {
   DEPTH_BANDS,
+  TIER_TAGLINES,
+  answerCoverFor,
   bandForTotal,
   buildRunV2,
   isLoreUnlocked,
   loreGateRemainingAlbums,
+  openPromptAnswerTable,
   openPromptExtremes,
   openSongDepth,
   openSongQualifies,
@@ -23,9 +26,11 @@ import {
 } from '../lib/loreMatch';
 
 const QUESTION_SECONDS = 25;
+const PREVIEW_SECONDS = 3;
 
 type Phase =
   | 'intro'
+  | 'preview'
   | 'playing'
   | 'leaving'
   | 'plunging'
@@ -51,6 +56,9 @@ interface AnswerRecord {
   note?: string;
   /** Trap outcome: the plausible-but-invalid answer's correction. */
   trapNote?: string;
+  /** Scoring reveals only: the album cover the answer resolves to. */
+  coverSrc?: string;
+  coverAlbum?: string;
   tier?: RarityTier;
   depthEarned: number;
   /** The Krillion contrast (open prompts only). */
@@ -297,6 +305,17 @@ const STAGE_HEIGHT = LAYER_HEIGHTS.reduce((a, b) => a + b, 0);
 const BEDROCK_DEPTH_CAP = 6500;
 const PLUNGE_MS = 900;
 
+/**
+ * How long a scoring plunge lasts, scaled by the depth just earned.
+ * An exponential approach to the ceiling keeps cheap answers brisk
+ * while giving the deepest pulls room to register: about 736ms at
+ * +20, 1,314ms at +200, 1,955ms at +550, and 2,367ms at +1,200.
+ */
+export function plungeDurationForDepth(depth: number): number {
+  if (depth <= 0) return 550;
+  return Math.round(650 + 1850 * (1 - Math.exp(-depth / 450)));
+}
+
 function depthToY(depth: number): number {
   for (let i = 0; i < DEPTH_BANDS.length; i++) {
     const band = DEPTH_BANDS[i];
@@ -329,7 +348,9 @@ interface BurstInfo {
  */
 function DescentStage({
   total,
+  displayTotal,
   burst,
+  burstDelayMs,
   shake,
   animKey,
   reducedMotion,
@@ -340,7 +361,11 @@ function DescentStage({
   children,
 }: {
   total: number;
+  /** Label-only depth, ticking up while the marker falls. */
+  displayTotal?: number;
   burst: BurstInfo | null;
+  /** When the burst pop starts, timed to finish as the marker lands. */
+  burstDelayMs?: number;
   shake: boolean;
   animKey: number;
   reducedMotion: boolean;
@@ -475,7 +500,7 @@ function DescentStage({
                 =w=
               </div>
               <div className="whitespace-nowrap rounded-full bg-[#111111] px-2.5 py-1 text-[10.5px] font-black tracking-[0.05em] text-[#FFD23F] shadow-[0_4px_12px_rgba(0,0,0,0.4)]">
-                YOU · {total.toLocaleString()} DEEP
+                YOU · {(displayTotal ?? total).toLocaleString()} DEEP
               </div>
             </div>
           </div>
@@ -494,6 +519,11 @@ function DescentStage({
                 className={`rounded-2xl bg-[#FFD23F] px-3 py-2.5 text-[#111111] shadow-[0_14px_34px_rgba(0,0,0,0.5)] ${
                   reducedMotion ? '' : 'lore-burst'
                 }`}
+                style={{
+                  animationDelay: reducedMotion
+                    ? undefined
+                    : `${Math.max(0, (burstDelayMs ?? PLUNGE_MS) - 450)}ms`,
+                }}
               >
                 <div className="whitespace-nowrap text-[10px] font-black tracking-[0.16em]">
                   {burst.tier ? `${burst.tier.toUpperCase()} · ` : ''}+
@@ -571,6 +601,7 @@ export default function StepLore() {
   const [run, setRun] = useState<RunItem[]>([]);
   const [index, setIndex] = useState(0);
   const [input, setInput] = useState('');
+  const [previewLeft, setPreviewLeft] = useState(PREVIEW_SECONDS);
   const [secondsLeft, setSecondsLeft] = useState(QUESTION_SECONDS);
   const [answers, setAnswers] = useState<AnswerRecord[]>([]);
   const [usedSongIds, setUsedSongIds] = useState<ReadonlySet<string>>(
@@ -594,6 +625,10 @@ export default function StepLore() {
     null
   );
   const [plungeDepth, setPlungeDepth] = useState(0);
+  const [plungeMs, setPlungeMs] = useState(PLUNGE_MS);
+  const [tickingTotal, setTickingTotal] = useState(0);
+  const plungeFromRef = useRef(0);
+  const [openDigPromptId, setOpenDigPromptId] = useState<string | null>(null);
 
   const total = answers.reduce((sum, a) => sum + a.depthEarned, 0);
   const item = run[index];
@@ -651,11 +686,14 @@ export default function StepLore() {
       };
       if (result.status === 'match') {
         const played = tableAnswers[result.index];
+        const cover = answerCoverFor(prompt, played.text);
         record = {
           outcome: 'correct',
           headline: played.text,
           subline: '',
           note: played.note,
+          coverSrc: cover?.src,
+          coverAlbum: cover?.album,
           tier: tierForDepth(played.depth),
           depthEarned: played.depth,
           ...contrast,
@@ -723,10 +761,17 @@ export default function StepLore() {
           nextUsed.add(resolved.song.id);
           setUsedSongIds(nextUsed);
           const depth = openSongDepth(prompt, resolved.song);
+          const cover = answerCoverFor(
+            prompt,
+            resolved.song.title,
+            resolved.song
+          );
           record = {
             outcome: 'correct',
             headline: resolved.song.title,
             subline: resolved.song.album,
+            coverSrc: cover?.src,
+            coverAlbum: cover?.album,
             tier: tierForDepth(depth),
             depthEarned: depth,
             ...contrast,
@@ -816,6 +861,9 @@ export default function StepLore() {
     const t = setTimeout(
       () => {
         if (pendingRecord) {
+          plungeFromRef.current = total;
+          setTickingTotal(total);
+          setPlungeMs(plungeDurationForDepth(pendingRecord.depthEarned));
           setAnswers((prev) => [...prev, pendingRecord]);
           setPlungeDepth(pendingRecord.depthEarned);
           setPendingRecord(null);
@@ -825,16 +873,41 @@ export default function StepLore() {
       reducedMotion ? 30 : 250
     );
     return () => clearTimeout(t);
+    // `total` is the pre-commit total here by construction: the
+    // pending record has not been added to `answers` yet.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, pendingRecord, reducedMotion]);
 
   useEffect(() => {
     if (phase !== 'plunging') return;
     const t = setTimeout(
       () => setPhase('reveal'),
-      reducedMotion ? 40 : plungeDepth > 0 ? PLUNGE_MS : 550
+      reducedMotion ? 40 : plungeMs
     );
     return () => clearTimeout(t);
-  }, [phase, plungeDepth, reducedMotion]);
+  }, [phase, plungeMs, reducedMotion]);
+
+  // While the marker falls, the depth label counts up with it. The
+  // count uses the same plunge duration; cleanup cancels the frame
+  // loop whenever the phase moves on or the component unmounts.
+  useEffect(() => {
+    if (phase !== 'plunging') return;
+    if (reducedMotion) {
+      setTickingTotal(total);
+      return;
+    }
+    let raf = 0;
+    const from = plungeFromRef.current;
+    const start = performance.now();
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / plungeMs);
+      const eased = 1 - Math.pow(1 - t, 3);
+      setTickingTotal(Math.round(from + (total - from) * eased));
+      if (t < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [phase, plungeMs, reducedMotion, total]);
 
   // End-of-run zoom-out: hold the fitted column, then the results.
   useEffect(() => {
@@ -851,6 +924,26 @@ export default function StepLore() {
   useEffect(() => {
     if (wiggle > 0) inputRef.current?.focus();
   }, [wiggle]);
+
+  // Krillion's preview beat: the prompt is read-only for three
+  // seconds, with no input and no 25-second clock, then play opens.
+  useEffect(() => {
+    if (phase !== 'preview') return;
+    const deadline = Date.now() + PREVIEW_SECONDS * 1000;
+    setPreviewLeft(PREVIEW_SECONDS);
+    const timer = setInterval(() => {
+      const left = Math.max(
+        0,
+        Math.ceil((deadline - Date.now()) / 1000)
+      );
+      setPreviewLeft(left);
+      if (left <= 0) {
+        clearInterval(timer);
+        setPhase('playing');
+      }
+    }, 100);
+    return () => clearInterval(timer);
+  }, [phase, index]);
 
   // The 25-second clock, alive only while a question is open. It
   // runs off a deadline timestamp so a backgrounded tab can't stretch
@@ -899,8 +992,13 @@ export default function StepLore() {
     setUsedSongIds(new Set());
     setHint(null);
     setPendingRecord(null);
+    setPlungeDepth(0);
+    setPlungeMs(PLUNGE_MS);
+    setTickingTotal(0);
+    plungeFromRef.current = 0;
+    setOpenDigPromptId(null);
     attemptsRef.current = 0;
-    setPhase('playing');
+    setPhase('preview');
   };
 
   const next = () => {
@@ -913,7 +1011,7 @@ export default function StepLore() {
       setInput('');
       setHint(null);
       attemptsRef.current = 0;
-      setPhase('playing');
+      setPhase('preview');
     }
   };
 
@@ -966,7 +1064,7 @@ export default function StepLore() {
 
   /** The question + answer card, pinned to the bottom of the stage
       and themed to the band the player is currently in. */
-  const stageCard = item && (phase === 'playing' || phase === 'leaving' || phase === 'reveal') && (
+  const stageCard = item && (phase === 'preview' || phase === 'playing' || phase === 'leaving' || phase === 'reveal') && (
     <div
       key={index}
       className={`rounded-3xl border p-4 sm:p-5 space-y-3.5 text-left ${theme.root} ${
@@ -990,7 +1088,7 @@ export default function StepLore() {
         </span>
       </div>
 
-      {phase === 'playing' || phase === 'leaving' ? (
+      {phase === 'preview' || phase === 'playing' || phase === 'leaving' ? (
         <h2 className="text-xl sm:text-2xl font-black tracking-tight leading-snug">
           {itemPrompt}
         </h2>
@@ -998,6 +1096,17 @@ export default function StepLore() {
         <p className="text-sm font-bold leading-snug opacity-80">
           {itemPrompt}
         </p>
+      )}
+
+      {phase === 'preview' && (
+        <div className="flex justify-center pt-1">
+          <span
+            className={`rounded-full border px-3.5 py-2 text-[11px] font-black uppercase tracking-[0.14em] ${theme.input}`}
+            aria-live="polite"
+          >
+            The clock starts in {previewLeft}
+          </span>
+        </div>
       )}
 
       {(phase === 'playing' || phase === 'leaving') && (
@@ -1098,6 +1207,20 @@ export default function StepLore() {
                 <p className={`text-xs font-bold ${theme.correctSub}`}>
                   {lastRecord.subline}
                 </p>
+              )}
+              {lastRecord.tier && (
+                <p className={`text-xs sm:text-sm font-bold ${theme.correctSub}`}>
+                  {TIER_TAGLINES[lastRecord.tier]}
+                </p>
+              )}
+              {lastRecord.coverSrc && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={lastRecord.coverSrc}
+                  alt={`${lastRecord.coverAlbum ?? 'Album'} cover`}
+                  className="h-44 w-44 max-h-48 rounded-2xl border border-black/10 object-cover shadow-md"
+                  loading="lazy"
+                />
               )}
             </div>
           )}
@@ -1259,10 +1382,12 @@ export default function StepLore() {
         {/* PLAYING / LEAVING / PLUNGING / REVEAL — the descent is
             the stage. During 'plunging' the card is gone entirely:
             nothing stands between the player and the drop. */}
-        {unlocked && item && (phase === 'playing' || phase === 'leaving' || phase === 'plunging' || phase === 'reveal') && (
+        {unlocked && item && (phase === 'preview' || phase === 'playing' || phase === 'leaving' || phase === 'plunging' || phase === 'reveal') && (
           <div ref={stageRef}>
             <DescentStage
               total={total}
+              displayTotal={phase === 'plunging' ? tickingTotal : total}
+              burstDelayMs={plungeMs}
               burst={
                 (phase === 'plunging' || phase === 'reveal') &&
                 lastRecord &&
@@ -1283,7 +1408,7 @@ export default function StepLore() {
               reducedMotion={reducedMotion}
               viewH={phase === 'reveal' ? 600 : 480}
               focusTop={phase === 'reveal'}
-              camMs={phase === 'reveal' ? 400 : PLUNGE_MS}
+              camMs={phase === 'reveal' ? 400 : plungeMs}
             >
               {phase === 'plunging' ? undefined : stageCard}
             </DescentStage>
@@ -1390,6 +1515,96 @@ export default function StepLore() {
                 >
                   Back to Dashboard
                 </button>
+              </div>
+            </div>
+
+            <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs space-y-3">
+              <div>
+                <h3 className="text-base font-black text-slate-950 tracking-tight">
+                  The Dig
+                </h3>
+                <p className="text-xs sm:text-sm font-medium text-slate-500 leading-relaxed">
+                  Open a prompt to see every answer that would have dug, deepest first.
+                </p>
+              </div>
+              <div className="divide-y divide-slate-100">
+                {run.map((runItem, runIndex) => {
+                  const record = answers[runIndex];
+                  const table = openPromptAnswerTable(runItem.prompt);
+                  const isOpen = openDigPromptId === runItem.prompt.id;
+                  return (
+                    <div key={runItem.prompt.id} className="py-3 first:pt-0 last:pb-0">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setOpenDigPromptId(isOpen ? null : runItem.prompt.id)
+                        }
+                        aria-expanded={isOpen}
+                        className="flex w-full items-start justify-between gap-3 text-left cursor-pointer"
+                      >
+                        <span>
+                          <span className="block text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
+                            Question {runIndex + 1}
+                          </span>
+                          <span className="block text-sm font-black text-slate-900 leading-snug">
+                            {runItem.prompt.prompt}
+                          </span>
+                          <span className="mt-1 block text-xs font-bold text-slate-500">
+                            {record?.outcome === 'correct'
+                              ? `You dug ${record.headline} · +${record.depthEarned}`
+                              : 'Nothing landed'}
+                          </span>
+                        </span>
+                        <span className="shrink-0 text-lg font-black text-[#0072CE]" aria-hidden="true">
+                          {isOpen ? '−' : '+'}
+                        </span>
+                      </button>
+
+                      {isOpen && (
+                        <div className="mt-3 space-y-4 rounded-2xl bg-slate-50 p-3.5">
+                          {(['Super rare', 'Rare', 'Uncommon', 'Common'] as RarityTier[])
+                            .map((tier) => ({
+                              tier,
+                              rows: table.filter((row) => row.tier === tier),
+                            }))
+                            .filter((group) => group.rows.length > 0)
+                            .map((group) => (
+                              <div key={group.tier} className="space-y-1.5">
+                                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
+                                  {group.tier}
+                                </p>
+                                <div className="space-y-1">
+                                  {group.rows.map((row) => {
+                                    const isPlayers =
+                                      record?.outcome === 'correct' &&
+                                      record.headline === row.text;
+                                    return (
+                                      <div
+                                        key={row.text}
+                                        className={`flex items-baseline justify-between gap-3 rounded-xl px-2.5 py-1.5 ${
+                                          isPlayers
+                                            ? 'bg-[#FFD23F] text-slate-950 shadow-sm'
+                                            : 'text-slate-700'
+                                        }`}
+                                      >
+                                        <span className="text-xs sm:text-sm font-bold">
+                                          {row.text}
+                                          {isPlayers ? ' · you' : ''}
+                                        </span>
+                                        <span className="shrink-0 text-xs sm:text-sm font-black">
+                                          {row.depth}
+                                        </span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </>

@@ -14,7 +14,13 @@
  * when that lands, it replaces the derivation, not the shape.
  */
 
-import { FULL_SONG_POOL, SINGLE_SONG_IDS, Song } from './constants';
+import {
+  ALBUMS_BY_ID,
+  ALBUM_NAME_TO_ID,
+  FULL_SONG_POOL,
+  SINGLE_SONG_IDS,
+  Song,
+} from './constants';
 import {
   LoreAnswerSpec,
   SongConstraint as _SongConstraint,
@@ -766,6 +772,18 @@ export function tierForDepth(depth: number): RarityTier {
   return 'Common';
 }
 
+/**
+ * One warm line for the landing, keyed by the answer's rarity tier.
+ * DRAFT copy for Mark's markup (v6): written for Weezer Lore's own
+ * voice, deliberately not borrowed from Krillion's tier lines.
+ */
+export const TIER_TAGLINES: Record<RarityTier, string> = {
+  Common: "The first answer in every fan's head.",
+  Uncommon: 'You skipped the obvious one — good instinct.',
+  Rare: 'Most fans never dig down this far.',
+  'Super rare': 'Bedrock knowledge — almost nobody digs this deep.',
+};
+
 /** One row of an open prompt's rarity table (table-kind prompts). */
 export interface OpenAnswer {
   /** The answer as displayed. */
@@ -867,6 +885,158 @@ export function openPromptExtremes(
   };
   extremesCache.set(prompt.id, result);
   return result;
+}
+
+/** One valid row in a prompt's full post-run answer table ("the Dig"). */
+export interface DigAnswer {
+  text: string;
+  depth: number;
+  tier: RarityTier;
+}
+
+/**
+ * The full valid answer table for one prompt: table prompts expose
+ * their non-trap rows; song prompts expose every qualifying catalog
+ * song at its prompt-specific depth. Sorted deepest first (then by
+ * title) so the Dig can group the rows by tier without re-sorting.
+ */
+export function openPromptAnswerTable(prompt: OpenPrompt): DigAnswer[] {
+  const rows: DigAnswer[] = [];
+
+  if (prompt.kind === 'table' && prompt.answers) {
+    for (const answer of prompt.answers) {
+      if (answer.trapNote) continue;
+      rows.push({
+        text: answer.text,
+        depth: answer.depth,
+        tier: tierForDepth(answer.depth),
+      });
+    }
+  } else {
+    for (const song of FULL_SONG_POOL) {
+      if (!openSongQualifies(prompt, song)) continue;
+      const depth = openSongDepth(prompt, song);
+      rows.push({ text: song.title, depth, tier: tierForDepth(depth) });
+    }
+  }
+
+  return rows.sort(
+    (a, b) => b.depth - a.depth || a.text.localeCompare(b.text)
+  );
+}
+
+/** A resolved album cover for a scoring reveal. */
+export interface AnswerCover {
+  album: string;
+  src: string;
+}
+
+const normalizeAlbumName = (value: string): string =>
+  normalizeAnswer(value).replace(/^the /, '');
+
+/**
+ * Cover files actually present under public/albums. The registry
+ * also points at Death to False Metal and Teal cover paths that are
+ * not shipped in this tree; returning those would render a broken
+ * image, so they resolve to no visual instead.
+ */
+const SHIPPED_ALBUM_COVER_PATHS = new Set([
+  '/albums/b-sides.jpg',
+  '/albums/black.png',
+  '/albums/blue.jpg',
+  '/albums/ewbaite.jpg',
+  '/albums/gold.jpg',
+  '/albums/green.jpg',
+  '/albums/hurley.jpg',
+  '/albums/make-believe.jpg',
+  '/albums/maladroit.jpg',
+  '/albums/ok-human.jpg',
+  '/albums/pacific-daydream.png',
+  '/albums/pinkerton.jpg',
+  '/albums/raditude.jpg',
+  '/albums/red.jpg',
+  '/albums/sznz-autumn.jpg',
+  '/albums/sznz-spring.jpg',
+  '/albums/sznz-summer.jpeg',
+  '/albums/sznz-winter.jpg',
+  '/albums/van-weezer.png',
+  '/albums/white.jpg',
+]);
+
+function shippedCover(album: { name: string; cover: string }): AnswerCover | undefined {
+  return SHIPPED_ALBUM_COVER_PATHS.has(album.cover)
+    ? { album: album.name, src: album.cover }
+    : undefined;
+}
+
+function coverForAlbumName(albumName: string): AnswerCover | undefined {
+  const wanted = normalizeAlbumName(
+    albumName === 'EWBAITE'
+      ? 'Everything Will Be Alright in the End'
+      : albumName
+  );
+  const album = Object.values(ALBUMS_BY_ID).find(
+    (candidate) => normalizeAlbumName(candidate.name) === wanted
+  );
+  if (album) return shippedCover(album);
+
+  const bridgedId = Object.entries(ALBUM_NAME_TO_ID).find(
+    ([name]) => normalizeAlbumName(name) === wanted
+  )?.[1];
+  const bridged = bridgedId ? ALBUMS_BY_ID[bridgedId] : undefined;
+  return bridged ? shippedCover(bridged) : undefined;
+}
+
+/**
+ * The ten studio-album tracks on the Teal Album — the one explicit
+ * song-to-album association the cover prompt needs that the 206-song
+ * pool cannot supply (its covers are not catalog songs). Paranoid
+ * Android is deliberately absent: it is not a Teal Album track, so
+ * it gets no visual rather than a wrong one.
+ */
+const TEAL_ALBUM_COVER_SONGS = new Set([
+  'africa',
+  'take on me',
+  'mr blue sky',
+  'everybody wants to rule the world',
+  'no scrubs',
+  'sweet dreams are made of this',
+  'happy together',
+  'billie jean',
+  'stand by me',
+  'paranoid',
+]);
+
+/**
+ * Resolve a valid answer to exactly one album cover, or return
+ * undefined when the association is not known. A missing cover is
+ * always preferable to a wrong or placeholder image: the reveal
+ * simply shows no visual.
+ */
+export function answerCoverFor(
+  prompt: OpenPrompt,
+  answerText: string,
+  song?: Song
+): AnswerCover | undefined {
+  if (song) return coverForAlbumName(song.album);
+
+  if (prompt.id === 'O4') return coverForAlbumName(answerText);
+
+  if (prompt.id === 'O7') {
+    return TEAL_ALBUM_COVER_SONGS.has(normalizeAnswer(answerText))
+      ? coverForAlbumName('The Teal Album')
+      : undefined;
+  }
+
+  if (prompt.kind === 'song') {
+    const wanted = normalizeAnswer(answerText);
+    const matches = FULL_SONG_POOL.filter(
+      (candidate) => normalizeAnswer(candidate.title) === wanted
+    );
+    if (matches.length === 1) return coverForAlbumName(matches[0].album);
+  }
+
+  return undefined;
 }
 
 export const OPEN_PROMPTS: OpenPrompt[] = [

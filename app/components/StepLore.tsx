@@ -5,6 +5,7 @@ import { useWeezer } from '../context/WeezerContext';
 import { FULL_SONG_POOL } from '../data/constants';
 import {
   DEPTH_BANDS,
+  FANHOOD_TOTAL_LADDER,
   LORE_GAMES,
   TIER_TAGLINES,
   answerCoverFor,
@@ -22,6 +23,7 @@ import {
   promptById,
   tierForDepth,
   titleForDepth,
+  totalTierRangeLabel,
 } from '../data/loreGame';
 import type {
   LoreGameId,
@@ -35,9 +37,11 @@ import {
 } from '../lib/loreMatch';
 import {
   fanhoodDisplay,
+  gameCanStart,
   readFanhood,
   recordGameResult,
 } from '../lib/fanhood';
+import { displayFont } from './shareables/fonts';
 import { syncFanhoodAfterRun } from '../lib/fanhoodSync';
 import FanhoodLeaderboard from './FanhoodLeaderboard';
 import type {
@@ -49,8 +53,42 @@ import type {
 const QUESTION_SECONDS = 25;
 const PREVIEW_SECONDS = 3;
 
+/** Picker strata (mock v2, approved Oct 27, 2026): the ladder
+ *  strip's rungs and the game cards' edge bars deepen as the
+ *  descent does — sky at the surface to near-black bedrock.
+ *  Parallel to FANHOOD_TOTAL_LADDER / LORE_GAMES by index. */
+const LADDER_RUNG_BG = ['#38bdf8', '#0284c7', '#0369a1', '#1e3a5f', '#020617'];
+const GAME_EDGE_BG = ['#7dd3fc', '#38bdf8', '#0284c7', '#1e3a5f', '#0f172a'];
+
+/** The start gate's four rules (mock v2, generic per Mark: no
+ *  prompt teasers — a one-and-done game's card is not a study
+ *  guide). Lead-ins render in black, the rest in body gray. */
+const GATE_RULES: { icon: string; lead: string; rest: string }[] = [
+  {
+    icon: '❓',
+    lead: 'Seven prompts.',
+    rest: "Each one different — you won't see them coming, and that's the point.",
+  },
+  {
+    icon: '⏱️',
+    lead: 'Twenty-five seconds each.',
+    rest: 'A wrong guess just wiggles — keep guessing until you land an answer or time runs out.',
+  },
+  {
+    icon: '⬇️',
+    lead: 'Rare answers sink you deeper.',
+    rest: 'The obvious answer scores a little. The one nobody else knows scores a lot.',
+  },
+  {
+    icon: '🔒',
+    lead: 'This game counts once.',
+    rest: 'Your score locks in when it ends and adds to your fanhood. No replays — but nothing starts until you say go.',
+  },
+];
+
 type Phase =
   | 'intro'
+  | 'ready'
   | 'preview'
   | 'playing'
   | 'leaving'
@@ -871,6 +909,7 @@ export default function StepLore() {
       setShowBoard(true);
       setPhase('intro');
       setActiveGameId(null);
+      setGateGameId(null);
     };
     let flagged = false;
     try {
@@ -909,6 +948,9 @@ export default function StepLore() {
   // Which played game's "Every answer" tables are open in the picker.
   const [pickerOpenGameId, setPickerOpenGameId] =
     useState<LoreGameId | null>(null);
+  // The start gate's game (phase 'ready'): Play selects it, Start
+  // begins its run, Not now returns to the picker untouched.
+  const [gateGameId, setGateGameId] = useState<LoreGameId | null>(null);
   const [reducedMotion, setReducedMotion] = useState(false);
   // Guessing loop (v4): a wrong guess never ends the question — it
   // wiggles the input and leaves a hint; only an acceptable answer
@@ -1369,6 +1411,26 @@ export default function StepLore() {
     setPhase('intro');
   };
 
+  // The start gate: Play opens the ready card — the run, its
+  // preview beat and its clock begin only at the gate's Start.
+  const openGate = (gameId: LoreGameId) => {
+    if (!gameCanStart(fanhood, gameId)) return;
+    setGateGameId(gameId);
+    setPhase('ready');
+  };
+
+  const startGatedGame = () => {
+    if (!gateGameId) return;
+    const id = gateGameId;
+    setGateGameId(null);
+    startGame(id);
+  };
+
+  const leaveGate = () => {
+    setGateGameId(null);
+    setPhase('intro');
+  };
+
   const next = () => {
     if (index + 1 >= run.length) {
       // The run ends straight at the results — the zoom-out that
@@ -1763,48 +1825,118 @@ export default function StepLore() {
                     {`${display.depth.toLocaleString()} deep across ${display.gamesPlayed} of 5 games. A finished game adds its score for good — the total never goes down.`}
                   </p>
                 </div>
-              ) : (
-                <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs space-y-2">
-                  <h2 className="text-lg font-black text-slate-950 tracking-tight">
-                    Five games. Each one counts once.
-                  </h2>
-                  <p className="text-xs sm:text-sm font-medium text-slate-500 leading-relaxed">
-                    Seven prompts a game, twenty-five seconds each. A wrong
-                    guess just wiggles — keep guessing till you land one or
-                    the clock runs out. Every prompt takes more than one
-                    right answer, and the rarer yours is, the deeper it
-                    lands. When a game ends, its score locks in and adds
-                    to your fanhood — there are no replays, so make each
-                    one count.
-                  </p>
-                </div>
-              );
+              ) : null;
             })()}
 
-            {LORE_GAMES.map((game) => {
+            {/* HOW IT WORKS — always on the page (mock v2: the old
+                explainer vanished once a fanhood existed; the
+                fanhood band now stacks above it, never instead). */}
+            <div className="bg-slate-950 text-white rounded-3xl p-5 shadow-md">
+              <h2 className={`${displayFont.className} text-[21px] leading-none`}>
+                How it works
+              </h2>
+              <ol className="mt-3.5 space-y-2.5">
+                {[
+                  {
+                    lead: 'Pick a game.',
+                    rest: 'Five themes, seven prompts each, twenty-five seconds a prompt.',
+                  },
+                  {
+                    lead: 'Guess until you land one.',
+                    rest: 'Every prompt takes more than one right answer — and the rarer yours is, the deeper you sink.',
+                  },
+                  {
+                    lead: 'Each game counts once.',
+                    rest: 'When it ends, your score locks in and adds to your fanhood. There are no replays.',
+                  },
+                ].map((step, i) => (
+                  <li
+                    key={step.lead}
+                    className="flex gap-2.5 text-xs sm:text-sm font-medium leading-relaxed text-slate-200"
+                  >
+                    <span className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full bg-[#039AD1] text-[12px] font-black text-white">
+                      {i + 1}
+                    </span>
+                    <span>
+                      <strong className="font-black text-white">
+                        {step.lead}
+                      </strong>{' '}
+                      {step.rest}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+              <p className="mt-3.5 text-xs font-semibold text-slate-400">
+                Type your answers — spelling doesn&apos;t have to be perfect.
+              </p>
+            </div>
+
+            {/* THE LADDER — the fanhood titles as strata, ranges
+                derived from FANHOOD_TOTAL_LADDER so the strip can
+                never disagree with the fanhood math itself. */}
+            <div className="overflow-hidden rounded-3xl border border-slate-300/80 bg-white shadow-xs">
+              <p className="px-4 sm:px-5 pt-3 pb-2.5 text-xs font-bold leading-relaxed text-slate-500">
+                Your five scores add up to one fanhood. This is where the
+                total lands you:
+              </p>
+              {FANHOOD_TOTAL_LADDER.map((tier, i) => (
+                <div
+                  key={tier.title}
+                  className="flex items-baseline justify-between gap-3 px-4 sm:px-5 py-2"
+                  style={{ backgroundColor: LADDER_RUNG_BG[i] }}
+                >
+                  <span
+                    className={`${displayFont.className} text-[15px] leading-none text-white`}
+                    style={
+                      i === FANHOOD_TOTAL_LADDER.length - 1
+                        ? { color: '#fbbf24' }
+                        : undefined
+                    }
+                  >
+                    {tier.title}
+                  </span>
+                  <span className="text-[11px] font-extrabold text-white/85">
+                    {totalTierRangeLabel(i)}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {LORE_GAMES.map((game, gameIndex) => {
               const result = fanhood?.games[game.id];
               const tablesOpen = pickerOpenGameId === game.id;
               return (
                 <div
                   key={game.id}
-                  className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs space-y-2.5"
+                  className="relative overflow-hidden bg-white border border-slate-200/90 rounded-3xl p-5 pl-6 shadow-xs"
                 >
+                  <span
+                    aria-hidden
+                    className="absolute inset-y-0 left-0 w-[7px]"
+                    style={{ backgroundColor: GAME_EDGE_BG[gameIndex] }}
+                  />
                   <div className="flex items-start justify-between gap-3">
-                    <h3 className="text-lg font-black text-slate-950 tracking-tight">
+                    <h3
+                      className={`${displayFont.className} text-xl leading-tight text-slate-950`}
+                    >
                       {game.name}
                     </h3>
-                    {result && (
-                      <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
-                        Played
-                      </span>
-                    )}
+                    <span
+                      className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] ${
+                        result
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-slate-100 text-slate-500'
+                      }`}
+                    >
+                      {result ? 'Played' : 'Not played'}
+                    </span>
                   </div>
-                  <p className="text-xs sm:text-sm font-medium text-slate-500 leading-relaxed">
+                  <p className="mt-1.5 text-xs sm:text-sm font-medium text-slate-500 leading-relaxed">
                     {game.promise}
                   </p>
                   {result ? (
                     <>
-                      <p className="text-sm font-black text-slate-900">
+                      <p className="mt-3 text-sm font-black text-slate-900">
                         Your score: {result.score.toLocaleString()} · Game
                         verdict — {titleForDepth(result.score)}
                       </p>
@@ -1814,7 +1946,7 @@ export default function StepLore() {
                           setPickerOpenGameId(tablesOpen ? null : game.id)
                         }
                         aria-expanded={tablesOpen}
-                        className="text-xs font-black text-[#0072CE] hover:underline cursor-pointer"
+                        className="mt-2 inline-block text-xs font-black text-[#0072CE] hover:underline cursor-pointer"
                       >
                         {tablesOpen ? 'Hide every answer' : 'See every answer'}
                       </button>
@@ -1834,12 +1966,17 @@ export default function StepLore() {
                       )}
                     </>
                   ) : (
-                    <button
-                      onClick={() => startGame(game.id)}
-                      className="w-full sm:w-auto bg-[#0072CE] hover:bg-blue-700 active:scale-95 text-white font-black text-xs sm:text-sm px-5 py-3 rounded-2xl transition-all shadow-md cursor-pointer"
-                    >
-                      Play {game.name} →
-                    </button>
+                    <>
+                      <button
+                        onClick={() => openGate(game.id)}
+                        className="mt-3.5 w-full bg-[#0072CE] hover:bg-blue-700 active:scale-95 text-white font-black text-xs sm:text-sm px-5 py-3 rounded-2xl transition-all shadow-md cursor-pointer"
+                      >
+                        Play {game.name}
+                      </button>
+                      <p className="mt-2 text-center text-[11px] font-bold text-slate-400">
+                        7 prompts · counts once
+                      </p>
+                    </>
                   )}
                 </div>
               );
@@ -1862,11 +1999,69 @@ export default function StepLore() {
               </span>
             </button>
 
-            <p className="text-xs font-bold leading-relaxed text-slate-400">
-              Type your answers — spelling doesn&apos;t have to be perfect.
-              Rivers Cuomo is worth a little. Jason Cropper is worth a
-              fortune.
-            </p>
+          </div>
+        )}
+
+        {/* THE START GATE — Play opens this ready card, never the
+            clock: a one-and-done game starts only when the player
+            says go. Leaving it starts nothing and consumes nothing,
+            and a played game can never reach it. */}
+        {unlocked && !showBoard && phase === 'ready' && gateGameId && (
+          <div className="w-full px-4 sm:px-6 pb-10">
+            {(() => {
+              const game = loreGameById(gateGameId);
+              const gameNumber =
+                LORE_GAMES.findIndex((g) => g.id === game.id) + 1;
+              return (
+                <div className="overflow-hidden rounded-3xl border border-slate-200/90 bg-white shadow-xs">
+                  <div className="bg-[#1e3a5f] p-5 text-white">
+                    <p className="text-[10px] font-black uppercase tracking-[0.14em] text-white/60">
+                      Game {gameNumber} of 5
+                    </p>
+                    <h2
+                      className={`${displayFont.className} mt-1.5 text-[27px] leading-none`}
+                    >
+                      {game.name}
+                    </h2>
+                    <p className="mt-2 text-xs sm:text-sm font-medium leading-relaxed text-white/85">
+                      {game.promise}
+                    </p>
+                  </div>
+                  <div className="p-5">
+                    <div className="divide-y divide-slate-100">
+                      {GATE_RULES.map((rule) => (
+                        <div
+                          key={rule.lead}
+                          className="flex gap-3 py-2.5 first:pt-0 last:pb-0"
+                        >
+                          <span aria-hidden className="text-base leading-snug">
+                            {rule.icon}
+                          </span>
+                          <p className="text-xs sm:text-sm font-medium leading-relaxed text-slate-600">
+                            <strong className="font-black text-slate-950">
+                              {rule.lead}
+                            </strong>{' '}
+                            {rule.rest}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                    <button
+                      onClick={startGatedGame}
+                      className="mt-4 w-full bg-[#0072CE] hover:bg-blue-700 active:scale-95 text-white font-black text-sm px-5 py-3.5 rounded-2xl transition-all shadow-md cursor-pointer"
+                    >
+                      Start {game.name}
+                    </button>
+                    <button
+                      onClick={leaveGate}
+                      className="mt-2.5 w-full py-1 text-center text-xs font-extrabold text-slate-500 hover:text-slate-700 cursor-pointer"
+                    >
+                      Not now
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         )}
 

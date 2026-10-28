@@ -101,6 +101,19 @@ export function fanhoodGamesPlayed(record: FanhoodRecord | null): number {
   return Object.keys(record.games).length;
 }
 
+/**
+ * The picker's start-gate rule: a game can be started only while it
+ * has no recorded result. Play on an unplayed game opens the gate;
+ * once a result lands the game is locked at its score and the gate
+ * can never open for it again (one-and-done).
+ */
+export function gameCanStart(
+  record: FanhoodRecord | null,
+  gameId: LoreGameId
+): boolean {
+  return !record?.games[gameId];
+}
+
 /** The deepest single answer behind the fanhood, across the
  *  finished games. */
 export function fanhoodDeepestAnswer(

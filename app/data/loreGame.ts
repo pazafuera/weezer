@@ -172,6 +172,21 @@ export function totalTitleForDepth(total: number): string {
   return FANHOOD_TOTAL_LADDER[FANHOOD_TOTAL_LADDER.length - 1].title;
 }
 
+/**
+ * The picker's ladder-strip range label for one rung of the compound
+ * ladder, derived from FANHOOD_TOTAL_LADDER itself so the strip can
+ * never disagree with totalTitleForDepth: the surface rung reads
+ * "under {ceiling}", the bedrock rung "{floor} +", and every rung
+ * between "{floor} – {ceiling}".
+ */
+export function totalTierRangeLabel(index: number): string {
+  const tier = FANHOOD_TOTAL_LADDER[index];
+  const fmt = (n: number) => n.toLocaleString('en-US');
+  if (index === 0) return `under ${fmt(tier.max + 1)}`;
+  if (tier.max === Infinity) return `${fmt(tier.min)} +`;
+  return `${fmt(tier.min)} – ${fmt(tier.max)}`;
+}
+
 /* ------------------------------------------------------------------ */
 /* Song depths (seed table, derived from the catalog)                  */
 /* ------------------------------------------------------------------ */
@@ -2982,35 +2997,35 @@ export const LORE_GAMES: LoreGame[] = [
     id: 'game1',
     name: 'The Sampler',
     promise:
-      'A spread of everything — albums, people, covers, and one very good boy named in a song title.',
+      'A little of everything — the obvious, the obscure, and a few in between.',
     promptIds: ['P4', 'P1', 'P10', 'P7', 'N23', 'N10', 'N1'],
   },
   {
     id: 'game2',
     name: 'Just the Titles',
     promise:
-      'Every answer is hiding in a song title — a color, an animal, a season, a question.',
+      "Don't overthink it. Everything you need is right there in the open.",
     promptIds: ['N11', 'N12', 'N4', 'P15', 'P5', 'N2', 'N3'],
   },
   {
     id: 'game3',
     name: 'The Credits',
     promise:
-      'The names in the small print — who played, who wrote, who showed up.',
+      'The stuff most fans never notice. The ones who do, remember it.',
     promptIds: ['N5', 'N21', 'N15', 'N17', 'N13', 'P3', 'P11'],
   },
   {
     id: 'game4',
     name: 'The Vault',
     promise:
-      "B-sides, covers, soundtrack one-offs — the songs that weren't on the albums.",
+      'The far corners — where the songs most fans never find are waiting.',
     promptIds: ['P12', 'N7', 'P13', 'P14', 'N18', 'N6', 'P6'],
   },
   {
     id: 'game5',
     name: 'The Business',
     promise:
-      'Albums, labels, tours, and the charts — how the band got from the garage to here.',
+      'How a garage band got from there to here — and everything it took along the way.',
     promptIds: ['N14', 'N19', 'N20', 'P8', 'N16', 'P9', 'P2'],
   },
 ];

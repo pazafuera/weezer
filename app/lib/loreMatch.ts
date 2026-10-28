@@ -159,21 +159,42 @@ export function matchLoreAnswer(
 }
 
 /**
+ * Curated short forms fans naturally type for a handful of catalog
+ * songs — the name a song is actually called, where the mechanical
+ * variants below can't find it. Keyed by song id, values are raw
+ * (normalized on use). Deliberately tiny and hand-picked: NO global
+ * first-word rule (half the catalog would collide). (Oct 27, 2026 —
+ * Mark, from tester-style play: "Sheila" and "Drunk Dori" missed.)
+ */
+export const CURATED_SONG_ALIASES: Readonly<Record<string, readonly string[]>> = {
+  // "Sheila Can Do It" (Van Weezer) — fans just say "Sheila".
+  vw_8: ['sheila'],
+  // "Summer Elaine and Drunk Dori" (White Album) — either girl's
+  // name is how fans name it.
+  wh_7: ['drunk dori', 'summer elaine'],
+};
+
+/**
  * The normalized title variants a fan might type for one catalog
  * song: the full title; the part before an en/em dash ("Undone" from
  * "Undone – The Sweater Song"); the part after it ("Sweater Song");
  * the title with parentheticals removed ("I Want You To" from
  * "(If You're Wondering If I Want You To) I Want You To" — the
  * parenthetical IS the lead there, so also the trailing text after a
- * leading parenthetical).
+ * leading parenthetical); plus the curated short forms above when
+ * the song's id is passed.
  */
-export function songTitleVariants(title: string): string[] {
+export function songTitleVariants(title: string, songId?: string): string[] {
   const variants = new Set<string>();
   const add = (v: string) => {
     const n = normalizeAnswer(v);
     if (n) variants.add(n);
   };
   add(title);
+  if (songId) {
+    const curated = CURATED_SONG_ALIASES[songId];
+    if (curated) curated.forEach(add);
+  }
   const dashParts = title.split(/\s+[–—-]\s+/);
   if (dashParts.length > 1) {
     add(dashParts[0]);
@@ -266,7 +287,7 @@ export function resolveSongAnswer<T extends MatchableSong>(
 
   const variantsBySong = pool.map((song) => ({
     song,
-    variants: songTitleVariants(song.title),
+    variants: songTitleVariants(song.title, song.id),
   }));
 
   let resolved: T | undefined;

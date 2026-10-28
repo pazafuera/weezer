@@ -1365,15 +1365,22 @@ export default function StepLore() {
   return (
     <div className="flex w-full flex-1 flex-col animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex w-full flex-1 flex-col">
-        {/* HEADER — a compact row: in the full-bleed layout the
-            stage below takes every remaining pixel of the body. */}
-        <div className="px-4 sm:px-6 pt-3 pb-2 space-y-0.5">
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight">
+        {/* HEADER — one compact row (Mark, Oct 27: the old two-line
+            title block ate ~200px above the stage and its subtitle
+            duplicated the intro card's headline). Small game name on
+            the left; the established fanhood rides on the right.
+            The stage below is flex-1 with a measured height, so the
+            reclaimed space goes straight to the descent. */}
+        <div className="flex items-center justify-between gap-3 px-4 sm:px-6 pt-3 pb-2">
+          <h1 className="truncate text-sm sm:text-base font-black tracking-tight text-slate-950">
             How Rare a Weezer Fan Are You?
           </h1>
-          <p className="text-sm font-medium text-slate-500">
-            Ten prompts. The rarer your answer, the deeper you dig.
-          </p>
+          {fanhood && (
+            <span className="shrink-0 rounded-full bg-slate-950 px-3 py-1 text-[11px] font-black whitespace-nowrap text-white">
+              Best · {fanhood.bestDepth.toLocaleString()} ·{' '}
+              {titleForDepth(fanhood.bestDepth)}
+            </span>
+          )}
         </div>
 
         {/* LOCKED — the teaser. Progress toward the gate is named

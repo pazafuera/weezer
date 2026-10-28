@@ -718,7 +718,7 @@ export const LORE_ANSWER_UNIVERSE: string[] = (() => {
     }
   }
   for (const song of FULL_SONG_POOL) {
-    songTitleVariants(song.title).forEach((v) => set.add(v));
+    songTitleVariants(song.title, song.id).forEach((v) => set.add(v));
   }
   return Array.from(set);
 })();

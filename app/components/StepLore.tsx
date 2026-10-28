@@ -1693,7 +1693,7 @@ export default function StepLore() {
             if (!display) return null;
             return (
               <span className="shrink-0 rounded-full bg-slate-950 px-3 py-1 text-[11px] font-black whitespace-nowrap text-white">
-                {display.legacy ? 'Best' : 'Fanhood'} ·{' '}
+                Fanhood ·{' '}
                 {display.depth.toLocaleString()} · {display.title}
               </span>
             );
@@ -1760,9 +1760,7 @@ export default function StepLore() {
                     You&apos;re a {display.title}
                   </p>
                   <p className="text-xs sm:text-sm font-bold leading-relaxed text-white/70">
-                    {display.legacy
-                      ? `${display.depth.toLocaleString()} deep — that was the old single game. It stays on your card until you finish one of the five games below; from then on your fanhood is the five scores added together.`
-                      : `${display.depth.toLocaleString()} deep across ${display.gamesPlayed} of 5 games. A finished game adds its score for good — the total never goes down.`}
+                    {`${display.depth.toLocaleString()} deep across ${display.gamesPlayed} of 5 games. A finished game adds its score for good — the total never goes down.`}
                   </p>
                 </div>
               ) : (
@@ -1964,7 +1962,7 @@ export default function StepLore() {
                 on this game). */}
             {(() => {
               const display = fanhoodDisplay(fanhood);
-              if (!display || display.legacy) return null;
+              if (!display) return null;
               return (
                 <div className="bg-slate-950 text-white rounded-3xl p-5 shadow-md space-y-1">
                   <p className="text-[10px] font-black uppercase tracking-[0.14em] text-white/60">

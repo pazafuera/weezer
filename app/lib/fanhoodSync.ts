@@ -11,8 +11,11 @@
  *
  *   - When a session is established, the account record is
  *     fetched and merged with the local one (mergeFanhoodRecords:
- *     per-game union, recorded results immutable; legacy bests by
- *     deeper-wins). The merged record is written back to
+ *     per-game union, recorded results immutable). The account row
+ *     is read for its games column ONLY — the retired legacy
+ *     columns (best_depth / deepest) never merge upward, so an
+ *     old-game total can never re-enter a record from either side.
+ *     The merged record is written back to
  *     localStorage, so every surface on this device/browser shows
  *     it, and pushed up to the account when the local side won.
  *   - After a finished run settles in the game, the settled
@@ -46,19 +49,11 @@ async function fetchAccountFanhood(
       .select('user_id, best_depth, deepest, games, updated_at')
       .eq('user_id', userId)
       .maybeSingle();
-    if (!error && data) return fanhoodRecordFromRow(data);
-    if (!error) return null;
-    // The games column doesn't exist yet (the fanhood-games
-    // migration is Mark's to run): fall back to the legacy columns
-    // so the account mirror keeps working exactly as it did before
-    // the five-game build.
-    const legacy = await supabase
-      .from('fanhood')
-      .select('user_id, best_depth, deepest, updated_at')
-      .eq('user_id', userId)
-      .maybeSingle();
-    if (legacy.error || !legacy.data) return null;
-    return fanhoodRecordFromRow(legacy.data);
+    if (error || !data) return null;
+    // Games column only: fanhoodRecordFromRow ignores the
+    // best_depth / deepest columns entirely, so a row written
+    // before the wipe reads as no fanhood until a game lands.
+    return fanhoodRecordFromRow(data);
   } catch {
     return null;
   }
@@ -74,13 +69,16 @@ async function upsertAccountFanhood(
       .from('fanhood')
       .upsert(row, { onConflict: 'user_id' });
     if (error) {
-      // Pre-games-migration table: write the legacy columns only.
-      // The five-game detail stays safe in localStorage and syncs
-      // in full once the column exists.
-      const { games: _games, ...legacyRow } = row;
+      // Pre-games-migration table: write the display columns only.
+      // Those values are derived from the games record alone
+      // (fanhoodRowFromRecord), so even this fallback can never
+      // write a total the games didn't earn. The five-game detail
+      // stays safe in localStorage and syncs in full once the
+      // column exists.
+      const { games: _games, ...columnsRow } = row;
       await supabase
         .from('fanhood')
-        .upsert(legacyRow, { onConflict: 'user_id' });
+        .upsert(columnsRow, { onConflict: 'user_id' });
     }
   } catch {
     /* the account copy is a mirror — a failed write just means

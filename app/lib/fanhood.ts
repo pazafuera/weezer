@@ -17,7 +17,6 @@
  * original key, deliberately not renamed, so saved state keeps
  * working):
  *   { games: { game1?: { score, deepest, finishedAt, log }, … },
- *     legacyBest: { bestDepth, deepest, updatedAt } | null,
  *     updatedAt: ISO string | null }
  *
  * `deepest` per game is that game's single deepest answer — the
@@ -26,25 +25,27 @@
  * game (prompt id, landed answer or null, depth earned) — it
  * powers the picker's "Every answer" view for locked games.
  *
- * LEGACY MIGRATION (Mark-vetoable, flagged in REPORT.md): records
- * from the old single game — the { bestDepth, deepest, updatedAt }
- * shape, and behind it the bare-number and { depth, band } shapes
- * — are preserved as `legacyBest`. Until the player finishes a
- * new-system game, every surface keeps showing the legacy verdict
- * exactly as it did; once any game is finished, the fanhood is the
- * games total and the legacy best no longer counts.
+ * LEGACY RETIRED (Mark's full-wipe ruling, Oct 27, 2026): the old
+ * single game's fanhood — the { bestDepth, deepest, updatedAt }
+ * shape, the bare-number and { depth, band } shapes behind it,
+ * and the `legacyBest` field the five-game record briefly carried
+ * — no longer counts for anything. A stored value with no
+ * finished games establishes NO fanhood, whatever older data it
+ * carries, and reads normalize it away so the wipe sticks on the
+ * device. Tester-era fanhood started over at zero for everyone;
+ * only finished games make a fanhood now.
  *
  * For signed-in players the record ALSO lives on their account
  * (public.fanhood; see app/lib/fanhoodSync.ts) and follows them
  * across browsers and devices. localStorage stays the surface
  * every reader uses; the account copy is merged into it whenever a
  * session is established and after every recorded game. Guests are
- * local-only. Until the games-column migration is applied, sync
- * degrades silently to the legacy columns and local behavior.
+ * local-only. Sync degrades silently to local behavior on any
+ * failure.
  */
 
 import { useSyncExternalStore } from 'react';
-import { LORE_GAMES, titleForDepth, totalTitleForDepth } from '../data/loreGame';
+import { LORE_GAMES, totalTitleForDepth } from '../data/loreGame';
 import type { LoreGameId } from '../data/loreGame';
 
 export interface FanhoodDeepest {
@@ -72,17 +73,9 @@ export interface FanhoodGameResult {
   log: FanhoodGameLogEntry[];
 }
 
-/** A best depth earned under the old single game, preserved. */
-export interface FanhoodLegacyBest {
-  bestDepth: number;
-  deepest: FanhoodDeepest | null;
-  updatedAt: string | null;
-}
-
 export interface FanhoodRecord {
   games: Partial<Record<LoreGameId, FanhoodGameResult>>;
-  legacyBest: FanhoodLegacyBest | null;
-  /** ISO timestamp of the last change; null for undated legacy. */
+  /** ISO timestamp of the last change. */
   updatedAt: string | null;
 }
 
@@ -108,8 +101,8 @@ export function fanhoodGamesPlayed(record: FanhoodRecord | null): number {
   return Object.keys(record.games).length;
 }
 
-/** The deepest single answer behind the fanhood: across finished
- *  games when there are any, else the legacy best's. */
+/** The deepest single answer behind the fanhood, across the
+ *  finished games. */
 export function fanhoodDeepestAnswer(
   record: FanhoodRecord | null
 ): FanhoodDeepest | null {
@@ -120,50 +113,35 @@ export function fanhoodDeepestAnswer(
       best = game.deepest;
     }
   }
-  if (best) return best;
-  if (fanhoodGamesPlayed(record) > 0) return null;
-  return record.legacyBest?.deepest ?? null;
+  return best;
 }
 
 export interface FanhoodDisplay {
   depth: number;
   title: string;
   deepest: FanhoodDeepest | null;
-  /** True when the display is the preserved old-game verdict. */
-  legacy: boolean;
   gamesPlayed: number;
 }
 
 /**
- * What every fanhood surface shows. New-system results exist →
- * the compound total and its title. Otherwise the legacy verdict,
- * exactly as the old game left it. Null when no fanhood exists.
+ * What every fanhood surface shows: the compound total of the
+ * finished games and its title. Null when no game is finished —
+ * the same state as a brand-new player, whatever older fanhood
+ * data the device or the account once carried.
  */
 export function fanhoodDisplay(
   record: FanhoodRecord | null
 ): FanhoodDisplay | null {
   if (!record) return null;
   const played = fanhoodGamesPlayed(record);
-  if (played > 0) {
-    const total = fanhoodTotal(record);
-    return {
-      depth: total,
-      title: totalTitleForDepth(total),
-      deepest: fanhoodDeepestAnswer(record),
-      legacy: false,
-      gamesPlayed: played,
-    };
-  }
-  if (record.legacyBest) {
-    return {
-      depth: record.legacyBest.bestDepth,
-      title: titleForDepth(record.legacyBest.bestDepth),
-      deepest: record.legacyBest.deepest,
-      legacy: true,
-      gamesPlayed: 0,
-    };
-  }
-  return null;
+  if (played === 0) return null;
+  const total = fanhoodTotal(record);
+  return {
+    depth: total,
+    title: totalTitleForDepth(total),
+    deepest: fanhoodDeepestAnswer(record),
+    gamesPlayed: played,
+  };
 }
 
 /* ------------------------------------------------------------------ */
@@ -219,26 +197,13 @@ function parseGamesMap(
   return games;
 }
 
-function parseLegacyBest(value: unknown): FanhoodLegacyBest | null {
-  if (typeof value !== 'object' || value === null) return null;
-  const l = value as Record<string, unknown>;
-  if (typeof l.bestDepth !== 'number' || !Number.isFinite(l.bestDepth)) {
-    return null;
-  }
-  if (l.bestDepth <= 0) return null;
-  return {
-    bestDepth: l.bestDepth,
-    deepest: isDeepest(l.deepest) ? l.deepest : null,
-    updatedAt: typeof l.updatedAt === 'string' ? l.updatedAt : null,
-  };
-}
-
-function legacyRecord(best: FanhoodLegacyBest): FanhoodRecord {
-  return { games: {}, legacyBest: best, updatedAt: best.updatedAt };
-}
-
-/** Any stored shape → the current record, or null when nothing
- *  usable is stored. Every older shape lands in `legacyBest`. */
+/** Any stored shape → the current record, or null when no
+ *  finished game is in it. Retired (Oct 27, 2026): every older
+ *  shape — the bare number, the { depth, band } object, the
+ *  account-era { bestDepth, deepest } object, and a five-game
+ *  record's `legacyBest` field — parses to nothing on its own; a
+ *  record survives only through its finished games, with any
+ *  legacy data it still carries dropped on the floor. */
 export function parseFanhoodValue(raw: string | null): FanhoodRecord | null {
   if (!raw) return null;
   let parsed: unknown;
@@ -247,37 +212,15 @@ export function parseFanhoodValue(raw: string | null): FanhoodRecord | null {
   } catch {
     return null;
   }
-  // Legacy shape 1: the bare number.
-  if (typeof parsed === 'number' && Number.isFinite(parsed)) {
-    return parsed > 0
-      ? legacyRecord({ bestDepth: parsed, deepest: null, updatedAt: null })
-      : null;
-  }
   if (typeof parsed !== 'object' || parsed === null) return null;
   const obj = parsed as Record<string, unknown>;
-  // Current (five-game) shape.
-  if ('games' in obj || 'legacyBest' in obj) {
-    const games = parseGamesMap(obj.games);
-    const legacyBest = parseLegacyBest(obj.legacyBest);
-    if (Object.keys(games).length === 0 && !legacyBest) return null;
-    return {
-      games,
-      legacyBest,
-      updatedAt: typeof obj.updatedAt === 'string' ? obj.updatedAt : null,
-    };
-  }
-  // The account-era shape: { bestDepth, deepest, updatedAt }.
-  if (typeof obj.bestDepth === 'number' && Number.isFinite(obj.bestDepth)) {
-    const legacy = parseLegacyBest(obj);
-    return legacy ? legacyRecord(legacy) : null;
-  }
-  // Legacy shape 2: the { depth, band } object (through v7).
-  if (typeof obj.depth === 'number' && Number.isFinite(obj.depth)) {
-    return obj.depth > 0
-      ? legacyRecord({ bestDepth: obj.depth, deepest: null, updatedAt: null })
-      : null;
-  }
-  return null;
+  if (!('games' in obj)) return null;
+  const games = parseGamesMap(obj.games);
+  if (Object.keys(games).length === 0) return null;
+  return {
+    games,
+    updatedAt: typeof obj.updatedAt === 'string' ? obj.updatedAt : null,
+  };
 }
 
 export function serializeFanhood(record: FanhoodRecord): string {
@@ -297,9 +240,23 @@ function notifyFanhoodChanged(): void {
 export function readFanhood(): FanhoodRecord | null {
   if (typeof window === 'undefined') return null;
   try {
-    return parseFanhoodValue(
-      window.localStorage.getItem(FANHOOD_STORAGE_KEY)
-    );
+    const raw = window.localStorage.getItem(FANHOOD_STORAGE_KEY);
+    const record = parseFanhoodValue(raw);
+    // Normalize on load so the legacy wipe sticks on this device:
+    // a stored value that no longer establishes a fanhood is
+    // cleared, and one that survives only through its games is
+    // rewritten without any legacy data it still carried.
+    if (raw !== null) {
+      if (record === null) {
+        window.localStorage.removeItem(FANHOOD_STORAGE_KEY);
+      } else if (serializeFanhood(record) !== raw) {
+        window.localStorage.setItem(
+          FANHOOD_STORAGE_KEY,
+          serializeFanhood(record)
+        );
+      }
+    }
+    return record;
   } catch {
     return null;
   }
@@ -346,7 +303,6 @@ export function applyGameResult(
         log: result.log,
       },
     },
-    legacyBest: current?.legacyBest ?? null,
     updatedAt: nowIso,
   };
   return { record, recorded: true };
@@ -380,27 +336,6 @@ export function recordGameResult(
 /* Merge + account-row mapping (pure — the harness exercises these)   */
 /* ------------------------------------------------------------------ */
 
-function mergeLegacyBest(
-  a: FanhoodLegacyBest | null,
-  b: FanhoodLegacyBest | null
-): FanhoodLegacyBest | null {
-  if (!a) return b;
-  if (!b) return a;
-  if (a.bestDepth !== b.bestDepth) return a.bestDepth > b.bestDepth ? a : b;
-  if ((a.deepest === null) !== (b.deepest === null)) {
-    return a.deepest !== null ? a : b;
-  }
-  const aTime = a.updatedAt ? Date.parse(a.updatedAt) : NaN;
-  const bTime = b.updatedAt ? Date.parse(b.updatedAt) : NaN;
-  if (!Number.isNaN(aTime) && !Number.isNaN(bTime) && aTime !== bTime) {
-    return aTime > bTime ? a : b;
-  }
-  if (Number.isNaN(aTime) !== Number.isNaN(bTime)) {
-    return Number.isNaN(aTime) ? b : a;
-  }
-  return a;
-}
-
 function laterIso(a: string | null, b: string | null): string | null {
   if (!a) return b;
   if (!b) return a;
@@ -412,9 +347,8 @@ function laterIso(a: string | null, b: string | null): string | null {
  * record and the account record — into one. Per-game union: a
  * recorded game result is immutable, so a game present on both
  * sides keeps the EARLIER finish (the first recording stands; a
- * tie keeps the higher score, then `a`). Legacy bests merge by the
- * old rule (deeper wins, then deepest-carrier, then newer). The
- * total is never stored — it is always recomputed from the map.
+ * tie keeps the higher score, then `a`). The total is never
+ * stored — it is always recomputed from the map.
  */
 export function mergeFanhoodRecords(
   a: FanhoodRecord | null,
@@ -444,13 +378,14 @@ export function mergeFanhoodRecords(
   }
   return {
     games,
-    legacyBest: mergeLegacyBest(a.legacyBest, b.legacyBest),
     updatedAt: laterIso(a.updatedAt, b.updatedAt),
   };
 }
 
 /** A public.fanhood row, as the client reads it back. `games` is
- *  absent until the games migration is applied. */
+ *  absent until the games migration is applied. The best_depth /
+ *  deepest columns are still selected (they mirror the games
+ *  display on write) but are never read back into a fanhood. */
 export interface FanhoodRow {
   user_id: string;
   best_depth: number;
@@ -459,35 +394,25 @@ export interface FanhoodRow {
   updated_at: unknown;
 }
 
-/** Row → record. The row's best_depth/deepest columns mirror the
- *  DISPLAY values (fanhoodRowFromRecord), so a row with no games
- *  reconstructs its fanhood as a legacy best; a row with games is
- *  self-sufficient and the columns are just its mirror. */
+/** Row → record, from the games column ONLY. A row with no
+ *  finished games is no fanhood at all — the retired legacy
+ *  columns never reconstruct one, so a pre-wipe account row can't
+ *  resurrect an old-game total on a fresh device. */
 export function fanhoodRecordFromRow(
   row: FanhoodRow | null | undefined
 ): FanhoodRecord | null {
   if (!row) return null;
   const games = parseGamesMap(row.games);
+  if (Object.keys(games).length === 0) return null;
   const updatedAt =
     typeof row.updated_at === 'string' ? row.updated_at : null;
-  if (Object.keys(games).length > 0) {
-    return { games, legacyBest: null, updatedAt };
-  }
-  if (typeof row.best_depth !== 'number' || !Number.isFinite(row.best_depth)) {
-    return null;
-  }
-  const legacy = parseLegacyBest({
-    bestDepth: row.best_depth,
-    deepest: row.deepest,
-    updatedAt,
-  });
-  return legacy ? { games: {}, legacyBest: legacy, updatedAt } : null;
+  return { games, updatedAt };
 }
 
-/** Record → the row shape an upsert writes: the games map plus the
- *  legacy columns mirroring the display (total when games exist,
- *  else the legacy best), so older readers and the leaderboard's
- *  fallback see the same fanhood the surfaces show. */
+/** Record → the row shape an upsert writes: the games map plus
+ *  the best_depth / deepest columns mirroring the games display
+ *  (0 / null when no game is finished), so the columns can never
+ *  carry a total the games didn't earn. */
 export function fanhoodRowFromRecord(
   userId: string,
   record: FanhoodRecord

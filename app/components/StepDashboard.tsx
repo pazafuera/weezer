@@ -422,9 +422,7 @@ export default function StepDashboard() {
             if (!display) {
               return 'Five games, seven prompts each — the rarer your answers, the deeper you go.';
             }
-            return display.legacy
-              ? `You\u2019re a ${display.title} — your deepest run reached ${display.depth.toLocaleString()}.`
-              : `You\u2019re a ${display.title} — ${display.depth.toLocaleString()} deep across ${display.gamesPlayed} of 5 games.`;
+            return `You\u2019re a ${display.title} — ${display.depth.toLocaleString()} deep across ${display.gamesPlayed} of 5 games.`;
           })()}
         </p>
         <div className="pt-0.5 flex items-center text-xs font-black text-[#0072CE] group-hover:underline">

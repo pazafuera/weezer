@@ -7,6 +7,10 @@ import { BucketType, Song, FULL_SONG_POOL } from '../data/constants';
 import { sanitizeMasterList, reconcileMasterList, getRankedSongs, sortByBucketBlock } from '@/utils/rankingUtils';
 import { createRankingsSyncQueue } from '../lib/rankingsSync';
 import type { RankingsSyncQueue } from '../lib/rankingsSync';
+import {
+  forgetAccountFanhoodSync,
+  reconcileAccountFanhood,
+} from '../lib/fanhoodSync';
 
 
 export type AppStep =
@@ -616,6 +620,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
       if (session?.user) {
         initUserAndLoadRankings();
       } else {
+        forgetAccountFanhoodSync();
         setUserId(null);
         setUserProfile(null);
         setFriendsList([]);
@@ -731,6 +736,11 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
       if (session?.user) {
         const uid = session.user.id;
         setUserId(uid);
+
+        // Fanhood follows the account: reconcile the device
+        // record with the account's (fire-and-forget — silently
+        // degrades to local-only until the fanhood table is live).
+        reconcileAccountFanhood(uid);
 
         // Migrate guest rankings from localStorage to Supabase
         await migrateGuestRankingsToUser(uid);

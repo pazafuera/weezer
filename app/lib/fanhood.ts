@@ -23,6 +23,15 @@
  *     { bestDepth: depth, deepest: null, updatedAt: null }.
  * A migrated record is only rewritten in the new shape when a new
  * best is set — reads never write.
+ *
+ * For signed-in players the record ALSO lives on their account
+ * (public.fanhood; see app/lib/fanhoodSync.ts) and follows them
+ * across browsers and devices — iOS home-screen web apps and
+ * Safari keep separate localStorage, so a device-only record is
+ * invisible from the other. localStorage stays the surface every
+ * reader uses; the account copy is merged into it (deeper wins)
+ * whenever a session is established and after every settled run.
+ * Guests are local-only, exactly as before.
  */
 
 import { useSyncExternalStore } from 'react';
@@ -159,6 +168,80 @@ export function settleFanhoodRun(
     return { record, previous, isNewBest: previous !== null };
   }
   return { record: previous, previous, isNewBest: false };
+}
+
+/* ------------------------------------------------------------------ */
+/* Merge + account-row mapping (pure — the harness exercises these)   */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Reconciles two views of the same player's fanhood — the device
+ * record and the account record (public.fanhood) — into one. The
+ * deeper best wins outright: fanhood only ever moves up. On a tie,
+ * the record carrying a deepest answer wins (it can prove the brag
+ * the Thread and the card quote); then the more recently set record.
+ * Null means "no fanhood there" and always loses.
+ */
+export function mergeFanhoodRecords(
+  a: FanhoodRecord | null,
+  b: FanhoodRecord | null
+): FanhoodRecord | null {
+  if (!a) return b;
+  if (!b) return a;
+  if (a.bestDepth !== b.bestDepth) {
+    return a.bestDepth > b.bestDepth ? a : b;
+  }
+  if ((a.deepest === null) !== (b.deepest === null)) {
+    return a.deepest !== null ? a : b;
+  }
+  const aTime = a.updatedAt ? Date.parse(a.updatedAt) : NaN;
+  const bTime = b.updatedAt ? Date.parse(b.updatedAt) : NaN;
+  if (!Number.isNaN(aTime) && !Number.isNaN(bTime) && aTime !== bTime) {
+    return aTime > bTime ? a : b;
+  }
+  if (Number.isNaN(aTime) !== Number.isNaN(bTime)) {
+    return Number.isNaN(aTime) ? b : a;
+  }
+  return a;
+}
+
+/** A public.fanhood row, as the client reads it back. */
+export interface FanhoodRow {
+  user_id: string;
+  best_depth: number;
+  deepest: unknown;
+  updated_at: unknown;
+}
+
+/** Row → record, with parseFanhoodValue's defensiveness: a malformed
+ *  deepest is dropped, a non-numeric best_depth voids the row. */
+export function fanhoodRecordFromRow(
+  row: FanhoodRow | null | undefined
+): FanhoodRecord | null {
+  if (!row) return null;
+  if (typeof row.best_depth !== 'number' || !Number.isFinite(row.best_depth)) {
+    return null;
+  }
+  return {
+    bestDepth: row.best_depth,
+    deepest: isDeepest(row.deepest) ? row.deepest : null,
+    updatedAt: typeof row.updated_at === 'string' ? row.updated_at : null,
+  };
+}
+
+/** Record → the row shape an upsert writes. A record with no
+ *  timestamp (migrated from a legacy local value) is stamped now —
+ *  being written to the account IS its establishment there. */
+export function fanhoodRowFromRecord(
+  userId: string,
+  record: FanhoodRecord
+): { user_id: string; best_depth: number; deepest: FanhoodDeepest | null; updated_at: string } {
+  return {
+    user_id: userId,
+    best_depth: record.bestDepth,
+    deepest: record.deepest,
+    updated_at: record.updatedAt ?? new Date().toISOString(),
+  };
 }
 
 /* ------------------------------------------------------------------ */

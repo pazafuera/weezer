@@ -25,6 +25,7 @@ import {
   resolveSongAnswer,
 } from '../lib/loreMatch';
 import { readFanhood, settleFanhoodRun } from '../lib/fanhood';
+import { syncFanhoodAfterRun } from '../lib/fanhoodSync';
 import type { FanhoodDeepest, FanhoodRecord } from '../lib/fanhood';
 
 const QUESTION_SECONDS = 25;
@@ -738,7 +739,7 @@ function CountUp({ value }: { value: number }) {
 }
 
 export default function StepLore() {
-  const { triageMap, navigateTo } = useWeezer();
+  const { triageMap, navigateTo, userId } = useWeezer();
   const unlocked = isLoreUnlocked(triageMap);
   const remainingAlbums = loreGateRemainingAlbums(triageMap);
 
@@ -1216,6 +1217,10 @@ export default function StepLore() {
     const settled = settleFanhoodRun(total, runDeepest);
     setFanhood(settled.record);
     setIsNewBest(settled.isNewBest);
+    // Signed in: the settled record also goes to the account, so
+    // the fanhood follows the player to their other browsers and
+    // devices (fire-and-forget; silent no-op for guests/failures).
+    void syncFanhoodAfterRun(userId, settled.record);
     // total and answers are final when the result phase opens.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);

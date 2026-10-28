@@ -8,6 +8,7 @@ import {
   TIER_TAGLINES,
   answerCoverFor,
   bandForTotal,
+  bandsEnteredBetween,
   buildRunV2,
   isLoreUnlocked,
   loreGateRemainingAlbums,
@@ -88,13 +89,18 @@ const BAND_STAGE: {
   range: string;
   texture: string;
   textureStyle?: React.CSSProperties;
+  /** A large, soft album cover ghosted into the layer — only where
+      a layer maps unambiguously to one album (Oct 27, 2026). */
+  coverSrc?: string;
 }[] = [
   {
-    // Buddy Holly — bright radio-blue.
+    // Buddy Holly — bright radio-blue. The layer IS the Blue Album
+    // era, so its cover ghosts the background.
     layer: 'bg-gradient-to-b from-[#039AD1] to-[#0277b6] text-[#eaf7ff]',
     chip: 'bg-white text-[#0277b6]',
     range: 'text-white/70',
     texture: "UNDONE · BUDDY HOLLY · SAY IT AIN'T SO · UNDONE ·",
+    coverSrc: '/albums/blue.jpg',
   },
   {
     // Sweater Song — flannel tan.
@@ -104,11 +110,12 @@ const BAND_STAGE: {
     texture: "FLANNEL · '94 · MTV · THE RENTALS ·",
   },
   {
-    // Pinkerton — dark maroon.
+    // Pinkerton — dark maroon, the album's own cover ghosted in.
     layer: 'bg-gradient-to-b from-[#5b2333] to-[#401826] text-[#f6d9de]',
     chip: 'bg-[#f6d9de] text-[#5b2333]',
     range: 'text-[#f6d9de]/60',
     texture: 'EL SCORCHO · ACROSS THE SEA ·',
+    coverSrc: '/albums/pinkerton.jpg',
   },
   {
     // Fan Club — photocopied-note purple, ruled lines.
@@ -288,9 +295,10 @@ const CARD_THEMES: CardTheme[] = [
 const BAND_CARD_THEME = [0, 0, 1, 1, 2, 3];
 
 /* Stage geometry: the column is ~6x the visible window. Within a
-   band the marker interpolates across that layer's height (inset
-   10%–90% so it never hugs a boundary); the bedrock band, whose
-   depth range is open-ended, interpolates up to a soft cap. */
+   band the marker interpolates from a 76px top inset (clear of the
+   layer's header zone) to 90% of the layer's height (so it never
+   hugs a boundary); the bedrock band, whose depth range is
+   open-ended, interpolates up to a soft cap. */
 const LAYER_HEIGHTS = [420, 460, 500, 520, 540, 560];
 const LAYER_TOPS: number[] = (() => {
   const tops: number[] = [];
@@ -307,26 +315,44 @@ const PLUNGE_MS = 900;
 
 /**
  * How long a scoring plunge lasts, scaled by the depth just earned.
- * An exponential approach to the ceiling keeps cheap answers brisk
- * while giving the deepest pulls room to register: about 736ms at
- * +20, 1,314ms at +200, 1,955ms at +550, and 2,367ms at +1,200.
+ * Slowed down substantially Oct 27, 2026 (Mark: even the v6 falls
+ * didn't REGISTER — he couldn't tell he was going deeper). The same
+ * exponential shape, re-tuned: about 1,214ms at +20, 2,056ms at
+ * +200, 3,034ms at +550, and 3,737ms at +1,200.
  */
 export function plungeDurationForDepth(depth: number): number {
   if (depth <= 0) return 550;
-  return Math.round(650 + 1850 * (1 - Math.exp(-depth / 450)));
+  return Math.round(1100 + 2900 * (1 - Math.exp(-depth / 500)));
+}
+
+/**
+ * The marker's within-layer travel band. The TOP inset is a clear
+ * header zone (Oct 27, 2026 — Mark's screenshot: at depth 0 the
+ * marker sat ON the "Buddy Holly" chip): each layer's chip + range
+ * row lives in its top ~44px, so the marker's interpolation starts
+ * 76px down and the tag/burst flip below the marker when it lands
+ * in the top zone (see DescentStage). The bottom stays at 90% so
+ * the marker never hugs the next layer's header either.
+ */
+const MARKER_TOP_INSET = 76;
+const MARKER_BOTTOM_FRACTION = 0.9;
+
+function bandIndexForDepth(depth: number): number {
+  for (let i = 0; i < DEPTH_BANDS.length; i++) {
+    if (depth <= DEPTH_BANDS[i].max || i === DEPTH_BANDS.length - 1) return i;
+  }
+  return DEPTH_BANDS.length - 1;
 }
 
 function depthToY(depth: number): number {
-  for (let i = 0; i < DEPTH_BANDS.length; i++) {
-    const band = DEPTH_BANDS[i];
-    const isLast = i === DEPTH_BANDS.length - 1;
-    if (depth <= band.max || isLast) {
-      const span = isLast ? BEDROCK_DEPTH_CAP - band.min : band.max - band.min;
-      const t = Math.min(1, Math.max(0, (depth - band.min) / span));
-      return LAYER_TOPS[i] + LAYER_HEIGHTS[i] * (0.1 + 0.8 * t);
-    }
-  }
-  return STAGE_HEIGHT;
+  const i = bandIndexForDepth(depth);
+  const band = DEPTH_BANDS[i];
+  const isLast = i === DEPTH_BANDS.length - 1;
+  const span = isLast ? BEDROCK_DEPTH_CAP - band.min : band.max - band.min;
+  const t = Math.min(1, Math.max(0, (depth - band.min) / span));
+  const travel =
+    LAYER_HEIGHTS[i] * MARKER_BOTTOM_FRACTION - MARKER_TOP_INSET;
+  return LAYER_TOPS[i] + MARKER_TOP_INSET + travel * t;
 }
 
 interface BurstInfo {
@@ -351,6 +377,7 @@ function DescentStage({
   displayTotal,
   burst,
   burstDelayMs,
+  flash,
   fallingTag,
   plunging,
   shake,
@@ -368,6 +395,9 @@ function DescentStage({
   burst: BurstInfo | null;
   /** When the burst pop starts, timed to finish as the marker lands. */
   burstDelayMs?: number;
+  /** A layer-name flash, shown while the plunge crosses into a new
+      layer (scheduled by the parent; renders centered, huge). */
+  flash?: { title: string; key: number; durMs: number } | null;
   /** The submitted answer, riding the marker down during the plunge. */
   fallingTag?: string | null;
   /** True while a plunge is in flight (the camera anchor drops so
@@ -399,6 +429,14 @@ function DescentStage({
   const effH = fill && autoH > 0 ? autoH : viewH;
 
   const markerY = depthToY(total);
+  // Overlap rule (Oct 27, 2026): when the marker lands in a layer's
+  // top zone, the falling tag and the burst stack BELOW the marker
+  // instead of above it — above would park them in the layer's
+  // header zone, on top of its name chip (Mark's screenshot: the
+  // marker covering the "Buddy Holly" chip at depth 0).
+  const markerOffsetInLayer =
+    markerY - LAYER_TOPS[bandIndexForDepth(total)];
+  const ridersBelow = markerOffsetInLayer < 150;
   // v7: while plunging, the anchor drops to 78% of the window, so
   // the marker's SCREEN position falls as the column transitions —
   // at the old fixed 42% anchor the marker stayed pinned and only
@@ -444,8 +482,15 @@ function DescentStage({
           to { transform: translateY(16px); opacity: 0; }
         }
         .lore-card-out { animation: lore-card-out 0.25s ease-in both; }
+        @keyframes lore-flash {
+          0% { opacity: 0; transform: scale(0.92) translateY(10px); }
+          16% { opacity: 1; transform: scale(1) translateY(0); }
+          78% { opacity: 1; }
+          100% { opacity: 0; transform: scale(1.02) translateY(-6px); }
+        }
+        .lore-flash { animation-name: lore-flash; animation-timing-function: ease-out; animation-fill-mode: both; }
         @media (prefers-reduced-motion: reduce) {
-          .lore-burst, .lore-shake, .lore-card-in, .lore-card-out { animation: none !important; }
+          .lore-burst, .lore-shake, .lore-card-in, .lore-card-out, .lore-flash { animation: none !important; }
         }
       `}</style>
 
@@ -483,19 +528,40 @@ function DescentStage({
               {style.textureStyle && (
                 <div className="absolute inset-0" style={style.textureStyle} />
               )}
+              {style.coverSrc && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={style.coverSrc}
+                  alt=""
+                  aria-hidden
+                  className="pointer-events-none absolute right-0 top-0 h-full w-auto max-w-none object-cover opacity-[0.16]"
+                  style={{
+                    maskImage:
+                      'linear-gradient(to left, black 45%, transparent 94%)',
+                    WebkitMaskImage:
+                      'linear-gradient(to left, black 45%, transparent 94%)',
+                  }}
+                />
+              )}
+              {/* The layer's name as a large watermark — presence
+                  (Oct 27, 2026: the layers read "small and
+                  insignificant" as flat bands). */}
+              <div className="pointer-events-none absolute inset-x-3 top-1/2 -translate-y-1/2 whitespace-nowrap text-[54px] font-black uppercase leading-none tracking-tight opacity-[0.09] sm:text-[64px]">
+                {band.title}
+              </div>
               <div className="absolute inset-x-3.5 top-2.5 flex items-start justify-between gap-2">
                 <span
-                  className={`inline-block rounded-full px-2 py-0.5 text-[9.5px] font-black tracking-[0.14em] ${style.chip}`}
+                  className={`inline-block rounded-full px-2.5 py-1 text-xs font-black tracking-[0.14em] ${style.chip}`}
                 >
                   {band.title}
                 </span>
                 <span
-                  className={`text-[9.5px] font-extrabold tracking-[0.08em] ${style.range}`}
+                  className={`text-[11px] font-extrabold tracking-[0.08em] ${style.range}`}
                 >
                   {range}
                 </span>
               </div>
-              <div className="pointer-events-none absolute left-2 top-16 whitespace-nowrap text-sm font-black tracking-[0.06em] opacity-[0.12]">
+              <div className="pointer-events-none absolute left-2 top-[76px] whitespace-nowrap text-lg font-black tracking-[0.06em] opacity-[0.16]">
                 {style.texture}
               </div>
               {unvisited && (
@@ -511,7 +577,7 @@ function DescentStage({
 
         {/* The descent trail: surface to marker */}
         <div
-          className="absolute left-[35px] top-0 z-10 w-0 border-l-[3px] border-dashed border-white/50"
+          className="absolute left-[37px] top-0 z-10 w-0 border-l-[3px] border-dashed border-white/50"
           style={{ height: markerY }}
         />
 
@@ -533,10 +599,10 @@ function DescentStage({
             className={shake && !reducedMotion ? 'lore-shake' : undefined}
           >
             <div className="flex -translate-y-1/2 items-center gap-[7px]">
-              <div className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-full border-[3px] border-[#111111] bg-[#FFD23F] text-xs font-black text-[#111111] shadow-[0_6px_18px_rgba(0,0,0,0.45)]">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-[3px] border-[#111111] bg-[#FFD23F] text-sm font-black text-[#111111] shadow-[0_6px_18px_rgba(0,0,0,0.45)]">
                 =w=
               </div>
-              <div className="whitespace-nowrap rounded-full bg-[#111111] px-2.5 py-1 text-[10.5px] font-black tracking-[0.05em] text-[#FFD23F] shadow-[0_4px_12px_rgba(0,0,0,0.4)]">
+              <div className="whitespace-nowrap rounded-full bg-[#111111] px-3 py-1.5 text-xs font-black tracking-[0.05em] text-[#FFD23F] shadow-[0_4px_12px_rgba(0,0,0,0.4)]">
                 YOU · {(displayTotal ?? total).toLocaleString()} DEEP
               </div>
             </div>
@@ -549,7 +615,7 @@ function DescentStage({
             travelling the full distance cannot be missed. */}
         {fallingTag && (
           <div
-            className="absolute left-[76px] z-20"
+            className="absolute left-[84px] z-20"
             style={{
               top: markerY,
               transition: reducedMotion
@@ -557,7 +623,13 @@ function DescentStage({
                 : `top ${moveMs}ms cubic-bezier(0.22, 0.9, 0.3, 1)`,
             }}
           >
-            <div style={{ transform: 'translateY(-260%)' }}>
+            <div
+              style={{
+                transform: ridersBelow
+                  ? 'translateY(370%)'
+                  : 'translateY(-260%)',
+              }}
+            >
               <div className="whitespace-nowrap rounded-full bg-[#111111]/90 px-3 py-1.5 text-[11px] font-black tracking-wide text-white shadow-[0_10px_24px_rgba(0,0,0,0.45)]">
                 “{fallingTag}” ▼
               </div>
@@ -568,7 +640,7 @@ function DescentStage({
         {/* The burst chip, riding the plunge */}
         {burst && (
           <div
-            className="absolute left-[76px] z-20"
+            className="absolute left-[84px] z-20"
             style={{
               top: markerY,
               transition: reducedMotion
@@ -576,7 +648,13 @@ function DescentStage({
                 : `top ${moveMs}ms cubic-bezier(0.22, 0.9, 0.3, 1)`,
             }}
           >
-            <div style={{ transform: 'translateY(-135%)' }}>
+            <div
+              style={{
+                transform: ridersBelow
+                  ? 'translateY(55%)'
+                  : 'translateY(-135%)',
+              }}
+            >
               <div
                 key={`burst-${animKey}`}
                 className={`rounded-2xl bg-[#FFD23F] px-3 py-2.5 text-[#111111] shadow-[0_14px_34px_rgba(0,0,0,0.5)] ${
@@ -600,6 +678,29 @@ function DescentStage({
           </div>
         )}
       </div>
+
+      {/* The layer-name flash: as the plunge crosses into a new
+          layer, its name fills the stage for a beat — the descent
+          registering, layer by layer. Pointer-events none; the fall
+          never pauses for it. */}
+      {flash && (
+        <div
+          key={flash.key}
+          className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center px-6"
+        >
+          <div
+            className="lore-flash rounded-3xl bg-black/45 px-7 py-5 text-center shadow-[0_18px_50px_rgba(0,0,0,0.45)]"
+            style={{ animationDuration: `${flash.durMs}ms` }}
+          >
+            <div className="text-[10px] font-black tracking-[0.34em] text-white/65">
+              ▼ NOW ENTERING ▼
+            </div>
+            <div className="mt-1 text-4xl font-black uppercase leading-none tracking-tight text-white sm:text-5xl">
+              {flash.title}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* The bottom-pinned card */}
       {children && (
@@ -671,6 +772,13 @@ export default function StepLore() {
   const [plungeDepth, setPlungeDepth] = useState(0);
   const [plungeMs, setPlungeMs] = useState(PLUNGE_MS);
   const [tickingTotal, setTickingTotal] = useState(0);
+  // Layer-name flashes during a plunge (Oct 27, 2026): each layer
+  // the fall crosses into gets its name flashed large mid-fall.
+  const [layerFlash, setLayerFlash] = useState<{
+    title: string;
+    key: number;
+    durMs: number;
+  } | null>(null);
   const plungeFromRef = useRef(0);
   // v7: the stage's geometry total lags the answers total during a
   // plunge — it is only advanced a frame after the plunging phase
@@ -985,6 +1093,63 @@ export default function StepLore() {
     return () => cancelAnimationFrame(raf);
   }, [phase, plungeMs, reducedMotion, total]);
 
+  // Layer-flash scheduling: when a plunge crosses into new layers,
+  // flash each entered layer's name as its boundary passes. Timing
+  // is proportional to depth (the camera's easing makes it
+  // approximate — legibility is the point, not surveying). At most
+  // two boundaries can be crossed by one answer (max +1,200 against
+  // floors at 200/500/1,500/3,000/5,000), so every crossing is
+  // shown; a flash lasts 700ms, shortened only when the next
+  // boundary follows quickly. No new phases — the fall never waits.
+  useEffect(() => {
+    if (phase !== 'plunging') return;
+    if (reducedMotion || plungeDepth <= 0) {
+      setLayerFlash(null);
+      return;
+    }
+    const from = plungeFromRef.current;
+    const to = plungeTargetRef.current;
+    if (to <= from) return;
+    const entered = bandsEnteredBetween(from, to);
+    if (entered.length === 0) return;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    entered.forEach((entry, i) => {
+      const startMs = Math.round(
+        (plungeMs * (entry.atDepth - from)) / (to - from)
+      );
+      const nextStart =
+        i + 1 < entered.length
+          ? Math.round(
+              (plungeMs * (entered[i + 1].atDepth - from)) / (to - from)
+            )
+          : plungeMs;
+      const durMs = Math.max(
+        320,
+        Math.min(700, nextStart - startMs, plungeMs - startMs)
+      );
+      timers.push(
+        setTimeout(
+          () =>
+            setLayerFlash({ title: entry.title, key: entry.index, durMs }),
+          startMs
+        )
+      );
+      timers.push(
+        setTimeout(
+          () =>
+            setLayerFlash((cur) =>
+              cur && cur.key === entry.index ? null : cur
+            ),
+          startMs + durMs
+        )
+      );
+    });
+    return () => {
+      timers.forEach(clearTimeout);
+      setLayerFlash(null);
+    };
+  }, [phase, plungeDepth, plungeMs, reducedMotion]);
+
   // A wrong guess leaves the cursor in the input, ready for the
   // next try.
   useEffect(() => {
@@ -1090,6 +1255,17 @@ export default function StepLore() {
   };
 
   const lastRecord = answers[answers.length - 1];
+  // Fanhood level-up (Oct 27, 2026): if the last scoring answer
+  // carried the total across a fanhood-title threshold, the reveal
+  // names the new territory.
+  const leveledUpTitle =
+    lastRecord && lastRecord.depthEarned > 0
+      ? (() => {
+          const before = titleForDepth(total - lastRecord.depthEarned);
+          const after = titleForDepth(total);
+          return before !== after ? after : null;
+        })()
+      : null;
   const deepest = [...answers]
     .filter((a) => a.depthEarned > 0)
     .sort((a, b) => b.depthEarned - a.depthEarned)
@@ -1261,6 +1437,13 @@ export default function StepLore() {
 
       {phase === 'reveal' && lastRecord && (
         <div className="space-y-3">
+          {leveledUpTitle && (
+            <div className="rounded-2xl bg-[#FFD23F] px-3.5 py-2.5 text-center shadow-md">
+              <p className="text-sm font-black text-[#111111]">
+                That&apos;s {leveledUpTitle} territory.
+              </p>
+            </div>
+          )}
           {lastRecord.outcome === 'correct' && (
             <div
               className={`border rounded-2xl p-3.5 space-y-1 ${theme.correctBox}`}
@@ -1476,6 +1659,7 @@ export default function StepLore() {
               total={stageTotal}
               displayTotal={phase === 'plunging' ? tickingTotal : total}
               burstDelayMs={plungeMs}
+              flash={phase === 'plunging' ? layerFlash : null}
               plunging={phase === 'plunging'}
               fallingTag={
                 phase === 'plunging' &&

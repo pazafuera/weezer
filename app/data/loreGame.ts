@@ -89,6 +89,26 @@ export function bandForTotal(total: number): DepthBand {
   return DEPTH_BANDS[DEPTH_BANDS.length - 1];
 }
 
+/**
+ * The layers a plunge ENTERS as the total moves from `fromTotal` to
+ * `toTotal`: every band (past the first) whose floor the move
+ * crosses, shallow → deep. Drives the during-the-fall layer-name
+ * flashes (Oct 27, 2026 — Mark: the descent needs to REGISTER, layer
+ * by layer). A move that stays inside one band enters nothing.
+ */
+export function bandsEnteredBetween(
+  fromTotal: number,
+  toTotal: number
+): { index: number; title: string; atDepth: number }[] {
+  const entered: { index: number; title: string; atDepth: number }[] = [];
+  DEPTH_BANDS.forEach((band, i) => {
+    if (i > 0 && fromTotal < band.min && toTotal >= band.min) {
+      entered.push({ index: i, title: band.title, atDepth: band.min });
+    }
+  });
+  return entered;
+}
+
 /* ------------------------------------------------------------------ */
 /* Fanhood titles (the verdict — LOCKED Oct 27, 2026, Mark's names)    */
 /* ------------------------------------------------------------------ */

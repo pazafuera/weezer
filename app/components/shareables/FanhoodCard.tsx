@@ -10,7 +10,7 @@ import {
   useShareableDownload,
 } from './ShareCardShell';
 import { displayFont, handFont } from './fonts';
-import { titleForDepth } from '../../data/loreGame';
+import { fanhoodDisplay } from '../../lib/fanhood';
 import type { FanhoodRecord } from '../../lib/fanhood';
 
 /**
@@ -32,7 +32,8 @@ export const FanhoodCardVisual = forwardRef<
   HTMLDivElement,
   { fanhood: FanhoodRecord | null; subtitle?: string }
 >(function FanhoodCardVisual({ fanhood }, ref) {
-  const title = fanhood ? titleForDepth(fanhood.bestDepth) : null;
+  const display = fanhoodDisplay(fanhood);
+  const title = display?.title ?? null;
   // The title renders on one line, auto-sized down until it fits —
   // the Tribe card's sizing rule (its longest title here is
   // "MEMBER OF THE FAN CLUB").
@@ -47,7 +48,7 @@ export const FanhoodCardVisual = forwardRef<
       style={{ backgroundColor: POSTER_BLUE }}
     >
       <PosterDomain />
-      {!fanhood || !title ? (
+      {!display || !title ? (
         <div className="absolute inset-0 flex items-center justify-center px-[100px]">
           <p
             className={`text-center text-[56px] font-bold leading-tight ${handFont.className}`}
@@ -80,7 +81,7 @@ export const FanhoodCardVisual = forwardRef<
           <p
             className={`absolute inset-x-0 top-[716px] text-center text-[64px] leading-none text-white ${displayFont.className}`}
           >
-            {fanhood.bestDepth.toLocaleString()} DEEP
+            {display.depth.toLocaleString()} DEEP
           </p>
 
           {/* THE FACTS — burst + the record, left column (the Tribe
@@ -94,12 +95,12 @@ export const FanhoodCardVisual = forwardRef<
               </span>
             </FactsBurst>
             <p className="mt-[28px] text-[46px] leading-[1.3]">
-              You went {fanhood.bestDepth.toLocaleString()} deep.
+              You went {display.depth.toLocaleString()} deep.
             </p>
-            {fanhood.deepest && (
+            {display.deepest && (
               <p className="mt-[18px] text-[40px] leading-[1.3]">
-                Deepest answer: {fanhood.deepest.answer} —{' '}
-                {fanhood.deepest.depth.toLocaleString()} deep.
+                Deepest answer: {display.deepest.answer} —{' '}
+                {display.deepest.depth.toLocaleString()} deep.
               </p>
             )}
           </div>

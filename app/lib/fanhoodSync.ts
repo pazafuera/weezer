@@ -11,7 +11,8 @@
  *
  *   - When a session is established, the account record is
  *     fetched and merged with the local one (mergeFanhoodRecords:
- *     deeper best wins). The merged record is written back to
+ *     per-game union, recorded results immutable; legacy bests by
+ *     deeper-wins). The merged record is written back to
  *     localStorage, so every surface on this device/browser shows
  *     it, and pushed up to the account when the local side won.
  *   - After a finished run settles in the game, the settled
@@ -42,11 +43,22 @@ async function fetchAccountFanhood(
   try {
     const { data, error } = await supabase
       .from('fanhood')
+      .select('user_id, best_depth, deepest, games, updated_at')
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (!error && data) return fanhoodRecordFromRow(data);
+    if (!error) return null;
+    // The games column doesn't exist yet (the fanhood-games
+    // migration is Mark's to run): fall back to the legacy columns
+    // so the account mirror keeps working exactly as it did before
+    // the five-game build.
+    const legacy = await supabase
+      .from('fanhood')
       .select('user_id, best_depth, deepest, updated_at')
       .eq('user_id', userId)
       .maybeSingle();
-    if (error || !data) return null;
-    return fanhoodRecordFromRow(data);
+    if (legacy.error || !legacy.data) return null;
+    return fanhoodRecordFromRow(legacy.data);
   } catch {
     return null;
   }
@@ -57,11 +69,19 @@ async function upsertAccountFanhood(
   record: FanhoodRecord
 ): Promise<void> {
   try {
-    await supabase
+    const row = fanhoodRowFromRecord(userId, record);
+    const { error } = await supabase
       .from('fanhood')
-      .upsert(fanhoodRowFromRecord(userId, record), {
-        onConflict: 'user_id',
-      });
+      .upsert(row, { onConflict: 'user_id' });
+    if (error) {
+      // Pre-games-migration table: write the legacy columns only.
+      // The five-game detail stays safe in localStorage and syncs
+      // in full once the column exists.
+      const { games: _games, ...legacyRow } = row;
+      await supabase
+        .from('fanhood')
+        .upsert(legacyRow, { onConflict: 'user_id' });
+    }
   } catch {
     /* the account copy is a mirror — a failed write just means
        this device keeps its local record, as before */

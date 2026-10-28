@@ -5,6 +5,7 @@ import { useWeezer } from '../context/WeezerContext';
 import { FULL_SONG_POOL } from '../data/constants';
 import {
   DEPTH_BANDS,
+  LORE_GAMES,
   TIER_TAGLINES,
   answerCoverFor,
   bandForTotal,
@@ -12,22 +13,37 @@ import {
   buildGameRun,
   isLoreUnlocked,
   loreGateRemainingAlbums,
+  loreGameById,
   openAnswerEntries,
   openAnswerKey,
   openAnswerSong,
   openPromptAnswerTable,
   openPromptExtremes,
+  promptById,
   tierForDepth,
   titleForDepth,
 } from '../data/loreGame';
-import type { RarityTier, RunItem } from '../data/loreGame';
+import type {
+  LoreGameId,
+  OpenPrompt,
+  RarityTier,
+  RunItem,
+} from '../data/loreGame';
 import {
   matchTableAnswer,
   resolveSongAnswer,
 } from '../lib/loreMatch';
-import { readFanhood, settleFanhoodRun } from '../lib/fanhood';
+import {
+  fanhoodDisplay,
+  readFanhood,
+  recordGameResult,
+} from '../lib/fanhood';
 import { syncFanhoodAfterRun } from '../lib/fanhoodSync';
-import type { FanhoodDeepest, FanhoodRecord } from '../lib/fanhood';
+import type {
+  FanhoodDeepest,
+  FanhoodGameLogEntry,
+  FanhoodRecord,
+} from '../lib/fanhood';
 
 const QUESTION_SECONDS = 25;
 const PREVIEW_SECONDS = 3;
@@ -739,6 +755,107 @@ function CountUp({ value }: { value: number }) {
   return <>{display.toLocaleString()}</>;
 }
 
+/**
+ * The "Every answer" tables for a set of prompts: each prompt
+ * opens to its full answer table (deepest first, grouped by tier),
+ * with the player's landed answer highlighted. Shared by the
+ * results screen (this run's answers) and the picker (a locked
+ * game's recorded log).
+ */
+function PromptAnswerTables({
+  items,
+}: {
+  items: {
+    prompt: OpenPrompt;
+    landedText: string | null;
+    landedDepth: number;
+  }[];
+}) {
+  const [openId, setOpenId] = useState<string | null>(null);
+  return (
+    <div className="divide-y divide-slate-100">
+      {items.map(({ prompt, landedText, landedDepth }, i) => {
+        const table = openPromptAnswerTable(prompt);
+        const isOpen = openId === prompt.id;
+        return (
+          <div key={prompt.id} className="py-3 first:pt-0 last:pb-0">
+            <button
+              type="button"
+              onClick={() => setOpenId(isOpen ? null : prompt.id)}
+              aria-expanded={isOpen}
+              className="flex w-full items-start justify-between gap-3 text-left cursor-pointer"
+            >
+              <span>
+                <span className="block text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
+                  Question {i + 1}
+                </span>
+                <span className="block text-sm font-black text-slate-900 leading-snug">
+                  {prompt.prompt}
+                </span>
+                <span className="mt-1 block text-xs font-bold text-slate-500">
+                  {landedText
+                    ? `You landed ${landedText} · +${landedDepth}`
+                    : 'Nothing landed'}
+                </span>
+              </span>
+              <span
+                className="shrink-0 text-lg font-black text-[#0072CE]"
+                aria-hidden="true"
+              >
+                {isOpen ? '−' : '+'}
+              </span>
+            </button>
+
+            {isOpen && (
+              <div className="mt-3 space-y-4 rounded-2xl bg-slate-50 p-3.5">
+                {(
+                  ['Super rare', 'Rare', 'Uncommon', 'Common'] as RarityTier[]
+                )
+                  .map((tier) => ({
+                    tier,
+                    rows: table.filter((row) => row.tier === tier),
+                  }))
+                  .filter((group) => group.rows.length > 0)
+                  .map((group) => (
+                    <div key={group.tier} className="space-y-1.5">
+                      <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
+                        {group.tier}
+                      </p>
+                      <div className="space-y-1">
+                        {group.rows.map((row) => {
+                          const isPlayers =
+                            landedText !== null && landedText === row.text;
+                          return (
+                            <div
+                              key={row.text}
+                              className={`flex items-baseline justify-between gap-3 rounded-xl px-2.5 py-1.5 ${
+                                isPlayers
+                                  ? 'bg-[#FFD23F] text-slate-950 shadow-sm'
+                                  : 'text-slate-700'
+                              }`}
+                            >
+                              <span className="text-xs sm:text-sm font-bold">
+                                {row.text}
+                                {isPlayers ? ' · you' : ''}
+                              </span>
+                              <span className="shrink-0 text-xs sm:text-sm font-black">
+                                {row.depth}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function StepLore() {
   const { triageMap, navigateTo, userId } = useWeezer();
   const unlocked = isLoreUnlocked(triageMap);
@@ -755,7 +872,15 @@ export default function StepLore() {
     new Set()
   );
   const [fanhood, setFanhood] = useState<FanhoodRecord | null>(null);
-  const [isNewBest, setIsNewBest] = useState(false);
+  // The game currently being played (or just finished). One-and-done:
+  // the picker never starts a game the record already holds, so a
+  // non-null activeGameId at the result means THIS run is the one
+  // that gets recorded.
+  const [activeGameId, setActiveGameId] = useState<LoreGameId | null>(null);
+  const [alreadyRecorded, setAlreadyRecorded] = useState(false);
+  // Which played game's "Every answer" tables are open in the picker.
+  const [pickerOpenGameId, setPickerOpenGameId] =
+    useState<LoreGameId | null>(null);
   const [reducedMotion, setReducedMotion] = useState(false);
   // Guessing loop (v4): a wrong guess never ends the question — it
   // wiggles the input and leaves a hint; only an acceptable answer
@@ -788,7 +913,6 @@ export default function StepLore() {
   // start value rather than a same-batch start=end commit.
   const [stageTotal, setStageTotal] = useState(0);
   const plungeTargetRef = useRef(0);
-  const [openDigPromptId, setOpenDigPromptId] = useState<string | null>(null);
 
   const total = answers.reduce((sum, a) => sum + a.depthEarned, 0);
   const item = run[index];
@@ -1154,12 +1278,16 @@ export default function StepLore() {
     return () => clearInterval(timer);
   }, [phase, index]);
 
-  // Landing on the result: settle the run against the established
-  // fanhood. A deeper run replaces the record — including this
-  // run's deepest single answer, the brag the Thread and the
-  // Shareables card quote; a shallower run leaves it standing.
+  // Landing on the result: THE COMMIT POINT. A finished game
+  // records its result exactly once — score, deepest answer, and
+  // the per-prompt log — into the fanhood (recordGameResult
+  // refuses a game that already has a result, so this can never
+  // overwrite). A started-but-unfinished game never reaches this
+  // effect and does not consume the play. Signed in: the record
+  // also goes to the account, so the fanhood follows the player
+  // (fire-and-forget; silent no-op for guests/failures).
   useEffect(() => {
-    if (phase !== 'result') return;
+    if (phase !== 'result' || !activeGameId) return;
     const top = [...answers]
       .filter((a) => a.depthEarned > 0)
       .sort((a, b) => b.depthEarned - a.depthEarned)[0];
@@ -1170,21 +1298,28 @@ export default function StepLore() {
           depth: top.depthEarned,
         }
       : null;
-    const settled = settleFanhoodRun(total, runDeepest);
-    setFanhood(settled.record);
-    setIsNewBest(settled.isNewBest);
-    // Signed in: the settled record also goes to the account, so
-    // the fanhood follows the player to their other browsers and
-    // devices (fire-and-forget; silent no-op for guests/failures).
-    void syncFanhoodAfterRun(userId, settled.record);
-    // total and answers are final when the result phase opens.
+    const log: FanhoodGameLogEntry[] = run.map((runItem, i) => ({
+      promptId: runItem.prompt.id,
+      answer: answers[i]?.outcome === 'correct' ? answers[i].headline : null,
+      depth: answers[i]?.depthEarned ?? 0,
+    }));
+    const before = readFanhood();
+    setAlreadyRecorded(!!before?.games[activeGameId]);
+    const { record } = recordGameResult(activeGameId, {
+      score: total,
+      deepest: runDeepest,
+      log,
+    });
+    setFanhood(record);
+    void syncFanhoodAfterRun(userId, record);
+    // total, answers and run are final when the result phase opens.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
 
-  const startRun = () => {
-    // Interim (stage 1 of the five-game build): The Sampler is the
-    // run; stage 2 replaces this with the five-game picker.
-    setRun(buildGameRun('game1'));
+  const startGame = (gameId: LoreGameId) => {
+    setActiveGameId(gameId);
+    setAlreadyRecorded(false);
+    setRun(buildGameRun(gameId));
     setIndex(0);
     setInput('');
     setAnswers([]);
@@ -1197,9 +1332,13 @@ export default function StepLore() {
     plungeFromRef.current = 0;
     plungeTargetRef.current = 0;
     setStageTotal(0);
-    setOpenDigPromptId(null);
     attemptsRef.current = 0;
     setPhase('preview');
+  };
+
+  const backToGames = () => {
+    setActiveGameId(null);
+    setPhase('intro');
   };
 
   const next = () => {
@@ -1521,12 +1660,16 @@ export default function StepLore() {
           <h1 className="truncate text-sm sm:text-base font-black tracking-tight text-slate-950">
             How Rare a Weezer Fan Are You?
           </h1>
-          {fanhood && (
-            <span className="shrink-0 rounded-full bg-slate-950 px-3 py-1 text-[11px] font-black whitespace-nowrap text-white">
-              Best · {fanhood.bestDepth.toLocaleString()} ·{' '}
-              {titleForDepth(fanhood.bestDepth)}
-            </span>
-          )}
+          {(() => {
+            const display = fanhoodDisplay(fanhood);
+            if (!display) return null;
+            return (
+              <span className="shrink-0 rounded-full bg-slate-950 px-3 py-1 text-[11px] font-black whitespace-nowrap text-white">
+                {display.legacy ? 'Best' : 'Fanhood'} ·{' '}
+                {display.depth.toLocaleString()} · {display.title}
+              </span>
+            );
+          })()}
         </div>
 
         {/* LOCKED — the teaser. Progress toward the gate is named
@@ -1567,50 +1710,115 @@ export default function StepLore() {
           </div>
         )}
 
-        {/* INTRO — unlocked, not yet playing: the marker waits at
-            the surface and the start card sits on the stage. */}
+        {/* THE PICKER — unlocked, not playing: the five games,
+            each unplayed or locked at its recorded score. Played
+            games never reopen for play (one-and-done); their
+            "Every answer" tables stay viewable from the card. */}
         {unlocked && phase === 'intro' && (
-          <div className="flex flex-1 flex-col">
-          <DescentStage
-            total={0}
-            burst={null}
-            shake={false}
-            animKey={0}
-            reducedMotion={reducedMotion}
-            viewH={480}
-            focusTop={false}
-            fill
-          >
-            <div
-              className={`rounded-3xl border p-5 space-y-3 text-left ${CARD_THEMES[0].root}`}
-            >
-              <h2 className="text-lg font-black tracking-tight">
-                Seven prompts. The rarer the answer, the deeper you sink.
-              </h2>
-              <div
-                className={`space-y-1.5 text-xs sm:text-sm font-medium leading-relaxed ${CARD_THEMES[0].body}`}
-              >
-                <p>Seven prompts, twenty-five seconds each. A wrong guess just wiggles — keep guessing till you land one or the clock runs out.</p>
-                <p>Every prompt takes more than one right answer. Rivers Cuomo is worth a little. Jason Cropper is worth a fortune.</p>
-                <p>Type your answers. Spelling doesn&apos;t have to be perfect.</p>
-              </div>
-              {fanhood && (
-                <p
-                  className={`text-xs sm:text-sm font-bold ${CARD_THEMES[0].strong}`}
+          <div className="w-full space-y-4 px-4 sm:px-6 pb-10">
+            {(() => {
+              const display = fanhoodDisplay(fanhood);
+              return display ? (
+                <div className="bg-slate-950 text-white rounded-3xl p-5 shadow-md space-y-1.5">
+                  <p className="text-[10px] font-black uppercase tracking-[0.14em] text-white/60">
+                    Your fanhood
+                  </p>
+                  <p className="text-2xl font-black tracking-tight">
+                    You&apos;re a {display.title}
+                  </p>
+                  <p className="text-xs sm:text-sm font-bold leading-relaxed text-white/70">
+                    {display.legacy
+                      ? `${display.depth.toLocaleString()} deep — that was the old single game. It stays on your card until you finish one of the five games below; from then on your fanhood is the five scores added together.`
+                      : `${display.depth.toLocaleString()} deep across ${display.gamesPlayed} of 5 games. A finished game adds its score for good — the total never goes down.`}
+                  </p>
+                </div>
+              ) : (
+                <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs space-y-2">
+                  <h2 className="text-lg font-black text-slate-950 tracking-tight">
+                    Five games. Each one counts once.
+                  </h2>
+                  <p className="text-xs sm:text-sm font-medium text-slate-500 leading-relaxed">
+                    Seven prompts a game, twenty-five seconds each. A wrong
+                    guess just wiggles — keep guessing till you land one or
+                    the clock runs out. Every prompt takes more than one
+                    right answer, and the rarer yours is, the deeper it
+                    lands. When a game ends, its score locks in and adds
+                    to your fanhood — there are no replays, so make each
+                    one count.
+                  </p>
+                </div>
+              );
+            })()}
+
+            {LORE_GAMES.map((game) => {
+              const result = fanhood?.games[game.id];
+              const tablesOpen = pickerOpenGameId === game.id;
+              return (
+                <div
+                  key={game.id}
+                  className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs space-y-2.5"
                 >
-                  Your fanhood so far: you&apos;re a{' '}
-                  {titleForDepth(fanhood.bestDepth)} —{' '}
-                  {fanhood.bestDepth.toLocaleString()} deep.
-                </p>
-              )}
-              <button
-                onClick={startRun}
-                className={`w-full sm:w-auto font-black text-xs sm:text-sm px-5 py-3 rounded-2xl transition-all active:scale-95 cursor-pointer ${CARD_THEMES[0].dig}`}
-              >
-                Start descending
-              </button>
-            </div>
-          </DescentStage>
+                  <div className="flex items-start justify-between gap-3">
+                    <h3 className="text-lg font-black text-slate-950 tracking-tight">
+                      {game.name}
+                    </h3>
+                    {result && (
+                      <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
+                        Played
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs sm:text-sm font-medium text-slate-500 leading-relaxed">
+                    {game.promise}
+                  </p>
+                  {result ? (
+                    <>
+                      <p className="text-sm font-black text-slate-900">
+                        Your score: {result.score.toLocaleString()} · Game
+                        verdict — {titleForDepth(result.score)}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setPickerOpenGameId(tablesOpen ? null : game.id)
+                        }
+                        aria-expanded={tablesOpen}
+                        className="text-xs font-black text-[#0072CE] hover:underline cursor-pointer"
+                      >
+                        {tablesOpen ? 'Hide every answer' : 'See every answer'}
+                      </button>
+                      {tablesOpen && (
+                        <PromptAnswerTables
+                          items={game.promptIds.map((promptId) => {
+                            const entry = result.log.find(
+                              (e) => e.promptId === promptId
+                            );
+                            return {
+                              prompt: promptById(promptId),
+                              landedText: entry?.answer ?? null,
+                              landedDepth: entry?.depth ?? 0,
+                            };
+                          })}
+                        />
+                      )}
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => startGame(game.id)}
+                      className="w-full sm:w-auto bg-[#0072CE] hover:bg-blue-700 active:scale-95 text-white font-black text-xs sm:text-sm px-5 py-3 rounded-2xl transition-all shadow-md cursor-pointer"
+                    >
+                      Play {game.name} →
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+
+            <p className="text-xs font-bold leading-relaxed text-slate-400">
+              Type your answers — spelling doesn&apos;t have to be perfect.
+              Rivers Cuomo is worth a little. Jason Cropper is worth a
+              fortune.
+            </p>
           </div>
         )}
 
@@ -1664,19 +1872,23 @@ export default function StepLore() {
         {unlocked && phase === 'result' && (
           <>
           <div className="w-full space-y-6 px-4 sm:px-6 pb-10">
-            {/* THE VERDICT — the results lead with what the run
-                says you ARE: Mark's fanhood ladder (titleForDepth),
-                not the layer the marker landed in. The banner keeps
-                the final layer's art and its warm line underneath. */}
+            {/* THE VERDICT — the results lead with the GAME's own
+                verdict, labeled as one so it never reads as a claim
+                about the whole fanhood: the per-game ladder names
+                it (titleForDepth on this game's score), the banner
+                keeps the final layer's art, and the fanhood strip
+                under it carries the compound story separately. */}
             <div
               className={`relative overflow-hidden rounded-3xl p-6 shadow-md space-y-3 ${BAND_STAGE[finalBandIdx].layer}`}
               style={BAND_STAGE[finalBandIdx].textureStyle}
             >
               <p className="text-[11px] font-black uppercase tracking-wider opacity-70">
-                You&apos;re a
+                {activeGameId
+                  ? `${loreGameById(activeGameId).name} · Game verdict`
+                  : 'Game verdict'}
               </p>
               <h2 className="text-4xl sm:text-5xl font-black tracking-tight leading-none">
-                {titleForDepth(total)}
+                You&apos;re a {titleForDepth(total)}
               </h2>
               <p className="text-base sm:text-lg font-black">
                 {total.toLocaleString()} deep
@@ -1684,19 +1896,43 @@ export default function StepLore() {
               <p className="text-xs sm:text-sm font-medium leading-relaxed opacity-80">
                 {finalBand.line}
               </p>
-              {isNewBest && (
-                <p className="text-xs font-black">
-                  Your deepest run yet — this is your fanhood now. 🏆
-                </p>
-              )}
-              {!isNewBest && fanhood && fanhood.bestDepth > total && (
+              {alreadyRecorded ? (
                 <p className="text-xs font-bold opacity-70">
-                  Your fanhood stands at{' '}
-                  {titleForDepth(fanhood.bestDepth)} —{' '}
-                  {fanhood.bestDepth.toLocaleString()} deep.
+                  This game was already on your card — a finished
+                  game&apos;s score never changes, so this run added
+                  nothing.
+                </p>
+              ) : (
+                <p className="text-xs font-black">
+                  Locked in — this score is on your card for good. 🏆
                 </p>
               )}
             </div>
+
+            {/* THE FANHOOD STRIP — the compound total on its own
+                ladder, labeled as the fanhood (never as a verdict
+                on this game). */}
+            {(() => {
+              const display = fanhoodDisplay(fanhood);
+              if (!display || display.legacy) return null;
+              return (
+                <div className="bg-slate-950 text-white rounded-3xl p-5 shadow-md space-y-1">
+                  <p className="text-[10px] font-black uppercase tracking-[0.14em] text-white/60">
+                    Your fanhood
+                  </p>
+                  <p className="text-base sm:text-lg font-black leading-snug">
+                    You&apos;re a {display.title} —{' '}
+                    {display.depth.toLocaleString()} deep across{' '}
+                    {display.gamesPlayed} of 5 games.
+                  </p>
+                  <p className="text-xs font-bold text-white/60">
+                    {display.gamesPlayed >= 5
+                      ? 'All five games are in. That is the whole card.'
+                      : 'Every game left on the picker adds its score to that total.'}
+                  </p>
+                </div>
+              );
+            })()}
 
             <DescentStage
               total={total}
@@ -1721,8 +1957,8 @@ export default function StepLore() {
               )}
               {deepest.length === 0 ? (
                 <p className="text-xs sm:text-sm font-medium text-slate-500 leading-relaxed">
-                  Nothing landed this run — the hits are waiting to be named
-                  next time.
+                  Nothing landed this time — every answer is in the tables
+                  below.
                 </p>
               ) : (
                 <div className="space-y-2">
@@ -1743,10 +1979,10 @@ export default function StepLore() {
               )}
               <div className="flex flex-col sm:flex-row gap-2 pt-1">
                 <button
-                  onClick={startRun}
+                  onClick={backToGames}
                   className={`w-full sm:w-auto font-black text-xs sm:text-sm px-5 py-3 rounded-2xl transition-all active:scale-95 cursor-pointer ${finalTheme.dig}`}
                 >
-                  Play again
+                  Back to the games
                 </button>
                 <button
                   onClick={() => navigateTo('dashboard')}
@@ -1766,85 +2002,16 @@ export default function StepLore() {
                   Open a prompt to see every answer that would have landed, deepest first.
                 </p>
               </div>
-              <div className="divide-y divide-slate-100">
-                {run.map((runItem, runIndex) => {
-                  const record = answers[runIndex];
-                  const table = openPromptAnswerTable(runItem.prompt);
-                  const isOpen = openDigPromptId === runItem.prompt.id;
-                  return (
-                    <div key={runItem.prompt.id} className="py-3 first:pt-0 last:pb-0">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setOpenDigPromptId(isOpen ? null : runItem.prompt.id)
-                        }
-                        aria-expanded={isOpen}
-                        className="flex w-full items-start justify-between gap-3 text-left cursor-pointer"
-                      >
-                        <span>
-                          <span className="block text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
-                            Question {runIndex + 1}
-                          </span>
-                          <span className="block text-sm font-black text-slate-900 leading-snug">
-                            {runItem.prompt.prompt}
-                          </span>
-                          <span className="mt-1 block text-xs font-bold text-slate-500">
-                            {record?.outcome === 'correct'
-                              ? `You landed ${record.headline} · +${record.depthEarned}`
-                              : 'Nothing landed'}
-                          </span>
-                        </span>
-                        <span className="shrink-0 text-lg font-black text-[#0072CE]" aria-hidden="true">
-                          {isOpen ? '−' : '+'}
-                        </span>
-                      </button>
-
-                      {isOpen && (
-                        <div className="mt-3 space-y-4 rounded-2xl bg-slate-50 p-3.5">
-                          {(['Super rare', 'Rare', 'Uncommon', 'Common'] as RarityTier[])
-                            .map((tier) => ({
-                              tier,
-                              rows: table.filter((row) => row.tier === tier),
-                            }))
-                            .filter((group) => group.rows.length > 0)
-                            .map((group) => (
-                              <div key={group.tier} className="space-y-1.5">
-                                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
-                                  {group.tier}
-                                </p>
-                                <div className="space-y-1">
-                                  {group.rows.map((row) => {
-                                    const isPlayers =
-                                      record?.outcome === 'correct' &&
-                                      record.headline === row.text;
-                                    return (
-                                      <div
-                                        key={row.text}
-                                        className={`flex items-baseline justify-between gap-3 rounded-xl px-2.5 py-1.5 ${
-                                          isPlayers
-                                            ? 'bg-[#FFD23F] text-slate-950 shadow-sm'
-                                            : 'text-slate-700'
-                                        }`}
-                                      >
-                                        <span className="text-xs sm:text-sm font-bold">
-                                          {row.text}
-                                          {isPlayers ? ' · you' : ''}
-                                        </span>
-                                        <span className="shrink-0 text-xs sm:text-sm font-black">
-                                          {row.depth}
-                                        </span>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                            ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+              <PromptAnswerTables
+                items={run.map((runItem, runIndex) => ({
+                  prompt: runItem.prompt,
+                  landedText:
+                    answers[runIndex]?.outcome === 'correct'
+                      ? answers[runIndex].headline
+                      : null,
+                  landedDepth: answers[runIndex]?.depthEarned ?? 0,
+                }))}
+              />
             </div>
           </div>
           </>

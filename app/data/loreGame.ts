@@ -146,6 +146,32 @@ export function titleForDepth(depth: number): string {
   return FANHOOD_LADDER[FANHOOD_LADDER.length - 1].title;
 }
 
+/**
+ * The COMPOUND ladder (five-game build, Oct 27, 2026): the same
+ * five titles over the SUM of the five game scores — a strong full
+ * run lands ≈14,500, a perfect one ≈31,500. DRAFT bands (from the
+ * composition doc's depth math; titles are locked, thresholds are
+ * Mark's to adjust). Per-game verdicts keep using titleForDepth on
+ * the per-game ladder above; this ladder is only for the overall
+ * fanhood the five scores add up to, and surfaces label the two
+ * distinctly ("Game verdict — …" vs. the fanhood title).
+ */
+export const FANHOOD_TOTAL_LADDER: FanhoodTier[] = [
+  { min: 0, max: 2499, title: 'Casual Fan' },
+  { min: 2500, max: 5999, title: 'Just the Hits Fan' },
+  { min: 6000, max: 12499, title: 'Member of the Fan Club' },
+  { min: 12500, max: 20999, title: 'Ride or Die Fan' },
+  { min: 21000, max: Infinity, title: 'Weezer OG' },
+];
+
+/** The overall fanhood title a five-game total earns. */
+export function totalTitleForDepth(total: number): string {
+  for (const tier of FANHOOD_TOTAL_LADDER) {
+    if (total >= tier.min && total <= tier.max) return tier.title;
+  }
+  return FANHOOD_TOTAL_LADDER[FANHOOD_TOTAL_LADDER.length - 1].title;
+}
+
 /* ------------------------------------------------------------------ */
 /* Song depths (seed table, derived from the catalog)                  */
 /* ------------------------------------------------------------------ */

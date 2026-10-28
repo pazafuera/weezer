@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useWeezer, getProgressState, countBucketedSongs, countCategorizedSongs } from '../context/WeezerContext';
 import { BUCKET_CONFIG, FULL_SONG_POOL, BucketType, ALBUM_NAME_TO_ID } from '../data/constants';
 import { isLoreUnlocked, loreGateRemainingAlbums, titleForDepth } from '../data/loreGame';
-import { readFanhood } from '../lib/fanhood';
+import { fanhoodDisplay, readFanhood } from '../lib/fanhood';
 import type { FanhoodRecord } from '../lib/fanhood';
 import { AlbumArtwork } from './SharedUI';
 import WeezerOnboardingModal from './WeezerOnboardingModal';
@@ -417,9 +417,15 @@ export default function StepDashboard() {
           How Rare a Weezer Fan Are You?
         </h2>
         <p className="text-xs sm:text-sm font-medium text-slate-500 leading-relaxed">
-          {fanhood
-            ? `You\u2019re a ${titleForDepth(fanhood.bestDepth)} — your deepest run reached ${fanhood.bestDepth.toLocaleString()}.`
-            : 'Ten prompts, twenty-five seconds each — the rarer your answers, the deeper you go.'}
+          {(() => {
+            const display = fanhoodDisplay(fanhood);
+            if (!display) {
+              return 'Five games, seven prompts each — the rarer your answers, the deeper you go.';
+            }
+            return display.legacy
+              ? `You\u2019re a ${display.title} — your deepest run reached ${display.depth.toLocaleString()}.`
+              : `You\u2019re a ${display.title} — ${display.depth.toLocaleString()} deep across ${display.gamesPlayed} of 5 games.`;
+          })()}
         </p>
         <div className="pt-0.5 flex items-center text-xs font-black text-[#0072CE] group-hover:underline">
           {fanhood ? 'Go deeper →' : 'Play the game →'}

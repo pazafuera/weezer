@@ -25,7 +25,7 @@ import {
   scoreArchetypes,
 } from '../lib/archetypes';
 import { isLoreUnlocked, titleForDepth } from '../data/loreGame';
-import { useFanhood } from '../lib/fanhood';
+import { fanhoodDisplay, useFanhood } from '../lib/fanhood';
 
 // Bucket scores for the Fan Club Tiers album derivation below
 // (mirrors StepShareables).
@@ -169,26 +169,27 @@ function FanhoodStop({
 }) {
   const { navigateTo } = useWeezer();
   const fanhood = useFanhood();
+  const display = fanhoodDisplay(fanhood);
   const unlocked = isLoreUnlocked(triageMap);
 
-  if (fanhood) {
+  if (display) {
     return (
       <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl text-center">
         <p className="text-[10px] font-black uppercase tracking-widest text-amber-300 block mb-3">
           How Rare a Weezer Fan Are You?
         </p>
         <h3 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
-          You&apos;re a {titleForDepth(fanhood.bestDepth)}
+          You&apos;re a {display.title}
         </h3>
         <p className="mt-2 text-sm font-black text-[#7dd3fc] uppercase tracking-widest">
-          {fanhood.bestDepth.toLocaleString()} deep
+          {display.depth.toLocaleString()} deep
         </p>
-        {fanhood.deepest && (
+        {display.deepest && (
           <p className="mt-4 text-sm font-semibold text-slate-300 leading-relaxed">
-            Your deepest answer was {fanhood.deepest.answer} —{' '}
-            {fanhood.deepest.depth.toLocaleString()} deep.
+            Your deepest answer was {display.deepest.answer} —{' '}
+            {display.deepest.depth.toLocaleString()} deep.
             <span className="block mt-1 text-xs font-bold text-slate-500">
-              {fanhood.deepest.promptLabel}
+              {display.deepest.promptLabel}
             </span>
           </p>
         )}
@@ -211,9 +212,9 @@ function FanhoodStop({
         Your fanhood hasn&apos;t been measured yet
       </h3>
       <p className="mt-3 text-sm font-semibold text-slate-500 leading-relaxed max-w-lg mx-auto">
-        Ten prompts, twenty-five seconds each. The rarer your answers,
-        the deeper you go — and the game tells you what kind of fan
-        that makes you.
+        Five games, seven prompts each, twenty-five seconds a prompt.
+        The rarer your answers, the deeper you go — and the games
+        tell you what kind of fan that makes you.
       </p>
       {unlocked ? (
         <button

@@ -9,13 +9,14 @@ import {
   answerCoverFor,
   bandForTotal,
   bandsEnteredBetween,
-  buildRunV2,
+  buildGameRun,
   isLoreUnlocked,
   loreGateRemainingAlbums,
+  openAnswerEntries,
+  openAnswerKey,
+  openAnswerSong,
   openPromptAnswerTable,
   openPromptExtremes,
-  openSongDepth,
-  openSongQualifies,
   tierForDepth,
   titleForDepth,
 } from '../data/loreGame';
@@ -750,7 +751,7 @@ export default function StepLore() {
   const [previewLeft, setPreviewLeft] = useState(PREVIEW_SECONDS);
   const [secondsLeft, setSecondsLeft] = useState(QUESTION_SECONDS);
   const [answers, setAnswers] = useState<AnswerRecord[]>([]);
-  const [usedSongIds, setUsedSongIds] = useState<ReadonlySet<string>>(
+  const [usedAnswerKeys, setUsedAnswerKeys] = useState<ReadonlySet<string>>(
     new Set()
   );
   const [fanhood, setFanhood] = useState<FanhoodRecord | null>(null);
@@ -830,28 +831,45 @@ export default function StepLore() {
     if (!item) return null;
     let record: AnswerRecord;
 
-    if (item.prompt.kind === 'table' && item.prompt.answers) {
-      const prompt = item.prompt;
-      const tableAnswers = item.prompt.answers;
-      const extremes = openPromptExtremes(prompt);
-      const entries = tableAnswers.map((a) => ({
-        spec: { answer: a.text, aliases: a.aliases },
-        trap: a.trapNote !== undefined,
-      }));
-      const result = matchTableAnswer(given, entries);
-      const contrast = {
-        commonText: extremes.common.text,
-        commonDepth: extremes.common.depth,
-        deepestText: extremes.deepest.text,
-        deepestDepth: extremes.deepest.depth,
-      };
-      if (result.status === 'match') {
-        const played = tableAnswers[result.index];
+    // Five-game rebuild (Oct 27, 2026): every prompt — songs
+    // included — scores by TABLE MEMBERSHIP ONLY. One matcher over
+    // the prompt's rows (canonical text + aliases + derived song
+    // variants); a catalog song that isn't in the table doesn't
+    // score, and a beyond-the-catalog row in the table does.
+    const prompt = item.prompt;
+    const extremes = openPromptExtremes(prompt);
+    const contrast = {
+      commonText: extremes.common.text,
+      commonDepth: extremes.common.depth,
+      deepestText: extremes.deepest.text,
+      deepestDepth: extremes.deepest.depth,
+    };
+    const result = matchTableAnswer(given, openAnswerEntries(prompt));
+
+    if (result.status === 'match') {
+      const played = prompt.answers[result.index];
+      const key = openAnswerKey(played);
+      if (usedAnswerKeys.has(key)) {
+        record = {
+          outcome: 'duplicate',
+          headline: played.text,
+          subline:
+            'You already played that one this run — no depth for repeats.',
+          depthEarned: 0,
+          ...contrast,
+          loreLine: prompt.loreLine,
+          questionPrompt: prompt.prompt,
+        };
+      } else {
+        const nextUsed = new Set(usedAnswerKeys);
+        nextUsed.add(key);
+        setUsedAnswerKeys(nextUsed);
+        const song = openAnswerSong(played);
         const cover = answerCoverFor(prompt, played.text);
         record = {
           outcome: 'correct',
           headline: played.text,
-          subline: '',
+          subline: song ? song.album : '',
           note: played.note,
           coverSrc: cover?.src,
           coverAlbum: cover?.album,
@@ -861,106 +879,44 @@ export default function StepLore() {
           loreLine: prompt.loreLine,
           questionPrompt: prompt.prompt,
         };
-      } else if (result.status === 'trap') {
-        const played = tableAnswers[result.index];
-        record = {
-          outcome: 'trap',
-          headline: played.text,
-          subline: '',
-          trapNote: played.trapNote,
-          depthEarned: 0,
-          ...contrast,
-          loreLine: prompt.loreLine,
-          questionPrompt: prompt.prompt,
-        };
-      } else {
-        record = {
-          outcome: 'miss',
-          headline: '',
-          subline: timedOut ? 'Time ran out.' : '',
-          depthEarned: 0,
-          ...contrast,
-          loreLine: prompt.loreLine,
-          questionPrompt: prompt.prompt,
-        };
       }
-    } else {
-      const prompt = item.prompt;
-      const extremes = openPromptExtremes(prompt);
-      const contrast = {
-        commonText: extremes.common.text,
-        commonDepth: extremes.common.depth,
-        deepestText: extremes.deepest.text,
-        deepestDepth: extremes.deepest.depth,
+    } else if (result.status === 'trap') {
+      const played = prompt.answers[result.index];
+      record = {
+        outcome: 'trap',
+        headline: played.text,
+        subline: '',
+        trapNote: played.trapNote,
+        depthEarned: 0,
+        ...contrast,
+        loreLine: prompt.loreLine,
+        questionPrompt: prompt.prompt,
       };
-      const resolved = resolveSongAnswer(given, FULL_SONG_POOL, usedSongIds);
-      if (resolved.status === 'duplicate' && resolved.song) {
-        record = {
-          outcome: 'duplicate',
-          headline: resolved.song.title,
-          subline: 'You already played that one this run — no depth for repeats.',
-          depthEarned: 0,
-          ...contrast,
-          loreLine: prompt.loreLine,
-          questionPrompt: prompt.prompt,
-        };
-      } else if (resolved.status === 'match' && resolved.song) {
-        const trapNote = prompt.songTraps?.[resolved.song.id];
-        if (trapNote) {
-          record = {
-            outcome: 'trap',
-            headline: resolved.song.title,
-            subline: '',
-            trapNote,
-            depthEarned: 0,
-            ...contrast,
-            loreLine: prompt.loreLine,
-            questionPrompt: prompt.prompt,
-          };
-        } else if (openSongQualifies(prompt, resolved.song)) {
-          const nextUsed = new Set(usedSongIds);
-          nextUsed.add(resolved.song.id);
-          setUsedSongIds(nextUsed);
-          const depth = openSongDepth(prompt, resolved.song);
-          const cover = answerCoverFor(
-            prompt,
-            resolved.song.title,
-            resolved.song
+    } else {
+      // A miss. When the guess names a real catalog song that
+      // simply isn't in this prompt's table, say so — the kindest
+      // hint the game has.
+      let subline = timedOut ? 'Time ran out.' : '';
+      if (!timedOut) {
+        const resolved = resolveSongAnswer(given, FULL_SONG_POOL, new Set());
+        if (resolved.status === 'match' && resolved.song) {
+          const inTable = prompt.answers.some(
+            (a) => openAnswerKey(a) === `song:${resolved.song!.id}`
           );
-          record = {
-            outcome: 'correct',
-            headline: resolved.song.title,
-            subline: resolved.song.album,
-            coverSrc: cover?.src,
-            coverAlbum: cover?.album,
-            tier: tierForDepth(depth),
-            depthEarned: depth,
-            ...contrast,
-            loreLine: prompt.loreLine,
-            questionPrompt: prompt.prompt,
-          };
-        } else {
-          record = {
-            outcome: 'miss',
-            headline: '',
-            subline: `${resolved.song.title} is a real one, but it doesn't fit this prompt.`,
-            depthEarned: 0,
-            ...contrast,
-            loreLine: prompt.loreLine,
-            questionPrompt: prompt.prompt,
-          };
+          if (!inTable) {
+            subline = `${resolved.song.title} is a real one, but it doesn't fit this prompt.`;
+          }
         }
-      } else {
-        record = {
-          outcome: 'miss',
-          headline: '',
-          subline: timedOut ? 'Time ran out.' : '',
-          depthEarned: 0,
-          ...contrast,
-          loreLine: prompt.loreLine,
-          questionPrompt: prompt.prompt,
-        };
       }
+      record = {
+        outcome: 'miss',
+        headline: '',
+        subline,
+        depthEarned: 0,
+        ...contrast,
+        loreLine: prompt.loreLine,
+        questionPrompt: prompt.prompt,
+      };
     }
 
     return record;
@@ -1226,11 +1182,13 @@ export default function StepLore() {
   }, [phase]);
 
   const startRun = () => {
-    setRun(buildRunV2());
+    // Interim (stage 1 of the five-game build): The Sampler is the
+    // run; stage 2 replaces this with the five-game picker.
+    setRun(buildGameRun('game1'));
     setIndex(0);
     setInput('');
     setAnswers([]);
-    setUsedSongIds(new Set());
+    setUsedAnswerKeys(new Set());
     setHint(null);
     setPendingRecord(null);
     setPlungeDepth(0);
@@ -1584,8 +1542,9 @@ export default function StepLore() {
               <span className="text-sm">🔒</span>
             </div>
             <p className="text-xs sm:text-sm font-medium text-slate-500 leading-relaxed">
-              Ten prompts, twenty-five seconds each. Any right answer drops
-              you — but the rarer your answer, the deeper you sink.
+              Five games, seven prompts each, twenty-five seconds a prompt.
+              Any right answer drops you — but the rarer your answer,
+              the deeper you sink.
             </p>
             <p className="text-xs sm:text-sm font-medium text-slate-500 leading-relaxed">
               {remainingAlbums.length === 2
@@ -1626,12 +1585,12 @@ export default function StepLore() {
               className={`rounded-3xl border p-5 space-y-3 text-left ${CARD_THEMES[0].root}`}
             >
               <h2 className="text-lg font-black tracking-tight">
-                Ten prompts. The rarer the answer, the deeper you sink.
+                Seven prompts. The rarer the answer, the deeper you sink.
               </h2>
               <div
                 className={`space-y-1.5 text-xs sm:text-sm font-medium leading-relaxed ${CARD_THEMES[0].body}`}
               >
-                <p>Ten prompts, twenty-five seconds each. A wrong guess just wiggles — keep guessing till you land one or the clock runs out.</p>
+                <p>Seven prompts, twenty-five seconds each. A wrong guess just wiggles — keep guessing till you land one or the clock runs out.</p>
                 <p>Every prompt takes more than one right answer. Rivers Cuomo is worth a little. Jason Cropper is worth a fortune.</p>
                 <p>Type your answers. Spelling doesn&apos;t have to be perfect.</p>
               </div>

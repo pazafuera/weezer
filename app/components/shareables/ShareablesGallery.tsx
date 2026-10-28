@@ -638,7 +638,7 @@ function FanhoodLibraryItem({
   return (
     <LibraryItem
       title="Your Fanhood"
-      description="Your verdict from How Rare a Weezer Fan Are You?"
+      description="Your verdict from How Deep Is Your Fanhood?"
       filename="my-weezer-fanhood.png"
     >
       <FanhoodCardVisual fanhood={fanhood} subtitle={subtitle} />

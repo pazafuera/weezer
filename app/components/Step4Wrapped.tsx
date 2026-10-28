@@ -176,7 +176,7 @@ function FanhoodStop({
     return (
       <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl text-center">
         <p className="text-[10px] font-black uppercase tracking-widest text-amber-300 block mb-3">
-          How Rare a Weezer Fan Are You?
+          How Deep Is Your Fanhood?
         </p>
         <h3 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
           You&apos;re a {display.title}
@@ -206,7 +206,7 @@ function FanhoodStop({
   return (
     <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm text-center">
       <p className="text-[10px] font-black uppercase tracking-widest text-[#0072CE] block mb-3">
-        How Rare a Weezer Fan Are You?
+        How Deep Is Your Fanhood?
       </p>
       <h3 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight">
         Your fanhood hasn&apos;t been measured yet

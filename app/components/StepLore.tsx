@@ -37,9 +37,12 @@ import {
 } from '../lib/loreMatch';
 import {
   fanhoodDisplay,
+  fanhoodGamesPlayed,
+  fanhoodStandingLine,
   gameCanStart,
   readFanhood,
   recordGameResult,
+  seriesRowState,
 } from '../lib/fanhood';
 import { displayFont } from './shareables/fonts';
 import { syncFanhoodAfterRun } from '../lib/fanhoodSync';
@@ -53,12 +56,13 @@ import type {
 const QUESTION_SECONDS = 25;
 const PREVIEW_SECONDS = 3;
 
-/** Picker strata (mock v2, approved Oct 27, 2026): the ladder
- *  strip's rungs and the game cards' edge bars deepen as the
- *  descent does — sky at the surface to near-black bedrock.
- *  Parallel to FANHOOD_TOTAL_LADDER / LORE_GAMES by index. */
+/** Picker strata (mock v2, approved Oct 27, 2026; rail balls
+ *  mock v3, Oct 28): the ladder strip's rungs and the series
+ *  rail's balls deepen as the descent does — sky at the surface
+ *  to near-black bedrock. Parallel to FANHOOD_TOTAL_LADDER /
+ *  LORE_GAMES by index. */
 const LADDER_RUNG_BG = ['#38bdf8', '#0284c7', '#0369a1', '#1e3a5f', '#020617'];
-const GAME_EDGE_BG = ['#7dd3fc', '#38bdf8', '#0284c7', '#1e3a5f', '#0f172a'];
+const SERIES_BALL_BG = ['#38bdf8', '#0284c7', '#0369a1', '#1e3a5f', '#0f172a'];
 
 /** The start gate's four rules (mock v2, generic per Mark: no
  *  prompt teasers — a one-and-done game's card is not a study
@@ -1745,10 +1749,14 @@ export default function StepLore() {
             duplicated the intro card's headline). Small game name on
             the left; the established fanhood rides on the right.
             The stage below is flex-1 with a measured height, so the
-            reclaimed space goes straight to the descent. */}
+            reclaimed space goes straight to the descent. Mock v3:
+            on the picker itself the row steps aside for the big
+            display title inside the picker — every other phase
+            (and the locked view and the board) keeps this row. */}
+        {!(unlocked && !showBoard && phase === 'intro') && (
         <div className="flex items-center justify-between gap-3 px-4 sm:px-6 pt-3 pb-2">
           <h1 className="truncate text-sm sm:text-base font-black tracking-tight text-slate-950">
-            How Rare a Weezer Fan Are You?
+            How Deep Is Your Fanhood?
           </h1>
           {(() => {
             const display = fanhoodDisplay(fanhood);
@@ -1761,6 +1769,7 @@ export default function StepLore() {
             );
           })()}
         </div>
+        )}
 
         {/* LOCKED — the teaser. Progress toward the gate is named
             by album, never by count: the dashboard's Catalog
@@ -1805,84 +1814,76 @@ export default function StepLore() {
           </div>
         )}
 
-        {/* THE PICKER — unlocked, not playing: the five games,
-            each unplayed or locked at its recorded score. Played
-            games never reopen for play (one-and-done); their
-            "Every answer" tables stay viewable from the card. */}
+        {/* THE PICKER — unlocked, not playing (mock v3, Oct 28,
+            2026): the big display title, ONE combined block (how
+            it works + the ladder + the standing line), then the
+            five games as a single series — played in order, each
+            finish unlocking the next. Played games never reopen
+            for play (one-and-done); their "Every answer" tables
+            stay viewable from their row. */}
         {unlocked && !showBoard && phase === 'intro' && (
           <div className="w-full space-y-4 px-4 sm:px-6 pb-10">
-            {(() => {
-              const display = fanhoodDisplay(fanhood);
-              return display ? (
-                <div className="bg-slate-950 text-white rounded-3xl p-5 shadow-md space-y-1.5">
-                  <p className="text-[10px] font-black uppercase tracking-[0.14em] text-white/60">
-                    Your fanhood
-                  </p>
-                  <p className="text-2xl font-black tracking-tight">
-                    You&apos;re a {display.title}
-                  </p>
-                  <p className="text-xs sm:text-sm font-bold leading-relaxed text-white/70">
-                    {`${display.depth.toLocaleString()} deep across ${display.gamesPlayed} of 5 games. A finished game adds its score for good — the total never goes down.`}
-                  </p>
-                </div>
-              ) : null;
-            })()}
+            <h1
+              className={`${displayFont.className} px-1 pt-1 text-[37px] leading-[1.08] text-slate-950`}
+            >
+              How Deep Is Your Fanhood?
+            </h1>
 
-            {/* HOW IT WORKS — always on the page (mock v2: the old
-                explainer vanished once a fanhood existed; the
-                fanhood band now stacks above it, never instead). */}
-            <div className="bg-slate-950 text-white rounded-3xl p-5 shadow-md">
-              <h2 className={`${displayFont.className} text-[21px] leading-none`}>
-                How it works
-              </h2>
-              <ol className="mt-3.5 space-y-2.5">
-                {[
-                  {
-                    lead: 'Pick a game.',
-                    rest: 'Five themes, seven prompts each, twenty-five seconds a prompt.',
-                  },
-                  {
-                    lead: 'Guess until you land one.',
-                    rest: 'Every prompt takes more than one right answer — and the rarer yours is, the deeper you sink.',
-                  },
-                  {
-                    lead: 'Each game counts once.',
-                    rest: 'When it ends, your score locks in and adds to your fanhood. There are no replays.',
-                  },
-                ].map((step, i) => (
-                  <li
-                    key={step.lead}
-                    className="flex gap-2.5 text-xs sm:text-sm font-medium leading-relaxed text-slate-200"
-                  >
-                    <span className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full bg-[#039AD1] text-[12px] font-black text-white">
-                      {i + 1}
-                    </span>
-                    <span>
-                      <strong className="font-black text-white">
-                        {step.lead}
-                      </strong>{' '}
-                      {step.rest}
-                    </span>
-                  </li>
-                ))}
-              </ol>
-              <p className="mt-3.5 text-xs font-semibold text-slate-400">
-                Type your answers — spelling doesn&apos;t have to be perfect.
-              </p>
-            </div>
-
-            {/* THE LADDER — the fanhood titles as strata, ranges
-                derived from FANHOOD_TOTAL_LADDER so the strip can
-                never disagree with the fanhood math itself. */}
-            <div className="overflow-hidden rounded-3xl border border-slate-300/80 bg-white shadow-xs">
-              <p className="px-4 sm:px-5 pt-3 pb-2.5 text-xs font-bold leading-relaxed text-slate-500">
+            {/* THE COMBINED BLOCK — the explainer, the ladder and
+                the player's standing in one dark container. It
+                renders in every fanhood state; the standing line
+                is simply absent until a first game is finished. */}
+            <div className="overflow-hidden rounded-3xl bg-slate-950 text-white shadow-md">
+              <div className="p-5 pb-1.5">
+                <h2
+                  className={`${displayFont.className} text-[21px] leading-none`}
+                >
+                  How it works
+                </h2>
+                <ol className="mt-3.5 space-y-2.5">
+                  {[
+                    {
+                      lead: 'Five games, played in order.',
+                      rest: 'Each finish unlocks the next. Seven prompts a game, twenty-five seconds a prompt.',
+                    },
+                    {
+                      lead: 'Guess until you land one.',
+                      rest: 'Every prompt takes more than one right answer — and the rarer yours is, the deeper you sink.',
+                    },
+                    {
+                      lead: 'Each game counts once.',
+                      rest: 'When it ends, your score locks in and adds to your fanhood. There are no replays.',
+                    },
+                  ].map((step, i) => (
+                    <li
+                      key={step.lead}
+                      className="flex gap-2.5 text-xs sm:text-sm font-medium leading-relaxed text-slate-200"
+                    >
+                      <span className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full bg-[#039AD1] text-[12px] font-black text-white">
+                        {i + 1}
+                      </span>
+                      <span>
+                        <strong className="font-black text-white">
+                          {step.lead}
+                        </strong>{' '}
+                        {step.rest}
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+                <p className="mt-3.5 text-xs font-semibold text-slate-400">
+                  Type your answers — spelling doesn&apos;t have to be
+                  perfect.
+                </p>
+              </div>
+              <p className="border-t border-white/15 px-5 pt-3 pb-2.5 text-xs font-bold leading-relaxed text-slate-300">
                 Your five scores add up to one fanhood. This is where the
                 total lands you:
               </p>
               {FANHOOD_TOTAL_LADDER.map((tier, i) => (
                 <div
                   key={tier.title}
-                  className="flex items-baseline justify-between gap-3 px-4 sm:px-5 py-2"
+                  className="flex items-baseline justify-between gap-3 px-5 py-2"
                   style={{ backgroundColor: LADDER_RUNG_BG[i] }}
                 >
                   <span
@@ -1900,87 +1901,146 @@ export default function StepLore() {
                   </span>
                 </div>
               ))}
+              {(() => {
+                const line = fanhoodStandingLine(fanhood);
+                if (!line) return null;
+                return (
+                  <div className="flex items-center gap-2 px-5 pt-2.5 pb-4">
+                    <span
+                      aria-hidden
+                      className="h-[9px] w-[9px] shrink-0 rounded-full bg-[#fbbf24]"
+                    />
+                    <p className="text-xs font-bold text-slate-200">{line}</p>
+                  </div>
+                );
+              })()}
             </div>
 
-            {LORE_GAMES.map((game, gameIndex) => {
-              const result = fanhood?.games[game.id];
-              const tablesOpen = pickerOpenGameId === game.id;
-              return (
-                <div
-                  key={game.id}
-                  className="relative overflow-hidden bg-white border border-slate-200/90 rounded-3xl p-5 pl-6 shadow-xs"
+            {/* THE SERIES — one card, five rows on a numbered rail
+                that deepens game by game. Only the up-next row can
+                open the start gate; locked rows name the game in
+                front of them. */}
+            <div className="overflow-hidden rounded-3xl border border-slate-200/90 bg-white shadow-xs">
+              <div className="flex items-baseline justify-between gap-3 border-b border-slate-100 px-5 pt-3.5 pb-3">
+                <h2
+                  className={`${displayFont.className} text-[17px] leading-none text-slate-950`}
                 >
-                  <span
-                    aria-hidden
-                    className="absolute inset-y-0 left-0 w-[7px]"
-                    style={{ backgroundColor: GAME_EDGE_BG[gameIndex] }}
-                  />
-                  <div className="flex items-start justify-between gap-3">
-                    <h3
-                      className={`${displayFont.className} text-xl leading-tight text-slate-950`}
-                    >
-                      {game.name}
-                    </h3>
-                    <span
-                      className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] ${
-                        result
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-slate-100 text-slate-500'
+                  The Series
+                </h2>
+                <span className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-slate-400">
+                  {fanhoodGamesPlayed(fanhood)} of 5 played
+                </span>
+              </div>
+              <div className="divide-y divide-slate-100">
+                {LORE_GAMES.map((game, gameIndex) => {
+                  const result = fanhood?.games[game.id];
+                  const state = seriesRowState(fanhood, game.id);
+                  const tablesOpen = pickerOpenGameId === game.id;
+                  return (
+                    <div
+                      key={game.id}
+                      className={`flex gap-3 px-5 py-4 ${
+                        state === 'locked' ? 'opacity-55' : ''
                       }`}
                     >
-                      {result ? 'Played' : 'Not played'}
-                    </span>
-                  </div>
-                  <p className="mt-1.5 text-xs sm:text-sm font-medium text-slate-500 leading-relaxed">
-                    {game.promise}
-                  </p>
-                  {result ? (
-                    <>
-                      <p className="mt-3 text-sm font-black text-slate-900">
-                        Your score: {result.score.toLocaleString()} · Game
-                        verdict — {titleForDepth(result.score)}
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setPickerOpenGameId(tablesOpen ? null : game.id)
-                        }
-                        aria-expanded={tablesOpen}
-                        className="mt-2 inline-block text-xs font-black text-[#0072CE] hover:underline cursor-pointer"
-                      >
-                        {tablesOpen ? 'Hide every answer' : 'See every answer'}
-                      </button>
-                      {tablesOpen && (
-                        <PromptAnswerTables
-                          items={game.promptIds.map((promptId) => {
-                            const entry = result.log.find(
-                              (e) => e.promptId === promptId
-                            );
-                            return {
-                              prompt: promptById(promptId),
-                              landedText: entry?.answer ?? null,
-                              landedDepth: entry?.depth ?? 0,
-                            };
-                          })}
-                        />
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      <button
-                        onClick={() => openGate(game.id)}
-                        className="mt-3.5 w-full bg-[#0072CE] hover:bg-blue-700 active:scale-95 text-white font-black text-xs sm:text-sm px-5 py-3 rounded-2xl transition-all shadow-md cursor-pointer"
-                      >
-                        Play {game.name}
-                      </button>
-                      <p className="mt-2 text-center text-[11px] font-bold text-slate-400">
-                        7 prompts · counts once
-                      </p>
-                    </>
-                  )}
-                </div>
-              );
-            })}
+                      <div className="flex flex-col items-center self-stretch">
+                        <span
+                          className="z-[1] flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full text-[13px] font-black text-white"
+                          style={{
+                            backgroundColor: SERIES_BALL_BG[gameIndex],
+                          }}
+                        >
+                          {state === 'played' ? '✓' : gameIndex + 1}
+                        </span>
+                        {gameIndex < LORE_GAMES.length - 1 && (
+                          <span
+                            aria-hidden
+                            className="mt-1 w-[3px] flex-1 rounded bg-slate-200"
+                          />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                          <h3
+                            className={`${displayFont.className} text-[19px] leading-tight text-slate-950`}
+                          >
+                            {game.name}
+                          </h3>
+                          <span
+                            className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] ${
+                              state === 'played'
+                                ? 'bg-green-100 text-green-700'
+                                : state === 'up-next'
+                                  ? 'bg-blue-100 text-blue-700'
+                                  : 'bg-slate-100 text-slate-500'
+                            }`}
+                          >
+                            {state === 'played'
+                              ? 'Played'
+                              : state === 'up-next'
+                                ? 'Up next'
+                                : 'Locked'}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-[13px] font-medium leading-relaxed text-slate-500">
+                          {game.promise}
+                        </p>
+                        {state === 'played' && result && (
+                          <>
+                            <p className="mt-2 text-sm font-black text-slate-900">
+                              Your score: {result.score.toLocaleString()} ·
+                              Game verdict — {titleForDepth(result.score)}
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setPickerOpenGameId(
+                                  tablesOpen ? null : game.id
+                                )
+                              }
+                              aria-expanded={tablesOpen}
+                              className="mt-1.5 inline-block cursor-pointer text-xs font-black text-[#0072CE] hover:underline"
+                            >
+                              {tablesOpen
+                                ? 'Hide every answer'
+                                : 'See every answer'}
+                            </button>
+                            {tablesOpen && (
+                              <PromptAnswerTables
+                                items={game.promptIds.map((promptId) => {
+                                  const entry = result.log.find(
+                                    (e) => e.promptId === promptId
+                                  );
+                                  return {
+                                    prompt: promptById(promptId),
+                                    landedText: entry?.answer ?? null,
+                                    landedDepth: entry?.depth ?? 0,
+                                  };
+                                })}
+                              />
+                            )}
+                          </>
+                        )}
+                        {state === 'up-next' && (
+                          <button
+                            onClick={() => openGate(game.id)}
+                            className="mt-3 w-full cursor-pointer rounded-[13px] bg-[#0072CE] px-5 py-3 text-sm font-black text-white shadow-md transition-all hover:bg-blue-700 active:scale-95"
+                          >
+                            Play {game.name}
+                          </button>
+                        )}
+                        {state === 'locked' && (
+                          <p className="mt-1.5 text-xs font-bold text-slate-400">
+                            🔒 Finish {LORE_GAMES[gameIndex - 1].name} to
+                            unlock
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
 
             <button
               onClick={() => setShowBoard(true)}
@@ -1998,7 +2058,6 @@ export default function StepLore() {
                 →
               </span>
             </button>
-
           </div>
         )}
 

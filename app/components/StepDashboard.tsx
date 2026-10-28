@@ -389,7 +389,7 @@ export default function StepDashboard() {
         >
           <div className="flex items-center justify-between gap-2">
             <h2 className="text-lg sm:text-xl font-black text-slate-950 tracking-tight">
-              How Rare a Weezer Fan Are You?
+              How Deep Is Your Fanhood?
             </h2>
             <span className="text-xs font-black text-slate-400 shrink-0">Locked 🔒</span>
           </div>
@@ -414,7 +414,7 @@ export default function StepDashboard() {
         className="w-full text-left bg-white border border-slate-200/90 hover:border-blue-300 rounded-3xl p-5 shadow-xs transition-all cursor-pointer group space-y-2"
       >
         <h2 className="text-lg sm:text-xl font-black text-slate-950 tracking-tight group-hover:text-[#0072CE] transition-colors">
-          How Rare a Weezer Fan Are You?
+          How Deep Is Your Fanhood?
         </h2>
         <p className="text-xs sm:text-sm font-medium text-slate-500 leading-relaxed">
           {(() => {

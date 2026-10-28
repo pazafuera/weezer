@@ -102,16 +102,60 @@ export function fanhoodGamesPlayed(record: FanhoodRecord | null): number {
 }
 
 /**
- * The picker's start-gate rule: a game can be started only while it
- * has no recorded result. Play on an unplayed game opens the gate;
- * once a result lands the game is locked at its score and the gate
- * can never open for it again (one-and-done).
+ * The picker's start-gate rule (mock v3 — the games are a SERIES,
+ * Oct 28, 2026): a game can be started only while it has no
+ * recorded result AND every earlier game in LORE_GAMES order has
+ * one. Play on the up-next game opens the gate; once a result
+ * lands the game is locked at its score and the gate can never
+ * open for it again (one-and-done), and finishing it is what
+ * unlocks the next game in the series. An out-of-order result
+ * (e.g. recorded before the series rule existed) stays played —
+ * the check only ever looks at the games before the target.
  */
 export function gameCanStart(
   record: FanhoodRecord | null,
   gameId: LoreGameId
 ): boolean {
-  return !record?.games[gameId];
+  if (record?.games[gameId]) return false;
+  const index = LORE_GAMES.findIndex((g) => g.id === gameId);
+  if (index <= 0) return index === 0;
+  return LORE_GAMES.slice(0, index).every((g) => !!record?.games[g.id]);
+}
+
+/** A series row's state, derived from the record alone: a game
+ *  with a result is played; a startable game is up next; anything
+ *  else is still locked behind the games in front of it. */
+export type SeriesRowState = 'played' | 'up-next' | 'locked';
+
+export function seriesRowState(
+  record: FanhoodRecord | null,
+  gameId: LoreGameId
+): SeriesRowState {
+  if (record?.games[gameId]) return 'played';
+  return gameCanStart(record, gameId) ? 'up-next' : 'locked';
+}
+
+const REMAINING_WORDS = ['one', 'two', 'three', 'four'];
+
+/**
+ * The combined block's standing line (mock v3): where the total
+ * stands and how much of the series is left. Null until a first
+ * game is finished — the same no-fanhood state as every other
+ * surface. The title is the compound ladder's (totalTitleForDepth
+ * via fanhoodDisplay), never a per-game verdict.
+ */
+export function fanhoodStandingLine(
+  record: FanhoodRecord | null
+): string | null {
+  const display = fanhoodDisplay(record);
+  if (!display) return null;
+  const standing = `You're at ${display.depth.toLocaleString('en-US')} — ${display.title}`;
+  const remaining = LORE_GAMES.length - display.gamesPlayed;
+  if (remaining <= 0) return `${standing}. All five games in.`;
+  const word = REMAINING_WORDS[remaining - 1] ?? String(remaining);
+  return remaining === 1
+    ? `${standing}, ${word} game to go.`
+    : `${standing}, ${word} games to go.`;
 }
 
 /** The deepest single answer behind the fanhood, across the

@@ -62,7 +62,7 @@ export const FanhoodCardVisual = forwardRef<
           <h2
             className={`absolute inset-x-[64px] top-[104px] text-center text-[76px] leading-[1.05] text-white ${displayFont.className}`}
           >
-            HOW RARE A WEEZER FAN ARE YOU?
+            HOW DEEP IS YOUR FANHOOD?
           </h2>
 
           <p
@@ -116,7 +116,7 @@ export const FanhoodCardVisual = forwardRef<
           <p
             className={`absolute inset-x-[40px] bottom-[26px] text-center text-[46px] font-bold leading-none ${handFont.className}`}
           >
-            find out how rare a fan YOU are at rankingweezer.com
+            find out how deep YOUR fanhood is at rankingweezer.com
           </p>
         </>
       )}

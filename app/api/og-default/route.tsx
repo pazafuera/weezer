@@ -85,7 +85,7 @@ export async function GET() {
               display: 'flex',
             }}
           >
-            Rank all 206 Weezer songs — and find out how rare a fan you are.
+            Rank all 206 Weezer songs — and find out how deep your fanhood is.
           </div>
 
           {/* Footer */}

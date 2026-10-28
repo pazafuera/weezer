@@ -179,6 +179,10 @@ export default function AppShell({
     unlockHint?: string;
     /** Which menu section carries the row (see the nav render below). */
     group?: 'ranking' | 'fanhood';
+    /** Lands on the lore step with its leaderboard view open
+     *  (Stage 3): the click also sets the session flag + event the
+     *  lore step listens for. */
+    opensLeaderboard?: boolean;
   }
 
   // Array order matters: each section's rows render in the
@@ -251,6 +255,14 @@ export default function AppShell({
       unlockHint: 'Unlocks after Blue + Pinkerton',
       group: 'fanhood',
     },
+    {
+      // The standings live inside the lore step but are public —
+      // no unlock gate (watching the board is not playing).
+      label: 'Fanhood Leaderboard',
+      step: 'lore',
+      opensLeaderboard: true,
+      group: 'fanhood',
+    },
   ];
 
   // FILTER NAV ITEMS
@@ -286,16 +298,32 @@ export default function AppShell({
   // text instead of spanning the flyout.
   // There are no arrow indicators anywhere in the menu.
   const renderNavButton = (item: NavItem) => {
-    const isActive = step === item.step;
+    const isActive = step === item.step && !item.opensLeaderboard;
     const isDisabled = item.disabled;
 
     return (
       <button
-        key={item.step}
+        key={item.label}
         disabled={isDisabled}
         onClick={() => {
           if (!isDisabled) {
             closeMenu();
+            if (item.opensLeaderboard) {
+              // Flag first (a fresh mount of the lore step reads
+              // it), then the event (an already-mounted lore step
+              // hears it), then navigate.
+              try {
+                window.sessionStorage.setItem(
+                  'weezer:open-leaderboard',
+                  '1'
+                );
+              } catch {
+                /* private mode — the event path still works */
+              }
+              window.dispatchEvent(
+                new CustomEvent('weezer:open-leaderboard')
+              );
+            }
             navigateTo(item.step);
           }
         }}

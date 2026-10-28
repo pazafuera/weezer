@@ -39,6 +39,7 @@ import {
   recordGameResult,
 } from '../lib/fanhood';
 import { syncFanhoodAfterRun } from '../lib/fanhoodSync';
+import FanhoodLeaderboard from './FanhoodLeaderboard';
 import type {
   FanhoodDeepest,
   FanhoodGameLogEntry,
@@ -859,6 +860,29 @@ function PromptAnswerTables({
 export default function StepLore() {
   const { triageMap, navigateTo, userId } = useWeezer();
   const unlocked = isLoreUnlocked(triageMap);
+
+  useEffect(() => {
+    const open = () => {
+      try {
+        window.sessionStorage.removeItem('weezer:open-leaderboard');
+      } catch {
+        /* private mode — the event path still works */
+      }
+      setShowBoard(true);
+      setPhase('intro');
+      setActiveGameId(null);
+    };
+    let flagged = false;
+    try {
+      flagged =
+        window.sessionStorage.getItem('weezer:open-leaderboard') === '1';
+    } catch {
+      flagged = false;
+    }
+    if (flagged) open();
+    window.addEventListener('weezer:open-leaderboard', open);
+    return () => window.removeEventListener('weezer:open-leaderboard', open);
+  }, []);
   const remainingAlbums = loreGateRemainingAlbums(triageMap);
 
   const [phase, setPhase] = useState<Phase>('intro');
@@ -878,6 +902,10 @@ export default function StepLore() {
   // that gets recorded.
   const [activeGameId, setActiveGameId] = useState<LoreGameId | null>(null);
   const [alreadyRecorded, setAlreadyRecorded] = useState(false);
+  // The leaderboard is a third view over the picker (Stage 3): the
+  // picker's own button flips it, and the app menu asks for it via
+  // the 'weezer:open-leaderboard' event / session flag below.
+  const [showBoard, setShowBoard] = useState(false);
   // Which played game's "Every answer" tables are open in the picker.
   const [pickerOpenGameId, setPickerOpenGameId] =
     useState<LoreGameId | null>(null);
@@ -1675,7 +1703,12 @@ export default function StepLore() {
         {/* LOCKED — the teaser. Progress toward the gate is named
             by album, never by count: the dashboard's Catalog
             Completion strip already carries those numbers. */}
-        {!unlocked && (
+        {/* THE LEADERBOARD — its own view over the picker */}
+        {showBoard && (
+          <FanhoodLeaderboard onBack={() => setShowBoard(false)} />
+        )}
+
+        {!unlocked && !showBoard && (
           <div className="mx-auto w-full max-w-2xl px-4 sm:px-6 pb-8">
           <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs space-y-3">
             <div className="flex items-center gap-2">
@@ -1714,7 +1747,7 @@ export default function StepLore() {
             each unplayed or locked at its recorded score. Played
             games never reopen for play (one-and-done); their
             "Every answer" tables stay viewable from the card. */}
-        {unlocked && phase === 'intro' && (
+        {unlocked && !showBoard && phase === 'intro' && (
           <div className="w-full space-y-4 px-4 sm:px-6 pb-10">
             {(() => {
               const display = fanhoodDisplay(fanhood);
@@ -1814,6 +1847,23 @@ export default function StepLore() {
               );
             })}
 
+            <button
+              onClick={() => setShowBoard(true)}
+              className="flex w-full items-center justify-between gap-3 bg-white border border-slate-200/90 hover:border-slate-300 rounded-3xl p-5 shadow-xs transition-all cursor-pointer text-left"
+            >
+              <span>
+                <span className="block text-base font-black tracking-tight text-slate-950">
+                  Fanhood Leaderboard
+                </span>
+                <span className="block text-xs sm:text-sm font-medium text-slate-500 leading-relaxed">
+                  Worldwide and friends standings, game by game.
+                </span>
+              </span>
+              <span className="shrink-0 text-sm font-black text-[#0072CE]">
+                →
+              </span>
+            </button>
+
             <p className="text-xs font-bold leading-relaxed text-slate-400">
               Type your answers — spelling doesn&apos;t have to be perfect.
               Rivers Cuomo is worth a little. Jason Cropper is worth a
@@ -1825,7 +1875,7 @@ export default function StepLore() {
         {/* PLAYING / LEAVING / PLUNGING / REVEAL — the descent is
             the stage. During 'plunging' the card is gone entirely:
             nothing stands between the player and the drop. */}
-        {unlocked && item && (phase === 'preview' || phase === 'playing' || phase === 'leaving' || phase === 'plunging' || phase === 'reveal') && (
+        {unlocked && !showBoard && item && (phase === 'preview' || phase === 'playing' || phase === 'leaving' || phase === 'plunging' || phase === 'reveal') && (
           <div ref={stageRef} className="flex flex-1 flex-col">
             <DescentStage
               total={stageTotal}
@@ -1869,7 +1919,7 @@ export default function StepLore() {
         )}
 
         {/* RESULT */}
-        {unlocked && phase === 'result' && (
+        {unlocked && !showBoard && phase === 'result' && (
           <>
           <div className="w-full space-y-6 px-4 sm:px-6 pb-10">
             {/* THE VERDICT — the results lead with the GAME's own

@@ -2893,9 +2893,37 @@ export const OPEN_PROMPTS: OpenPrompt[] = [
       { text: 'Piano', depth: 30 },
       { text: 'Harmonica', depth: 45 },
       { text: 'Orchestra', depth: 140, aliases: ['Strings'] },
+      {
+        text: 'Violin',
+        depth: 240,
+        aliases: ['Violins'],
+        note: "Part of the 38-piece orchestra credited on OK Human — the same credit the Orchestra row stands on.",
+      },
+      {
+        text: 'Cello',
+        depth: 280,
+        aliases: ['Violoncello'],
+        note: "Part of the 38-piece orchestra credited on OK Human — the same credit the Orchestra row stands on.",
+      },
+      {
+        text: 'Viola',
+        depth: 330,
+        note: "Part of the 38-piece orchestra credited on OK Human — the same credit the Orchestra row stands on.",
+      },
+      {
+        text: 'Double bass',
+        depth: 370,
+        aliases: ['Contrabass'],
+        note: "Part of the 38-piece orchestra credited on OK Human — the same credit the Orchestra row stands on. (The upright kind — a bare 'bass' never scores here; the prompt excludes it.)",
+      },
       { text: 'Flute', depth: 420 },
       { text: 'Horns', depth: 480 },
       { text: 'Mandolin', depth: 520 },
+      {
+        text: 'Melodica',
+        depth: 560,
+        note: "GSG Media's review of 'A Little Bit of Love' describes a melodica arrangement, and Ramapo News heard the occasional bit of melodica across SZNZ: Spring — review-documented, like the xylophone.",
+      },
       { text: 'Xylophone', depth: 800 },
       { text: 'Hurdy-gurdy', depth: 950, aliases: ['Hurdy gurdy'] },
       {

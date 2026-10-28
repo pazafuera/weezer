@@ -196,7 +196,7 @@ function FanhoodStop({
           onClick={() => navigateTo('lore')}
           className="mt-6 bg-[#0072CE] hover:bg-blue-600 text-white font-black text-sm px-6 py-3 rounded-full transition-colors cursor-pointer"
         >
-          Dig deeper →
+          Go deeper →
         </button>
       </div>
     );
@@ -212,7 +212,7 @@ function FanhoodStop({
       </h3>
       <p className="mt-3 text-sm font-semibold text-slate-500 leading-relaxed max-w-lg mx-auto">
         Ten prompts, twenty-five seconds each. The rarer your answers,
-        the deeper you dig — and the game tells you what kind of fan
+        the deeper you go — and the game tells you what kind of fan
         that makes you.
       </p>
       {unlocked ? (

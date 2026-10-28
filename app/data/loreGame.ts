@@ -817,8 +817,8 @@ export function tierForDepth(depth: number): RarityTier {
 export const TIER_TAGLINES: Record<RarityTier, string> = {
   Common: "The first answer in every fan's head.",
   Uncommon: 'You skipped the obvious one — good instinct.',
-  Rare: 'Most fans never dig down this far.',
-  'Super rare': 'Bedrock knowledge — almost nobody digs this deep.',
+  Rare: 'Most fans never get down this far.',
+  'Super rare': 'Bedrock knowledge — almost nobody gets this deep.',
 };
 
 /** One row of an open prompt's rarity table (table-kind prompts). */
@@ -924,7 +924,7 @@ export function openPromptExtremes(
   return result;
 }
 
-/** One valid row in a prompt's full post-run answer table ("the Dig"). */
+/** One valid row in a prompt's full post-run answer table. */
 export interface DigAnswer {
   text: string;
   depth: number;
@@ -935,7 +935,7 @@ export interface DigAnswer {
  * The full valid answer table for one prompt: table prompts expose
  * their non-trap rows; song prompts expose every qualifying catalog
  * song at its prompt-specific depth. Sorted deepest first (then by
- * title) so the Dig can group the rows by tier without re-sorting.
+ * title) so the table can group the rows by tier without re-sorting.
  */
 export function openPromptAnswerTable(prompt: OpenPrompt): DigAnswer[] {
   const rows: DigAnswer[] = [];

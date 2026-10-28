@@ -134,7 +134,7 @@ export function writeFanhood(record: FanhoodRecord): void {
 
 /**
  * Settles a finished run against the established fanhood. A run
- * only replaces the record when it digs deeper than the best —
+ * only replaces the record when it goes deeper than the best —
  * fanhood can move up, never down. `isNewBest` keeps the game's
  * long-standing meaning: a previous best existed AND this run beat
  * it (a first-ever run establishes the fanhood without the "new

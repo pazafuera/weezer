@@ -44,7 +44,7 @@ type Phase =
 const GENERIC_HINTS = [
   'Not that one — try again.',
   'Nope. Have another go.',
-  'Still digging — try a different answer.',
+  'Keep going — try a different answer.',
 ];
 
 interface AnswerRecord {
@@ -1158,7 +1158,7 @@ export default function StepLore() {
         <span
           className={`text-[10px] font-black uppercase tracking-[0.14em] ${theme.label}`}
         >
-          {answers.filter((a) => a.outcome === 'correct').length} dug
+          {answers.filter((a) => a.outcome === 'correct').length} landed
         </span>
       </div>
 
@@ -1245,7 +1245,7 @@ export default function StepLore() {
               type="submit"
               className={`font-black text-sm px-6 py-3.5 rounded-2xl transition-all active:scale-95 cursor-pointer ${theme.dig}`}
             >
-              Dig
+              Descend
             </button>
           </form>
 
@@ -1331,7 +1331,7 @@ export default function StepLore() {
               <p className={`text-base sm:text-lg font-black ${theme.missTitle}`}>
                 {lastRecord.headline
                   ? `It was ${lastRecord.headline}.`
-                  : 'Nothing dug there.'}
+                  : 'Nothing landed there.'}
               </p>
               {lastRecord.subline && (
                 <p className={`text-xs font-bold ${theme.missSub}`}>
@@ -1396,8 +1396,8 @@ export default function StepLore() {
               <span className="text-sm">🔒</span>
             </div>
             <p className="text-xs sm:text-sm font-medium text-slate-500 leading-relaxed">
-              Ten prompts, twenty-five seconds each. Any right answer digs —
-              but the rarer your answer, the deeper it digs.
+              Ten prompts, twenty-five seconds each. Any right answer drops
+              you — but the rarer your answer, the deeper you sink.
             </p>
             <p className="text-xs sm:text-sm font-medium text-slate-500 leading-relaxed">
               {remainingAlbums.length === 2
@@ -1438,7 +1438,7 @@ export default function StepLore() {
               className={`rounded-3xl border p-5 space-y-3 text-left ${CARD_THEMES[0].root}`}
             >
               <h2 className="text-lg font-black tracking-tight">
-                Ten prompts. The rarer the answer, the deeper you dig.
+                Ten prompts. The rarer the answer, the deeper you sink.
               </h2>
               <div
                 className={`space-y-1.5 text-xs sm:text-sm font-medium leading-relaxed ${CARD_THEMES[0].body}`}
@@ -1460,7 +1460,7 @@ export default function StepLore() {
                 onClick={startRun}
                 className={`w-full sm:w-auto font-black text-xs sm:text-sm px-5 py-3 rounded-2xl transition-all active:scale-95 cursor-pointer ${CARD_THEMES[0].dig}`}
               >
-                Start digging
+                Start descending
               </button>
             </div>
           </DescentStage>
@@ -1562,7 +1562,7 @@ export default function StepLore() {
 
             <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs space-y-3">
               <h3 className="text-base font-black text-slate-950 tracking-tight">
-                Your deepest digs
+                Your deepest drops
               </h3>
               {rarest && (
                 <p className="text-xs sm:text-sm font-bold text-slate-700 leading-relaxed">
@@ -1573,7 +1573,7 @@ export default function StepLore() {
               )}
               {deepest.length === 0 ? (
                 <p className="text-xs sm:text-sm font-medium text-slate-500 leading-relaxed">
-                  Nothing dug this run — the hits are waiting to be named
+                  Nothing landed this run — the hits are waiting to be named
                   next time.
                 </p>
               ) : (
@@ -1612,10 +1612,10 @@ export default function StepLore() {
             <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs space-y-3">
               <div>
                 <h3 className="text-base font-black text-slate-950 tracking-tight">
-                  The Dig
+                  Every answer
                 </h3>
                 <p className="text-xs sm:text-sm font-medium text-slate-500 leading-relaxed">
-                  Open a prompt to see every answer that would have dug, deepest first.
+                  Open a prompt to see every answer that would have landed, deepest first.
                 </p>
               </div>
               <div className="divide-y divide-slate-100">
@@ -1642,7 +1642,7 @@ export default function StepLore() {
                           </span>
                           <span className="mt-1 block text-xs font-bold text-slate-500">
                             {record?.outcome === 'correct'
-                              ? `You dug ${record.headline} · +${record.depthEarned}`
+                              ? `You landed ${record.headline} · +${record.depthEarned}`
                               : 'Nothing landed'}
                           </span>
                         </span>

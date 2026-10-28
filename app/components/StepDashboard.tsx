@@ -418,11 +418,11 @@ export default function StepDashboard() {
         </h2>
         <p className="text-xs sm:text-sm font-medium text-slate-500 leading-relaxed">
           {fanhood
-            ? `You\u2019re a ${titleForDepth(fanhood.bestDepth)} — your deepest run dug to ${fanhood.bestDepth.toLocaleString()}.`
-            : 'Ten prompts, twenty-five seconds each — the rarer your answers, the deeper you dig.'}
+            ? `You\u2019re a ${titleForDepth(fanhood.bestDepth)} — your deepest run reached ${fanhood.bestDepth.toLocaleString()}.`
+            : 'Ten prompts, twenty-five seconds each — the rarer your answers, the deeper you go.'}
         </p>
         <div className="pt-0.5 flex items-center text-xs font-black text-[#0072CE] group-hover:underline">
-          {fanhood ? 'Dig deeper →' : 'Play the game →'}
+          {fanhood ? 'Go deeper →' : 'Play the game →'}
         </div>
       </button>
     );

@@ -94,7 +94,7 @@ export const FanhoodCardVisual = forwardRef<
               </span>
             </FactsBurst>
             <p className="mt-[28px] text-[46px] leading-[1.3]">
-              You dug to {fanhood.bestDepth.toLocaleString()} deep.
+              You went {fanhood.bestDepth.toLocaleString()} deep.
             </p>
             {fanhood.deepest && (
               <p className="mt-[18px] text-[40px] leading-[1.3]">

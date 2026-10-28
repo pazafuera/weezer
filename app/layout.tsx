@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     siteName: 'Ranking Weezer',
     images: [
       {
-        url: '/api/og',
+        url: '/api/og-default',
         width: 1200,
         height: 630,
         alt: 'Ranking Weezer — All My Favorite Songs',
@@ -39,7 +39,7 @@ export const metadata: Metadata = {
     title: 'All My Favorite Songs | The Weezer Song Ranking Project',
     description:
       'Rank all 206 Weezer songs, discover your Fan Tribe and Era DNA, and compare lists with friends.',
-    images: ['/api/og'],
+    images: ['/api/og-default'],
   },
 };
 

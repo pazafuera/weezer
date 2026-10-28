@@ -181,7 +181,7 @@ export async function GET(request: NextRequest) {
               display: 'flex',
             }}
           >
-            FAMDUEL.COM/WEEZER
+            RANKINGWEEZER.COM
           </div>
         </div>
       ),

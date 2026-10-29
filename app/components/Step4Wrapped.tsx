@@ -24,7 +24,7 @@ import {
   normalizeUserVector,
   scoreArchetypes,
 } from '../lib/archetypes';
-import { isLoreUnlocked, titleForDepth } from '../data/loreGame';
+import { isLoreUnlocked } from '../data/loreGame';
 import { fanhoodDisplay, useFanhood } from '../lib/fanhood';
 
 // Bucket scores for the Fan Club Tiers album derivation below
@@ -154,10 +154,10 @@ function deriveRankClashes(comparisons: RankComparison[]): {
 }
 
 /**
- * THE FANHOOD STOP — the depth game's verdict, woven into the
- * Thread. Once a fanhood is established (a finished run of How
- * Rare a Weezer Fan Are You? — app/lib/fanhood.ts), the stop shows
- * it: the title, the depth, and the best run's deepest answer.
+ * THE FANHOOD STOP — how far back you've gotten, woven into the
+ * Thread. Once a fanhood is established (a finished game of Back
+ * to the Shack — app/lib/fanhood.ts), the stop shows it: the stop
+ * your total has reached, the points, and the rarest answer.
  * Before that, the stop is the invitation: the Thread is where a
  * fan reads who they are, so it's where the game asks to be played
  * (respecting the game's own unlock gate on the way in).
@@ -176,18 +176,20 @@ function FanhoodStop({
     return (
       <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl text-center">
         <p className="text-[10px] font-black uppercase tracking-widest text-amber-300 block mb-3">
-          How Deep Is Your Fanhood?
+          Can You Get Back to the Shack?
         </p>
         <h3 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
-          You&apos;re a {display.title}
+          {display.stop === 'The Shack'
+            ? "You're back at the Shack"
+            : `You're at ${display.stop}`}
         </h3>
         <p className="mt-2 text-sm font-black text-[#7dd3fc] uppercase tracking-widest">
-          {display.depth.toLocaleString()} deep
+          {display.depth.toLocaleString()} points
         </p>
         {display.deepest && (
           <p className="mt-4 text-sm font-semibold text-slate-300 leading-relaxed">
-            Your deepest answer was {display.deepest.answer} —{' '}
-            {display.deepest.depth.toLocaleString()} deep.
+            Your rarest answer was {display.deepest.answer} —{' '}
+            {display.deepest.depth.toLocaleString()} points.
             <span className="block mt-1 text-xs font-bold text-slate-500">
               {display.deepest.promptLabel}
             </span>
@@ -197,7 +199,7 @@ function FanhoodStop({
           onClick={() => navigateTo('lore')}
           className="mt-6 bg-[#0072CE] hover:bg-blue-600 text-white font-black text-sm px-6 py-3 rounded-full transition-colors cursor-pointer"
         >
-          Go deeper →
+          Keep playing →
         </button>
       </div>
     );
@@ -206,15 +208,14 @@ function FanhoodStop({
   return (
     <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm text-center">
       <p className="text-[10px] font-black uppercase tracking-widest text-[#0072CE] block mb-3">
-        How Deep Is Your Fanhood?
+        Can You Get Back to the Shack?
       </p>
       <h3 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight">
-        Your fanhood hasn&apos;t been measured yet
+        You haven&apos;t started back yet
       </h3>
       <p className="mt-3 text-sm font-semibold text-slate-500 leading-relaxed max-w-lg mx-auto">
         Five games, seven prompts each, twenty-five seconds a prompt.
-        The rarer your answers, the deeper you go — and the games
-        tell you what kind of fan that makes you.
+        The rarer your answers, the further back you go.
       </p>
       {unlocked ? (
         <button

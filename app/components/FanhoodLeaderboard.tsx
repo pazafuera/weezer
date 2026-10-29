@@ -15,7 +15,7 @@ import {
 import type { LeaderboardEntry, LeaderboardScope } from '../lib/leaderboard';
 
 /**
- * The fanhood leaderboard: worldwide and friends standings for the
+ * The leaderboard: worldwide and friends standings for the
  * five games, with a per-game filter. Rows come from
  * get_fanhood_leaderboard() (migration pending — Mark runs it
  * separately); until the function answers, the board shows its
@@ -87,7 +87,7 @@ export default function FanhoodLeaderboard({
 
   const emptyMessage = (): string => {
     if (loadFailed) {
-      return 'The leaderboard arrives when the community table updates — finished games will land here as soon as it is live.';
+      return 'Finished games will appear here as soon as the community table updates.';
     }
     if (tab === 'friends') {
       return 'None of your friends have finished a game yet — the board fills in as they play.';
@@ -102,7 +102,7 @@ export default function FanhoodLeaderboard({
     <div className="w-full space-y-4 px-4 sm:px-6 pb-10">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-lg sm:text-xl font-black tracking-tight text-slate-950">
-          Fanhood Leaderboard
+          Leaderboard
         </h2>
         <button
           onClick={onBack}
@@ -213,7 +213,7 @@ export default function FanhoodLeaderboard({
                       <span className="block text-xs font-bold text-slate-400">
                         {scope === 'all'
                           ? `${entry.gamesPlayed} of ${TOTAL_GAMES} games`
-                          : `${entry.totalDepth.toLocaleString()} deep overall`}
+                          : `${entry.totalDepth.toLocaleString()} total`}
                       </span>
                     </button>
                     <span className="shrink-0 text-sm font-black text-[#0072CE]">
@@ -221,7 +221,7 @@ export default function FanhoodLeaderboard({
                         ? entry.totalDepth
                         : (gameScore ?? 0)
                       ).toLocaleString()}{' '}
-                      deep
+                      points
                     </span>
                   </div>
                 );
@@ -231,7 +231,7 @@ export default function FanhoodLeaderboard({
 
           <p className="text-xs font-bold leading-relaxed text-slate-400">
             Finished games only, scores locked in for good. Fans who
-            finished all five games rank first, by total depth.
+            finished all five rank first, by total.
           </p>
         </>
       )}

@@ -249,7 +249,7 @@ export default function AppShell({
       // step itself renders the teaser, and the dashboard card
       // carries the fuller pitch; this row just carries the lock
       // and its reason, like every other locked row.
-      label: 'How Deep Is Your Fanhood?',
+      label: 'Back to the Shack',
       step: 'lore',
       disabled: !isLoreUnlocked(triageMap),
       unlockHint: 'Unlocks after Blue + Pinkerton',
@@ -258,7 +258,7 @@ export default function AppShell({
     {
       // The standings live inside the lore step but are public —
       // no unlock gate (watching the board is not playing).
-      label: 'Fanhood Leaderboard',
+      label: 'Leaderboard',
       step: 'lore',
       opensLeaderboard: true,
       group: 'fanhood',

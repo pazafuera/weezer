@@ -14,31 +14,30 @@ import { fanhoodDisplay } from '../../lib/fanhood';
 import type { FanhoodRecord } from '../../lib/fanhood';
 
 /**
- * The fanhood card — the depth game's verdict as a shareable, in
+ * The fanhood card — how far back you got, as a shareable, in
  * the poster system (Abby's language: flat #039AD1 field, Lilita
  * One display type, white burst, black doodle). It renders ONLY
  * from an established fanhood (app/lib/fanhood.ts): the gallery
- * includes it once a first run has landed, and the Sweater Thread
+ * includes it once a first game has landed, and the Sweater Thread
  * carries the play-the-game prompt for everyone else — so this
  * visual's null state is a defensive placeholder, never the plan.
  *
- * Copy is Mark's, locked with the game (Oct 27, 2026): the header
- * is the game's name, the statement is the results screen's own
- * verdict ("You're a" + his fanhood title), and the facts are the
- * established record — best depth, plus the best run's deepest
- * single answer when one is stored.
+ * Copy (reframed Oct 28, 2026): the header is the game's headline
+ * question, the statement is the standing stop ("You got back
+ * to…" + the stop), and the facts are two — the total points and
+ * the rarest answer, when one is stored.
  */
 export const FanhoodCardVisual = forwardRef<
   HTMLDivElement,
   { fanhood: FanhoodRecord | null; subtitle?: string }
 >(function FanhoodCardVisual({ fanhood }, ref) {
   const display = fanhoodDisplay(fanhood);
-  const title = display?.title ?? null;
-  // The title renders on one line, auto-sized down until it fits —
-  // the Tribe card's sizing rule (its longest title here is
-  // "MEMBER OF THE FAN CLUB").
-  const titleSize = title
-    ? Math.max(76, Math.min(168, Math.floor(1740 / title.length)))
+  const stop = display?.stop ?? null;
+  // The stop renders on one line, auto-sized down until it fits —
+  // the Tribe card's sizing rule (its longest stop here is
+  // "ISLAND IN THE SUN").
+  const stopSize = stop
+    ? Math.max(76, Math.min(168, Math.floor(1740 / stop.length)))
     : 0;
 
   return (
@@ -48,41 +47,35 @@ export const FanhoodCardVisual = forwardRef<
       style={{ backgroundColor: POSTER_BLUE }}
     >
       <PosterDomain />
-      {!display || !title ? (
+      {!display || !stop ? (
         <div className="absolute inset-0 flex items-center justify-center px-[100px]">
           <p
             className={`text-center text-[56px] font-bold leading-tight ${handFont.className}`}
           >
-            Play the game to earn your fanhood card!
+            Play the game to earn your card!
           </p>
         </div>
       ) : (
         <>
-          {/* Header: the game's name, in display type. */}
+          {/* Header: the game's headline question, in display type. */}
           <h2
             className={`absolute inset-x-[64px] top-[104px] text-center text-[76px] leading-[1.05] text-white ${displayFont.className}`}
           >
-            HOW DEEP IS YOUR FANHOOD?
+            CAN YOU GET BACK TO THE SHACK?
           </h2>
 
           <p
             className={`absolute inset-x-[60px] top-[396px] text-center text-[72px] font-bold leading-none ${handFont.className}`}
           >
-            You&apos;re a...
+            You got back to...
           </p>
 
           <h3
             className={`absolute inset-x-0 top-[492px] whitespace-nowrap text-center leading-none text-white ${displayFont.className}`}
-            style={{ fontSize: titleSize }}
+            style={{ fontSize: stopSize }}
           >
-            {title.toUpperCase()}
+            {stop.toUpperCase()}
           </h3>
-
-          <p
-            className={`absolute inset-x-0 top-[716px] text-center text-[64px] leading-none text-white ${displayFont.className}`}
-          >
-            {display.depth.toLocaleString()} DEEP
-          </p>
 
           {/* THE FACTS — burst + the record, left column (the Tribe
               card's facts zone, same coordinates). */}
@@ -95,12 +88,11 @@ export const FanhoodCardVisual = forwardRef<
               </span>
             </FactsBurst>
             <p className="mt-[28px] text-[46px] leading-[1.3]">
-              You went {display.depth.toLocaleString()} deep.
+              You scored {display.depth.toLocaleString()} points.
             </p>
             {display.deepest && (
               <p className="mt-[18px] text-[40px] leading-[1.3]">
-                Deepest answer: {display.deepest.answer} —{' '}
-                {display.deepest.depth.toLocaleString()} deep.
+                Rarest answer: {display.deepest.answer}.
               </p>
             )}
           </div>
@@ -116,7 +108,7 @@ export const FanhoodCardVisual = forwardRef<
           <p
             className={`absolute inset-x-[40px] bottom-[26px] text-center text-[46px] font-bold leading-none ${handFont.className}`}
           >
-            find out how deep YOUR fanhood is at rankingweezer.com
+            see if YOU can get back to the shack at rankingweezer.com
           </p>
         </>
       )}

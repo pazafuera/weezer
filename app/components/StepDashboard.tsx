@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useWeezer, getProgressState, countBucketedSongs, countCategorizedSongs } from '../context/WeezerContext';
 import { BUCKET_CONFIG, FULL_SONG_POOL, BucketType, ALBUM_NAME_TO_ID } from '../data/constants';
-import { isLoreUnlocked, loreGateRemainingAlbums, titleForDepth } from '../data/loreGame';
+import { isLoreUnlocked, loreGateRemainingAlbums } from '../data/loreGame';
 import { fanhoodDisplay, readFanhood } from '../lib/fanhood';
 import type { FanhoodRecord } from '../lib/fanhood';
 import { AlbumArtwork } from './SharedUI';
@@ -364,7 +364,7 @@ export default function StepDashboard() {
     );
   };
 
-  // FANHOOD GAME CARD — the depth game's dashboard home, in both
+  // FANHOOD GAME CARD — the journey game's dashboard home, in both
   // dashboard states. Locked: the teaser names the gate albums and
   // what remains — by album, never by count (the merged progress
   // card's Catalog Completion strip, directly above, already
@@ -389,7 +389,7 @@ export default function StepDashboard() {
         >
           <div className="flex items-center justify-between gap-2">
             <h2 className="text-lg sm:text-xl font-black text-slate-950 tracking-tight">
-              How Deep Is Your Fanhood?
+              Back to the Shack
             </h2>
             <span className="text-xs font-black text-slate-400 shrink-0">Locked 🔒</span>
           </div>
@@ -414,19 +414,19 @@ export default function StepDashboard() {
         className="w-full text-left bg-white border border-slate-200/90 hover:border-blue-300 rounded-3xl p-5 shadow-xs transition-all cursor-pointer group space-y-2"
       >
         <h2 className="text-lg sm:text-xl font-black text-slate-950 tracking-tight group-hover:text-[#0072CE] transition-colors">
-          How Deep Is Your Fanhood?
+          Back to the Shack
         </h2>
         <p className="text-xs sm:text-sm font-medium text-slate-500 leading-relaxed">
           {(() => {
             const display = fanhoodDisplay(fanhood);
             if (!display) {
-              return 'Five games, seven prompts each — the rarer your answers, the deeper you go.';
+              return 'Five games, seven prompts each — the rarer your answers, the further back you go.';
             }
-            return `You\u2019re a ${display.title} — ${display.depth.toLocaleString()} deep across ${display.gamesPlayed} of 5 games.`;
+            return `You\u2019re at ${display.stop} — ${display.depth.toLocaleString()} points across ${display.gamesPlayed} of 5 games.`;
           })()}
         </p>
         <div className="pt-0.5 flex items-center text-xs font-black text-[#0072CE] group-hover:underline">
-          {fanhood ? 'Go deeper →' : 'Play the game →'}
+          {fanhood ? 'Keep playing →' : 'Play the game →'}
         </div>
       </button>
     );

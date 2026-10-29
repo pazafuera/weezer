@@ -353,7 +353,7 @@ export default function WeezerFriends() {
             Fan Friends
           </h2>
           <p className="text-sm font-bold text-slate-500 mt-2 max-w-md mx-auto">
-            Connect with friends to compare how compatible your Weezer fanhood is.
+            Connect with friends to compare how compatible your Weezer taste is.
           </p>
         </div>
 

@@ -625,8 +625,8 @@ function TierLibrarySection({
 }
 
 /** The fanhood card items (both variants). The card exists ONLY
- *  once a fanhood is established (a first finished run of the depth
- *  game — see app/lib/fanhood.ts); the gallery reads the record
+ *  once a fanhood is established (a first finished game — see
+ *  app/lib/fanhood.ts); the gallery reads the record
  *  itself via useFanhood, so hosts pass nothing. */
 function FanhoodLibraryItem({
   fanhood,
@@ -637,8 +637,8 @@ function FanhoodLibraryItem({
 }) {
   return (
     <LibraryItem
-      title="Your Fanhood"
-      description="Your verdict from How Deep Is Your Fanhood?"
+      title="Back to the Shack"
+      description="Your stop in Back to the Shack"
       filename="my-weezer-fanhood.png"
     >
       <FanhoodCardVisual fanhood={fanhood} subtitle={subtitle} />
@@ -654,7 +654,7 @@ function FanhoodThumbnailItem({
   subtitle?: string;
 }) {
   return (
-    <ThumbnailItem shortTitle="Fanhood" filename="my-weezer-fanhood.png">
+    <ThumbnailItem shortTitle="The Shack" filename="my-weezer-fanhood.png">
       <FanhoodCardVisual fanhood={fanhood} subtitle={subtitle} />
     </ThumbnailItem>
   );

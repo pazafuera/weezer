@@ -4,14 +4,13 @@
  * The established fanhood — the depth game's durable verdict.
  *
  * FIVE-GAME MODEL (Oct 27, 2026). A player's fanhood is the SUM of
- * their finished game scores across the five themed games of How
- * Rare a Weezer Fan Are You? — each game is one-and-done: a
- * finished game writes its result ONCE and it never changes, and
- * finishing a game can only add to the total. The overall title
- * comes from the compound ladder (totalTitleForDepth in
- * app/data/loreGame.ts); a single game's own verdict keeps using
- * the per-game ladder (titleForDepth), and surfaces label the two
- * distinctly.
+ * their finished game scores across the five themed games of Back
+ * to the Shack — each game is one-and-done: a finished game writes
+ * its result ONCE and it never changes, and finishing a game can
+ * only add to the total. Standings are read off the journey's one
+ * ladder (the stops in app/data/loreGame.ts): a single game's
+ * score names its stop via the run bands, the total names its
+ * stop via the total stops — same names on both scales.
  *
  * Stored record (localStorage key 'weezer-lore-best' — the game's
  * original key, deliberately not renamed, so saved state keeps
@@ -45,7 +44,11 @@
  */
 
 import { useSyncExternalStore } from 'react';
-import { LORE_GAMES, totalTitleForDepth } from '../data/loreGame';
+import {
+  LORE_GAMES,
+  nextStopForTotal,
+  stopForTotal,
+} from '../data/loreGame';
 import type { LoreGameId } from '../data/loreGame';
 
 export interface FanhoodDeepest {
@@ -138,18 +141,22 @@ export function seriesRowState(
 const REMAINING_WORDS = ['one', 'two', 'three', 'four'];
 
 /**
- * The combined block's standing line (mock v3): where the total
- * stands and how much of the series is left. Null until a first
- * game is finished — the same no-fanhood state as every other
- * surface. The title is the compound ladder's (totalTitleForDepth
- * via fanhoodDisplay), never a per-game verdict.
+ * The combined block's standing line: the stop the total has
+ * reached, the distance to the next one, and how much of the
+ * series is left. Null until a first game is finished — the same
+ * no-fanhood state as every other surface. The stop is the total
+ * scale's (stopForTotal via fanhoodDisplay), never a single
+ * game's.
  */
 export function fanhoodStandingLine(
   record: FanhoodRecord | null
 ): string | null {
   const display = fanhoodDisplay(record);
   if (!display) return null;
-  const standing = `You're at ${display.depth.toLocaleString('en-US')} — ${display.title}`;
+  const next = nextStopForTotal(display.depth);
+  const standing = next
+    ? `You're at ${display.stop} — ${next.pointsTo.toLocaleString('en-US')} points from ${next.title}`
+    : "You're back at the Shack";
   const remaining = LORE_GAMES.length - display.gamesPlayed;
   if (remaining <= 0) return `${standing}. All five games in.`;
   const word = REMAINING_WORDS[remaining - 1] ?? String(remaining);
@@ -175,16 +182,17 @@ export function fanhoodDeepestAnswer(
 
 export interface FanhoodDisplay {
   depth: number;
-  title: string;
+  /** The stop the total has reached (the one ladder's name). */
+  stop: string;
   deepest: FanhoodDeepest | null;
   gamesPlayed: number;
 }
 
 /**
  * What every fanhood surface shows: the compound total of the
- * finished games and its title. Null when no game is finished —
- * the same state as a brand-new player, whatever older fanhood
- * data the device or the account once carried.
+ * finished games and the stop it has reached. Null when no game
+ * is finished — the same state as a brand-new player, whatever
+ * older fanhood data the device or the account once carried.
  */
 export function fanhoodDisplay(
   record: FanhoodRecord | null
@@ -195,7 +203,7 @@ export function fanhoodDisplay(
   const total = fanhoodTotal(record);
   return {
     depth: total,
-    title: totalTitleForDepth(total),
+    stop: stopForTotal(total).title,
     deepest: fanhoodDeepestAnswer(record),
     gamesPlayed: played,
   };

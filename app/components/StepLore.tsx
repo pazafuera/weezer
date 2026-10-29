@@ -5,9 +5,9 @@ import { useWeezer } from '../context/WeezerContext';
 import { FULL_SONG_POOL } from '../data/constants';
 import {
   DEPTH_BANDS,
-  FANHOOD_TOTAL_LADDER,
   LORE_GAMES,
   TIER_TAGLINES,
+  TOTAL_STOPS,
   answerCoverFor,
   bandForTotal,
   bandsEnteredBetween,
@@ -15,15 +15,16 @@ import {
   isLoreUnlocked,
   loreGateRemainingAlbums,
   loreGameById,
+  nextStopForTotal,
   openAnswerEntries,
   openAnswerKey,
   openAnswerSong,
   openPromptAnswerTable,
   openPromptExtremes,
   promptById,
+  stopForScore,
   tierForDepth,
-  titleForDepth,
-  totalTierRangeLabel,
+  totalStopThresholdLabel,
 } from '../data/loreGame';
 import type {
   LoreGameId,
@@ -57,11 +58,18 @@ const QUESTION_SECONDS = 25;
 const PREVIEW_SECONDS = 3;
 
 /** Picker strata (mock v2, approved Oct 27, 2026; rail balls
- *  mock v3, Oct 28): the ladder strip's rungs and the series
- *  rail's balls deepen as the descent does — sky at the surface
- *  to near-black bedrock. Parallel to FANHOOD_TOTAL_LADDER /
+ *  mock v3, Oct 28): the route strip's stops and the series
+ *  rail's balls deepen as the journey goes back — sky at the
+ *  surface to near-black bedrock. Parallel to TOTAL_STOPS /
  *  LORE_GAMES by index. */
-const LADDER_RUNG_BG = ['#38bdf8', '#0284c7', '#0369a1', '#1e3a5f', '#020617'];
+const LADDER_RUNG_BG = [
+  '#38bdf8',
+  '#0ea5e9',
+  '#0284c7',
+  '#0369a1',
+  '#1e3a5f',
+  '#020617',
+];
 const SERIES_BALL_BG = ['#38bdf8', '#0284c7', '#0369a1', '#1e3a5f', '#0f172a'];
 
 /** The start gate's four rules (mock v2, generic per Mark: no
@@ -80,13 +88,13 @@ const GATE_RULES: { icon: string; lead: string; rest: string }[] = [
   },
   {
     icon: '⬇️',
-    lead: 'Rare answers sink you deeper.',
+    lead: 'Rare answers take you further back.',
     rest: 'The obvious answer scores a little. The one nobody else knows scores a lot.',
   },
   {
     icon: '🔒',
     lead: 'This game counts once.',
-    rest: 'Your score locks in when it ends and adds to your fanhood. No replays — but nothing starts until you say go.',
+    rest: 'Your score locks in when it ends. No replays — but nothing starts until you say go.',
   },
 ];
 
@@ -139,10 +147,10 @@ interface AnswerRecord {
 /**
  * Per-band layer styling, parallel to DEPTH_BANDS, following the
  * approved mock: bright radio-blue at the surface, flannel tan for
- * the '90s layer, dark Pinkerton maroon, photocopied-note purple
- * with ruled lines for the Fan Club, archive dark-green for Karl,
- * and near-black bedrock. Each layer carries the mock's faint
- * era-texture type.
+ * the Island layer, dark Pinkerton maroon, photocopied-note purple
+ * with ruled lines for the Tar Pits, archive dark-green for the
+ * Garage, and near-black bedrock for the Shack. Each layer carries
+ * the mock's faint era-texture type.
  */
 const BAND_STAGE: {
   layer: string;
@@ -155,8 +163,8 @@ const BAND_STAGE: {
   coverSrc?: string;
 }[] = [
   {
-    // Buddy Holly — bright radio-blue. The layer IS the Blue Album
-    // era, so its cover ghosts the background.
+    // Arnold's Diner — bright radio-blue. The layer IS the Blue
+    // Album era, so its cover ghosts the background.
     layer: 'bg-gradient-to-b from-[#039AD1] to-[#0277b6] text-[#eaf7ff]',
     chip: 'bg-white text-[#0277b6]',
     range: 'text-white/70',
@@ -164,14 +172,14 @@ const BAND_STAGE: {
     coverSrc: '/albums/blue.jpg',
   },
   {
-    // Sweater Song — flannel tan.
+    // Island in the Sun — flannel tan.
     layer: 'bg-gradient-to-b from-[#f3e9d2] to-[#e7d7ae] text-[#4a3a17]',
     chip: 'bg-[#4a3a17] text-[#f3e9d2]',
     range: 'text-[#4a3a17]/60',
     texture: "FLANNEL · '94 · MTV · THE RENTALS ·",
   },
   {
-    // Pinkerton — dark maroon, the album's own cover ghosted in.
+    // Across the Sea — dark maroon, Pinkerton's own cover ghosted in.
     layer: 'bg-gradient-to-b from-[#5b2333] to-[#401826] text-[#f6d9de]',
     chip: 'bg-[#f6d9de] text-[#5b2333]',
     range: 'text-[#f6d9de]/60',
@@ -179,7 +187,7 @@ const BAND_STAGE: {
     coverSrc: '/albums/pinkerton.jpg',
   },
   {
-    // Fan Club — photocopied-note purple, ruled lines.
+    // La Brea Tar Pits — photocopied-note purple, ruled lines.
     layer: 'bg-[#3d348b] text-[#dcd6ff]',
     chip: 'bg-[#dcd6ff] text-[#3d348b]',
     range: 'text-[#dcd6ff]/60',
@@ -190,18 +198,18 @@ const BAND_STAGE: {
     },
   },
   {
-    // Karl — archive dark-green.
+    // The Garage — archive dark-green.
     layer: 'bg-gradient-to-b from-[#14261c] to-[#0c1a12] text-[#b9e7c9]',
     chip: 'bg-[#b9e7c9] text-[#14261c]',
     range: 'text-[#b9e7c9]/60',
     texture: "KARL'S CORNER · THE FIFTH WEEZER · ARCHIVE ·",
   },
   {
-    // GOAT PUNISHMENT — near-black bedrock.
+    // The Shack — near-black bedrock.
     layer: 'bg-[#060607] text-[#8f8fa3]',
     chip: 'bg-[#26262e] text-[#c9c9d6] border border-[#3a3a46]',
     range: 'text-[#8f8fa3]/70',
-    texture: '🐐 · NIRVANA COVERS · 1998 ·',
+    texture: 'THE LIGHTNING STRAP · 1992 ·',
     textureStyle: {
       backgroundImage:
         'radial-gradient(120% 90% at 50% 0%, rgba(70,70,88,0.5) 0%, rgba(6,6,7,0) 70%)',
@@ -210,10 +218,10 @@ const BAND_STAGE: {
 ];
 
 /**
- * Card themes, re-skinned per depth band (mock frames 1 vs 3): a
- * white card at the surface bands, a dark plum card through
- * Pinkerton / Fan Club, the archive-green dark card at Karl, and a
- * warm gold-accented dark card in the bedrock.
+ * Card themes, re-skinned per stop (mock frames 1 vs 3): a
+ * white card at the surface stops, a dark plum card through
+ * Across the Sea / the Tar Pits, the archive-green dark card at
+ * the Garage, and a warm gold-accented dark card in the bedrock.
  */
 interface CardTheme {
   root: string;
@@ -270,7 +278,7 @@ const CARD_THEMES: CardTheme[] = [
     next: 'bg-[#0072CE] hover:bg-blue-700 text-white shadow-md',
   },
   {
-    // Pinkerton / Fan Club — dark plum.
+    // Across the Sea / Tar Pits — dark plum.
     root: 'bg-[#211423] text-[#f6e8ee] border-[#4a2b3d]',
     label: 'text-pink-200/50',
     body: 'text-pink-100/60',
@@ -297,7 +305,7 @@ const CARD_THEMES: CardTheme[] = [
     next: 'bg-pink-300 hover:bg-pink-200 text-[#401826] shadow-md',
   },
   {
-    // Karl — the mock's archive-green dark card.
+    // The Garage — the mock's archive-green dark card.
     root: 'bg-[#101418] text-[#eef3ee] border-[#2b3a30]',
     label: 'text-[#7be495]/60',
     body: 'text-[#b9e7c9]/60',
@@ -324,7 +332,7 @@ const CARD_THEMES: CardTheme[] = [
     next: 'bg-[#7be495] hover:bg-[#93eda9] text-[#0c1a12] shadow-md',
   },
   {
-    // GOAT PUNISHMENT — warm dark card, gold accents (mock frame 2).
+    // The Shack — warm dark card, gold accents (mock frame 2).
     root: 'bg-[#12100a] text-[#f5ecd8] border-[#4a3f22]',
     label: 'text-[#FFD23F]/50',
     body: 'text-[#cbbf9f]/70',
@@ -423,7 +431,7 @@ interface BurstInfo {
 }
 
 /**
- * The fanhood cross-section as a full-screen stage: a tall column of
+ * The journey cross-section as a full-screen stage: a tall column of
  * the six layers inside a clipped window. The player marker lives
  * IN the column at the Y its total depth maps to, with a dashed
  * trail from the surface; the camera is a translateY on the column
@@ -664,7 +672,7 @@ function DescentStage({
                 =w=
               </div>
               <div className="whitespace-nowrap rounded-full bg-[#111111] px-3 py-1.5 text-xs font-black tracking-[0.05em] text-[#FFD23F] shadow-[0_4px_12px_rgba(0,0,0,0.4)]">
-                YOU · {(displayTotal ?? total).toLocaleString()} DEEP
+                YOU · {(displayTotal ?? total).toLocaleString()} POINTS
               </div>
             </div>
           </div>
@@ -800,9 +808,9 @@ function CountUp({ value }: { value: number }) {
 
 /**
  * The "Every answer" tables for a set of prompts: each prompt
- * opens to its full answer table (deepest first, grouped by tier),
+ * opens to its full answer table (rarest first, grouped by tier),
  * with the player's landed answer highlighted. Shared by the
- * results screen (this run's answers) and the picker (a locked
+ * results screen (this run's answers) and the picker (a played
  * game's recorded log).
  */
 function PromptAnswerTables({
@@ -1052,7 +1060,7 @@ export default function StepLore() {
           outcome: 'duplicate',
           headline: played.text,
           subline:
-            'You already played that one this run — no depth for repeats.',
+            'You already played that one this run — no points for repeats.',
           depthEarned: 0,
           ...contrast,
           loreLine: prompt.loreLine,
@@ -1451,17 +1459,10 @@ export default function StepLore() {
   };
 
   const lastRecord = answers[answers.length - 1];
-  // Fanhood level-up (Oct 27, 2026): if the last scoring answer
-  // carried the total across a fanhood-title threshold, the reveal
-  // names the new territory.
-  const leveledUpTitle =
-    lastRecord && lastRecord.depthEarned > 0
-      ? (() => {
-          const before = titleForDepth(total - lastRecord.depthEarned);
-          const after = titleForDepth(total);
-          return before !== after ? after : null;
-        })()
-      : null;
+  // (The reveal used to carry a title level-up banner here; with
+  // the one-ladder reframe the plunge's NOW ENTERING flash already
+  // names the stop a scoring answer crosses into, in the same
+  // words — the banner only said it twice, so it was cut.)
   const deepest = [...answers]
     .filter((a) => a.depthEarned > 0)
     .sort((a, b) => b.depthEarned - a.depthEarned)
@@ -1497,12 +1498,12 @@ export default function StepLore() {
         <p>
           {isCommon
             ? 'Most fans say exactly that.'
-            : `Most fans say ${record.commonText} — ${record.commonDepth} deep.`}
+            : `Most fans say ${record.commonText} — ${record.commonDepth} points.`}
         </p>
         <p>
           {isDeepest
-            ? 'And that is the deepest answer there is for this one. Nothing under it.'
-            : `Deepest possible: ${record.deepestText} — ${record.deepestDepth} deep.`}
+            ? 'And that is the rarest answer there is for this one.'
+            : `Rarest possible: ${record.deepestText} — ${record.deepestDepth} points.`}
         </p>
       </div>
     );
@@ -1633,13 +1634,6 @@ export default function StepLore() {
 
       {phase === 'reveal' && lastRecord && (
         <div className="space-y-3">
-          {leveledUpTitle && (
-            <div className="rounded-2xl bg-[#FFD23F] px-3.5 py-2.5 text-center shadow-md">
-              <p className="text-sm font-black text-[#111111]">
-                That&apos;s {leveledUpTitle} territory.
-              </p>
-            </div>
-          )}
           {lastRecord.outcome === 'correct' && (
             <div
               className={`border rounded-2xl p-3.5 space-y-1 ${theme.correctBox}`}
@@ -1756,15 +1750,15 @@ export default function StepLore() {
         {!(unlocked && !showBoard && phase === 'intro') && (
         <div className="flex items-center justify-between gap-3 px-4 sm:px-6 pt-3 pb-2">
           <h1 className="truncate text-sm sm:text-base font-black tracking-tight text-slate-950">
-            How Deep Is Your Fanhood?
+            Can You Get Back to the Shack?
           </h1>
           {(() => {
             const display = fanhoodDisplay(fanhood);
             if (!display) return null;
             return (
               <span className="shrink-0 rounded-full bg-slate-950 px-3 py-1 text-[11px] font-black whitespace-nowrap text-white">
-                Fanhood ·{' '}
-                {display.depth.toLocaleString()} · {display.title}
+                {display.stop} ·{' '}
+                {display.depth.toLocaleString()}
               </span>
             );
           })()}
@@ -1790,8 +1784,7 @@ export default function StepLore() {
             </div>
             <p className="text-xs sm:text-sm font-medium text-slate-500 leading-relaxed">
               Five games, seven prompts each, twenty-five seconds a prompt.
-              Any right answer drops you — but the rarer your answer,
-              the deeper you sink.
+              The rarer your answer, the further back it takes you.
             </p>
             <p className="text-xs sm:text-sm font-medium text-slate-500 leading-relaxed">
               {remainingAlbums.length === 2
@@ -1801,8 +1794,7 @@ export default function StepLore() {
                   : 'Pinkerton is in the books. The Blue Album is all that\u2019s left — sort it in the Gut Check and the game opens.'}
             </p>
             <p className="text-xs font-bold text-slate-400 leading-relaxed">
-              Where fans land: Buddy Holly · Sweater Song · Pinkerton · Fan
-              Club · Karl · GOAT PUNISHMENT
+              The way back: {DEPTH_BANDS.map((b) => b.title).join(' · ')}
             </p>
             <button
               onClick={() => navigateTo('triage')}
@@ -1826,10 +1818,11 @@ export default function StepLore() {
             <h1
               className={`${displayFont.className} px-1 pt-1 text-[37px] leading-[1.08] text-slate-950`}
             >
-              How Deep Is Your Fanhood?
+              Can You Get Back to the Shack?
             </h1>
 
-            {/* THE COMBINED BLOCK — the explainer, the ladder and
+            {/* THE COMBINED BLOCK — the explainer, the route (the
+                one ladder: the six stops on the total scale) and
                 the player's standing in one dark container. It
                 renders in every fanhood state; the standing line
                 is simply absent until a first game is finished. */}
@@ -1844,15 +1837,15 @@ export default function StepLore() {
                   {[
                     {
                       lead: 'Five games, played in order.',
-                      rest: 'Each finish unlocks the next. Seven prompts a game, twenty-five seconds a prompt.',
+                      rest: "Each finish unlocks the next. Seven prompts a game — and every answer you land takes you further back through the band's history.",
                     },
                     {
-                      lead: 'Guess until you land one.',
-                      rest: 'Every prompt takes more than one right answer — and the rarer yours is, the deeper you sink.',
+                      lead: 'The rarer the answer, the further back it takes you.',
+                      rest: 'The obvious ones keep you near the hits. The ones only real fans know take you all the way back.',
                     },
                     {
                       lead: 'Each game counts once.',
-                      rest: 'When it ends, your score locks in and adds to your fanhood. There are no replays.',
+                      rest: "Your score locks in, and your total is how far back you've gotten. No replays — the way back only goes one way.",
                     },
                   ].map((step, i) => (
                     <li
@@ -1876,29 +1869,41 @@ export default function StepLore() {
                   perfect.
                 </p>
               </div>
-              <p className="border-t border-white/15 px-5 pt-3 pb-2.5 text-xs font-bold leading-relaxed text-slate-300">
-                Your five scores add up to one fanhood. This is where the
-                total lands you:
-              </p>
-              {FANHOOD_TOTAL_LADDER.map((tier, i) => (
+              <div className="border-t border-white/15 px-5 pt-3.5 pb-1">
+                <h3
+                  className={`${displayFont.className} text-[16px] leading-none`}
+                >
+                  The way back
+                </h3>
+                <p className="mt-1.5 text-xs font-semibold leading-relaxed text-slate-400">
+                  Six stops between the hits and the beginning — each
+                  sits at the total beside it.
+                </p>
+              </div>
+              {TOTAL_STOPS.map((stop, i) => (
                 <div
-                  key={tier.title}
-                  className="flex items-baseline justify-between gap-3 px-5 py-2"
+                  key={stop.title}
+                  className="px-5 py-2.5"
                   style={{ backgroundColor: LADDER_RUNG_BG[i] }}
                 >
-                  <span
-                    className={`${displayFont.className} text-[15px] leading-none text-white`}
-                    style={
-                      i === FANHOOD_TOTAL_LADDER.length - 1
-                        ? { color: '#fbbf24' }
-                        : undefined
-                    }
-                  >
-                    {tier.title}
-                  </span>
-                  <span className="text-[11px] font-extrabold text-white/85">
-                    {totalTierRangeLabel(i)}
-                  </span>
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span
+                      className={`${displayFont.className} text-[15px] leading-none text-white`}
+                      style={
+                        i === TOTAL_STOPS.length - 1
+                          ? { color: '#fbbf24' }
+                          : undefined
+                      }
+                    >
+                      {stop.title}
+                    </span>
+                    <span className="text-[11px] font-extrabold text-white/85">
+                      {totalStopThresholdLabel(i)}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs font-medium leading-relaxed text-white/85">
+                    {DEPTH_BANDS[i].line}
+                  </p>
                 </div>
               ))}
               {(() => {
@@ -1988,8 +1993,8 @@ export default function StepLore() {
                         {state === 'played' && result && (
                           <>
                             <p className="mt-2 text-sm font-black text-slate-900">
-                              Your score: {result.score.toLocaleString()} ·
-                              Game verdict — {titleForDepth(result.score)}
+                              Got back to {stopForScore(result.score).title} ·{' '}
+                              {result.score.toLocaleString()}
                             </p>
                             <button
                               type="button"
@@ -2048,7 +2053,7 @@ export default function StepLore() {
             >
               <span>
                 <span className="block text-base font-black tracking-tight text-slate-950">
-                  Fanhood Leaderboard
+                  Leaderboard
                 </span>
                 <span className="block text-xs sm:text-sm font-medium text-slate-500 leading-relaxed">
                   Worldwide and friends standings, game by game.
@@ -2174,26 +2179,27 @@ export default function StepLore() {
         {unlocked && !showBoard && phase === 'result' && (
           <>
           <div className="w-full space-y-6 px-4 sm:px-6 pb-10">
-            {/* THE VERDICT — the results lead with the GAME's own
-                verdict, labeled as one so it never reads as a claim
-                about the whole fanhood: the per-game ladder names
-                it (titleForDepth on this game's score), the banner
-                keeps the final layer's art, and the fanhood strip
-                under it carries the compound story separately. */}
+            {/* THE RESULT — the results lead with how far back THIS
+                game got (its stop, from the run bands), in the one
+                ladder's words; the standing strip under it carries
+                the total's stop separately. The banner keeps the
+                final layer's art. */}
             <div
               className={`relative overflow-hidden rounded-3xl p-6 shadow-md space-y-3 ${BAND_STAGE[finalBandIdx].layer}`}
               style={BAND_STAGE[finalBandIdx].textureStyle}
             >
               <p className="text-[11px] font-black uppercase tracking-wider opacity-70">
                 {activeGameId
-                  ? `${loreGameById(activeGameId).name} · Game verdict`
-                  : 'Game verdict'}
+                  ? `Game ${LORE_GAMES.findIndex((g) => g.id === activeGameId) + 1} of 5 · ${loreGameById(activeGameId).name} — finished`
+                  : 'Finished'}
               </p>
               <h2 className="text-4xl sm:text-5xl font-black tracking-tight leading-none">
-                You&apos;re a {titleForDepth(total)}
+                {finalBand.title === 'The Shack'
+                  ? "You're back at the Shack."
+                  : `You got back to ${finalBand.title}.`}
               </h2>
               <p className="text-base sm:text-lg font-black">
-                {total.toLocaleString()} deep
+                {total.toLocaleString()} points
               </p>
               <p className="text-xs sm:text-sm font-medium leading-relaxed opacity-80">
                 {finalBand.line}
@@ -2211,26 +2217,30 @@ export default function StepLore() {
               )}
             </div>
 
-            {/* THE FANHOOD STRIP — the compound total on its own
-                ladder, labeled as the fanhood (never as a verdict
-                on this game). */}
+            {/* THE STANDING STRIP — the compound total's stop, on
+                the same ladder as the result above it. */}
             {(() => {
               const display = fanhoodDisplay(fanhood);
               if (!display) return null;
+              const next = nextStopForTotal(display.depth);
               return (
                 <div className="bg-slate-950 text-white rounded-3xl p-5 shadow-md space-y-1">
                   <p className="text-[10px] font-black uppercase tracking-[0.14em] text-white/60">
-                    Your fanhood
+                    Your standing
                   </p>
                   <p className="text-base sm:text-lg font-black leading-snug">
-                    You&apos;re a {display.title} —{' '}
-                    {display.depth.toLocaleString()} deep across{' '}
+                    {display.stop === 'The Shack'
+                      ? "You're back at the Shack"
+                      : `You're at ${display.stop}`}{' '}
+                    — {display.depth.toLocaleString()} points across{' '}
                     {display.gamesPlayed} of 5 games.
                   </p>
                   <p className="text-xs font-bold text-white/60">
-                    {display.gamesPlayed >= 5
-                      ? 'All five games are in. That is the whole card.'
-                      : 'Every game left on the picker adds its score to that total.'}
+                    {!next
+                      ? 'There is nowhere further back to go.'
+                      : display.gamesPlayed >= 5
+                        ? 'All five games in.'
+                        : `${next.pointsTo.toLocaleString()} points from ${next.title}.`}
                   </p>
                 </div>
               );
@@ -2248,7 +2258,7 @@ export default function StepLore() {
 
             <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs space-y-3">
               <h3 className="text-base font-black text-slate-950 tracking-tight">
-                Your deepest drops
+                Furthest back this game
               </h3>
               {rarest && (
                 <p className="text-xs sm:text-sm font-bold text-slate-700 leading-relaxed">
@@ -2301,7 +2311,7 @@ export default function StepLore() {
                   Every answer
                 </h3>
                 <p className="text-xs sm:text-sm font-medium text-slate-500 leading-relaxed">
-                  Open a prompt to see every answer that would have landed, deepest first.
+                  Open a prompt to see every answer that would have landed, rarest first.
                 </p>
               </div>
               <PromptAnswerTables

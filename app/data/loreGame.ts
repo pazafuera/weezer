@@ -31,15 +31,22 @@ import {
 export type { SongConstraint } from '../lib/loreMatch';
 
 /* ------------------------------------------------------------------ */
-/* Depth bands (RUN TOTALS)                                            */
+/* The stops (RUN TOTALS) — the game's ONE ladder (Oct 28, 2026)       */
 /* ------------------------------------------------------------------ */
 
+/**
+ * The journey back: six stops between the hits and the beginning,
+ * named for places in the band's story. A run's score says how far
+ * back it got (these bands); the five-game total reads the SAME
+ * stop names off TOTAL_STOPS below. One vocabulary everywhere —
+ * the fanhood titles this ladder used to parallel are retired.
+ */
 export interface DepthBand {
   min: number;
   /** Inclusive upper bound; Infinity for the bedrock band. */
   max: number;
   title: string;
-  /** One warm line about landing in this band. Draft copy. */
+  /** One line about the stop. */
   line: string;
 }
 
@@ -47,38 +54,38 @@ export const DEPTH_BANDS: DepthBand[] = [
   {
     min: 0,
     max: 199,
-    title: 'Buddy Holly',
-    line: 'You know the hits — and the hits are great. The lore goes a lot deeper whenever you want it.',
+    title: "Arnold's Diner",
+    line: 'The hit, the Happy Days video, TV-land. Every trip back starts here.',
   },
   {
     min: 200,
     max: 499,
-    title: 'Sweater Song',
-    line: "Solid '90s footing. You were there, or you've done the homework.",
+    title: 'Island in the Sun',
+    line: "Out on the golden sea — still sunny, but the shore's behind you now.",
   },
   {
     min: 500,
     max: 1499,
-    title: 'Pinkerton',
-    line: 'You have opinions about the second album, and they are not mild ones.',
+    title: 'Across the Sea',
+    line: 'The crossing. It gets confessional from here.',
   },
   {
     min: 1500,
     max: 2999,
-    title: 'Fan Club',
-    line: 'Mykel and Carli territory — you know the names most fans never learn.',
+    title: 'La Brea Tar Pits',
+    line: "Things down here don't fade — they're preserved: the demos, the lost songs, the vault.",
   },
   {
     min: 3000,
     max: 4999,
-    title: 'Karl',
-    line: "You know who the fifth Weezer is. That's not trivia, that's citizenship.",
+    title: 'The Garage',
+    line: "The sanctuary — the Dungeon Master's Guide, a 12-sided die, Kiss records on the shelf.",
   },
   {
     min: 5000,
     max: Infinity,
-    title: 'GOAT PUNISHMENT',
-    line: 'The bottom of the lore. Ride or die — there is nothing under this.',
+    title: 'The Shack',
+    line: 'The last stop is the first place. Nothing sits below the beginning.',
   },
 ];
 
@@ -110,81 +117,70 @@ export function bandsEnteredBetween(
 }
 
 /* ------------------------------------------------------------------ */
-/* Fanhood titles (the verdict — LOCKED Oct 27, 2026, Mark's names)    */
+/* Stop derivations (the one ladder, both scales)                      */
 /* ------------------------------------------------------------------ */
 
-/**
- * The fanhood ladder: what a finished run's depth says you ARE, as
- * opposed to the depth bands above, which name the PLACES the game
- * sinks through (Buddy Holly, Pinkerton, Karl…). Mark's names,
- * verbatim, locked Oct 27, 2026 after he rejected a song-title
- * ladder as "more cheesy than clever" — plain fanhood titles, with
- * Weezer OG reserved for the bedrock alone. The established fanhood
- * (Thread, Shareables) is always read off the player's BEST depth
- * through this same ladder.
- */
-export interface FanhoodTier {
+/** The stop a single game's score reached — its band, by name. */
+export function stopForScore(score: number): DepthBand {
+  return bandForTotal(score);
+}
+
+export interface JourneyStop {
+  /** The five-game total at which this stop is reached. */
   min: number;
-  /** Inclusive upper bound; Infinity for Weezer OG. */
-  max: number;
   title: string;
 }
 
-export const FANHOOD_LADDER: FanhoodTier[] = [
-  { min: 0, max: 199, title: 'Casual Fan' },
-  { min: 200, max: 499, title: 'Just the Hits Fan' },
-  { min: 500, max: 1499, title: 'Member of the Fan Club' },
-  { min: 1500, max: 4999, title: 'Ride or Die Fan' },
-  { min: 5000, max: Infinity, title: 'Weezer OG' },
+/**
+ * The stops on the TOTAL scale: where the sum of the five game
+ * scores has gotten you. Same names, same order as DEPTH_BANDS
+ * (the harness holds the two lists to it) — the route strip on
+ * the picker reads off this table, and every standing line names
+ * its stop from here. Thresholds (Oct 28, 2026): the retired
+ * total ladder's 2,500 / 6,000 / 12,500 / 21,000 cuts, with the
+ * old top band split at 17,000 so the Garage gets its own floor.
+ */
+export const TOTAL_STOPS: JourneyStop[] = [
+  { min: 0, title: "Arnold's Diner" },
+  { min: 2500, title: 'Island in the Sun' },
+  { min: 6000, title: 'Across the Sea' },
+  { min: 12500, title: 'La Brea Tar Pits' },
+  { min: 17000, title: 'The Garage' },
+  { min: 21000, title: 'The Shack' },
 ];
 
-/** The fanhood title a depth earns — the game's verdict line. */
-export function titleForDepth(depth: number): string {
-  for (const tier of FANHOOD_LADDER) {
-    if (depth >= tier.min && depth <= tier.max) return tier.title;
+/** The stop a five-game total has reached. */
+export function stopForTotal(total: number): JourneyStop {
+  let reached = TOTAL_STOPS[0];
+  for (const stop of TOTAL_STOPS) {
+    if (total >= stop.min) reached = stop;
   }
-  return FANHOOD_LADDER[FANHOOD_LADDER.length - 1].title;
+  return reached;
+}
+
+/** The next stop up the road and the points still needed to
+ *  reach it — null once the total is back at the Shack. */
+export function nextStopForTotal(
+  total: number
+): { title: string; pointsTo: number } | null {
+  for (const stop of TOTAL_STOPS) {
+    if (total < stop.min) {
+      return { title: stop.title, pointsTo: stop.min - total };
+    }
+  }
+  return null;
 }
 
 /**
- * The COMPOUND ladder (five-game build, Oct 27, 2026): the same
- * five titles over the SUM of the five game scores — a strong full
- * run lands ≈14,500, a perfect one ≈31,500. DRAFT bands (from the
- * composition doc's depth math; titles are locked, thresholds are
- * Mark's to adjust). Per-game verdicts keep using titleForDepth on
- * the per-game ladder above; this ladder is only for the overall
- * fanhood the five scores add up to, and surfaces label the two
- * distinctly ("Game verdict — …" vs. the fanhood title).
+ * The route strip's threshold label for one stop, derived from
+ * TOTAL_STOPS itself so the strip can never disagree with
+ * stopForTotal: the first stop reads "You start here", every
+ * other "{floor} total".
  */
-export const FANHOOD_TOTAL_LADDER: FanhoodTier[] = [
-  { min: 0, max: 2499, title: 'Casual Fan' },
-  { min: 2500, max: 5999, title: 'Just the Hits Fan' },
-  { min: 6000, max: 12499, title: 'Member of the Fan Club' },
-  { min: 12500, max: 20999, title: 'Ride or Die Fan' },
-  { min: 21000, max: Infinity, title: 'Weezer OG' },
-];
-
-/** The overall fanhood title a five-game total earns. */
-export function totalTitleForDepth(total: number): string {
-  for (const tier of FANHOOD_TOTAL_LADDER) {
-    if (total >= tier.min && total <= tier.max) return tier.title;
-  }
-  return FANHOOD_TOTAL_LADDER[FANHOOD_TOTAL_LADDER.length - 1].title;
-}
-
-/**
- * The picker's ladder-strip range label for one rung of the compound
- * ladder, derived from FANHOOD_TOTAL_LADDER itself so the strip can
- * never disagree with totalTitleForDepth: the surface rung reads
- * "under {ceiling}", the bedrock rung "{floor} +", and every rung
- * between "{floor} – {ceiling}".
- */
-export function totalTierRangeLabel(index: number): string {
-  const tier = FANHOOD_TOTAL_LADDER[index];
-  const fmt = (n: number) => n.toLocaleString('en-US');
-  if (index === 0) return `under ${fmt(tier.max + 1)}`;
-  if (tier.max === Infinity) return `${fmt(tier.min)} +`;
-  return `${fmt(tier.min)} – ${fmt(tier.max)}`;
+export function totalStopThresholdLabel(index: number): string {
+  const stop = TOTAL_STOPS[index];
+  if (index === 0) return 'You start here';
+  return `${stop.min.toLocaleString('en-US')} total`;
 }
 
 /* ------------------------------------------------------------------ */
@@ -733,7 +729,7 @@ export const LORE_QUESTIONS: LoreQuestion[] = [
     loreLine: 'Some of the most loved Weezer songs never made a studio album at all.',
   },
 
-  /* ---------------- Band 6 — GOAT PUNISHMENT bedrock ---------------- */
+  /* ---------------- Band 6 — The Shack bedrock ---------------- */
   {
     id: 'L31',
     band: 6,
@@ -878,8 +874,8 @@ export function tierForDepth(depth: number): RarityTier {
 export const TIER_TAGLINES: Record<RarityTier, string> = {
   Common: "The first answer in every fan's head.",
   Uncommon: 'You skipped the obvious one — good instinct.',
-  Rare: 'Most fans never get down this far.',
-  'Super rare': 'Bedrock knowledge — almost nobody gets this deep.',
+  Rare: 'Most fans never get back this far.',
+  'Super rare': 'Bedrock knowledge — almost nobody gets back this far.',
 };
 
 /** One row of an open prompt's rarity table. */

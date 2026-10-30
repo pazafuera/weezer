@@ -1807,7 +1807,7 @@ export default function StepLore() {
         )}
 
         {/* THE PICKER — unlocked, not playing (mock v3, Oct 28,
-            2026): the big display title, the explainer block, then
+            2026): the banner title, the explainer block, then
             the levels block (the ladder + the standing line) as its
             own card (split Oct 29, 2026), then the five games as a
             single series — played in order, each finish unlocking
@@ -1816,11 +1816,21 @@ export default function StepLore() {
             viewable from their row. */}
         {unlocked && !showBoard && phase === 'intro' && (
           <div className="w-full space-y-4 px-4 sm:px-6 pb-10">
-            <h1
-              className={`${displayFont.className} px-1 pt-1 text-[37px] leading-[1.08] text-slate-950`}
-            >
-              Can You Get Back to the Shack?
-            </h1>
+            {/* THE BANNER — the headline lives in the artwork now
+                (Mark, Oct 29, 2026: the text title felt squished;
+                candidate B — the long road down — with the shack
+                enlarged and the title baked in). The h1 stays,
+                visually hidden, so the heading never renders twice
+                but screen readers still get it. */}
+            <div className="pt-4 sm:pt-6">
+              <h1 className="sr-only">Can You Get Back to the Shack?</h1>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/images/shack-header.webp"
+                alt="Can You Get Back to the Shack?"
+                className="w-full rounded-3xl shadow-md"
+              />
+            </div>
 
             {/* THE EXPLAINER — how it works, its own dark card
                 (split from the levels block Oct 29, 2026). */}

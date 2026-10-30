@@ -23,8 +23,9 @@ import {
   openPromptExtremes,
   promptById,
   stopForScore,
+  stopForTotal,
   tierForDepth,
-  totalStopThresholdLabel,
+  youreAtPhrase,
 } from '../data/loreGame';
 import type {
   LoreGameId,
@@ -39,7 +40,7 @@ import {
 import {
   fanhoodDisplay,
   fanhoodGamesPlayed,
-  fanhoodStandingLine,
+  fanhoodTotal,
   gameCanStart,
   readFanhood,
   recordGameResult,
@@ -56,21 +57,6 @@ import type {
 
 const QUESTION_SECONDS = 25;
 const PREVIEW_SECONDS = 3;
-
-/** Picker strata (mock v2, approved Oct 27, 2026; rail balls
- *  mock v3, Oct 28): the route strip's stops and the series
- *  rail's balls deepen as the journey goes back — sky at the
- *  surface to near-black bedrock. Parallel to TOTAL_STOPS /
- *  LORE_GAMES by index. */
-const LADDER_RUNG_BG = [
-  '#38bdf8',
-  '#0ea5e9',
-  '#0284c7',
-  '#0369a1',
-  '#1e3a5f',
-  '#020617',
-];
-const SERIES_BALL_BG = ['#38bdf8', '#0284c7', '#0369a1', '#1e3a5f', '#0f172a'];
 
 /** The start gate's four rules (mock v2, generic per Mark: no
  *  prompt teasers — a one-and-done game's card is not a study
@@ -1735,6 +1721,325 @@ export default function StepLore() {
     </div>
   );
 
+  /* THE PICKER BLOCKS (mock v5, Oct 30, 2026) — defined once
+     here and ordered by state in the intro below. The journey
+     card is the old levels card and the standing line merged
+     into one route map (one ladder, no redundancy); How to Play
+     is the old explainer compressed to three text-only tiles;
+     the rounds rows are tinted by state; the leaderboard entry
+     carries its new title. */
+  const pickerPlayedAny = fanhoodGamesPlayed(fanhood) > 0;
+  const journeyTotal = fanhoodTotal(fanhood);
+  const journeyStop = stopForTotal(journeyTotal);
+  const journeyNext = nextStopForTotal(journeyTotal);
+  const journeyStopIndex = TOTAL_STOPS.findIndex(
+    (s) => s.title === journeyStop.title
+  );
+  const journeyLegPct = journeyNext
+    ? Math.round(
+        ((journeyTotal - journeyStop.min) /
+          (TOTAL_STOPS[journeyStopIndex + 1].min - journeyStop.min)) *
+          100
+      )
+    : 100;
+  const journeyPill = pickerPlayedAny
+    ? youreAtPhrase(journeyStop.title).toUpperCase()
+    : "YOU START AT ARNOLD'S DINER";
+
+  const pickerJourneyCard = (
+    <div className="overflow-hidden rounded-3xl bg-slate-950 text-white shadow-md">
+      <div className="p-5">
+        <div className="flex items-end justify-between gap-3">
+          <div>
+            <p
+              className={`${displayFont.className} text-[40px] leading-none text-white`}
+            >
+              {journeyTotal.toLocaleString('en-US')}
+            </p>
+            <p className="mt-1.5 text-[11px] font-bold uppercase tracking-[0.08em] text-slate-400">
+              Points so far
+            </p>
+          </div>
+          <span className="rounded-full bg-[#0072CE] px-3 py-1.5 text-center text-[11px] font-extrabold leading-tight tracking-[0.05em] text-white">
+            {journeyPill}
+          </span>
+        </div>
+        <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-slate-800">
+          <div
+            className="h-full rounded-full bg-sky-400"
+            style={{ width: `${journeyLegPct}%` }}
+          />
+        </div>
+        <div className="mt-2 flex items-baseline justify-between gap-3 text-xs text-slate-300">
+          <span>
+            {journeyStop.title} · {journeyStop.min.toLocaleString('en-US')}
+          </span>
+          {journeyNext ? (
+            <span>
+              <strong className="font-extrabold text-white">
+                {journeyNext.pointsTo.toLocaleString('en-US')} points
+              </strong>{' '}
+              to {journeyNext.title}
+            </span>
+          ) : (
+            <span>There is nowhere further back to go.</span>
+          )}
+        </div>
+        <div className="mt-3 border-t border-slate-800 pt-1.5">
+          {TOTAL_STOPS.map((stop, i) => {
+            const status =
+              i < journeyStopIndex
+                ? 'reached'
+                : i === journeyStopIndex
+                  ? 'here'
+                  : i === journeyStopIndex + 1
+                    ? 'next'
+                    : 'future';
+            return (
+              <div
+                key={stop.title}
+                className="relative flex items-center gap-3 py-2"
+              >
+                {i < TOTAL_STOPS.length - 1 && (
+                  <span
+                    aria-hidden
+                    className="absolute bottom-[-12px] left-[10px] top-[34px] w-[2px] bg-slate-800"
+                  />
+                )}
+                <span
+                  className={`z-[1] flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border-2 text-[11px] font-extrabold ${
+                    status === 'reached'
+                      ? 'border-[#0072CE] bg-[#0072CE] text-white'
+                      : status === 'here'
+                        ? 'border-sky-300 bg-sky-400 text-slate-950'
+                        : 'border-slate-700 bg-slate-900 text-slate-500'
+                  }`}
+                  style={
+                    status === 'here'
+                      ? { boxShadow: '0 0 0 4px rgba(56,189,248,.25)' }
+                      : undefined
+                  }
+                >
+                  {status === 'reached'
+                    ? '✓'
+                    : status === 'here'
+                      ? '●'
+                      : i + 1}
+                </span>
+                <span
+                  className={`text-[15px] font-bold ${
+                    status === 'reached'
+                      ? 'text-slate-100'
+                      : status === 'here'
+                        ? 'text-white'
+                        : 'text-slate-400'
+                  }`}
+                >
+                  {stop.title}
+                </span>
+                {status === 'reached' && (
+                  <span className="shrink-0 rounded-full bg-[#0072CE]/25 px-2 py-[3px] text-[10px] font-extrabold tracking-[0.05em] text-sky-300">
+                    BEEN THERE
+                  </span>
+                )}
+                {status === 'here' && (
+                  <span className="shrink-0 rounded-full bg-sky-400 px-2 py-[3px] text-[10px] font-extrabold tracking-[0.05em] text-slate-950">
+                    YOU'RE HERE
+                  </span>
+                )}
+                {stop.title === 'The Shack' && (
+                  <span className="shrink-0 rounded-full bg-yellow-400/15 px-2 py-[3px] text-[10px] font-extrabold tracking-[0.05em] text-yellow-300">
+                    THE GOAL
+                  </span>
+                )}
+                {status === 'next' && journeyNext && (
+                  <span className="ml-auto shrink-0 text-xs font-bold text-yellow-300">
+                    {journeyNext.pointsTo.toLocaleString('en-US')} to go
+                  </span>
+                )}
+                <span
+                  className={`${status === 'next' ? '' : 'ml-auto'} shrink-0 text-[13px] font-bold text-slate-400`}
+                >
+                  {stop.min.toLocaleString('en-US')}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+
+  const pickerHowToPlayCard = (
+    <div className="overflow-hidden rounded-3xl bg-slate-950 text-white shadow-md">
+      <div className="p-5">
+        <h2 className="text-[17px] font-extrabold leading-none">
+          How to Play
+        </h2>
+        <div className="mt-3.5 flex gap-2.5">
+          {[
+            {
+              title: 'Five games, in order',
+              sub: 'Each finish unlocks the next. 7 questions a game.',
+            },
+            {
+              title: 'Rarer answers, more points',
+              sub: 'The obvious ones keep you near the hits.',
+            },
+            {
+              title: 'One way back',
+              sub: 'Scores lock in. No replays.',
+            },
+          ].map((tile) => (
+            <div
+              key={tile.title}
+              className="flex-1 rounded-2xl border border-slate-800 bg-slate-900 p-3"
+            >
+              <p className="text-[13px] font-extrabold leading-snug text-white">
+                {tile.title}
+              </p>
+              <p className="mt-1 text-[11px] font-medium leading-snug text-slate-400">
+                {tile.sub}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  const pickerRoundsCard = (
+    <div className="overflow-hidden rounded-3xl border border-slate-200/90 bg-white shadow-xs">
+      <div className="flex items-baseline justify-between gap-3 px-5 pt-4">
+        <h2 className="text-[17px] font-extrabold leading-none text-slate-950">
+          The Rounds
+        </h2>
+        <span className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-slate-400">
+          {fanhoodGamesPlayed(fanhood)} of 5 played
+        </span>
+      </div>
+      <div className="space-y-2.5 p-4">
+        {LORE_GAMES.map((game, gameIndex) => {
+          const result = fanhood?.games[game.id];
+          const state = seriesRowState(fanhood, game.id);
+          const tablesOpen = pickerOpenGameId === game.id;
+          return (
+            <div
+              key={game.id}
+              className={`flex gap-3 rounded-2xl border p-3.5 ${
+                state === 'played'
+                  ? 'border-green-200 bg-green-50'
+                  : state === 'up-next'
+                    ? 'border-blue-200 bg-blue-50'
+                    : 'border-slate-200 opacity-75'
+              }`}
+            >
+              <span
+                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-extrabold text-white ${
+                  state === 'played' ? 'bg-green-600' : 'bg-slate-950'
+                }`}
+              >
+                {state === 'played' ? '✓' : gameIndex + 1}
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+                  <h3 className="text-[15px] font-extrabold leading-tight text-slate-950">
+                    {game.name}
+                  </h3>
+                  <span
+                    className={`shrink-0 rounded-full px-2 py-[3px] text-[10px] font-extrabold tracking-[0.05em] ${
+                      state === 'played'
+                        ? 'bg-green-600 text-white'
+                        : state === 'up-next'
+                          ? 'bg-[#0072CE] text-white'
+                          : 'bg-slate-200 text-slate-500'
+                    }`}
+                  >
+                    {state === 'played'
+                      ? 'ROUND COMPLETE'
+                      : state === 'up-next'
+                        ? pickerPlayedAny
+                          ? 'UP NEXT'
+                          : 'START HERE'
+                        : 'LOCKED'}
+                  </span>
+                </div>
+                {state === 'played' && result && (
+                  <>
+                    <p className="mt-1.5 text-xs font-medium text-slate-500">
+                      Got back to {stopForScore(result.score).title} ·{' '}
+                      {result.score.toLocaleString()} points
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setPickerOpenGameId(tablesOpen ? null : game.id)
+                      }
+                      aria-expanded={tablesOpen}
+                      className="mt-1.5 inline-block cursor-pointer text-xs font-black text-[#0072CE] hover:underline"
+                    >
+                      {tablesOpen
+                        ? 'Hide every answer'
+                        : 'See every answer'}
+                    </button>
+                    {tablesOpen && (
+                      <PromptAnswerTables
+                        items={game.promptIds.map((promptId) => {
+                          const entry = result.log.find(
+                            (e) => e.promptId === promptId
+                          );
+                          return {
+                            prompt: promptById(promptId),
+                            landedText: entry?.answer ?? null,
+                            landedDepth: entry?.depth ?? 0,
+                          };
+                        })}
+                      />
+                    )}
+                  </>
+                )}
+                {state === 'up-next' && (
+                  <button
+                    onClick={() => openGate(game.id)}
+                    className="mt-3 w-full cursor-pointer rounded-[13px] bg-[#0072CE] px-5 py-3 text-sm font-black text-white shadow-md transition-all hover:bg-blue-700 active:scale-95"
+                  >
+                    Play {game.name}
+                  </button>
+                )}
+                {state === 'locked' && (
+                  <p className="mt-1.5 text-xs font-bold text-slate-400">
+                    🔒 Your next stop is waiting. Finish{' '}
+                    {LORE_GAMES[gameIndex - 1].name} to unlock.
+                  </p>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  const pickerLeaderboardButton = (
+    <button
+      onClick={() => setShowBoard(true)}
+      className="flex w-full cursor-pointer items-center gap-3 rounded-3xl border border-slate-200/90 bg-white p-5 text-left shadow-xs transition-all hover:border-slate-300"
+    >
+      <span aria-hidden className="shrink-0 text-[22px]">
+        🏆
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-base font-black tracking-tight text-slate-950">
+          {"Who's Making It Back?"}
+        </span>
+        <span className="mt-0.5 block text-xs font-medium leading-relaxed text-slate-500 sm:text-sm">
+          See how your score stacks up against Weezer fans everywhere.
+        </span>
+      </span>
+      <span className="shrink-0 text-sm font-black text-[#0072CE]">→</span>
+    </button>
+  );
+
   return (
     <div className="flex w-full flex-1 flex-col animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex w-full flex-1 flex-col">
@@ -1806,270 +2111,50 @@ export default function StepLore() {
           </div>
         )}
 
-        {/* THE PICKER — unlocked, not playing (mock v3, Oct 28,
-            2026): the banner title, the explainer block, then
-            the levels block (the ladder + the standing line) as its
-            own card (split Oct 29, 2026), then the five games as a
-            single series — played in order, each finish unlocking
-            the next. Played games never reopen for play
-            (one-and-done); their "Every answer" tables stay
-            viewable from their row. */}
+        {/* THE PICKER — unlocked, not playing (mock v5, Oct 30,
+            2026): no banner — the headline is the header now,
+            centered and two-tier. The journey card and the How
+            to Play tiles swap order by state: a player with a
+            finished game meets their journey first; a new player
+            meets the rules first. The Rounds and the leaderboard
+            entry follow in both states. */}
         {unlocked && !showBoard && phase === 'intro' && (
-          <div className="w-full space-y-4 px-4 sm:px-6 pb-10">
-            {/* THE BANNER + HEADLINE — the banner is pure artwork
-                (Mark, Oct 29, 2026: candidate A — the poster shack
-                with the guitar — and no title baked into the art),
-                so the headline is page text again, visible below
-                the banner in the display font. The img is
-                decorative (alt="") so the title is announced once,
-                by the h1. */}
-            <div className="pt-4 sm:pt-6">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/images/shack-header.webp"
-                alt=""
-                className="w-full rounded-3xl shadow-md"
-              />
+          <div className="w-full space-y-4 px-4 pb-10 sm:px-6">
+            <div className="px-1 pt-5 text-center sm:pt-7">
               <h1
-                className={`${displayFont.className} px-1 pt-4 text-[37px] leading-[1.08] text-slate-950`}
+                aria-label="Can You Get Back to the Shack?"
+                className="text-slate-950"
               >
-                Can You Get Back to the Shack?
+                <span className="block text-[15px] font-extrabold uppercase leading-none tracking-[0.28em] text-[#0072CE]">
+                  Can you get
+                </span>
+                <span className="mt-1.5 block whitespace-nowrap text-[min(8.6vw,42px)] font-black uppercase leading-[1.04] tracking-tight">
+                  Back to the Shack?
+                </span>
               </h1>
-            </div>
-
-            {/* THE EXPLAINER — how it works, its own dark card
-                (split from the levels block Oct 29, 2026). */}
-            <div className="overflow-hidden rounded-3xl bg-slate-950 text-white shadow-md">
-              <div className="p-5">
-                <h2
-                  className={`${displayFont.className} text-[21px] leading-none`}
-                >
-                  How it works
-                </h2>
-                <ol className="mt-3.5 space-y-2.5">
-                  {[
-                    {
-                      lead: 'Five games, played in order.',
-                      rest: "Each finish unlocks the next. Seven prompts a game — and every answer you land takes you further back through the band's history.",
-                    },
-                    {
-                      lead: 'The rarer the answer, the further back it takes you.',
-                      rest: 'The obvious ones keep you near the hits. The ones only real fans know take you all the way back.',
-                    },
-                    {
-                      lead: 'Each game counts once.',
-                      rest: "Your score locks in, and your total is how far back you've gotten. No replays — the way back only goes one way.",
-                    },
-                  ].map((step, i) => (
-                    <li
-                      key={step.lead}
-                      className="flex gap-2.5 text-xs sm:text-sm font-medium leading-relaxed text-slate-200"
-                    >
-                      <span className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full bg-[#039AD1] text-[12px] font-black text-white">
-                        {i + 1}
-                      </span>
-                      <span>
-                        <strong className="font-black text-white">
-                          {step.lead}
-                        </strong>{' '}
-                        {step.rest}
-                      </span>
-                    </li>
-                  ))}
-                </ol>
-              </div>
-            </div>
-
-            {/* THE LEVELS — the route (the one ladder: the six stops
-                on the total scale) and the player's standing, its
-                own dark card below the explainer. It renders in
-                every fanhood state; the standing line is simply
-                absent until a first game is finished. */}
-            <div className="overflow-hidden rounded-3xl bg-slate-950 text-white shadow-md">
-              <div className="px-5 pt-4 pb-1">
-                <h3
-                  className={`${displayFont.className} text-[16px] leading-none`}
-                >
-                  How to Get Back
-                </h3>
-              </div>
-              {TOTAL_STOPS.map((stop, i) => (
-                <div
-                  key={stop.title}
-                  className="px-5 py-2.5"
-                  style={{ backgroundColor: LADDER_RUNG_BG[i] }}
-                >
-                  <div className="flex items-baseline justify-between gap-3">
-                    <span
-                      className={`${displayFont.className} text-[15px] leading-none text-white`}
-                      style={
-                        i === TOTAL_STOPS.length - 1
-                          ? { color: '#fbbf24' }
-                          : undefined
-                      }
-                    >
-                      {stop.title}
-                    </span>
-                    <span className="text-[11px] font-extrabold text-white/85">
-                      {totalStopThresholdLabel(i)}
-                    </span>
-                  </div>
-                </div>
-              ))}
-              {(() => {
-                const line = fanhoodStandingLine(fanhood);
-                if (!line) return null;
-                return (
-                  <div className="flex items-center gap-2 px-5 pt-2.5 pb-4">
-                    <span
-                      aria-hidden
-                      className="h-[9px] w-[9px] shrink-0 rounded-full bg-[#fbbf24]"
-                    />
-                    <p className="text-xs font-bold text-slate-200">{line}</p>
-                  </div>
-                );
-              })()}
-            </div>
-
-            {/* THE ROUNDS — one card, five rows on a numbered rail
-                that deepens game by game. Only the up-next row can
-                open the start gate; locked rows name the game in
-                front of them. */}
-            <div className="overflow-hidden rounded-3xl border border-slate-200/90 bg-white shadow-xs">
-              <div className="flex items-baseline justify-between gap-3 border-b border-slate-100 px-5 pt-3.5 pb-3">
-                <h2
-                  className={`${displayFont.className} text-[17px] leading-none text-slate-950`}
-                >
-                  The Rounds
-                </h2>
-                <span className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-slate-400">
-                  {fanhoodGamesPlayed(fanhood)} of 5 played
+              <p className="mt-3 text-sm font-semibold leading-snug text-slate-500">
+                <span className="block">
+                  Five games. Thirty-five questions.
                 </span>
-              </div>
-              <div className="divide-y divide-slate-100">
-                {LORE_GAMES.map((game, gameIndex) => {
-                  const result = fanhood?.games[game.id];
-                  const state = seriesRowState(fanhood, game.id);
-                  const tablesOpen = pickerOpenGameId === game.id;
-                  return (
-                    <div
-                      key={game.id}
-                      className={`flex gap-3 px-5 py-4 ${
-                        state === 'locked' ? 'opacity-55' : ''
-                      }`}
-                    >
-                      <div className="flex flex-col items-center self-stretch">
-                        <span
-                          className="z-[1] flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full text-[13px] font-black text-white"
-                          style={{
-                            backgroundColor: SERIES_BALL_BG[gameIndex],
-                          }}
-                        >
-                          {state === 'played' ? '✓' : gameIndex + 1}
-                        </span>
-                        {gameIndex < LORE_GAMES.length - 1 && (
-                          <span
-                            aria-hidden
-                            className="mt-1 w-[3px] flex-1 rounded bg-slate-200"
-                          />
-                        )}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                          <h3
-                            className={`${displayFont.className} text-[19px] leading-tight text-slate-950`}
-                          >
-                            {game.name}
-                          </h3>
-                          <span
-                            className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] ${
-                              state === 'played'
-                                ? 'bg-green-100 text-green-700'
-                                : state === 'up-next'
-                                  ? 'bg-blue-100 text-blue-700'
-                                  : 'bg-slate-100 text-slate-500'
-                            }`}
-                          >
-                            {state === 'played'
-                              ? 'Played'
-                              : state === 'up-next'
-                                ? 'Up next'
-                                : 'Locked'}
-                          </span>
-                        </div>
-                        {state === 'played' && result && (
-                          <>
-                            <p className="mt-2 text-sm font-black text-slate-900">
-                              Got back to {stopForScore(result.score).title} ·{' '}
-                              {result.score.toLocaleString()}
-                            </p>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setPickerOpenGameId(
-                                  tablesOpen ? null : game.id
-                                )
-                              }
-                              aria-expanded={tablesOpen}
-                              className="mt-1.5 inline-block cursor-pointer text-xs font-black text-[#0072CE] hover:underline"
-                            >
-                              {tablesOpen
-                                ? 'Hide every answer'
-                                : 'See every answer'}
-                            </button>
-                            {tablesOpen && (
-                              <PromptAnswerTables
-                                items={game.promptIds.map((promptId) => {
-                                  const entry = result.log.find(
-                                    (e) => e.promptId === promptId
-                                  );
-                                  return {
-                                    prompt: promptById(promptId),
-                                    landedText: entry?.answer ?? null,
-                                    landedDepth: entry?.depth ?? 0,
-                                  };
-                                })}
-                              />
-                            )}
-                          </>
-                        )}
-                        {state === 'up-next' && (
-                          <button
-                            onClick={() => openGate(game.id)}
-                            className="mt-3 w-full cursor-pointer rounded-[13px] bg-[#0072CE] px-5 py-3 text-sm font-black text-white shadow-md transition-all hover:bg-blue-700 active:scale-95"
-                          >
-                            Play {game.name}
-                          </button>
-                        )}
-                        {state === 'locked' && (
-                          <p className="mt-1.5 text-xs font-bold text-slate-400">
-                            🔒 Finish {LORE_GAMES[gameIndex - 1].name} to
-                            unlock
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+                <span className="block">
+                  One trip through Weezer history.
+                </span>
+              </p>
             </div>
-
-            <button
-              onClick={() => setShowBoard(true)}
-              className="flex w-full items-center justify-between gap-3 bg-white border border-slate-200/90 hover:border-slate-300 rounded-3xl p-5 shadow-xs transition-all cursor-pointer text-left"
-            >
-              <span>
-                <span className="block text-base font-black tracking-tight text-slate-950">
-                  Leaderboard
-                </span>
-                <span className="block text-xs sm:text-sm font-medium text-slate-500 leading-relaxed">
-                  Worldwide and friends standings, game by game.
-                </span>
-              </span>
-              <span className="shrink-0 text-sm font-black text-[#0072CE]">
-                →
-              </span>
-            </button>
+            {pickerPlayedAny ? (
+              <>
+                {pickerJourneyCard}
+                {pickerRoundsCard}
+                {pickerHowToPlayCard}
+              </>
+            ) : (
+              <>
+                {pickerHowToPlayCard}
+                {pickerJourneyCard}
+                {pickerRoundsCard}
+              </>
+            )}
+            {pickerLeaderboardButton}
           </div>
         )}
 
@@ -2199,7 +2284,7 @@ export default function StepLore() {
               </p>
               <h2 className="text-4xl sm:text-5xl font-black tracking-tight leading-none">
                 {finalBand.title === 'The Shack'
-                  ? "You're back at the Shack."
+                  ? `${youreAtPhrase(finalBand.title)}.`
                   : `You got back to ${finalBand.title}.`}
               </h2>
               <p className="text-base sm:text-lg font-black">
@@ -2230,9 +2315,7 @@ export default function StepLore() {
                     Your standing
                   </p>
                   <p className="text-base sm:text-lg font-black leading-snug">
-                    {display.stop === 'The Shack'
-                      ? "You're back at the Shack"
-                      : `You're at ${display.stop}`}{' '}
+                    {youreAtPhrase(display.stop)}{' '}
                     — {display.depth.toLocaleString()} points across{' '}
                     {display.gamesPlayed} of 5 games.
                   </p>

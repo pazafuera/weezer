@@ -3,7 +3,11 @@
 import React, { useEffect, useState } from 'react';
 import { useWeezer, getProgressState, countBucketedSongs, countCategorizedSongs } from '../context/WeezerContext';
 import { BUCKET_CONFIG, FULL_SONG_POOL, BucketType, ALBUM_NAME_TO_ID } from '../data/constants';
-import { isLoreUnlocked, loreGateRemainingAlbums } from '../data/loreGame';
+import {
+  isLoreUnlocked,
+  loreGateRemainingAlbums,
+  youreAtPhrase,
+} from '../data/loreGame';
 import { fanhoodDisplay, readFanhood } from '../lib/fanhood';
 import type { FanhoodRecord } from '../lib/fanhood';
 import { AlbumArtwork } from './SharedUI';
@@ -422,7 +426,7 @@ export default function StepDashboard() {
             if (!display) {
               return 'Five games, seven prompts each — the rarer your answers, the further back you go.';
             }
-            return `You\u2019re at ${display.stop} — ${display.depth.toLocaleString()} points across ${display.gamesPlayed} of 5 games.`;
+            return `${youreAtPhrase(display.stop)} — ${display.depth.toLocaleString()} points across ${display.gamesPlayed} of 5 games.`;
           })()}
         </p>
         <div className="pt-0.5 flex items-center text-xs font-black text-[#0072CE] group-hover:underline">

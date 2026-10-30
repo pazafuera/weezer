@@ -48,6 +48,7 @@ import {
   LORE_GAMES,
   nextStopForTotal,
   stopForTotal,
+  youreAtPhrase,
 } from '../data/loreGame';
 import type { LoreGameId } from '../data/loreGame';
 
@@ -155,8 +156,8 @@ export function fanhoodStandingLine(
   if (!display) return null;
   const next = nextStopForTotal(display.depth);
   const standing = next
-    ? `You're at ${display.stop} — ${next.pointsTo.toLocaleString('en-US')} points from ${next.title}`
-    : "You're back at the Shack";
+    ? `${youreAtPhrase(display.stop)} — ${next.pointsTo.toLocaleString('en-US')} points from ${next.title}`
+    : youreAtPhrase(display.stop);
   const remaining = LORE_GAMES.length - display.gamesPlayed;
   if (remaining <= 0) return `${standing}. All five games in.`;
   const word = REMAINING_WORDS[remaining - 1] ?? String(remaining);

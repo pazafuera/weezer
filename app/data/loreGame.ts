@@ -129,6 +129,13 @@ export interface JourneyStop {
   /** The five-game total at which this stop is reached. */
   min: number;
   title: string;
+  /**
+   * How a standing sentence names being at this stop — the
+   * fragment after "You're" ("You're on an Island in the Sun",
+   * never "You're at Island in the Sun"). Per-stop because the
+   * blanket "at" is wrong for half the road (Mark, Oct 30, 2026).
+   */
+  phrase: string;
 }
 
 /**
@@ -141,12 +148,12 @@ export interface JourneyStop {
  * old top band split at 17,000 so the Garage gets its own floor.
  */
 export const TOTAL_STOPS: JourneyStop[] = [
-  { min: 0, title: "Arnold's Diner" },
-  { min: 2500, title: 'Island in the Sun' },
-  { min: 6000, title: 'Across the Sea' },
-  { min: 12500, title: 'La Brea Tar Pits' },
-  { min: 17000, title: 'The Garage' },
-  { min: 21000, title: 'The Shack' },
+  { min: 0, title: "Arnold's Diner", phrase: "at Arnold's Diner" },
+  { min: 2500, title: 'Island in the Sun', phrase: 'on an Island in the Sun' },
+  { min: 6000, title: 'Across the Sea', phrase: 'across the Sea' },
+  { min: 12500, title: 'La Brea Tar Pits', phrase: 'in the La Brea Tar Pits' },
+  { min: 17000, title: 'The Garage', phrase: 'in The Garage' },
+  { min: 21000, title: 'The Shack', phrase: 'back to The Shack' },
 ];
 
 /** The stop a five-game total has reached. */
@@ -158,8 +165,19 @@ export function stopForTotal(total: number): JourneyStop {
   return reached;
 }
 
+/**
+ * The standing sentence for a stop: "You're " + the stop's own
+ * fragment, so every surface says it the stop's way ("You're on
+ * an Island in the Sun", "You're across the Sea", "You're back
+ * to The Shack"). Unknown names fall back to the plain "at".
+ */
+export function youreAtPhrase(stopName: string): string {
+  const stop = TOTAL_STOPS.find((s) => s.title === stopName);
+  return stop ? `You're ${stop.phrase}` : `You're at ${stopName}`;
+}
+
 /** The next stop up the road and the points still needed to
- *  reach it — null once the total is back at the Shack. */
+ *  reach it — null once the total is back to the Shack. */
 export function nextStopForTotal(
   total: number
 ): { title: string; pointsTo: number } | null {

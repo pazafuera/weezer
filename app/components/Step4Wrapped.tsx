@@ -24,7 +24,7 @@ import {
   normalizeUserVector,
   scoreArchetypes,
 } from '../lib/archetypes';
-import { isLoreUnlocked } from '../data/loreGame';
+import { isLoreUnlocked, youreAtPhrase } from '../data/loreGame';
 import { fanhoodDisplay, useFanhood } from '../lib/fanhood';
 
 // Bucket scores for the Fan Club Tiers album derivation below
@@ -179,9 +179,7 @@ function FanhoodStop({
           Can You Get Back to the Shack?
         </p>
         <h3 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
-          {display.stop === 'The Shack'
-            ? "You're back at the Shack"
-            : `You're at ${display.stop}`}
+          {youreAtPhrase(display.stop)}
         </h3>
         <p className="mt-2 text-sm font-black text-[#7dd3fc] uppercase tracking-widest">
           {display.depth.toLocaleString()} points

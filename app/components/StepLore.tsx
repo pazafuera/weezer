@@ -1816,20 +1816,25 @@ export default function StepLore() {
             viewable from their row. */}
         {unlocked && !showBoard && phase === 'intro' && (
           <div className="w-full space-y-4 px-4 sm:px-6 pb-10">
-            {/* THE BANNER — the headline lives in the artwork now
-                (Mark, Oct 29, 2026: the text title felt squished;
-                candidate B — the long road down — with the shack
-                enlarged and the title baked in). The h1 stays,
-                visually hidden, so the heading never renders twice
-                but screen readers still get it. */}
+            {/* THE BANNER + HEADLINE — the banner is pure artwork
+                (Mark, Oct 29, 2026: candidate A — the poster shack
+                with the guitar — and no title baked into the art),
+                so the headline is page text again, visible below
+                the banner in the display font. The img is
+                decorative (alt="") so the title is announced once,
+                by the h1. */}
             <div className="pt-4 sm:pt-6">
-              <h1 className="sr-only">Can You Get Back to the Shack?</h1>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/images/shack-header.webp"
-                alt="Can You Get Back to the Shack?"
+                alt=""
                 className="w-full rounded-3xl shadow-md"
               />
+              <h1
+                className={`${displayFont.className} px-1 pt-4 text-[37px] leading-[1.08] text-slate-950`}
+              >
+                Can You Get Back to the Shack?
+              </h1>
             </div>
 
             {/* THE EXPLAINER — how it works, its own dark card

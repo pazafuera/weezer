@@ -2081,9 +2081,6 @@ export default function StepLore() {
                     >
                       {game.name}
                     </h2>
-                    <p className="mt-2 text-xs sm:text-sm font-medium leading-relaxed text-white/85">
-                      {game.promise}
-                    </p>
                   </div>
                   <div className="p-5">
                     <div className="divide-y divide-slate-100">
@@ -2194,9 +2191,6 @@ export default function StepLore() {
               </h2>
               <p className="text-base sm:text-lg font-black">
                 {total.toLocaleString()} points
-              </p>
-              <p className="text-xs sm:text-sm font-medium leading-relaxed opacity-80">
-                {finalBand.line}
               </p>
               {alreadyRecorded ? (
                 <p className="text-xs font-bold opacity-70">

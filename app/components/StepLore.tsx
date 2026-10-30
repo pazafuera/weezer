@@ -1807,12 +1807,13 @@ export default function StepLore() {
         )}
 
         {/* THE PICKER — unlocked, not playing (mock v3, Oct 28,
-            2026): the big display title, ONE combined block (how
-            it works + the ladder + the standing line), then the
-            five games as a single series — played in order, each
-            finish unlocking the next. Played games never reopen
-            for play (one-and-done); their "Every answer" tables
-            stay viewable from their row. */}
+            2026): the big display title, the explainer block, then
+            the levels block (the ladder + the standing line) as its
+            own card (split Oct 29, 2026), then the five games as a
+            single series — played in order, each finish unlocking
+            the next. Played games never reopen for play
+            (one-and-done); their "Every answer" tables stay
+            viewable from their row. */}
         {unlocked && !showBoard && phase === 'intro' && (
           <div className="w-full space-y-4 px-4 sm:px-6 pb-10">
             <h1
@@ -1821,13 +1822,10 @@ export default function StepLore() {
               Can You Get Back to the Shack?
             </h1>
 
-            {/* THE COMBINED BLOCK — the explainer, the route (the
-                one ladder: the six stops on the total scale) and
-                the player's standing in one dark container. It
-                renders in every fanhood state; the standing line
-                is simply absent until a first game is finished. */}
+            {/* THE EXPLAINER — how it works, its own dark card
+                (split from the levels block Oct 29, 2026). */}
             <div className="overflow-hidden rounded-3xl bg-slate-950 text-white shadow-md">
-              <div className="p-5 pb-1.5">
+              <div className="p-5">
                 <h2
                   className={`${displayFont.className} text-[21px] leading-none`}
                 >
@@ -1864,21 +1862,21 @@ export default function StepLore() {
                     </li>
                   ))}
                 </ol>
-                <p className="mt-3.5 text-xs font-semibold text-slate-400">
-                  Type your answers — spelling doesn&apos;t have to be
-                  perfect.
-                </p>
               </div>
-              <div className="border-t border-white/15 px-5 pt-3.5 pb-1">
+            </div>
+
+            {/* THE LEVELS — the route (the one ladder: the six stops
+                on the total scale) and the player's standing, its
+                own dark card below the explainer. It renders in
+                every fanhood state; the standing line is simply
+                absent until a first game is finished. */}
+            <div className="overflow-hidden rounded-3xl bg-slate-950 text-white shadow-md">
+              <div className="px-5 pt-4 pb-1">
                 <h3
                   className={`${displayFont.className} text-[16px] leading-none`}
                 >
-                  The way back
+                  How to Get Back
                 </h3>
-                <p className="mt-1.5 text-xs font-semibold leading-relaxed text-slate-400">
-                  Six stops between the hits and the beginning — each
-                  sits at the total beside it.
-                </p>
               </div>
               {TOTAL_STOPS.map((stop, i) => (
                 <div
@@ -1918,7 +1916,7 @@ export default function StepLore() {
               })()}
             </div>
 
-            {/* THE SERIES — one card, five rows on a numbered rail
+            {/* THE ROUNDS — one card, five rows on a numbered rail
                 that deepens game by game. Only the up-next row can
                 open the start gate; locked rows name the game in
                 front of them. */}
@@ -1927,7 +1925,7 @@ export default function StepLore() {
                 <h2
                   className={`${displayFont.className} text-[17px] leading-none text-slate-950`}
                 >
-                  The Series
+                  The Rounds
                 </h2>
                 <span className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-slate-400">
                   {fanhoodGamesPlayed(fanhood)} of 5 played

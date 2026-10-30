@@ -1901,9 +1901,6 @@ export default function StepLore() {
                       {totalStopThresholdLabel(i)}
                     </span>
                   </div>
-                  <p className="mt-1 text-xs font-medium leading-relaxed text-white/85">
-                    {DEPTH_BANDS[i].line}
-                  </p>
                 </div>
               ))}
               {(() => {
@@ -1987,9 +1984,6 @@ export default function StepLore() {
                                 : 'Locked'}
                           </span>
                         </div>
-                        <p className="mt-1 text-[13px] font-medium leading-relaxed text-slate-500">
-                          {game.promise}
-                        </p>
                         {state === 'played' && result && (
                           <>
                             <p className="mt-2 text-sm font-black text-slate-900">

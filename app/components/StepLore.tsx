@@ -22,7 +22,6 @@ import {
   openPromptAnswerTable,
   openPromptExtremes,
   promptById,
-  stopForScore,
   stopForTotal,
   tierForDepth,
   youreAtPhrase,
@@ -960,6 +959,14 @@ export default function StepLore() {
   // that gets recorded.
   const [activeGameId, setActiveGameId] = useState<LoreGameId | null>(null);
   const [alreadyRecorded, setAlreadyRecorded] = useState(false);
+  // The standing totals either side of the just-finished round,
+  // snapshotted at the commit point below: the results screen's
+  // ONE ladder reads the standing off these (before → after), so
+  // a round that carries the player into a new stop can say so.
+  const [resultStanding, setResultStanding] = useState<{
+    before: number;
+    after: number;
+  } | null>(null);
   // The leaderboard is a third view over the picker (Stage 3): the
   // picker's own button flips it, and the app menu asks for it via
   // the 'weezer:open-leaderboard' event / session flag below.
@@ -1453,6 +1460,10 @@ export default function StepLore() {
       deepest: runDeepest,
       log,
     });
+    setResultStanding({
+      before: fanhoodTotal(before),
+      after: fanhoodTotal(record),
+    });
     setFanhood(record);
     void syncFanhoodAfterRun(userId, record);
     // total, answers and run are final when the result phase opens.
@@ -1462,6 +1473,7 @@ export default function StepLore() {
   const startGame = (gameId: LoreGameId) => {
     setActiveGameId(gameId);
     setAlreadyRecorded(false);
+    setResultStanding(null);
     setRun(buildGameRun(gameId));
     setIndex(0);
     setInput('');
@@ -1531,15 +1543,33 @@ export default function StepLore() {
   const rarest = [...answers]
     .filter((a) => a.depthEarned > 0)
     .sort((a, b) => b.depthEarned - a.depthEarned)[0];
-  const finalBand = bandForTotal(total);
-  const finalBandIdx = DEPTH_BANDS.findIndex(
-    (b) => b.title === finalBand.title
-  );
   const currentBandIdx = DEPTH_BANDS.findIndex(
     (b) => b.title === currentBandTitle
   );
   const theme = CARD_THEMES[BAND_CARD_THEME[currentBandIdx]];
-  const finalTheme = CARD_THEMES[BAND_CARD_THEME[finalBandIdx]];
+  // The results screen reads ONE ladder (Nov 1, 2026): the round
+  // reports its points, and the standing — the total's stop,
+  // before vs after this round — is the only stop named. The
+  // banner art follows the standing stop's layer (TOTAL_STOPS and
+  // DEPTH_BANDS share their order). Before the commit snapshot
+  // lands, the after-total falls back to the pre-run record plus
+  // this round's score.
+  const resultAfterTotal =
+    resultStanding?.after ?? fanhoodTotal(fanhood) + total;
+  const resultBeforeTotal = resultStanding?.before ?? fanhoodTotal(fanhood);
+  const resultStop = stopForTotal(resultAfterTotal);
+  const resultStopBefore = stopForTotal(resultBeforeTotal);
+  const resultStopIdx = TOTAL_STOPS.findIndex(
+    (s) => s.title === resultStop.title
+  );
+  const resultCrossed =
+    resultStopIdx >
+    TOTAL_STOPS.findIndex((s) => s.title === resultStopBefore.title);
+  const resultNext = nextStopForTotal(resultAfterTotal);
+  const resultNextThreshold = resultNext
+    ? TOTAL_STOPS.find((s) => s.title === resultNext.title)?.min
+    : undefined;
+  const resultTheme = CARD_THEMES[BAND_CARD_THEME[resultStopIdx]];
 
   const itemPrompt = item ? item.prompt.prompt : '';
 
@@ -1957,7 +1987,7 @@ export default function StepLore() {
           {[
             {
               lead: 'In order.',
-              desc: 'Five games, 7 questions each. Finish one to unlock the next.',
+              desc: 'Five rounds, 7 questions each. Finish one to unlock the next.',
             },
             {
               lead: 'Rarer = more.',
@@ -1996,7 +2026,7 @@ export default function StepLore() {
         ref={deckRef}
         onScroll={handleDeckScroll}
         role="region"
-        aria-label="The Rounds — swipe to browse the five games"
+        aria-label="The Rounds — swipe to browse the five rounds"
         className="lore-deck-scroll mt-3 flex snap-x snap-mandatory items-start gap-2.5 overflow-x-auto px-[8%] pb-2 pt-1"
       >
         {LORE_GAMES.map((game, gameIndex) => {
@@ -2019,7 +2049,7 @@ export default function StepLore() {
             >
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs font-extrabold uppercase tracking-[0.07em] text-slate-500">
-                  Game {gameIndex + 1} of 5
+                  Round {gameIndex + 1} of 5
                 </span>
                 <span
                   className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-extrabold tracking-[0.05em] ${
@@ -2044,11 +2074,10 @@ export default function StepLore() {
                   state === 'locked' ? 'text-slate-500' : 'text-slate-950'
                 }`}
               >
-                {game.name}
+                Round {gameIndex + 1}
               </h3>
               {state === 'played' && result && (
                 <p className="mt-1.5 text-[13.5px] font-medium leading-relaxed text-slate-500">
-                  Got back to {stopForScore(result.score).title} ·{' '}
                   {result.score.toLocaleString()} points
                 </p>
               )}
@@ -2088,12 +2117,12 @@ export default function StepLore() {
                   onClick={() => openGate(game.id)}
                   className="mt-3 w-full cursor-pointer rounded-xl bg-[#0072CE] px-5 py-3 text-[15px] font-black text-white shadow-md transition-all hover:bg-blue-700 active:scale-95"
                 >
-                  Play {game.name}
+                  Play Round {gameIndex + 1}
                 </button>
               )}
               {state === 'locked' && (
                 <p className="text-[13.5px] font-bold text-slate-400">
-                  🔒 Finish {LORE_GAMES[gameIndex - 1].name} to unlock.
+                  🔒 Finish Round {gameIndex} to unlock.
                 </p>
               )}
             </div>
@@ -2114,7 +2143,7 @@ export default function StepLore() {
         ))}
       </div>
       <p className="mt-1.5 text-center text-[11.5px] font-bold uppercase tracking-[0.03em] text-slate-400">
-        {`Game ${deckIndex + 1} of 5 · Swipe to browse`}
+        {`Round ${deckIndex + 1} of 5 · Swipe to browse`}
       </p>
     </div>
   );
@@ -2187,7 +2216,7 @@ export default function StepLore() {
               <span className="text-sm">🔒</span>
             </div>
             <p className="text-xs sm:text-sm font-medium text-slate-500 leading-relaxed">
-              Five games, seven prompts each, twenty-five seconds a prompt.
+              Five rounds, seven prompts each, twenty-five seconds a prompt.
               The rarer your answer, the further back it takes you.
             </p>
             <p className="text-xs sm:text-sm font-medium text-slate-500 leading-relaxed">
@@ -2234,7 +2263,7 @@ export default function StepLore() {
               </h1>
               <p className="mt-3 text-sm font-semibold leading-snug text-slate-500">
                 <span className="block">
-                  Five games. Thirty-five questions.
+                  Five rounds. Thirty-five questions.
                 </span>
                 <span className="block">
                   One trip through Weezer history.
@@ -2368,32 +2397,29 @@ export default function StepLore() {
         {unlocked && !showBoard && phase === 'result' && (
           <>
           <div className="w-full space-y-6 px-4 sm:px-6 pb-10">
-            {/* THE RESULT — the results lead with how far back THIS
-                game got (its stop, from the run bands), in the one
-                ladder's words; the standing strip under it carries
-                the total's stop separately. The banner keeps the
-                final layer's art. */}
+            {/* THE RESULT — one ladder (Nov 1, 2026): the round
+                reports its own points and nothing else; the only
+                stop named on this screen is the STANDING's, in
+                the standing strip under the banner. The banner
+                keeps the standing stop's layer art. */}
             <div
-              className={`relative overflow-hidden rounded-3xl p-6 shadow-md space-y-3 ${BAND_STAGE[finalBandIdx].layer}`}
-              style={BAND_STAGE[finalBandIdx].textureStyle}
+              className={`relative overflow-hidden rounded-3xl p-6 shadow-md space-y-3 ${BAND_STAGE[resultStopIdx].layer}`}
+              style={BAND_STAGE[resultStopIdx].textureStyle}
             >
               <p className="text-[11px] font-black uppercase tracking-wider opacity-70">
                 {activeGameId
-                  ? `Game ${LORE_GAMES.findIndex((g) => g.id === activeGameId) + 1} of 5 · ${loreGameById(activeGameId).name} — finished`
-                  : 'Finished'}
+                  ? `ROUND ${LORE_GAMES.findIndex((g) => g.id === activeGameId) + 1} OF 5 — FINISHED`
+                  : 'ROUND FINISHED'}
               </p>
               <h2 className="text-4xl sm:text-5xl font-black tracking-tight leading-none">
-                {finalBand.title === 'The Shack'
-                  ? `${youreAtPhrase(finalBand.title)}.`
-                  : `You got back to ${finalBand.title}.`}
+                {activeGameId
+                  ? `Round ${LORE_GAMES.findIndex((g) => g.id === activeGameId) + 1}: ${total.toLocaleString()} points.`
+                  : `${total.toLocaleString()} points.`}
               </h2>
-              <p className="text-base sm:text-lg font-black">
-                {total.toLocaleString()} points
-              </p>
               {alreadyRecorded ? (
                 <p className="text-xs font-bold opacity-70">
-                  This game was already on your card — a finished
-                  game&apos;s score never changes, so this run added
+                  This round was already on your card — a finished
+                  round&apos;s score never changes, so this run added
                   nothing.
                 </p>
               ) : (
@@ -2403,41 +2429,31 @@ export default function StepLore() {
               )}
             </div>
 
-            {/* THE STANDING STRIP — the compound total's stop, on
-                the same ladder as the result above it. The
-                distance sentence names its scale ("for your
-                standing") and the stop's total-scale threshold:
-                a game's result stop and the standing's next stop
-                can share a name, and the bare "{n} points from
-                {stop}" read as a contradiction when they did
+            {/* THE STANDING STRIP — the compound total's stop, the
+                one ladder's only stop on this screen. A round that
+                carried the player into a new stop says "You made
+                it…"; otherwise it restates where the standing sits.
+                The distance sentence names its scale ("for your
+                standing") and the stop's total-scale threshold
                 (Oct 31, 2026). */}
-            {(() => {
-              const display = fanhoodDisplay(fanhood);
-              if (!display) return null;
-              const next = nextStopForTotal(display.depth);
-              const nextThreshold = next
-                ? TOTAL_STOPS.find((s) => s.title === next.title)?.min
-                : undefined;
-              return (
-                <div className="bg-slate-950 text-white rounded-3xl p-5 shadow-md space-y-1">
-                  <p className="text-[10px] font-black uppercase tracking-[0.14em] text-white/60">
-                    Your standing
-                  </p>
-                  <p className="text-base sm:text-lg font-black leading-snug">
-                    {youreAtPhrase(display.stop)}{' '}
-                    — {display.depth.toLocaleString()} points across{' '}
-                    {display.gamesPlayed} of 5 games.
-                  </p>
-                  <p className="text-xs font-bold text-white/60">
-                    {!next
-                      ? 'There is nowhere further back to go.'
-                      : display.gamesPlayed >= 5
-                        ? 'All five games in.'
-                        : `Next stop for your standing: ${next.title} — ${nextThreshold?.toLocaleString()} total, ${next.pointsTo.toLocaleString()} to go.`}
-                  </p>
-                </div>
-              );
-            })()}
+            <div className="bg-slate-950 text-white rounded-3xl p-5 shadow-md space-y-1">
+              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-white/60">
+                Your standing
+              </p>
+              <p className="text-base sm:text-lg font-black leading-snug">
+                {resultCrossed
+                  ? `You made it ${resultStop.phrase}.`
+                  : `${youreAtPhrase(resultStop.title)}.`}
+              </p>
+              <p className="text-xs font-bold text-white/60">
+                {resultAfterTotal.toLocaleString()} total points.
+              </p>
+              {resultNext && (
+                <p className="text-xs font-bold text-white/60">
+                  {`Next stop for your standing: ${resultNext.title} — ${resultNextThreshold?.toLocaleString()} total, ${resultNext.pointsTo.toLocaleString()} to go.`}
+                </p>
+              )}
+            </div>
 
             <DescentStage
               total={total}
@@ -2485,9 +2501,9 @@ export default function StepLore() {
               <div className="flex flex-col sm:flex-row gap-2 pt-1">
                 <button
                   onClick={backToGames}
-                  className={`w-full sm:w-auto font-black text-xs sm:text-sm px-5 py-3 rounded-2xl transition-all active:scale-95 cursor-pointer ${finalTheme.dig}`}
+                  className={`w-full sm:w-auto font-black text-xs sm:text-sm px-5 py-3 rounded-2xl transition-all active:scale-95 cursor-pointer ${resultTheme.dig}`}
                 >
-                  Back to the games
+                  Back to the rounds
                 </button>
                 <button
                   onClick={() => navigateTo('dashboard')}

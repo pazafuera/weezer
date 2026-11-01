@@ -424,9 +424,9 @@ export default function StepDashboard() {
           {(() => {
             const display = fanhoodDisplay(fanhood);
             if (!display) {
-              return 'Five games, seven prompts each — the rarer your answers, the further back you go.';
+              return 'Five rounds, seven prompts each — the rarer your answers, the further back you go.';
             }
-            return `${youreAtPhrase(display.stop)} — ${display.depth.toLocaleString()} points across ${display.gamesPlayed} of 5 games.`;
+            return `${youreAtPhrase(display.stop)} — ${display.depth.toLocaleString()} points across ${display.gamesPlayed} of 5 rounds.`;
           })()}
         </p>
         <div className="pt-0.5 flex items-center text-xs font-black text-[#0072CE] group-hover:underline">

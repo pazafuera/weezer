@@ -82,20 +82,20 @@ export default function FanhoodLeaderboard({
     return rankLeaderboard(scoped, scope);
   }, [entries, tab, userId, friendUsernames, scope]);
 
-  const scopeGame =
-    scope === 'all' ? null : LORE_GAMES.find((g) => g.id === scope);
+  const scopeIndex =
+    scope === 'all' ? -1 : LORE_GAMES.findIndex((g) => g.id === scope);
 
   const emptyMessage = (): string => {
     if (loadFailed) {
-      return 'Finished games will appear here as soon as the community table updates.';
+      return 'Finished rounds will appear here as soon as the community table updates.';
     }
     if (tab === 'friends') {
-      return 'None of your friends have finished a game yet — the board fills in as they play.';
+      return 'None of your friends have finished a round yet — the board fills in as they play.';
     }
-    if (scopeGame) {
-      return `Nobody has finished ${scopeGame.name} yet.`;
+    if (scopeIndex >= 0) {
+      return `Nobody has finished Round ${scopeIndex + 1} yet.`;
     }
-    return 'No finished games yet — the first name on this board is still up for grabs.';
+    return 'No finished rounds yet — the first name on this board is still up for grabs.';
   };
 
   return (
@@ -108,7 +108,7 @@ export default function FanhoodLeaderboard({
           onClick={onBack}
           className="shrink-0 text-xs font-black text-[#0072CE] hover:underline cursor-pointer"
         >
-          ← Back to the games
+          ← Back to the rounds
         </button>
       </div>
 
@@ -159,9 +159,9 @@ export default function FanhoodLeaderboard({
                   : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
               }`}
             >
-              All games
+              All rounds
             </button>
-            {LORE_GAMES.map((game) => (
+            {LORE_GAMES.map((game, i) => (
               <button
                 key={game.id}
                 onClick={() => setScope(game.id as LoreGameId)}
@@ -171,7 +171,7 @@ export default function FanhoodLeaderboard({
                     : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
                 }`}
               >
-                {game.name}
+                Round {i + 1}
               </button>
             ))}
           </div>

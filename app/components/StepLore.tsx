@@ -417,6 +417,23 @@ interface BurstInfo {
 }
 
 /**
+ * The layer watermark's font size, fitted to the layer's name
+ * (Oct 31, 2026): at a flat 54–64px the long names clipped
+ * mid-word at the column edge ("LA BREA TAR P…"). Size from the
+ * name's length so the whole name always fits a phone-width
+ * column (~335px of glyphs at ~0.58em average for the black
+ * uppercase face), capped at the old 64px presence size. On
+ * wider columns the long names simply sit a little smaller —
+ * the trade for never clipping.
+ */
+function watermarkFontPx(title: string): number {
+  return Math.max(
+    26,
+    Math.min(64, Math.floor(335 / (title.length * 0.58)))
+  );
+}
+
+/**
  * The journey cross-section as a full-screen stage: a tall column of
  * the six layers inside a clipped window. The player marker lives
  * IN the column at the Y its total depth maps to, with a dashed
@@ -600,8 +617,12 @@ function DescentStage({
               )}
               {/* The layer's name as a large watermark — presence
                   (Oct 27, 2026: the layers read "small and
-                  insignificant" as flat bands). */}
-              <div className="pointer-events-none absolute inset-x-3 top-1/2 -translate-y-1/2 whitespace-nowrap text-[54px] font-black uppercase leading-none tracking-tight opacity-[0.09] sm:text-[64px]">
+                  insignificant" as flat bands). The size fits the
+                  name (Oct 31, 2026) — see watermarkFontPx. */}
+              <div
+                className="pointer-events-none absolute inset-x-3 top-1/2 -translate-y-1/2 whitespace-nowrap font-black uppercase leading-none tracking-tight opacity-[0.09]"
+                style={{ fontSize: watermarkFontPx(band.title) }}
+              >
                 {band.title}
               </div>
               <div className="absolute inset-x-3.5 top-2.5 flex items-start justify-between gap-2">
@@ -2133,7 +2154,7 @@ export default function StepLore() {
         {!(unlocked && !showBoard && phase === 'intro') && (
         <div className="flex items-center justify-between gap-3 px-4 sm:px-6 pt-3 pb-2">
           <h1 className="truncate text-sm sm:text-base font-black tracking-tight text-slate-950">
-            Can You Get Back to the Shack?
+            Back to the Shack
           </h1>
           {(() => {
             const display = fanhoodDisplay(fanhood);
@@ -2412,7 +2433,7 @@ export default function StepLore() {
                       ? 'There is nowhere further back to go.'
                       : display.gamesPlayed >= 5
                         ? 'All five games in.'
-                        : `${next.pointsTo.toLocaleString()} points from ${next.title}.`}
+                        : `Next stop for your standing: ${next.title} — ${nextThreshold?.toLocaleString()} total, ${next.pointsTo.toLocaleString()} to go.`}
                   </p>
                 </div>
               );

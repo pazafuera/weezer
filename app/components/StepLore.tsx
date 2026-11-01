@@ -56,29 +56,21 @@ import type {
 const QUESTION_SECONDS = 25;
 const PREVIEW_SECONDS = 3;
 
-/** The start gate's four rules (mock v2, generic per Mark: no
- *  prompt teasers — a one-and-done game's card is not a study
- *  guide). Lead-ins render in black, the rest in body gray. */
-const GATE_RULES: { icon: string; lead: string; rest: string }[] = [
-  {
-    icon: '❓',
-    lead: 'Seven prompts.',
-    rest: "Each one different — you won't see them coming, and that's the point.",
-  },
+/** The start gate's three rules (Nov 1, 2026 rebuild: stakes
+ *  first, mechanics concrete, lock-in as commitment — the old
+ *  variety rule and four-rule set are gone). Verbatim copy. */
+const GATE_RULES: { icon: string; text: string }[] = [
   {
     icon: '⏱️',
-    lead: 'Twenty-five seconds each.',
-    rest: 'A wrong guess just wiggles — keep guessing until you land an answer or time runs out.',
+    text: '25 seconds a question. Wrong guesses cost nothing — keep guessing.',
   },
   {
     icon: '⬇️',
-    lead: 'Rare answers take you further back.',
-    rest: 'The obvious answer scores a little. The one nobody else knows scores a lot.',
+    text: 'Rarer answers move you further. The obvious ones barely move you.',
   },
   {
     icon: '🔒',
-    lead: 'This game counts once.',
-    rest: 'Your score locks in when it ends. No replays — but nothing starts until you say go.',
+    text: 'Your score locks in when the round ends. One run — make it count.',
   },
 ];
 
@@ -2158,42 +2150,69 @@ export default function StepLore() {
               const game = loreGameById(gateGameId);
               const gameNumber =
                 LORE_GAMES.findIndex((g) => g.id === game.id) + 1;
+              const roundsAfter = LORE_GAMES.length - gameNumber;
               return (
                 <div className="overflow-hidden rounded-3xl border border-slate-200/90 bg-white shadow-xs">
                   <div className="bg-[#1e3a5f] p-5 text-white">
                     <p className="text-[10px] font-black uppercase tracking-[0.14em] text-white/60">
-                      Game {gameNumber} of 5
+                      Round {gameNumber} of 5
                     </p>
                     <h2
                       className={`${displayFont.className} mt-1.5 text-[27px] leading-none`}
                     >
-                      {game.name}
+                      Round {gameNumber}
                     </h2>
+                    <p className="mt-2 text-sm font-semibold leading-snug text-white/75">
+                      Every point moves you closer to the Shack.
+                    </p>
                   </div>
                   <div className="p-5">
                     <div className="divide-y divide-slate-100">
                       {GATE_RULES.map((rule) => (
                         <div
-                          key={rule.lead}
+                          key={rule.text}
                           className="flex gap-3 py-2.5 first:pt-0 last:pb-0"
                         >
                           <span aria-hidden className="text-base leading-snug">
                             {rule.icon}
                           </span>
                           <p className="text-xs sm:text-sm font-medium leading-relaxed text-slate-600">
-                            <strong className="font-black text-slate-950">
-                              {rule.lead}
-                            </strong>{' '}
-                            {rule.rest}
+                            {rule.text}
                           </p>
                         </div>
                       ))}
+                    </div>
+                    <div className="mt-4">
+                      <div className="flex gap-1.5" aria-hidden>
+                        {LORE_GAMES.map((g) => {
+                          const done = !!fanhood?.games[g.id];
+                          const current = g.id === gateGameId;
+                          return (
+                            <span
+                              key={g.id}
+                              className={`h-1.5 flex-1 rounded-full ${
+                                current
+                                  ? 'bg-[#0072CE]'
+                                  : done
+                                    ? 'bg-slate-900'
+                                    : 'bg-slate-200'
+                              }`}
+                            />
+                          );
+                        })}
+                      </div>
+                      {roundsAfter > 0 && (
+                        <p className="mt-2 text-[11px] font-bold text-slate-400">
+                          {roundsAfter} round
+                          {roundsAfter === 1 ? '' : 's'} after this one
+                        </p>
+                      )}
                     </div>
                     <button
                       onClick={startGatedGame}
                       className="mt-4 w-full bg-[#0072CE] hover:bg-blue-700 active:scale-95 text-white font-black text-sm px-5 py-3.5 rounded-2xl transition-all shadow-md cursor-pointer"
                     >
-                      Start {game.name}
+                      Start Round {gameNumber}
                     </button>
                     <button
                       onClick={leaveGate}

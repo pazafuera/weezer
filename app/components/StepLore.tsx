@@ -946,6 +946,60 @@ export default function StepLore() {
   // Which played game's "Every answer" tables are open in the picker.
   const [pickerOpenGameId, setPickerOpenGameId] =
     useState<LoreGameId | null>(null);
+  // The Rounds swipe deck (mock v6, Oct 31, 2026): the deck opens
+  // centered on the up-next game, and the dots + caption under it
+  // track whichever card sits nearest the center as the player
+  // swipes.
+  const deckRef = useRef<HTMLDivElement>(null);
+  const deckCardRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const deckScrollRaf = useRef(0);
+  const [deckIndex, setDeckIndex] = useState(0);
+  const deckUpNextIndex = (() => {
+    const idx = LORE_GAMES.findIndex(
+      (g) => seriesRowState(fanhood, g.id) === 'up-next'
+    );
+    return idx >= 0 ? idx : LORE_GAMES.length - 1;
+  })();
+
+  // Center the up-next card whenever the picker comes into view
+  // (first mount, and returning from a run or the gate — the
+  // record has moved on by then, so the centering follows it).
+  useEffect(() => {
+    if (phase !== 'intro' || !unlocked || showBoard) return;
+    const deck = deckRef.current;
+    const card = deckCardRefs.current[deckUpNextIndex];
+    if (!deck || !card) return;
+    const deckRect = deck.getBoundingClientRect();
+    const cardRect = card.getBoundingClientRect();
+    deck.scrollLeft +=
+      cardRect.left +
+      cardRect.width / 2 -
+      (deckRect.left + deckRect.width / 2);
+    setDeckIndex(deckUpNextIndex);
+  }, [phase, unlocked, showBoard, deckUpNextIndex]);
+
+  const handleDeckScroll = () => {
+    if (deckScrollRaf.current) return;
+    deckScrollRaf.current = requestAnimationFrame(() => {
+      deckScrollRaf.current = 0;
+      const deck = deckRef.current;
+      if (!deck) return;
+      const deckRect = deck.getBoundingClientRect();
+      const center = deckRect.left + deckRect.width / 2;
+      let best = 0;
+      let bestDist = Infinity;
+      deckCardRefs.current.forEach((card, i) => {
+        if (!card) return;
+        const rect = card.getBoundingClientRect();
+        const dist = Math.abs(rect.left + rect.width / 2 - center);
+        if (dist < bestDist) {
+          bestDist = dist;
+          best = i;
+        }
+      });
+      setDeckIndex((prev) => (prev === best ? prev : best));
+    });
+  };
   // The start gate's game (phase 'ready'): Play selects it, Start
   // begins its run, Not now returns to the picker untouched.
   const [gateGameId, setGateGameId] = useState<LoreGameId | null>(null);
@@ -1721,13 +1775,15 @@ export default function StepLore() {
     </div>
   );
 
-  /* THE PICKER BLOCKS (mock v5, Oct 30, 2026) — defined once
-     here and ordered by state in the intro below. The journey
-     card is the old levels card and the standing line merged
-     into one route map (one ladder, no redundancy); How to Play
-     is the old explainer compressed to three text-only tiles;
-     the rounds rows are tinted by state; the leaderboard entry
-     carries its new title. */
+  /* THE PICKER BLOCKS (mock v5, Oct 30, 2026; rounds + How to
+     Play revised to mock v6, Oct 31, 2026) — defined once here
+     and ordered by state in the intro below. The journey card
+     is the old levels card and the standing line merged into
+     one route map (one ladder, no redundancy); How to Play is
+     the old explainer compressed to three slim text rows; the
+     rounds are a swipe deck of state-tinted cards (v6: the
+     vertical stack of rows read as a wall of text); the
+     leaderboard entry carries its new title. */
   const pickerPlayedAny = fanhoodGamesPlayed(fanhood) > 0;
   const journeyTotal = fanhoodTotal(fanhood);
   const journeyStop = stopForTotal(journeyTotal);
@@ -1860,7 +1916,7 @@ export default function StepLore() {
                 <span
                   className={`${status === 'next' ? '' : 'ml-auto'} shrink-0 text-[13px] font-bold text-slate-400`}
                 >
-                  {stop.min.toLocaleString('en-US')}
+                  {i === 0 ? 'START' : stop.min.toLocaleString('en-US')}
                 </span>
               </div>
             );
@@ -1876,30 +1932,27 @@ export default function StepLore() {
         <h2 className="text-[17px] font-extrabold leading-none">
           How to Play
         </h2>
-        <div className="mt-3.5 flex gap-2.5">
+        <div className="mt-1.5 divide-y divide-slate-800">
           {[
             {
-              title: 'Five games, in order',
-              sub: 'Each finish unlocks the next. 7 questions a game.',
+              lead: 'In order.',
+              desc: 'Five games, 7 questions each. Finish one to unlock the next.',
             },
             {
-              title: 'Rarer answers, more points',
-              sub: 'The obvious ones keep you near the hits.',
+              lead: 'Rarer = more.',
+              desc: "Deep cuts score big. The hits won't get you to the Shack.",
             },
             {
-              title: 'One way back',
-              sub: 'Scores lock in. No replays.',
+              lead: 'One way back.',
+              desc: 'Scores lock in. No replays.',
             },
-          ].map((tile) => (
-            <div
-              key={tile.title}
-              className="flex-1 rounded-2xl border border-slate-800 bg-slate-900 p-3"
-            >
-              <p className="text-[13px] font-extrabold leading-snug text-white">
-                {tile.title}
+          ].map((row) => (
+            <div key={row.lead} className="flex gap-2.5 py-[9px]">
+              <p className="whitespace-nowrap text-sm font-extrabold text-white">
+                {row.lead}
               </p>
-              <p className="mt-1 text-[11px] font-medium leading-snug text-slate-400">
-                {tile.sub}
+              <p className="text-[13px] font-medium leading-relaxed text-slate-400">
+                {row.desc}
               </p>
             </div>
           ))}
@@ -1908,17 +1961,23 @@ export default function StepLore() {
     </div>
   );
 
-  const pickerRoundsCard = (
-    <div className="overflow-hidden rounded-3xl border border-slate-200/90 bg-white shadow-xs">
-      <div className="flex items-baseline justify-between gap-3 px-5 pt-4">
+  const pickerRoundsSection = (
+    <div>
+      <div className="flex items-baseline justify-between gap-3 px-1">
         <h2 className="text-[17px] font-extrabold leading-none text-slate-950">
           The Rounds
         </h2>
-        <span className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-slate-400">
+        <span className="text-xs font-bold text-slate-400">
           {fanhoodGamesPlayed(fanhood)} of 5 played
         </span>
       </div>
-      <div className="space-y-2.5 p-4">
+      <div
+        ref={deckRef}
+        onScroll={handleDeckScroll}
+        role="region"
+        aria-label="The Rounds — swipe to browse the five games"
+        className="lore-deck-scroll mt-3 flex snap-x snap-mandatory items-start gap-2.5 overflow-x-auto px-[8%] pb-2 pt-1"
+      >
         {LORE_GAMES.map((game, gameIndex) => {
           const result = fanhood?.games[game.id];
           const state = seriesRowState(fanhood, game.id);
@@ -1926,97 +1985,116 @@ export default function StepLore() {
           return (
             <div
               key={game.id}
-              className={`flex gap-3 rounded-2xl border p-3.5 ${
+              ref={(el) => {
+                deckCardRefs.current[gameIndex] = el;
+              }}
+              className={`flex min-h-[196px] flex-[0_0_84%] snap-center flex-col rounded-[20px] border p-[18px] ${
                 state === 'played'
                   ? 'border-green-200 bg-green-50'
                   : state === 'up-next'
-                    ? 'border-blue-200 bg-blue-50'
-                    : 'border-slate-200 opacity-75'
+                    ? 'border-blue-300 bg-blue-50 shadow-[0_6px_18px_rgba(0,114,206,0.16)]'
+                    : 'border-slate-200 bg-slate-50'
               }`}
             >
-              <span
-                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-extrabold text-white ${
-                  state === 'played' ? 'bg-green-600' : 'bg-slate-950'
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-extrabold uppercase tracking-[0.07em] text-slate-500">
+                  Game {gameIndex + 1} of 5
+                </span>
+                <span
+                  className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-extrabold tracking-[0.05em] ${
+                    state === 'played'
+                      ? 'bg-green-600 text-white'
+                      : state === 'up-next'
+                        ? 'bg-[#0072CE] text-white'
+                        : 'bg-slate-200 text-slate-500'
+                  }`}
+                >
+                  {state === 'played'
+                    ? 'ROUND COMPLETE'
+                    : state === 'up-next'
+                      ? pickerPlayedAny
+                        ? 'UP NEXT'
+                        : 'START HERE'
+                      : 'LOCKED'}
+                </span>
+              </div>
+              <h3
+                className={`${displayFont.className} mt-2.5 text-[27px] leading-[1.12] ${
+                  state === 'locked' ? 'text-slate-500' : 'text-slate-950'
                 }`}
               >
-                {state === 'played' ? '✓' : gameIndex + 1}
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
-                  <h3 className="text-[15px] font-extrabold leading-tight text-slate-950">
-                    {game.name}
-                  </h3>
-                  <span
-                    className={`shrink-0 rounded-full px-2 py-[3px] text-[10px] font-extrabold tracking-[0.05em] ${
-                      state === 'played'
-                        ? 'bg-green-600 text-white'
-                        : state === 'up-next'
-                          ? 'bg-[#0072CE] text-white'
-                          : 'bg-slate-200 text-slate-500'
-                    }`}
-                  >
-                    {state === 'played'
-                      ? 'ROUND COMPLETE'
-                      : state === 'up-next'
-                        ? pickerPlayedAny
-                          ? 'UP NEXT'
-                          : 'START HERE'
-                        : 'LOCKED'}
-                  </span>
-                </div>
-                {state === 'played' && result && (
-                  <>
-                    <p className="mt-1.5 text-xs font-medium text-slate-500">
-                      Got back to {stopForScore(result.score).title} ·{' '}
-                      {result.score.toLocaleString()} points
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setPickerOpenGameId(tablesOpen ? null : game.id)
-                      }
-                      aria-expanded={tablesOpen}
-                      className="mt-1.5 inline-block cursor-pointer text-xs font-black text-[#0072CE] hover:underline"
-                    >
-                      {tablesOpen
-                        ? 'Hide every answer'
-                        : 'See every answer'}
-                    </button>
-                    {tablesOpen && (
-                      <PromptAnswerTables
-                        items={game.promptIds.map((promptId) => {
-                          const entry = result.log.find(
-                            (e) => e.promptId === promptId
-                          );
-                          return {
-                            prompt: promptById(promptId),
-                            landedText: entry?.answer ?? null,
-                            landedDepth: entry?.depth ?? 0,
-                          };
-                        })}
-                      />
-                    )}
-                  </>
-                )}
-                {state === 'up-next' && (
+                {game.name}
+              </h3>
+              {state === 'played' && result && (
+                <p className="mt-1.5 text-[13.5px] font-medium leading-relaxed text-slate-500">
+                  Got back to {stopForScore(result.score).title} ·{' '}
+                  {result.score.toLocaleString()} points
+                </p>
+              )}
+              <div className="flex-1" />
+              {state === 'played' && result && (
+                <>
                   <button
-                    onClick={() => openGate(game.id)}
-                    className="mt-3 w-full cursor-pointer rounded-[13px] bg-[#0072CE] px-5 py-3 text-sm font-black text-white shadow-md transition-all hover:bg-blue-700 active:scale-95"
+                    type="button"
+                    onClick={() =>
+                      setPickerOpenGameId(tablesOpen ? null : game.id)
+                    }
+                    aria-expanded={tablesOpen}
+                    className="mt-3 inline-block cursor-pointer self-start text-[13.5px] font-black text-[#0072CE] hover:underline"
                   >
-                    Play {game.name}
+                    {tablesOpen
+                      ? 'Hide every answer'
+                      : 'See every answer'}
                   </button>
-                )}
-                {state === 'locked' && (
-                  <p className="mt-1.5 text-xs font-bold text-slate-400">
-                    🔒 Your next stop is waiting. Finish{' '}
-                    {LORE_GAMES[gameIndex - 1].name} to unlock.
-                  </p>
-                )}
-              </div>
+                  {tablesOpen && (
+                    <PromptAnswerTables
+                      items={game.promptIds.map((promptId) => {
+                        const entry = result.log.find(
+                          (e) => e.promptId === promptId
+                        );
+                        return {
+                          prompt: promptById(promptId),
+                          landedText: entry?.answer ?? null,
+                          landedDepth: entry?.depth ?? 0,
+                        };
+                      })}
+                    />
+                  )}
+                </>
+              )}
+              {state === 'up-next' && (
+                <button
+                  onClick={() => openGate(game.id)}
+                  className="mt-3 w-full cursor-pointer rounded-xl bg-[#0072CE] px-5 py-3 text-[15px] font-black text-white shadow-md transition-all hover:bg-blue-700 active:scale-95"
+                >
+                  Play {game.name}
+                </button>
+              )}
+              {state === 'locked' && (
+                <p className="text-[13.5px] font-bold text-slate-400">
+                  🔒 Finish {LORE_GAMES[gameIndex - 1].name} to unlock.
+                </p>
+              )}
             </div>
           );
         })}
       </div>
+      <div
+        aria-hidden
+        className="mt-1 flex items-center justify-center gap-1.5"
+      >
+        {LORE_GAMES.map((game, i) => (
+          <span
+            key={game.id}
+            className={`h-[7px] rounded-full transition-all ${
+              i === deckIndex ? 'w-5 bg-[#0072CE]' : 'w-[7px] bg-slate-300'
+            }`}
+          />
+        ))}
+      </div>
+      <p className="mt-1.5 text-center text-[11.5px] font-bold uppercase tracking-[0.03em] text-slate-400">
+        {`Game ${deckIndex + 1} of 5 · Swipe to browse`}
+      </p>
     </div>
   );
 
@@ -2112,11 +2190,12 @@ export default function StepLore() {
         )}
 
         {/* THE PICKER — unlocked, not playing (mock v5, Oct 30,
-            2026): no banner — the headline is the header now,
-            centered and two-tier. The journey card and the How
-            to Play tiles swap order by state: a player with a
-            finished game meets their journey first; a new player
-            meets the rules first. The Rounds and the leaderboard
+            2026; rounds deck + How to Play rows, mock v6, Oct 31):
+            no banner — the headline is the header now, centered
+            and two-tier. The journey card and the How to Play
+            rows swap order by state: a player with a finished
+            game meets their journey first; a new player meets
+            the rules first. The Rounds deck and the leaderboard
             entry follow in both states. */}
         {unlocked && !showBoard && phase === 'intro' && (
           <div className="w-full space-y-4 px-4 pb-10 sm:px-6">
@@ -2144,14 +2223,14 @@ export default function StepLore() {
             {pickerPlayedAny ? (
               <>
                 {pickerJourneyCard}
-                {pickerRoundsCard}
+                {pickerRoundsSection}
                 {pickerHowToPlayCard}
               </>
             ) : (
               <>
                 {pickerHowToPlayCard}
                 {pickerJourneyCard}
-                {pickerRoundsCard}
+                {pickerRoundsSection}
               </>
             )}
             {pickerLeaderboardButton}
@@ -2304,11 +2383,20 @@ export default function StepLore() {
             </div>
 
             {/* THE STANDING STRIP — the compound total's stop, on
-                the same ladder as the result above it. */}
+                the same ladder as the result above it. The
+                distance sentence names its scale ("for your
+                standing") and the stop's total-scale threshold:
+                a game's result stop and the standing's next stop
+                can share a name, and the bare "{n} points from
+                {stop}" read as a contradiction when they did
+                (Oct 31, 2026). */}
             {(() => {
               const display = fanhoodDisplay(fanhood);
               if (!display) return null;
               const next = nextStopForTotal(display.depth);
+              const nextThreshold = next
+                ? TOTAL_STOPS.find((s) => s.title === next.title)?.min
+                : undefined;
               return (
                 <div className="bg-slate-950 text-white rounded-3xl p-5 shadow-md space-y-1">
                   <p className="text-[10px] font-black uppercase tracking-[0.14em] text-white/60">

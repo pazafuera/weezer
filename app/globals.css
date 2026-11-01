@@ -63,3 +63,15 @@ body {
     animation: none;
   }
 }
+
+/* The Rounds swipe deck (Back to the Shack picker, mock v6):
+   snap-scrolling cards with no visible scrollbar — the peeking
+   next card and the dots under the deck carry the affordance. */
+.lore-deck-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.lore-deck-scroll::-webkit-scrollbar {
+  display: none;
+}

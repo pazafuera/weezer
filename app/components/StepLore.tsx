@@ -10,7 +10,6 @@ import {
   TOTAL_STOPS,
   answerCoverFor,
   bandForTotal,
-  bandsEnteredBetween,
   buildGameRun,
   isLoreUnlocked,
   loreGateRemainingAlbums,
@@ -416,23 +415,6 @@ interface BurstInfo {
 }
 
 /**
- * The layer watermark's font size, fitted to the layer's name
- * (Oct 31, 2026): at a flat 54–64px the long names clipped
- * mid-word at the column edge ("LA BREA TAR P…"). Size from the
- * name's length so the whole name always fits a phone-width
- * column (~335px of glyphs at ~0.58em average for the black
- * uppercase face), capped at the old 64px presence size. On
- * wider columns the long names simply sit a little smaller —
- * the trade for never clipping.
- */
-function watermarkFontPx(title: string): number {
-  return Math.max(
-    26,
-    Math.min(64, Math.floor(335 / (title.length * 0.58)))
-  );
-}
-
-/**
  * The journey cross-section as a full-screen stage: a tall column of
  * the six layers inside a clipped window. The player marker lives
  * IN the column at the Y its total depth maps to, with a dashed
@@ -448,7 +430,6 @@ function DescentStage({
   displayTotal,
   burst,
   burstDelayMs,
-  flash,
   fallingTag,
   plunging,
   shake,
@@ -466,9 +447,6 @@ function DescentStage({
   burst: BurstInfo | null;
   /** When the burst pop starts, timed to finish as the marker lands. */
   burstDelayMs?: number;
-  /** A layer-name flash, shown while the plunge crosses into a new
-      layer (scheduled by the parent; renders centered, huge). */
-  flash?: { title: string; key: number; durMs: number } | null;
   /** The submitted answer, riding the marker down during the plunge. */
   fallingTag?: string | null;
   /** True while a plunge is in flight (the camera anchor drops so
@@ -553,15 +531,8 @@ function DescentStage({
           to { transform: translateY(16px); opacity: 0; }
         }
         .lore-card-out { animation: lore-card-out 0.25s ease-in both; }
-        @keyframes lore-flash {
-          0% { opacity: 0; transform: scale(0.92) translateY(10px); }
-          16% { opacity: 1; transform: scale(1) translateY(0); }
-          78% { opacity: 1; }
-          100% { opacity: 0; transform: scale(1.02) translateY(-6px); }
-        }
-        .lore-flash { animation-name: lore-flash; animation-timing-function: ease-out; animation-fill-mode: both; }
         @media (prefers-reduced-motion: reduce) {
-          .lore-burst, .lore-shake, .lore-card-in, .lore-card-out, .lore-flash { animation: none !important; }
+          .lore-burst, .lore-shake, .lore-card-in, .lore-card-out { animation: none !important; }
         }
       `}</style>
 
@@ -580,10 +551,6 @@ function DescentStage({
         {DEPTH_BANDS.map((band, i) => {
           const style = BAND_STAGE[i];
           const unvisited = band.min > total;
-          const range =
-            band.max === Infinity
-              ? `${band.min.toLocaleString()}+`
-              : `${band.min.toLocaleString()}–${band.max.toLocaleString()}`;
           return (
             <div
               key={band.title}
@@ -614,35 +581,17 @@ function DescentStage({
                   }}
                 />
               )}
-              {/* The layer's name as a large watermark — presence
-                  (Oct 27, 2026: the layers read "small and
-                  insignificant" as flat bands). The size fits the
-                  name (Oct 31, 2026) — see watermarkFontPx. */}
-              <div
-                className="pointer-events-none absolute inset-x-3 top-1/2 -translate-y-1/2 whitespace-nowrap font-black uppercase leading-none tracking-tight opacity-[0.09]"
-                style={{ fontSize: watermarkFontPx(band.title) }}
-              >
-                {band.title}
-              </div>
-              <div className="absolute inset-x-3.5 top-2.5 flex items-start justify-between gap-2">
-                <span
-                  className={`inline-block rounded-full px-2.5 py-1 text-xs font-black tracking-[0.14em] ${style.chip}`}
-                >
-                  {band.title}
-                </span>
-                <span
-                  className={`text-[11px] font-extrabold tracking-[0.08em] ${style.range}`}
-                >
-                  {range}
-                </span>
-              </div>
+              {/* The layers are UNNAMED (Nov 1, 2026): colors and
+                  era textures only — the stops live on the one
+                  ladder (picker journey + results standing), never
+                  on the run's own scale. */}
               <div className="pointer-events-none absolute left-2 top-[76px] whitespace-nowrap text-lg font-black tracking-[0.06em] opacity-[0.16]">
                 {style.texture}
               </div>
               {unvisited && (
                 <div className="absolute inset-x-0 bottom-2.5 text-center text-[10px] font-black tracking-[0.22em] opacity-50">
                   {i === DEPTH_BANDS.length - 1
-                    ? '▼ THE BEDROCK ▼'
+                    ? '▼ THE FINAL LAYER ▼'
                     : "▼ WHAT'S DOWN THERE? ▼"}
                 </div>
               )}
@@ -753,29 +702,6 @@ function DescentStage({
           </div>
         )}
       </div>
-
-      {/* The layer-name flash: as the plunge crosses into a new
-          layer, its name fills the stage for a beat — the descent
-          registering, layer by layer. Pointer-events none; the fall
-          never pauses for it. */}
-      {flash && (
-        <div
-          key={flash.key}
-          className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center px-6"
-        >
-          <div
-            className="lore-flash rounded-3xl bg-black/45 px-7 py-5 text-center shadow-[0_18px_50px_rgba(0,0,0,0.45)]"
-            style={{ animationDuration: `${flash.durMs}ms` }}
-          >
-            <div className="text-[10px] font-black tracking-[0.34em] text-white/65">
-              ▼ NOW ENTERING ▼
-            </div>
-            <div className="mt-1 text-4xl font-black uppercase leading-none tracking-tight text-white sm:text-5xl">
-              {flash.title}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* The bottom-pinned card */}
       {children && (
@@ -1049,13 +975,6 @@ export default function StepLore() {
   const [plungeDepth, setPlungeDepth] = useState(0);
   const [plungeMs, setPlungeMs] = useState(PLUNGE_MS);
   const [tickingTotal, setTickingTotal] = useState(0);
-  // Layer-name flashes during a plunge (Oct 27, 2026): each layer
-  // the fall crosses into gets its name flashed large mid-fall.
-  const [layerFlash, setLayerFlash] = useState<{
-    title: string;
-    key: number;
-    durMs: number;
-  } | null>(null);
   const plungeFromRef = useRef(0);
   // v7: the stage's geometry total lags the answers total during a
   // plunge — it is only advanced a frame after the plunging phase
@@ -1324,63 +1243,6 @@ export default function StepLore() {
     return () => cancelAnimationFrame(raf);
   }, [phase, plungeMs, reducedMotion, total]);
 
-  // Layer-flash scheduling: when a plunge crosses into new layers,
-  // flash each entered layer's name as its boundary passes. Timing
-  // is proportional to depth (the camera's easing makes it
-  // approximate — legibility is the point, not surveying). At most
-  // two boundaries can be crossed by one answer (max +1,200 against
-  // floors at 200/500/1,500/3,000/5,000), so every crossing is
-  // shown; a flash lasts 700ms, shortened only when the next
-  // boundary follows quickly. No new phases — the fall never waits.
-  useEffect(() => {
-    if (phase !== 'plunging') return;
-    if (reducedMotion || plungeDepth <= 0) {
-      setLayerFlash(null);
-      return;
-    }
-    const from = plungeFromRef.current;
-    const to = plungeTargetRef.current;
-    if (to <= from) return;
-    const entered = bandsEnteredBetween(from, to);
-    if (entered.length === 0) return;
-    const timers: ReturnType<typeof setTimeout>[] = [];
-    entered.forEach((entry, i) => {
-      const startMs = Math.round(
-        (plungeMs * (entry.atDepth - from)) / (to - from)
-      );
-      const nextStart =
-        i + 1 < entered.length
-          ? Math.round(
-              (plungeMs * (entered[i + 1].atDepth - from)) / (to - from)
-            )
-          : plungeMs;
-      const durMs = Math.max(
-        320,
-        Math.min(700, nextStart - startMs, plungeMs - startMs)
-      );
-      timers.push(
-        setTimeout(
-          () =>
-            setLayerFlash({ title: entry.title, key: entry.index, durMs }),
-          startMs
-        )
-      );
-      timers.push(
-        setTimeout(
-          () =>
-            setLayerFlash((cur) =>
-              cur && cur.key === entry.index ? null : cur
-            ),
-          startMs + durMs
-        )
-      );
-    });
-    return () => {
-      timers.forEach(clearTimeout);
-      setLayerFlash(null);
-    };
-  }, [phase, plungeDepth, plungeMs, reducedMotion]);
-
   // A wrong guess leaves the cursor in the input, ready for the
   // next try.
   useEffect(() => {
@@ -1532,10 +1394,9 @@ export default function StepLore() {
   };
 
   const lastRecord = answers[answers.length - 1];
-  // (The reveal used to carry a title level-up banner here; with
-  // the one-ladder reframe the plunge's NOW ENTERING flash already
-  // names the stop a scoring answer crosses into, in the same
-  // words — the banner only said it twice, so it was cut.)
+  // (The reveal used to carry a title level-up banner here; it
+  // named the run's band — a second scale — so the one-ladder
+  // reframe cut it rather than say the standing twice.)
   const deepest = [...answers]
     .filter((a) => a.depthEarned > 0)
     .sort((a, b) => b.depthEarned - a.depthEarned)
@@ -1709,7 +1570,7 @@ export default function StepLore() {
               type="submit"
               className={`font-black text-sm px-6 py-3.5 rounded-2xl transition-all active:scale-95 cursor-pointer ${theme.dig}`}
             >
-              Descend
+              Answer
             </button>
           </form>
 
@@ -1991,7 +1852,7 @@ export default function StepLore() {
             },
             {
               lead: 'Rarer = more.',
-              desc: "Deep cuts score big. The hits won't get you to the Shack.",
+              desc: "Obscure answers score big. The hits won't get you to the Shack.",
             },
             {
               lead: 'One way back.',
@@ -2356,7 +2217,6 @@ export default function StepLore() {
               total={stageTotal}
               displayTotal={phase === 'plunging' ? tickingTotal : total}
               burstDelayMs={plungeMs}
-              flash={phase === 'plunging' ? layerFlash : null}
               plunging={phase === 'plunging'}
               fallingTag={
                 phase === 'plunging' &&
@@ -2467,7 +2327,7 @@ export default function StepLore() {
 
             <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs space-y-3">
               <h3 className="text-base font-black text-slate-950 tracking-tight">
-                Furthest back this game
+                Your best answers this round
               </h3>
               {rarest && (
                 <p className="text-xs sm:text-sm font-bold text-slate-700 leading-relaxed">

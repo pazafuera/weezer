@@ -58,18 +58,17 @@ const PREVIEW_SECONDS = 3;
 
 /** The start gate's three rules (Nov 1, 2026 rebuild: stakes
  *  first, mechanics concrete, lock-in as commitment — the old
- *  variety rule and four-rule set are gone). Verbatim copy. */
-const GATE_RULES: { icon: string; text: string }[] = [
+ *  variety rule and four-rule set are gone). Verbatim copy.
+ *  Plain text rows since Nov 3, 2026 — the rule icons are gone
+ *  (Mark overruled keeping them). */
+const GATE_RULES: { text: string }[] = [
   {
-    icon: '⏱️',
     text: '25 seconds a question. Wrong guesses cost nothing — keep guessing.',
   },
   {
-    icon: '⬇️',
     text: 'Rarer answers move you further. The obvious ones barely move you.',
   },
   {
-    icon: '🔒',
     text: 'Your score locks in when the round ends. One run — make it count.',
   },
 ];
@@ -1679,15 +1678,16 @@ export default function StepLore() {
     </div>
   );
 
-  /* THE PICKER BLOCKS (mock v5, Oct 30, 2026; rounds + How to
-     Play revised to mock v6, Oct 31, 2026) — defined once here
-     and ordered by state in the intro below. The journey card
-     is the old levels card and the standing line merged into
-     one route map (one ladder, no redundancy); How to Play is
-     the old explainer compressed to three slim text rows; the
-     rounds are a swipe deck of state-tinted cards (v6: the
-     vertical stack of rows read as a wall of text); the
-     leaderboard entry carries its new title. */
+  /* THE PICKER BLOCKS (mock v5, Oct 30, 2026; rounds revised
+     to mock v6, Oct 31, 2026; de-duplicated Nov 3, 2026) —
+     defined once here and rendered in the intro below in one
+     fixed order. The journey card is the old levels card and
+     the standing line merged into one route map (one ladder,
+     each fact stated once); the rounds are a swipe deck of
+     state-tinted cards (v6: the vertical stack of rows read
+     as a wall of text); the leaderboard entry carries its new
+     title. The old explainer card is gone — the start gate
+     carries the rules now. */
   const pickerPlayedAny = fanhoodGamesPlayed(fanhood) > 0;
   const journeyTotal = fanhoodTotal(fanhood);
   const journeyStop = stopForTotal(journeyTotal);
@@ -1702,10 +1702,6 @@ export default function StepLore() {
           100
       )
     : 100;
-  const journeyPill = pickerPlayedAny
-    ? youreAtPhrase(journeyStop.title).toUpperCase()
-    : "YOU START AT ARNOLD'S DINER";
-
   const pickerJourneyCard = (
     <div className="overflow-hidden rounded-3xl bg-slate-950 text-white shadow-md">
       <div className="p-5">
@@ -1716,34 +1712,16 @@ export default function StepLore() {
             >
               {journeyTotal.toLocaleString('en-US')}
             </p>
-            <p className="mt-1.5 text-[11px] font-bold uppercase tracking-[0.08em] text-slate-400">
+            <p className="mt-1.5 text-xs font-bold uppercase tracking-[0.08em] text-slate-400">
               Points so far
             </p>
           </div>
-          <span className="rounded-full bg-[#0072CE] px-3 py-1.5 text-center text-[11px] font-extrabold leading-tight tracking-[0.05em] text-white">
-            {journeyPill}
-          </span>
         </div>
         <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-slate-800">
           <div
             className="h-full rounded-full bg-sky-400"
             style={{ width: `${journeyLegPct}%` }}
           />
-        </div>
-        <div className="mt-2 flex items-baseline justify-between gap-3 text-xs text-slate-300">
-          <span>
-            {journeyStop.title} · {journeyStop.min.toLocaleString('en-US')}
-          </span>
-          {journeyNext ? (
-            <span>
-              <strong className="font-extrabold text-white">
-                {journeyNext.pointsTo.toLocaleString('en-US')} points
-              </strong>{' '}
-              to {journeyNext.title}
-            </span>
-          ) : (
-            <span>There is nowhere further back to go.</span>
-          )}
         </div>
         <div className="mt-3 border-t border-slate-800 pt-1.5">
           {TOTAL_STOPS.map((stop, i) => {
@@ -1787,7 +1765,7 @@ export default function StepLore() {
                       : i + 1}
                 </span>
                 <span
-                  className={`text-[15px] font-bold ${
+                  className={`text-base font-bold ${
                     status === 'reached'
                       ? 'text-slate-100'
                       : status === 'here'
@@ -1797,28 +1775,23 @@ export default function StepLore() {
                 >
                   {stop.title}
                 </span>
-                {status === 'reached' && (
-                  <span className="shrink-0 rounded-full bg-[#0072CE]/25 px-2 py-[3px] text-[10px] font-extrabold tracking-[0.05em] text-sky-300">
-                    BEEN THERE
-                  </span>
-                )}
                 {status === 'here' && (
-                  <span className="shrink-0 rounded-full bg-sky-400 px-2 py-[3px] text-[10px] font-extrabold tracking-[0.05em] text-slate-950">
+                  <span className="shrink-0 rounded-full bg-sky-400 px-2 py-[3px] text-[11px] font-extrabold tracking-[0.05em] text-slate-950">
                     YOU'RE HERE
                   </span>
                 )}
                 {stop.title === 'The Shack' && (
-                  <span className="shrink-0 rounded-full bg-yellow-400/15 px-2 py-[3px] text-[10px] font-extrabold tracking-[0.05em] text-yellow-300">
+                  <span className="shrink-0 rounded-full bg-yellow-400/15 px-2 py-[3px] text-[11px] font-extrabold tracking-[0.05em] text-yellow-300">
                     THE GOAL
                   </span>
                 )}
                 {status === 'next' && journeyNext && (
-                  <span className="ml-auto shrink-0 text-xs font-bold text-yellow-300">
+                  <span className="ml-auto shrink-0 text-[13px] font-bold text-yellow-300">
                     {journeyNext.pointsTo.toLocaleString('en-US')} to go
                   </span>
                 )}
                 <span
-                  className={`${status === 'next' ? '' : 'ml-auto'} shrink-0 text-[13px] font-bold text-slate-400`}
+                  className={`${status === 'next' ? '' : 'ml-auto'} shrink-0 text-sm font-bold text-slate-400`}
                 >
                   {i === 0 ? 'START' : stop.min.toLocaleString('en-US')}
                 </span>
@@ -1830,48 +1803,13 @@ export default function StepLore() {
     </div>
   );
 
-  const pickerHowToPlayCard = (
-    <div className="overflow-hidden rounded-3xl bg-slate-950 text-white shadow-md">
-      <div className="p-5">
-        <h2 className="text-[17px] font-extrabold leading-none">
-          How to Play
-        </h2>
-        <div className="mt-1.5 divide-y divide-slate-800">
-          {[
-            {
-              lead: 'In order.',
-              desc: 'Five rounds, 7 questions each. Finish one to unlock the next.',
-            },
-            {
-              lead: 'Rarer = more.',
-              desc: "Obscure answers score big. The hits won't get you to the Shack.",
-            },
-            {
-              lead: 'One way back.',
-              desc: 'Scores lock in. No replays.',
-            },
-          ].map((row) => (
-            <div key={row.lead} className="flex gap-2.5 py-[9px]">
-              <p className="whitespace-nowrap text-sm font-extrabold text-white">
-                {row.lead}
-              </p>
-              <p className="text-[13px] font-medium leading-relaxed text-slate-400">
-                {row.desc}
-              </p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-
   const pickerRoundsSection = (
     <div>
       <div className="flex items-baseline justify-between gap-3 px-1">
-        <h2 className="text-[17px] font-extrabold leading-none text-slate-950">
+        <h2 className="text-lg font-extrabold leading-none text-slate-950">
           The Rounds
         </h2>
-        <span className="text-xs font-bold text-slate-400">
+        <span className="text-[13px] font-bold text-slate-400">
           {fanhoodGamesPlayed(fanhood)} of 5 played
         </span>
       </div>
@@ -1900,12 +1838,9 @@ export default function StepLore() {
                     : 'border-slate-200 bg-slate-50'
               }`}
             >
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-extrabold uppercase tracking-[0.07em] text-slate-500">
-                  Round {gameIndex + 1} of 5
-                </span>
+              <div className="flex items-center justify-end gap-2">
                 <span
-                  className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-extrabold tracking-[0.05em] ${
+                  className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-extrabold tracking-[0.05em] ${
                     state === 'played'
                       ? 'bg-green-600 text-white'
                       : state === 'up-next'
@@ -1923,14 +1858,14 @@ export default function StepLore() {
                 </span>
               </div>
               <h3
-                className={`${displayFont.className} mt-2.5 text-[27px] leading-[1.12] ${
+                className={`${displayFont.className} mt-2.5 text-[30px] leading-[1.12] ${
                   state === 'locked' ? 'text-slate-500' : 'text-slate-950'
                 }`}
               >
                 Round {gameIndex + 1}
               </h3>
               {state === 'played' && result && (
-                <p className="mt-1.5 text-[13.5px] font-medium leading-relaxed text-slate-500">
+                <p className="mt-1.5 text-[15px] font-medium leading-relaxed text-slate-500">
                   {result.score.toLocaleString()} points
                 </p>
               )}
@@ -1943,7 +1878,7 @@ export default function StepLore() {
                       setPickerOpenGameId(tablesOpen ? null : game.id)
                     }
                     aria-expanded={tablesOpen}
-                    className="mt-3 inline-block cursor-pointer self-start text-[13.5px] font-black text-[#0072CE] hover:underline"
+                    className="mt-3 inline-block cursor-pointer self-start text-[15px] font-black text-[#0072CE] hover:underline"
                   >
                     {tablesOpen
                       ? 'Hide every answer'
@@ -1968,14 +1903,14 @@ export default function StepLore() {
               {state === 'up-next' && (
                 <button
                   onClick={() => openGate(game.id)}
-                  className="mt-3 w-full cursor-pointer rounded-xl bg-[#0072CE] px-5 py-3 text-[15px] font-black text-white shadow-md transition-all hover:bg-blue-700 active:scale-95"
+                  className="mt-3 w-full cursor-pointer rounded-xl bg-[#0072CE] px-5 py-3 text-base font-black text-white shadow-md transition-all hover:bg-blue-700 active:scale-95"
                 >
                   Play Round {gameIndex + 1}
                 </button>
               )}
               {state === 'locked' && (
-                <p className="text-[13.5px] font-bold text-slate-400">
-                  🔒 Finish Round {gameIndex} to unlock.
+                <p className="text-[15px] font-bold text-slate-400">
+                  Finish Round {gameIndex} to unlock.
                 </p>
               )}
             </div>
@@ -1995,7 +1930,7 @@ export default function StepLore() {
           />
         ))}
       </div>
-      <p className="mt-1.5 text-center text-[11.5px] font-bold uppercase tracking-[0.03em] text-slate-400">
+      <p className="mt-1.5 text-center text-[12.5px] font-bold uppercase tracking-[0.03em] text-slate-400">
         {`Round ${deckIndex + 1} of 5 · Swipe to browse`}
       </p>
     </div>
@@ -2006,18 +1941,14 @@ export default function StepLore() {
       onClick={() => setShowBoard(true)}
       className="flex w-full cursor-pointer items-center gap-3 rounded-3xl border border-slate-200/90 bg-white p-5 text-left shadow-xs transition-all hover:border-slate-300"
     >
-      <span aria-hidden className="shrink-0 text-[22px]">
-        🏆
-      </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-base font-black tracking-tight text-slate-950">
-          {"Who's Making It Back?"}
+        <span className="block text-lg font-black tracking-tight text-slate-950">
+          Leaderboard
         </span>
-        <span className="mt-0.5 block text-xs font-medium leading-relaxed text-slate-500 sm:text-sm">
+        <span className="mt-0.5 block text-[13px] font-medium leading-relaxed text-slate-500 sm:text-[15px]">
           See how your score stacks up against Weezer fans everywhere.
         </span>
       </span>
-      <span className="shrink-0 text-sm font-black text-[#0072CE]">→</span>
     </button>
   );
 
@@ -2066,7 +1997,6 @@ export default function StepLore() {
               <h2 className="text-lg font-black text-slate-950 tracking-tight">
                 This game is locked
               </h2>
-              <span className="text-sm">🔒</span>
             </div>
             <p className="text-xs sm:text-sm font-medium text-slate-500 leading-relaxed">
               Five rounds, seven prompts each, twenty-five seconds a prompt.
@@ -2093,13 +2023,11 @@ export default function StepLore() {
         )}
 
         {/* THE PICKER — unlocked, not playing (mock v5, Oct 30,
-            2026; rounds deck + How to Play rows, mock v6, Oct 31):
-            no banner — the headline is the header now, centered
-            and two-tier. The journey card and the How to Play
-            rows swap order by state: a player with a finished
-            game meets their journey first; a new player meets
-            the rules first. The Rounds deck and the leaderboard
-            entry follow in both states. */}
+            2026; rounds deck, mock v6, Oct 31; de-duplicated
+            Nov 3, 2026): no banner — the headline is the header
+            now, centered and two-tier. One fixed order for every
+            player: headline, journey card, the Rounds deck, the
+            leaderboard entry. */}
         {unlocked && !showBoard && phase === 'intro' && (
           <div className="w-full space-y-4 px-4 pb-10 sm:px-6">
             <div className="px-1 pt-5 text-center sm:pt-7">
@@ -2114,7 +2042,7 @@ export default function StepLore() {
                   Back to the Shack?
                 </span>
               </h1>
-              <p className="mt-3 text-sm font-semibold leading-snug text-slate-500">
+              <p className="mt-3 text-base font-semibold leading-snug text-slate-500">
                 <span className="block">
                   Five rounds. Thirty-five questions.
                 </span>
@@ -2123,19 +2051,8 @@ export default function StepLore() {
                 </span>
               </p>
             </div>
-            {pickerPlayedAny ? (
-              <>
-                {pickerJourneyCard}
-                {pickerRoundsSection}
-                {pickerHowToPlayCard}
-              </>
-            ) : (
-              <>
-                {pickerHowToPlayCard}
-                {pickerJourneyCard}
-                {pickerRoundsSection}
-              </>
-            )}
+            {pickerJourneyCard}
+            {pickerRoundsSection}
             {pickerLeaderboardButton}
           </div>
         )}
@@ -2171,11 +2088,8 @@ export default function StepLore() {
                       {GATE_RULES.map((rule) => (
                         <div
                           key={rule.text}
-                          className="flex gap-3 py-2.5 first:pt-0 last:pb-0"
+                          className="py-2.5 first:pt-0 last:pb-0"
                         >
-                          <span aria-hidden className="text-base leading-snug">
-                            {rule.icon}
-                          </span>
                           <p className="text-xs sm:text-sm font-medium leading-relaxed text-slate-600">
                             {rule.text}
                           </p>

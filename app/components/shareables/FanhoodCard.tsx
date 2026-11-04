@@ -1,9 +1,9 @@
 'use client';
 
 import { forwardRef } from 'react';
+import type { CSSProperties } from 'react';
 import {
   FactsBurst,
-  MusicNotesDoodle,
   POSTER_BLUE,
   PosterDomain,
   SaveImageButton,
@@ -12,6 +12,44 @@ import {
 import { displayFont, handFont } from './fonts';
 import { fanhoodDisplay } from '../../lib/fanhood';
 import type { FanhoodRecord } from '../../lib/fanhood';
+
+/** Why this doodle is defined locally instead of imported from
+ *  ShareCardShell: on 2026-11-03 the deployed production bundle
+ *  shipped FanhoodCard referencing the shared ShareCardShell export
+ *  through a namespace object that never received it (no definition
+ *  in any deployed chunk), making the element type undefined and
+ *  crashing the Sweater Thread/Shareables gallery (React #130) for
+ *  every player with an established standing. A module-local copy
+ *  cannot be dropped that way. (ShareCardShell keeps its own export —
+ *  Top10Card still imports it there.) */
+function MusicNotesDoodle({
+  className = '',
+  style,
+}: {
+  className?: string;
+  style?: CSSProperties;
+}) {
+  return (
+    <svg
+      viewBox="0 0 320 300"
+      className={className}
+      style={style}
+      fill="#000"
+      aria-hidden="true"
+    >
+      {/* beamed pair */}
+      <rect x="82" y="118" width="8" height="126" />
+      <rect x="172" y="94" width="8" height="126" />
+      <polygon points="82,118 180,94 180,126 82,150" />
+      <ellipse cx="58" cy="252" rx="27" ry="19" transform="rotate(-18 58 252)" />
+      <ellipse cx="148" cy="228" rx="27" ry="19" transform="rotate(-18 148 228)" />
+      {/* single flagged eighth note */}
+      <rect x="271" y="64" width="8" height="104" />
+      <path d="M271 64 C 302 76, 310 104, 298 134 C 304 102, 294 84, 271 74 Z" />
+      <ellipse cx="250" cy="176" rx="24" ry="17" transform="rotate(-18 250 176)" />
+    </svg>
+  );
+}
 
 /**
  * The fanhood card — how far back you got, as a shareable, in

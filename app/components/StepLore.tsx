@@ -731,29 +731,35 @@ function DescentStage({
  * The game-world backdrop (desktop layout pass, Nov 3, 2026;
  * gradient revision the same night — Mark: the stacked bands
  * read as weird stripes, "can we do a gradient maybe?"): ONE
- * smooth vertical linear-gradient through the six BAND_STAGE
- * layer colors in descent order, so on a wide screen the
+ * smooth vertical linear-gradient, so on a wide screen the
  * capped, centered content columns sit IN the world instead
- * of on a blank page. Each color sits at its layer's center
+ * of on a blank page. The stops sit at each layer's center
  * in the descent column's own proportions (LAYER_HEIGHTS over
- * STAGE_HEIGHT), so the blend passes through every era on the
- * way down. No hard band edges and no texture overlays back
- * here — the ruled lines and radial glow belong to the real
- * stage only. Fully responsive — the gradient spans whatever
- * width the bleed gives it — and purely decorative:
+ * STAGE_HEIGHT). No hard band edges and no texture overlays
+ * back here — the ruled lines and radial glow belong to the
+ * real stage only. Fully responsive — the gradient spans
+ * whatever width the bleed gives it — and purely decorative:
  * aria-hidden, pointer-events-none, low opacity, so every
  * card and line of text on top stays readable. During a run
  * the play stage covers the middle and the gradient shows in
  * its flanks. On a phone the capped columns fill the width
  * and the backdrop is simply the page's tint.
+ *
+ * Color revision (later the same night — Mark: the original
+ * six-color melt through every era's color was "too much"):
+ * ONE color family — blue. Pale sky at the top (light enough
+ * for the dark picker headline to read cleanly), deepening
+ * through the stage's radio blue and the brand blue to a
+ * deep navy at the bottom, so the page still descends
+ * light → dark without the rainbow.
  */
 const BACKDROP_COLORS = [
-  '#0389c4', // Arnold's Diner — radio blue (the band's own mid)
-  '#ede0c0', // Island in the Sun — flannel tan (mid)
-  '#4e1e2d', // Across the Sea — Pinkerton maroon (mid)
-  '#3d348b', // La Brea Tar Pits — photocopied-note purple
-  '#102017', // The Garage — archive dark-green (mid)
-  '#060607', // The Shack — near-black bedrock
+  '#a8dcf5', // pale sky — the top of the descent
+  '#0389c4', // radio blue (the stage's own top layer)
+  '#0072ce', // brand blue
+  '#005b9f', // deepened brand blue
+  '#0e2f52', // navy (kin to the gate's #1e3a5f, darker)
+  '#050d1a', // near-black navy bedrock
 ];
 
 function GradientBackdrop() {
@@ -1650,40 +1656,48 @@ export default function StepLore() {
       {phase === 'reveal' && lastRecord && (
         <div className="space-y-3">
           {lastRecord.outcome === 'correct' && (
-            <div
-              className={`border rounded-2xl p-3.5 space-y-1 ${theme.correctBox}`}
-            >
-              <p
-                className={`text-base sm:text-lg font-black ${theme.correctTitle}`}
-              >
-                ✓ {lastRecord.headline} — +
-                <CountUp value={lastRecord.depthEarned} />
-                {lastRecord.tier ? ` · ${lastRecord.tier}!` : ''}
-              </p>
-              {lastRecord.note && (
-                <p className={`text-xs font-bold ${theme.correctSub}`}>
-                  {lastRecord.note}
-                </p>
-              )}
-              {lastRecord.subline && (
-                <p className={`text-xs font-bold ${theme.correctSub}`}>
-                  {lastRecord.subline}
-                </p>
-              )}
-              {lastRecord.tier && (
-                <p className={`text-xs sm:text-sm font-bold ${theme.correctSub}`}>
-                  {TIER_TAGLINES[lastRecord.tier]}
-                </p>
-              )}
-              {lastRecord.coverSrc && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={lastRecord.coverSrc}
-                  alt={`${lastRecord.coverAlbum ?? 'Album'} cover`}
-                  className="h-44 w-44 max-h-48 rounded-2xl border border-black/10 object-cover shadow-md"
-                  loading="lazy"
-                />
-              )}
+            <div className={`border rounded-2xl p-3.5 ${theme.correctBox}`}>
+              {/* Compact reveal art (Mark, Nov 3, 2026): the cover
+                  used to render as a large block under the answer
+                  text and ate the panel. Now the header zone is a
+                  row — headline, note, subline and tagline on the
+                  left, the cover as a small thumbnail on the
+                  right — and the facts below keep the full width. */}
+              <div className="flex items-start gap-3">
+                <div className="min-w-0 flex-1 space-y-1">
+                  <p
+                    className={`text-base sm:text-lg font-black ${theme.correctTitle}`}
+                  >
+                    ✓ {lastRecord.headline} — +
+                    <CountUp value={lastRecord.depthEarned} />
+                    {lastRecord.tier ? ` · ${lastRecord.tier}!` : ''}
+                  </p>
+                  {lastRecord.note && (
+                    <p className={`text-xs font-bold ${theme.correctSub}`}>
+                      {lastRecord.note}
+                    </p>
+                  )}
+                  {lastRecord.subline && (
+                    <p className={`text-xs font-bold ${theme.correctSub}`}>
+                      {lastRecord.subline}
+                    </p>
+                  )}
+                  {lastRecord.tier && (
+                    <p className={`text-xs sm:text-sm font-bold ${theme.correctSub}`}>
+                      {TIER_TAGLINES[lastRecord.tier]}
+                    </p>
+                  )}
+                </div>
+                {lastRecord.coverSrc && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={lastRecord.coverSrc}
+                    alt={`${lastRecord.coverAlbum ?? 'Album'} cover`}
+                    className="h-28 w-28 shrink-0 rounded-xl border border-black/10 object-cover shadow-md"
+                    loading="lazy"
+                  />
+                )}
+              </div>
             </div>
           )}
           {lastRecord.outcome === 'trap' && (
@@ -2043,31 +2057,56 @@ export default function StepLore() {
       <div className="relative flex w-full flex-1 flex-col">
         {/* HEADER — one compact row (Mark, Oct 27: the old two-line
             title block ate ~200px above the stage and its subtitle
-            duplicated the intro card's headline). Small game name on
-            the left; the established fanhood rides on the right.
-            The stage below is flex-1 with a measured height, so the
-            reclaimed space goes straight to the descent. Mock v3:
-            on the picker itself the row steps aside for the big
-            display title inside the picker — every other phase
-            (and the locked view and the board) keeps this row. */}
+            duplicated the intro card's headline). The stage below
+            is flex-1 with a measured height, so the reclaimed
+            space goes straight to the descent. Mock v3: on the
+            picker itself the row steps aside for the big display
+            title inside the picker — every other phase (and the
+            locked view and the board) keeps this row.
+            Title treatment (Mark, Nov 3, 2026): the game name is
+            now LARGE and CENTERED above the card. The established
+            fanhood still rides on the right; from md up an
+            invisible twin of the chip balances it on the left so
+            the title is truly centered, and below md the title
+            centers in the space the chip leaves — the chip
+            always keeps its room and the title steps down a size
+            rather than crowd it. */}
         {!(unlocked && !showBoard && phase === 'intro') && (
-        <div className={`mx-auto flex w-full items-center justify-between gap-3 px-4 pt-3 pb-2 sm:px-6 ${inPlayPhase ? 'max-w-[900px]' : 'max-w-2xl'}`}>
-          <h1 className="truncate text-sm sm:text-base font-black tracking-tight text-slate-950">
-            Back to the Shack
-          </h1>
-          {(() => {
+          (() => {
             const display = fanhoodDisplay(fanhood);
             // In the ready phase the chip moves into the gate
             // card's header band (Nov 3, 2026) — never both.
-            if (!display || phase === 'ready') return null;
+            const chipText =
+              display && phase !== 'ready'
+                ? `${display.stop} · ${display.depth.toLocaleString()}`
+                : null;
             return (
-              <span className="shrink-0 rounded-full bg-slate-950 px-3 py-1 text-[11px] font-black whitespace-nowrap text-white">
-                {display.stop} ·{' '}
-                {display.depth.toLocaleString()}
-              </span>
+              <div className={`mx-auto flex w-full items-center gap-3 px-4 pt-3 pb-2 sm:px-6 ${inPlayPhase ? 'max-w-[900px]' : 'max-w-2xl'}`}>
+                {chipText && (
+                  <span
+                    aria-hidden
+                    className="invisible hidden shrink-0 rounded-full bg-slate-950 px-3 py-1 text-[11px] font-black whitespace-nowrap text-white md:block"
+                  >
+                    {chipText}
+                  </span>
+                )}
+                <h1
+                  className={`min-w-0 flex-1 truncate text-center font-black leading-none tracking-tight text-slate-950 ${
+                    chipText
+                      ? 'text-[19px] min-[420px]:text-[22px] sm:text-[28px]'
+                      : 'text-[26px] sm:text-[28px]'
+                  }`}
+                >
+                  Back to the Shack
+                </h1>
+                {chipText && (
+                  <span className="shrink-0 rounded-full bg-slate-950 px-3 py-1 text-[11px] font-black whitespace-nowrap text-white">
+                    {chipText}
+                  </span>
+                )}
+              </div>
             );
-          })()}
-        </div>
+          })()
         )}
 
         {/* LOCKED — the teaser. Progress toward the gate is named

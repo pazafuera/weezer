@@ -99,7 +99,7 @@ export default function FanhoodLeaderboard({
   };
 
   return (
-    <div className="w-full space-y-4 px-4 sm:px-6 pb-10">
+    <div className="mx-auto w-full max-w-2xl space-y-4 px-4 pb-10 sm:px-6">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-lg sm:text-xl font-black tracking-tight text-slate-950">
           Leaderboard

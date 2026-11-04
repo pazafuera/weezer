@@ -697,12 +697,53 @@ function DescentStage({
       {/* The bottom-pinned card */}
       {children && (
         <div
-          className="absolute inset-x-3 bottom-3 z-30 overflow-y-auto rounded-3xl shadow-[0_18px_40px_rgba(0,0,0,0.5)]"
+          className="absolute inset-x-0 bottom-3 z-30 mx-auto w-full max-w-2xl overflow-y-auto px-3"
           style={{ maxHeight: effH - 92 }}
         >
           {children}
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * The game-world backdrop (desktop layout pass, Nov 3, 2026):
+ * the stage's own six strata, laid out as faint full-bleed
+ * bands behind every surface of the game, so on a wide screen
+ * the capped, centered content columns sit IN the world
+ * instead of on a blank page. Built from the existing
+ * BAND_STAGE palette, in the descent column's own proportions
+ * (LAYER_HEIGHTS over STAGE_HEIGHT), texture overlays
+ * included. Fully responsive — the bands span whatever width
+ * the bleed gives them — and purely decorative: aria-hidden,
+ * pointer-events-none, low opacity, so every card and line of
+ * text on top stays readable. During a run the play stage
+ * covers the middle and the bands show in its flanks. On a
+ * phone the capped columns fill the width and the backdrop
+ * is simply the page's tint — no visible change.
+ */
+function StrataBackdrop() {
+  return (
+    <div
+      aria-hidden
+      className="pointer-events-none absolute inset-0 overflow-hidden opacity-30"
+    >
+      <div className="flex h-full flex-col">
+        {BAND_STAGE.map((style, i) => (
+          <div
+            key={DEPTH_BANDS[i].title}
+            className={`relative w-full shrink-0 overflow-hidden ${style.layer}`}
+            style={{
+              height: `${(LAYER_HEIGHTS[i] / STAGE_HEIGHT) * 100}%`,
+            }}
+          >
+            {style.textureStyle && (
+              <div className="absolute inset-0" style={style.textureStyle} />
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -1457,7 +1498,7 @@ export default function StepLore() {
   const stageCard = item && (phase === 'preview' || phase === 'playing' || phase === 'leaving' || phase === 'reveal') && (
     <div
       key={index}
-      className={`rounded-3xl border p-4 sm:p-5 space-y-3.5 text-left ${theme.root} ${
+      className={`rounded-3xl border p-4 sm:p-5 space-y-3.5 text-left shadow-[0_18px_40px_rgba(0,0,0,0.5)] ${theme.root} ${
         reducedMotion
           ? ''
           : phase === 'leaving'
@@ -1818,7 +1859,7 @@ export default function StepLore() {
         onScroll={handleDeckScroll}
         role="region"
         aria-label="The Rounds — swipe to browse the five rounds"
-        className="lore-deck-scroll mt-3 flex snap-x snap-mandatory items-start gap-2.5 overflow-x-auto px-[8%] pb-2 pt-1"
+        className="lore-deck-scroll mt-3 flex snap-x snap-mandatory items-start gap-2.5 overflow-x-auto px-[8%] pb-2 pt-1 sm:px-[calc((100%_-_380px)/2)] lg:px-[calc((100%_-_420px)/2)]"
       >
         {LORE_GAMES.map((game, gameIndex) => {
           const result = fanhood?.games[game.id];
@@ -1830,7 +1871,7 @@ export default function StepLore() {
               ref={(el) => {
                 deckCardRefs.current[gameIndex] = el;
               }}
-              className={`flex min-h-[196px] flex-[0_0_84%] snap-center flex-col rounded-[20px] border p-[18px] ${
+              className={`flex min-h-[196px] flex-[0_0_84%] snap-center flex-col rounded-[20px] border p-[18px] sm:flex-[0_0_380px] lg:flex-[0_0_420px] ${
                 state === 'played'
                   ? 'border-green-200 bg-green-50'
                   : state === 'up-next'
@@ -1952,9 +1993,23 @@ export default function StepLore() {
     </button>
   );
 
+  // Desktop layout pass (Nov 3, 2026): the slim header row caps
+  // to the column of the surface beneath it — the play stage's
+  // 900px while a run is on, the reading column's max-w-2xl
+  // otherwise — so the standing chip aligns with the content
+  // edge instead of the viewport edge. Full width on a phone
+  // either way.
+  const inPlayPhase =
+    phase === 'preview' ||
+    phase === 'playing' ||
+    phase === 'leaving' ||
+    phase === 'plunging' ||
+    phase === 'reveal';
+
   return (
-    <div className="flex w-full flex-1 flex-col animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex w-full flex-1 flex-col">
+    <div className="relative flex w-full flex-1 flex-col animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <StrataBackdrop />
+      <div className="relative flex w-full flex-1 flex-col">
         {/* HEADER — one compact row (Mark, Oct 27: the old two-line
             title block ate ~200px above the stage and its subtitle
             duplicated the intro card's headline). Small game name on
@@ -1965,7 +2020,7 @@ export default function StepLore() {
             display title inside the picker — every other phase
             (and the locked view and the board) keeps this row. */}
         {!(unlocked && !showBoard && phase === 'intro') && (
-        <div className="flex items-center justify-between gap-3 px-4 sm:px-6 pt-3 pb-2">
+        <div className={`mx-auto flex w-full items-center justify-between gap-3 px-4 pt-3 pb-2 sm:px-6 ${inPlayPhase ? 'max-w-[900px]' : 'max-w-2xl'}`}>
           <h1 className="truncate text-sm sm:text-base font-black tracking-tight text-slate-950">
             Back to the Shack
           </h1>
@@ -2031,7 +2086,7 @@ export default function StepLore() {
             player: headline, journey card, the Rounds deck, the
             leaderboard entry. */}
         {unlocked && !showBoard && phase === 'intro' && (
-          <div className="w-full space-y-4 px-4 pb-10 sm:px-6">
+          <div className="mx-auto w-full max-w-2xl space-y-4 px-4 pb-10 sm:px-6">
             <div className="px-1 pt-5 text-center sm:pt-7">
               <h1
                 aria-label="Can You Get Back to the Shack?"
@@ -2064,7 +2119,7 @@ export default function StepLore() {
             says go. Leaving it starts nothing and consumes nothing,
             and a played game can never reach it. */}
         {unlocked && !showBoard && phase === 'ready' && gateGameId && (
-          <div className="w-full px-4 sm:px-6 pb-10">
+          <div className="mx-auto w-full max-w-2xl px-4 pb-10 sm:px-6">
             {(() => {
               const game = loreGameById(gateGameId);
               const gameNumber =
@@ -2155,7 +2210,7 @@ export default function StepLore() {
             the stage. During 'plunging' the card is gone entirely:
             nothing stands between the player and the drop. */}
         {unlocked && !showBoard && item && (phase === 'preview' || phase === 'playing' || phase === 'leaving' || phase === 'plunging' || phase === 'reveal') && (
-          <div ref={stageRef} className="flex flex-1 flex-col">
+          <div ref={stageRef} className="mx-auto flex w-full max-w-[900px] flex-1 flex-col">
             <DescentStage
               total={stageTotal}
               displayTotal={phase === 'plunging' ? tickingTotal : total}
@@ -2199,7 +2254,7 @@ export default function StepLore() {
         {/* RESULT */}
         {unlocked && !showBoard && phase === 'result' && (
           <>
-          <div className="w-full space-y-6 px-4 sm:px-6 pb-10">
+          <div className="mx-auto w-full max-w-2xl space-y-6 px-4 pb-10 sm:px-6">
             {/* THE RESULT — one ladder (Nov 1, 2026): the round
                 reports its own points and nothing else; the only
                 stop named on this screen is the STANDING's, in

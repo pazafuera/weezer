@@ -35,14 +35,23 @@ export function HelpButton() {
   );
 }
 
-// SORTING-INCOMPLETE NOTICE — the slim amber heads-up at the top
-// of the Refine (rank_buckets) and My Rankings / Final Review
-// (master) steps when the user got there without finishing triage
-// (owner, Oct 18). Both steps unlock on partial sorting, and both
-// only ever show the songs sorted so far — the notice says so
-// plainly, offers the way back to triage, and otherwise gets out
-// of the way: it never blocks, and it is NOT dismissible (it
-// renders for exactly as long as the condition is true).
+// SORTING-INCOMPLETE NOTICE — the amber heads-up at the top of
+// every Refine stage list (rank_buckets) and of My Rankings /
+// Final Review (master) when the user got there without finishing
+// triage (owner, Oct 18). Both steps unlock on partial sorting,
+// and both only ever show the songs sorted so far — the notice
+// says so plainly and offers the way back to triage. It never
+// blocks, and it is NOT dismissible (it renders for exactly as
+// long as the condition is true).
+// Nov 3 (owner): the original slim pale-amber banner was too easy
+// to miss, and the copy rambled — the notice is now a solid amber
+// block with dark text and a strong border, and the copy is two
+// short sentences. One refinement surface deliberately does NOT
+// carry it: the matchups interstitial (Step1_5Matchups) is a
+// fixed-height (80vh) full-view takeover with no room for a
+// banner inside its head-to-head layout — the notice brackets it
+// instead, sitting on the stage list the user came from and the
+// one they return to.
 // "Finished" = every catalog song categorized — a real bucket OR
 // a "Don't Know It" mark (countCategorizedSongs, the same signal
 // the menu and dashboard use); at a full 206 it renders nothing.
@@ -59,15 +68,14 @@ export function SortingIncompleteNotice({
   const sortedCount = countCategorizedSongs(triageMap);
   if (sortedCount >= FULL_SONG_POOL.length) return null;
   return (
-    <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 shadow-xs">
-      <p className="text-xs sm:text-sm font-semibold text-amber-900 leading-relaxed text-center">
-        Sorting isn&apos;t finished yet — {sortedCount} of {FULL_SONG_POOL.length} songs
-        sorted. You can keep going here, but this only covers the songs
-        you&apos;ve sorted so far.{' '}
+    <div className="bg-amber-400 border-2 border-amber-600 rounded-2xl px-4 py-3 shadow-sm">
+      <p className="text-sm sm:text-base font-bold text-slate-950 leading-snug text-center">
+        You haven&apos;t finished sorting — {sortedCount} of {FULL_SONG_POOL.length} songs
+        sorted. This page only covers the songs you&apos;ve sorted so far.{' '}
         <button
           type="button"
           onClick={onKeepSorting}
-          className="font-black text-[#0072CE] hover:underline cursor-pointer whitespace-nowrap"
+          className="font-black text-[#0072CE] underline underline-offset-2 hover:text-blue-800 cursor-pointer whitespace-nowrap"
         >
           Keep sorting →
         </button>

@@ -278,7 +278,11 @@ export default function Step2Refine({
       {/* SORTING-INCOMPLETE NOTICE — tops every refine stage when
           triage isn't finished (renders nothing at 206). The
           matchups interstitial above replaces this whole view
-          while it runs; the notice is waiting here when it ends. */}
+          while it runs, and it is the one refine surface without
+          the notice: a fixed-height (80vh) takeover with no room
+          for a banner inside it (owner, Nov 3). The notice
+          brackets it — it is here on the stage list before the
+          matchups start and waiting here when they end. */}
       <SortingIncompleteNotice triageMap={triageMap} onKeepSorting={onKeepSorting} />
 
       {/* CUSTOM CONFIRMATION MODAL OVERLAY */}
@@ -293,11 +297,22 @@ export default function Step2Refine({
             </div>
             <p className="text-sm font-medium text-slate-600 mb-6 leading-relaxed">
               Are you sure you want to move <span className="font-bold text-slate-900">"{pendingMove.song.title}"</span>?
-              <br /><br />
-              <span className="text-xs text-slate-500 flex gap-1.5 bg-slate-50 p-2 rounded-xl border border-slate-100">
-                <span className="shrink-0">💡</span> 
-                <span>To simply reorder songs within this list, hold and drag the ☰ icon instead.</span>
-              </span>
+              {/* DRAG TIP — only on stages where this list actually
+                  offers drag-reorder. hasSlider is the very flag
+                  that renders the ☰ handle and enables dragging
+                  (Banger / Lowkey Slaps); the Mid, Skip and Trash
+                  stages have no drag, so the tip must not claim
+                  there is (owner, Nov 3). No substitute advice
+                  where it doesn't apply — the box just isn't there. */}
+              {hasSlider && (
+                <>
+                  <br /><br />
+                  <span className="text-xs text-slate-500 flex gap-1.5 bg-slate-50 p-2 rounded-xl border border-slate-100">
+                    <span className="shrink-0">💡</span>
+                    <span>To simply reorder songs within this list, hold and drag the ☰ icon instead.</span>
+                  </span>
+                </>
+              )}
             </p>
             <div className="flex gap-3">
               <button onClick={() => setPendingMove(null)} className="flex-1 px-4 py-3 rounded-2xl bg-slate-100 text-slate-600 font-bold hover:bg-slate-200 transition cursor-pointer">

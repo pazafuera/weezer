@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useWeezer } from '../context/WeezerContext';
 import { FULL_SONG_POOL } from '../data/constants';
 import {
@@ -468,6 +468,25 @@ function DescentStage({
   }, [fill]);
   const effH = fill && autoH > 0 ? autoH : viewH;
 
+  // The card tray (below) is a scroll container capped at
+  // effH - 92, and a rich reveal — headline, album cover,
+  // contrast, lore, button — can be taller than the cap. When
+  // the reveal lands, its Next button's autoFocus makes the
+  // browser scroll the tray to the focused button, so the
+  // panel reads from the BOTTOM: the headline scrolled away
+  // and the cover clipped at the tray's top edge (Mark's
+  // screenshot, Nov 3, 2026 — mobile and desktop alike).
+  // focusTop flips true in the same commit the reveal mounts,
+  // and this layout effect runs after the focus scroll, so
+  // the reveal always starts at the top of the tray and flows
+  // down, cover fully visible.
+  const cardScrollRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    if (focusTop && cardScrollRef.current) {
+      cardScrollRef.current.scrollTop = 0;
+    }
+  }, [focusTop]);
+
   const markerY = depthToY(total);
   // Overlap rule (Oct 27, 2026): when the marker lands in a layer's
   // top zone, the falling tag and the burst stack BELOW the marker
@@ -697,6 +716,7 @@ function DescentStage({
       {/* The bottom-pinned card */}
       {children && (
         <div
+          ref={cardScrollRef}
           className="absolute inset-x-0 bottom-3 z-30 mx-auto w-full max-w-2xl overflow-y-auto px-3"
           style={{ maxHeight: effH - 92 }}
         >
@@ -708,42 +728,53 @@ function DescentStage({
 }
 
 /**
- * The game-world backdrop (desktop layout pass, Nov 3, 2026):
- * the stage's own six strata, laid out as faint full-bleed
- * bands behind every surface of the game, so on a wide screen
- * the capped, centered content columns sit IN the world
- * instead of on a blank page. Built from the existing
- * BAND_STAGE palette, in the descent column's own proportions
- * (LAYER_HEIGHTS over STAGE_HEIGHT), texture overlays
- * included. Fully responsive — the bands span whatever width
- * the bleed gives them — and purely decorative: aria-hidden,
- * pointer-events-none, low opacity, so every card and line of
- * text on top stays readable. During a run the play stage
- * covers the middle and the bands show in its flanks. On a
- * phone the capped columns fill the width and the backdrop
- * is simply the page's tint — no visible change.
+ * The game-world backdrop (desktop layout pass, Nov 3, 2026;
+ * gradient revision the same night — Mark: the stacked bands
+ * read as weird stripes, "can we do a gradient maybe?"): ONE
+ * smooth vertical linear-gradient through the six BAND_STAGE
+ * layer colors in descent order, so on a wide screen the
+ * capped, centered content columns sit IN the world instead
+ * of on a blank page. Each color sits at its layer's center
+ * in the descent column's own proportions (LAYER_HEIGHTS over
+ * STAGE_HEIGHT), so the blend passes through every era on the
+ * way down. No hard band edges and no texture overlays back
+ * here — the ruled lines and radial glow belong to the real
+ * stage only. Fully responsive — the gradient spans whatever
+ * width the bleed gives it — and purely decorative:
+ * aria-hidden, pointer-events-none, low opacity, so every
+ * card and line of text on top stays readable. During a run
+ * the play stage covers the middle and the gradient shows in
+ * its flanks. On a phone the capped columns fill the width
+ * and the backdrop is simply the page's tint.
  */
-function StrataBackdrop() {
+const BACKDROP_COLORS = [
+  '#0389c4', // Arnold's Diner — radio blue (the band's own mid)
+  '#ede0c0', // Island in the Sun — flannel tan (mid)
+  '#4e1e2d', // Across the Sea — Pinkerton maroon (mid)
+  '#3d348b', // La Brea Tar Pits — photocopied-note purple
+  '#102017', // The Garage — archive dark-green (mid)
+  '#060607', // The Shack — near-black bedrock
+];
+
+function GradientBackdrop() {
+  const stops: string[] = [];
+  let acc = 0;
+  LAYER_HEIGHTS.forEach((h, i) => {
+    const center = ((acc + h / 2) / STAGE_HEIGHT) * 100;
+    stops.push(`${BACKDROP_COLORS[i]} ${center.toFixed(1)}%`);
+    acc += h;
+  });
   return (
     <div
       aria-hidden
       className="pointer-events-none absolute inset-0 overflow-hidden opacity-30"
     >
-      <div className="flex h-full flex-col">
-        {BAND_STAGE.map((style, i) => (
-          <div
-            key={DEPTH_BANDS[i].title}
-            className={`relative w-full shrink-0 overflow-hidden ${style.layer}`}
-            style={{
-              height: `${(LAYER_HEIGHTS[i] / STAGE_HEIGHT) * 100}%`,
-            }}
-          >
-            {style.textureStyle && (
-              <div className="absolute inset-0" style={style.textureStyle} />
-            )}
-          </div>
-        ))}
-      </div>
+      <div
+        className="h-full w-full"
+        style={{
+          backgroundImage: `linear-gradient(to bottom, ${stops.join(', ')})`,
+        }}
+      />
     </div>
   );
 }
@@ -2008,7 +2039,7 @@ export default function StepLore() {
 
   return (
     <div className="relative flex w-full flex-1 flex-col animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <StrataBackdrop />
+      <GradientBackdrop />
       <div className="relative flex w-full flex-1 flex-col">
         {/* HEADER — one compact row (Mark, Oct 27: the old two-line
             title block ate ~200px above the stage and its subtitle

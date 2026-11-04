@@ -1971,7 +1971,9 @@ export default function StepLore() {
           </h1>
           {(() => {
             const display = fanhoodDisplay(fanhood);
-            if (!display) return null;
+            // In the ready phase the chip moves into the gate
+            // card's header band (Nov 3, 2026) — never both.
+            if (!display || phase === 'ready') return null;
             return (
               <span className="shrink-0 rounded-full bg-slate-950 px-3 py-1 text-[11px] font-black whitespace-nowrap text-white">
                 {display.stop} ·{' '}
@@ -2067,21 +2069,35 @@ export default function StepLore() {
               const game = loreGameById(gateGameId);
               const gameNumber =
                 LORE_GAMES.findIndex((g) => g.id === game.id) + 1;
-              const roundsAfter = LORE_GAMES.length - gameNumber;
               return (
                 <div className="overflow-hidden rounded-3xl border border-slate-200/90 bg-white shadow-xs">
-                  <div className="bg-[#1e3a5f] p-5 text-white">
+                  <div className="bg-[#1e3a5f] p-5 text-center text-white">
                     <p className="text-[10px] font-black uppercase tracking-[0.14em] text-white/60">
                       Round {gameNumber} of 5
                     </p>
                     <h2
-                      className={`${displayFont.className} mt-1.5 text-[27px] leading-none`}
+                      className={`${displayFont.className} mt-1.5 text-[34px] leading-none`}
                     >
                       Round {gameNumber}
                     </h2>
                     <p className="mt-2 text-sm font-semibold leading-snug text-white/75">
                       Every point moves you closer to the Shack.
                     </p>
+                    {/* The standing chip rides inside the gate's
+                        header band, centered under the lead line
+                        (Nov 3, 2026) — the slim header's chip steps
+                        aside in the ready phase so the standing is
+                        never stated twice on one screen. */}
+                    {(() => {
+                      const display = fanhoodDisplay(fanhood);
+                      if (!display) return null;
+                      return (
+                        <span className="mt-3 inline-block rounded-full bg-white/10 px-3 py-1 text-[11px] font-black whitespace-nowrap text-white">
+                          {display.stop} ·{' '}
+                          {display.depth.toLocaleString()}
+                        </span>
+                      );
+                    })()}
                   </div>
                   <div className="p-5">
                     <div className="divide-y divide-slate-100">
@@ -2090,7 +2106,7 @@ export default function StepLore() {
                           key={rule.text}
                           className="py-2.5 first:pt-0 last:pb-0"
                         >
-                          <p className="text-xs sm:text-sm font-medium leading-relaxed text-slate-600">
+                          <p className="text-[15px] sm:text-base font-medium leading-relaxed text-slate-600">
                             {rule.text}
                           </p>
                         </div>
@@ -2115,12 +2131,6 @@ export default function StepLore() {
                           );
                         })}
                       </div>
-                      {roundsAfter > 0 && (
-                        <p className="mt-2 text-[11px] font-bold text-slate-400">
-                          {roundsAfter} round
-                          {roundsAfter === 1 ? '' : 's'} after this one
-                        </p>
-                      )}
                     </div>
                     <button
                       onClick={startGatedGame}

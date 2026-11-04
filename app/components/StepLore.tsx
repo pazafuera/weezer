@@ -399,6 +399,27 @@ function depthToY(depth: number): number {
   return LAYER_TOPS[i] + MARKER_TOP_INSET + travel * t;
 }
 
+/**
+ * Where a STANDING total sits in the column, on the total
+ * ladder (TOTAL_STOPS) rather than the run scale: the layer of
+ * the stop the total has reached, interpolated within the
+ * layer by progress toward the next stop's floor — the same
+ * 76px-inset → 90% travel depthToY uses, so the results map's
+ * geometry is the game's own, zoomed out. At the Shack there
+ * is no next floor: the marker rests at the travel band's end.
+ */
+function standingToStageY(total: number): number {
+  const stop = stopForTotal(total);
+  const i = TOTAL_STOPS.findIndex((s) => s.title === stop.title);
+  const next = TOTAL_STOPS[i + 1];
+  const t = next
+    ? Math.min(1, Math.max(0, (total - stop.min) / (next.min - stop.min)))
+    : 1;
+  const travel =
+    LAYER_HEIGHTS[i] * MARKER_BOTTOM_FRACTION - MARKER_TOP_INSET;
+  return LAYER_TOPS[i] + MARKER_TOP_INSET + travel * t;
+}
+
 interface BurstInfo {
   tier?: RarityTier;
   depth: number;
@@ -430,6 +451,7 @@ function DescentStage({
   focusTop,
   fill,
   camMs,
+  journeyMap,
   children,
 }: {
   total: number;
@@ -452,6 +474,11 @@ function DescentStage({
   fill?: boolean;
   /** Camera transition duration (defaults to the plunge length). */
   camMs?: number;
+  /** Results-screen map mode: render the WHOLE column scaled
+      into the panel, the marker placed by the STANDING total
+      (the `total` prop, on the TOTAL_STOPS ladder) with the
+      stops labeled — see the journeyMap branch below. */
+  journeyMap?: boolean;
   children?: React.ReactNode;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
@@ -506,6 +533,102 @@ function DescentStage({
     STAGE_HEIGHT - effH
   );
   const moveMs = reducedMotion ? 0 : (camMs ?? PLUNGE_MS);
+
+  // JOURNEY MAP (results screen only, Nov 3, 2026 — Mark: the
+  // gameplay-scale window "doesn't tell the user how far/close
+  // they are to getting back to the shack"). The whole 3,000px
+  // column scales into the panel: every band at its true
+  // LAYER_HEIGHTS proportion, the trail from the surface, and
+  // the marker placed by the STANDING total (standingToStageY)
+  // so one glance reads the whole trip — where you are, how
+  // much road is left. The stops are labeled HERE ONLY (small
+  // chips that read on light and dark bands alike); the in-run
+  // stage stays unnamed. What doesn't survive the zoom: the
+  // texture watermark type (76px furniture in ~70–90px bands)
+  // and the "▼ WHAT'S DOWN THERE? ▼" footers — both noise at
+  // this scale, and the labels carry the information instead.
+  // Cover ghosts and texture overlays stay. Bands past the
+  // standing dim like unvisited layers do in the run.
+  if (journeyMap) {
+    const mapScale = effH / STAGE_HEIGHT;
+    const standingIdx = TOTAL_STOPS.findIndex(
+      (s) => s.title === stopForTotal(total).title
+    );
+    // Clamp so the 48px marker never clips the panel's edges
+    // (a 0 total would otherwise park its center 12px down).
+    const mapMarkerY = Math.min(
+      Math.max(standingToStageY(total) * mapScale, 26),
+      effH - 26
+    );
+    return (
+      <div
+        className="relative overflow-hidden rounded-3xl border border-slate-900/25 shadow-md"
+        style={{ height: viewH }}
+      >
+        {DEPTH_BANDS.map((band, i) => {
+          const style = BAND_STAGE[i];
+          const unreached = i > standingIdx;
+          return (
+            <div
+              key={band.title}
+              className={`absolute inset-x-0 overflow-hidden ${style.layer}`}
+              style={{
+                top: LAYER_TOPS[i] * mapScale,
+                height: LAYER_HEIGHTS[i] * mapScale,
+                filter: unreached
+                  ? 'brightness(0.78) saturate(0.85)'
+                  : undefined,
+              }}
+            >
+              {style.textureStyle && (
+                <div className="absolute inset-0" style={style.textureStyle} />
+              )}
+              {style.coverSrc && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={style.coverSrc}
+                  alt=""
+                  aria-hidden
+                  className="pointer-events-none absolute right-0 top-0 h-full w-auto max-w-none object-cover opacity-[0.16]"
+                  style={{
+                    maskImage:
+                      'linear-gradient(to left, black 45%, transparent 94%)',
+                    WebkitMaskImage:
+                      'linear-gradient(to left, black 45%, transparent 94%)',
+                  }}
+                />
+              )}
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-full bg-black/45 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.14em] text-white">
+                {TOTAL_STOPS[i].title}
+              </span>
+            </div>
+          );
+        })}
+
+        {/* The descent trail: surface to marker */}
+        <div
+          className="absolute left-[37px] top-0 z-10 w-0 border-l-[3px] border-dashed border-white/50"
+          style={{ height: mapMarkerY }}
+        />
+
+        {/* The player marker, at the standing's position */}
+        <div
+          className="absolute left-3.5 z-20"
+          style={{ top: mapMarkerY }}
+        >
+          <div className="flex -translate-y-1/2 items-center gap-[7px]">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-[3px] border-[#111111] bg-[#FFD23F] text-sm font-black text-[#111111] shadow-[0_6px_18px_rgba(0,0,0,0.45)]">
+              =w=
+            </div>
+            <div className="whitespace-nowrap rounded-full bg-[#111111] px-3 py-1.5 text-xs font-black tracking-[0.05em] text-[#FFD23F] shadow-[0_4px_12px_rgba(0,0,0,0.4)]">
+              YOU · {(displayTotal ?? total).toLocaleString()} POINTS
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       ref={rootRef}
@@ -2075,9 +2198,12 @@ export default function StepLore() {
           (() => {
             const display = fanhoodDisplay(fanhood);
             // In the ready phase the chip moves into the gate
-            // card's header band (Nov 3, 2026) — never both.
+            // card's header band (Nov 3, 2026) — never both. In
+            // the result phase the results standing block states
+            // the stop and the total itself (Nov 3, 2026 de-dup),
+            // so the chip steps aside there too.
             const chipText =
-              display && phase !== 'ready'
+              display && phase !== 'ready' && phase !== 'result'
                 ? `${display.stop} · ${display.depth.toLocaleString()}`
                 : null;
             return (
@@ -2339,10 +2465,12 @@ export default function StepLore() {
                   ? `ROUND ${LORE_GAMES.findIndex((g) => g.id === activeGameId) + 1} OF 5 — FINISHED`
                   : 'ROUND FINISHED'}
               </p>
+              {/* De-dup (Nov 3, 2026): the headline is the
+                  points alone — the eyebrow above already names
+                  the round, and "Round 1: 4,040" read as one
+                  continuous number. */}
               <h2 className="text-4xl sm:text-5xl font-black tracking-tight leading-none">
-                {activeGameId
-                  ? `Round ${LORE_GAMES.findIndex((g) => g.id === activeGameId) + 1}: ${total.toLocaleString()} points.`
-                  : `${total.toLocaleString()} points.`}
+                {`${total.toLocaleString()} points.`}
               </h2>
               {alreadyRecorded ? (
                 <p className="text-xs font-bold opacity-70">
@@ -2352,7 +2480,7 @@ export default function StepLore() {
                 </p>
               ) : (
                 <p className="text-xs font-black">
-                  Locked in — this score is on your card for good. 🏆
+                  Locked in — this score is on your card for good.
                 </p>
               )}
             </div>
@@ -2373,9 +2501,15 @@ export default function StepLore() {
                   ? `You made it ${resultStop.phrase}.`
                   : `${youreAtPhrase(resultStop.title)}.`}
               </p>
-              <p className="text-xs font-bold text-white/60">
-                {resultAfterTotal.toLocaleString()} total points.
-              </p>
+              {/* The total line renders only when it adds
+                  information: after Round 1 the total EQUALS the
+                  headline's score, so stating it again would just
+                  repeat the banner (de-dup, Nov 3, 2026). */}
+              {resultAfterTotal !== total && (
+                <p className="text-xs font-bold text-white/60">
+                  {resultAfterTotal.toLocaleString()} total points.
+                </p>
+              )}
               {resultNext && (
                 <p className="text-xs font-bold text-white/60">
                   {`Next stop for your standing: ${resultNext.title} — ${resultNextThreshold?.toLocaleString()} total, ${resultNext.pointsTo.toLocaleString()} to go.`}
@@ -2383,14 +2517,19 @@ export default function StepLore() {
               )}
             </div>
 
+            {/* THE JOURNEY MAP — the whole descent zoomed out,
+                the marker at the STANDING's position (the
+                after-total, not this round's score), so the
+                panel reads as progress toward the Shack. */}
             <DescentStage
-              total={total}
+              total={resultAfterTotal}
               burst={null}
               shake={false}
               animKey={0}
               reducedMotion={reducedMotion}
               viewH={480}
               focusTop={false}
+              journeyMap
             />
 
             <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs space-y-3">

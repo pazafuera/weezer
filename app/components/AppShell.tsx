@@ -412,8 +412,15 @@ export default function AppShell({
             from the first row's text — still the tightest gap.
             Rows inside carry no gap at all (see
             renderNavButton). */}
-        <div className="-mx-2 bg-slate-200 px-2">
-          <p className="px-3.5 py-2 text-xs font-black text-slate-900">
+        <div
+          className="-mx-2 bg-[#DCEEF8] px-2"
+          style={{
+            backgroundImage:
+              'radial-gradient(rgba(0,114,206,0.10) 1.2px, transparent 1.3px)',
+            backgroundSize: '22px 22px',
+          }}
+        >
+          <p className="px-3.5 py-2 text-xs font-black uppercase tracking-[0.08em] text-[#0C1220]">
             {title}
           </p>
         </div>
@@ -566,7 +573,7 @@ export default function AppShell({
             className="absolute inset-0 bg-slate-950/40 backdrop-blur-xs transition-opacity"
           />
 
-          <div className="relative w-full max-w-xs bg-white h-full shadow-2xl border-l border-slate-200 flex flex-col overflow-y-auto z-10 animate-in slide-in-from-right duration-300">
+          <div className="relative w-full max-w-xs bg-white h-full shadow-2xl border-l-[3px] border-l-[#0C1220] flex flex-col overflow-y-auto z-10 animate-in slide-in-from-right duration-300">
             <div>
               <div className="p-4 border-b border-slate-100 flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -622,7 +629,7 @@ export default function AppShell({
                     <span>Account & Profile</span>
                   </button>
 
-                  <div className="mx-4 my-3 p-3.5 bg-blue-50/50 border border-blue-200/80 rounded-2xl space-y-2">
+                  <div className="mx-4 my-3 p-3.5 bg-white border-2 border-[#0C1220] rounded-2xl space-y-2">
                     <div className="flex items-center justify-between">
                       <button
                         onClick={() => {
@@ -664,12 +671,12 @@ export default function AppShell({
               )}
 
               {!userId && (
-                <div className="mx-4 my-3 p-4 bg-amber-50 border border-amber-200/80 rounded-2xl space-y-3">
+                <div className="mx-4 my-3 p-4 bg-white border-2 border-[#0C1220] rounded-2xl space-y-3">
                   <div className="space-y-1">
-                    <h4 className="text-xs font-black text-amber-950">
+                    <h4 className="text-xs font-black text-[#0C1220]">
                       Why Bother creating an account?
                     </h4>
-                    <p className="text-[11px] font-medium text-amber-800 leading-snug">
+                    <p className="text-[11px] font-medium text-[#3D4A63] leading-snug">
                       Guest rankings are only saved temporarily. Create an
                       account now to save your work.
                     </p>
@@ -750,13 +757,13 @@ export default function AppShell({
             className="absolute inset-0 bg-slate-950/40 backdrop-blur-xs transition-opacity"
           />
 
-          <div className="relative w-full max-w-sm bg-white rounded-3xl shadow-2xl border border-slate-200 p-5 z-10">
+          <div className="relative w-full max-w-sm bg-white rounded-[18px] shadow-[4px_4px_0_rgba(11,30,63,0.85)] border-[3px] border-[#0C1220] p-5 z-10">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-7 h-7 bg-[#0072CE] text-white rounded-lg flex items-center justify-center">
                   <FlyingWIcon className="w-4 h-4 text-white" />
                 </div>
-                <span className="text-xs font-black text-slate-900 uppercase tracking-wider">
+                <span className="text-xs font-black text-[#0C1220] uppercase tracking-wider">
                   Help
                 </span>
               </div>
@@ -773,10 +780,10 @@ export default function AppShell({
             <div className="space-y-2 mt-4">
               <button
                 onClick={replayTutorial}
-                className="w-full flex items-center justify-between gap-3 px-4 py-3.5 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200/80 text-left transition-colors cursor-pointer"
+                className="w-full flex items-center justify-between gap-3 px-4 py-3.5 rounded-2xl bg-white hover:bg-slate-100 border-2 border-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)] text-left transition-colors cursor-pointer"
               >
                 <span>
-                  <span className="block text-sm font-black text-slate-900">
+                  <span className="block text-sm font-black text-[#0C1220]">
                     Replay the deck tutorial
                   </span>
                   <span className="block text-xs font-medium text-slate-500 mt-0.5">
@@ -791,10 +798,10 @@ export default function AppShell({
                   setHelpOpen(false);
                   setBucketsOpen(true);
                 }}
-                className="w-full flex items-center justify-between gap-3 px-4 py-3.5 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200/80 text-left transition-colors cursor-pointer"
+                className="w-full flex items-center justify-between gap-3 px-4 py-3.5 rounded-2xl bg-white hover:bg-slate-100 border-2 border-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)] text-left transition-colors cursor-pointer"
               >
                 <span>
-                  <span className="block text-sm font-black text-slate-900">
+                  <span className="block text-sm font-black text-[#0C1220]">
                     Bucket definitions
                   </span>
                   <span className="block text-xs font-medium text-slate-500 mt-0.5">
@@ -818,9 +825,9 @@ export default function AppShell({
             className="absolute inset-0 bg-slate-950/40 backdrop-blur-xs transition-opacity"
           />
 
-          <div className="relative w-full max-w-md max-h-[85dvh] overflow-y-auto bg-white rounded-3xl shadow-2xl border border-slate-200 z-10">
-            <div className="sticky top-0 bg-white border-b border-slate-100 px-5 sm:px-6 py-4 flex items-center justify-between rounded-t-3xl">
-              <span className="text-xs font-black text-slate-900 uppercase tracking-wider">
+          <div className="relative w-full max-w-md max-h-[85dvh] overflow-y-auto bg-white rounded-[18px] shadow-[4px_4px_0_rgba(11,30,63,0.85)] border-[3px] border-[#0C1220] z-10">
+            <div className="sticky top-0 bg-white border-b-2 border-[#0C1220] px-5 sm:px-6 py-4 flex items-center justify-between rounded-t-[15px]">
+              <span className="text-xs font-black text-[#0C1220] uppercase tracking-wider">
                 The buckets
               </span>
 

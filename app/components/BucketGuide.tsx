@@ -30,21 +30,25 @@ const GUIDE_BUCKETS: { key: BucketType; purpose: string }[] = [
 
 export default function BucketGuide() {
   return (
-    <div className="bg-white border border-slate-200/90 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
+    <div className="bg-white border-[3px] border-[#0C1220] rounded-[18px] p-5 sm:p-6 shadow-[4px_4px_0_rgba(11,30,63,0.85)] space-y-4">
       {GUIDE_BUCKETS.map(({ key, purpose }) => {
         const cfg = BUCKET_CONFIG[key];
         // The deck shortens this one label on its tiles.
         const displayLabel = key === 'slaps' ? 'Slaps' : cfg.label;
         return (
           <div key={key} className="flex items-center gap-3.5">
-            {/* Replica of the deck tray tile (default state). */}
-            <div className="w-[92px] shrink-0 flex flex-col items-center justify-center gap-0.5 rounded-2xl border py-3 shadow-sm bg-white border-slate-200">
+            {/* Replica of the deck tray tile (default state) — in
+                the poster frame since the Nov 5 sheet refresh; the
+                deck tiles themselves take the same frame in the
+                Round 2 pass, at which point these replicas match
+                again by construction. */}
+            <div className="w-[92px] shrink-0 flex flex-col items-center justify-center gap-0.5 rounded-2xl border-2 border-[#0C1220] py-3 shadow-[2px_2px_0_rgba(11,30,63,0.85)] bg-white">
               <span className="text-[26px] leading-none">{cfg.emoji}</span>
-              <span className="text-[13px] font-bold leading-tight text-slate-800">
+              <span className="text-[13px] font-bold leading-tight text-[#0C1220]">
                 {displayLabel}
               </span>
             </div>
-            <p className="text-sm font-medium text-slate-600 leading-snug">
+            <p className="text-sm font-medium text-[#3D4A63] leading-snug">
               {purpose}
             </p>
           </div>
@@ -52,13 +56,13 @@ export default function BucketGuide() {
       })}
 
       {/* DON'T KNOW IT — replica of the quiet line under the tray. */}
-      <div className="flex items-center gap-3.5 pt-1 border-t border-slate-100">
+      <div className="flex items-center gap-3.5 pt-1 border-t border-[#0C1220]/10">
         <div className="w-[92px] shrink-0 text-center pt-2">
           <span className="inline-block text-sm px-4 py-1 rounded-full text-slate-500 font-medium whitespace-nowrap">
             Don&apos;t Know It
           </span>
         </div>
-        <p className="text-sm font-medium text-slate-600 leading-snug pt-2">
+        <p className="text-sm font-medium text-[#3D4A63] leading-snug pt-2">
           Never heard it. It doesn&apos;t count as a rating.
         </p>
       </div>

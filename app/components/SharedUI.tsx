@@ -28,7 +28,7 @@ export function HelpButton() {
       onClick={() => window.dispatchEvent(new CustomEvent('weezer:open-help'))}
       aria-label="Help"
       title="Help"
-      className="w-7 h-7 shrink-0 flex items-center justify-center rounded-full bg-[#0072CE] hover:bg-blue-600 text-white font-black text-sm leading-none shadow-xs transition-colors cursor-pointer"
+      className="w-7 h-7 shrink-0 flex items-center justify-center rounded-full bg-[#0072CE] hover:bg-blue-600 text-white font-black text-sm leading-none shadow-xs transition-colors cursor-pointer border-2 border-[#0C1220]"
     >
       ?
     </button>

@@ -9,6 +9,7 @@ import {
 } from '../context/WeezerContext';
 import { albumCoverSrc, resolveAlbumId } from './shareables/ShareCardShell';
 import { FlyingWIcon, AudioPreviewButton, HelpButton } from './SharedUI';
+import { displayFont } from './shareables/fonts';
 import type { CommunityScopeStats, TriageSection } from './Step1Triage';
 
 /**
@@ -671,6 +672,7 @@ function DeckCardShell({
   swipe,
   adaptive,
   swaying,
+  paper,
 }: {
   children: React.ReactNode;
   /**
@@ -725,6 +727,13 @@ function DeckCardShell({
    * state-toggled and can never leak into normal deck use.
    */
   swaying?: boolean;
+  /**
+   * Milestone state only (Round 2 refresh): the front card's
+   * face goes paper-white instead of the deck's light blue, so
+   * the celebration reads as its own poster moment. Song,
+   * completion and end-of-deck cards keep the blue face.
+   */
+  paper?: boolean;
 }) {
   // The front card's transform/transition are phase-driven: it
   // follows the pointer while dragging, springs back over 200ms on
@@ -765,11 +774,11 @@ function DeckCardShell({
     >
       <div
         aria-hidden="true"
-        className="absolute inset-0 rounded-[28px] bg-white border border-slate-200 shadow-md -rotate-2 translate-y-1"
+        className="absolute inset-0 rounded-[28px] bg-white border-[3px] border-[#0C1220] -rotate-2 translate-y-1"
       />
       <div
         aria-hidden="true"
-        className="absolute inset-0 rounded-[28px] bg-white border border-slate-200 shadow-md rotate-[1.5deg] translate-y-0.5"
+        className="absolute inset-0 rounded-[28px] bg-white border-[3px] border-[#0C1220] rotate-[1.5deg] translate-y-0.5"
       />
       {swipe ? (
         <div
@@ -786,7 +795,7 @@ function DeckCardShell({
           }}
           className={`relative ${
             adaptive ? 'min-h-[362px]' : 'h-full'
-          } rounded-[28px] bg-[#d9eafa] border border-slate-200 shadow-xl select-none`}
+          } rounded-[28px] bg-[#d9eafa] border-[3px] border-[#0C1220] shadow-[4px_4px_0_rgba(11,30,63,0.85)] select-none`}
         >
           {/* Directional stamps: all three are CENTERED OVER THE
               ALBUM ART (owner: the old corner stamps rotated
@@ -831,7 +840,9 @@ function DeckCardShell({
         <div
           className={`relative ${
             adaptive ? 'min-h-[362px]' : 'h-full'
-          } rounded-[28px] bg-[#d9eafa] border border-slate-200 shadow-xl`}
+          } rounded-[28px] ${
+            paper ? 'bg-white' : 'bg-[#d9eafa]'
+          } border-[3px] border-[#0C1220] shadow-[4px_4px_0_rgba(11,30,63,0.85)]`}
         >
           {children}
         </div>
@@ -1817,26 +1828,28 @@ export default function Step1Deck({
     const cfg = BUCKET_CONFIG[bucket];
     const displayLabel = bucket === 'slaps' ? 'Slaps' : cfg.label;
 
-    // The mock's bucket tiles: white, thin slate border, the bucket's
-    // glyph large on top and its label underneath. The selected tile
-    // keeps the deck's sky-400 family as a border/ring treatment —
-    // and because the deck is browsable, it always reflects the
-    // CURRENT card's verdict. While THIS tile's sort is mid-flip it
-    // wears a committed fill instead (slate-900 + white text — the
-    // bucket config's own fills are light tints only, so the dark
-    // committed state is uniform across buckets), resetting the
-    // moment the flip completes.
+    // The bucket tiles: white, with the bucket's glyph large on
+    // top and its label underneath — Round 2 gives the resting
+    // tile the poster ink frame and hard shadow. The selected
+    // tile keeps the deck's sky-400 family as a border/ring
+    // treatment — and because the deck is browsable, it always
+    // reflects the CURRENT card's verdict. While THIS tile's
+    // sort is mid-flip it wears a committed fill instead
+    // (slate-900 + white text — the bucket config's own fills
+    // are light tints only, so the dark committed state is
+    // uniform across buckets), resetting the moment the flip
+    // completes.
     return (
       <button
         key={bucket}
         data-tutorial={`bucket-${bucket}`}
         onClick={() => flipAct(bucket)}
-        className={`flex-1 flex flex-col items-center justify-center gap-0.5 rounded-2xl border py-3 [@media(max-height:740px)]:py-2 shadow-sm transition-all cursor-pointer ${
+        className={`flex-1 flex flex-col items-center justify-center gap-0.5 rounded-2xl border-[2.5px] py-3 [@media(max-height:740px)]:py-2 transition-all cursor-pointer ${
           isCommitted
             ? 'bg-slate-900 border-slate-900 shadow-md'
             : isSelected
-            ? 'bg-sky-50 border-sky-400 ring-1 ring-sky-400'
-            : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+            ? 'bg-sky-50 border-sky-400 ring-1 ring-sky-400 shadow-sm'
+            : 'bg-white border-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)] hover:bg-slate-50'
         }`}
         title={displayLabel}
       >
@@ -1845,7 +1858,7 @@ export default function Step1Deck({
         </span>
         <span
           className={`text-[13px] font-bold leading-tight ${
-            isCommitted ? 'text-white' : 'text-slate-800'
+            isCommitted ? 'text-white' : 'text-[#0C1220]'
           }`}
         >
           {displayLabel}
@@ -2396,7 +2409,7 @@ export default function Step1Deck({
           distance suffix — the milestone cards pace the deck now,
           the line just reports progress) and the help button. */}
       <div className="shrink-0 pt-2 space-y-1.5">
-        <div className="flex items-center justify-between gap-2 text-[11px] font-black text-slate-700">
+        <div className="flex items-center justify-between gap-2 text-[11px] font-black text-[#0C1220]">
           <div className="flex items-center gap-2">
             {/* No dashboard exit in this row — the owner ruled
                 the menu is the way there (a first-run sorter has
@@ -2412,12 +2425,12 @@ export default function Step1Deck({
             </span>
           </div>
           <div className="flex items-center gap-3 shrink-0">
-            <label className="flex items-center gap-1.5 cursor-pointer text-[11px] font-extrabold text-slate-600 select-none normal-case tracking-normal">
+            <label className="flex items-center gap-1.5 cursor-pointer text-[11px] font-extrabold text-[#3D4A63] select-none normal-case tracking-normal">
               <input
                 type="checkbox"
                 checked={hideSorted}
                 onChange={(e) => toggleHideSorted(e.target.checked)}
-                className="rounded border-slate-300 text-[#0072CE] focus:ring-[#0072CE] w-3.5 h-3.5 cursor-pointer"
+                className="rounded border-2 border-[#0C1220] text-[#0072CE] focus:ring-[#0072CE] w-3.5 h-3.5 cursor-pointer"
               />
               <span>Hide sorted</span>
             </label>
@@ -2425,15 +2438,16 @@ export default function Step1Deck({
           </div>
         </div>
         {/* The Flying W rides the fill's edge — the same treatment
-            as the list view's bar (Step1Triage), colors included:
-            a light track (bg-[#E0F2FE], blue-200 border) and a sky
-            fill (bg-[#7DD3FC]) so the #0072CE W reads against both
-            (owner: on the old solid-#0072CE fill the W drowned in
-            its own color). A w-8 h-5 marker centered on the fill
-            edge, its left % clamped to 2–98 so it never hangs off
-            either end. */}
+            as the list view's bar (Step1Triage): a sky fill
+            (bg-[#7DD3FC]) so the #0072CE W reads against both the
+            fill and the track (owner: on the old solid-#0072CE
+            fill the W drowned in its own color). Round 2: the
+            track itself is now paper-white with an ink frame
+            (approved mock) — fill and W colors unchanged. A w-8
+            h-5 marker centered on the fill edge, its left %
+            clamped to 2–98 so it never hangs off either end. */}
         <div className="relative w-full h-3.5 my-2 z-0">
-          <div className="absolute inset-0 bg-[#E0F2FE] rounded-full border border-blue-200 z-10" />
+          <div className="absolute inset-0 bg-white rounded-full border-[2.5px] border-[#0C1220] z-10" />
           <div
             className="absolute top-0 left-0 h-full bg-[#7DD3FC] rounded-full transition-all duration-300 z-20"
             style={{ width: `${progressPercent}%` }}
@@ -2735,7 +2749,7 @@ export default function Step1Deck({
                 <img
                   src={albumCoverSrc(resolveAlbumId(currentSong))}
                   alt={`${currentSong.album} cover art`}
-                  className="h-28 w-28 object-cover rounded-xl shadow-lg border-[3px] border-white ring-1 ring-slate-900/10"
+                  className="h-28 w-28 object-cover rounded-xl border-[3px] border-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)]"
                 />
               </div>
               {/* TITLE — a fixed two-line slot. line-clamp-2 caps the
@@ -2744,12 +2758,12 @@ export default function Step1Deck({
                   second line's space empty. */}
               <div className="h-[104px] w-full flex items-center justify-center">
                 <h2
-                  className={`${titleSizeClass} font-black tracking-tight text-slate-950 leading-[1.05] break-words line-clamp-2`}
+                  className={`${titleSizeClass} ${displayFont.className} text-[#0C1220] leading-[1.05] break-words line-clamp-2`}
                 >
                   {currentSong.title}
                 </h2>
               </div>
-              <p className="text-sm font-bold text-slate-500">
+              <p className="text-sm font-bold text-[#3D4A63]">
                 {currentSong.album} ({currentSong.year})
               </p>
               {/* The list rows' preview button, exact same component
@@ -2779,7 +2793,7 @@ export default function Step1Deck({
         <div className="shrink-0">
           <div
             data-tutorial="tray"
-            className="bg-slate-100 border border-slate-200/60 rounded-3xl shadow-sm p-3 [@media(max-height:740px)]:p-2.5"
+            className="bg-white border-[3px] border-[#0C1220] rounded-3xl shadow-[4px_4px_0_rgba(11,30,63,0.85)] p-3 [@media(max-height:740px)]:p-2.5"
           >
             <div className="flex gap-1.5 sm:gap-2">
               {BUCKET_ORDER.map(renderBucketButton)}
@@ -2798,7 +2812,7 @@ export default function Step1Deck({
                   ? 'bg-slate-900 text-white font-bold shadow-md'
                   : triageMap[currentSong.id] === 'unknown'
                   ? 'text-[#0072CE] font-bold'
-                  : 'text-slate-500 font-medium hover:text-slate-800'
+                  : 'text-[#3D4A63] font-medium hover:text-[#0C1220]'
               }`}
               title="I haven't heard this song — don't rate it"
             >
@@ -2812,7 +2826,7 @@ export default function Step1Deck({
                 onChange={(e) => {
                   if (e.target.value) jumpToSection(e.target.value);
                 }}
-                className="w-full appearance-none text-xs font-extrabold text-slate-700 bg-white border border-slate-200 rounded-full shadow-sm pl-4 pr-9 py-2 cursor-pointer hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#0072CE]"
+                className="w-full appearance-none text-xs font-extrabold text-[#0C1220] bg-white border-[2.5px] border-[#0C1220] rounded-full shadow-[2px_2px_0_rgba(11,30,63,0.85)] pl-4 pr-9 py-2 cursor-pointer hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#0072CE]"
                 aria-label="Jump to album"
               >
                 <option value="" disabled>
@@ -2831,7 +2845,7 @@ export default function Step1Deck({
               </select>
               <svg
                 aria-hidden="true"
-                className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400"
+                className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#0C1220]"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"

@@ -8,7 +8,6 @@ import { Top10AlbumsCardVisual } from './Top10AlbumsCard';
 import type { Bucket, ShareSong } from './Top10Card';
 import { TribeBadgeCardVisual } from './TribeBadgeCard';
 import { EraDnaCardVisual } from './EraDnaCard';
-import { TasteCompatibilityCardVisual, friendKey, friendLabel } from './TasteCompatibilityCard';
 import type { FriendLike } from './TasteCompatibilityCard';
 import { FanhoodCardVisual } from './FanhoodCard';
 import { useFanhood } from '../../lib/fanhood';
@@ -40,10 +39,9 @@ export interface TierChartData {
 }
 
 /**
- * One asset in the library: a scaled preview, an optional control row
- * (e.g. the compatibility card's friend picker), and a single Download
- * button — the tier card's one-button pattern (native share sheet on
- * mobile, file download on desktop).
+ * One asset in the library: a scaled preview, an optional control
+ * row, and a single Download button — the tier card's one-button
+ * pattern (native share sheet on mobile, file download on desktop).
  *
  * Exports ALWAYS render from a hidden full-size off-screen copy (the
  * TierListChart pattern) — never from the CSS-scaled preview — so PNGs
@@ -437,78 +435,6 @@ function ThumbnailItem({
   );
 }
 
-/** Compatibility thumbnail item: same friend-selection state pattern as
- *  CompatibilityLibraryItem — the picker lives in the modal above the
- *  card, and the download stays disabled until a friend is chosen. */
-function CompatibilityThumbnailItem({
-  songs,
-  friends,
-  subtitle,
-  onFindFriends,
-}: {
-  songs: ShareSong[];
-  friends: FriendLike[];
-  subtitle?: string;
-  onFindFriends?: () => void;
-}) {
-  const [selectedKey, setSelectedKey] = useState('');
-  const controls = (
-    <div>
-      <label className="mb-1 block text-[10px] font-black uppercase tracking-wider text-slate-400">
-        Compare with
-      </label>
-      {friends.length === 0 ? (
-        /* No friends: the picker used to render empty and the
-           Download stayed disabled with no explanation and no
-           way forward. Say what's missing and offer the trip. */
-        <div className="space-y-2">
-          <p className="text-sm font-bold text-slate-500 leading-snug">
-            Taste Match compares your rankings with a friend&apos;s —
-            you don&apos;t have any Fan Friends yet.
-          </p>
-          {onFindFriends && (
-            <button
-              type="button"
-              onClick={onFindFriends}
-              className="text-sm font-black text-[#0072CE] underline underline-offset-4 cursor-pointer"
-            >
-              Find friends →
-            </button>
-          )}
-        </div>
-      ) : (
-        <select
-          value={selectedKey}
-          onChange={(e) => setSelectedKey(e.target.value)}
-          className="w-full rounded-xl bg-white border border-slate-300 px-3 py-2.5 text-sm font-bold text-slate-900"
-        >
-          <option value="">Choose a friend…</option>
-          {friends.map((f, i) => (
-            <option key={friendKey(f, i)} value={friendKey(f, i)}>
-              {friendLabel(f)}
-            </option>
-          ))}
-        </select>
-      )}
-    </div>
-  );
-  return (
-    <ThumbnailItem
-      shortTitle="Taste Match"
-      filename="weezer-taste-match.png"
-      controls={controls}
-      downloadDisabled={selectedKey === ''}
-    >
-      <TasteCompatibilityCardVisual
-        songs={songs}
-        friends={friends}
-        subtitle={subtitle}
-        selectedKey={selectedKey}
-      />
-    </ThumbnailItem>
-  );
-}
-
 /** Tier List thumbnail item (one per mode — "Tier List — Songs" and
  *  "Tier List — Albums"): the item builds its own TierListChart from
  *  the shared tier data, pinned to its mode via fixedView (no toggle
@@ -684,90 +610,25 @@ function FanhoodThumbnailItem({
   );
 }
 
-/** Compatibility item holds the friend selection so the preview and the
- *  export copy render the same match. The picker sits under the preview
- *  at natural size. */
-function CompatibilityLibraryItem({
-  songs,
-  friends,
-  subtitle,
-  onFindFriends,
-}: {
-  songs: ShareSong[];
-  friends: FriendLike[];
-  subtitle?: string;
-  onFindFriends?: () => void;
-}) {
-  const [selectedKey, setSelectedKey] = useState('');
-  const controls = (
-    <div>
-      <label className="mb-1 block text-[10px] font-black uppercase tracking-wider text-slate-400">
-        Compare with
-      </label>
-      {friends.length === 0 ? (
-        <div className="space-y-2">
-          <p className="text-sm font-bold text-slate-500 leading-snug">
-            Taste Match compares your rankings with a friend&apos;s —
-            you don&apos;t have any Fan Friends yet.
-          </p>
-          {onFindFriends && (
-            <button
-              type="button"
-              onClick={onFindFriends}
-              className="text-sm font-black text-[#0072CE] underline underline-offset-4 cursor-pointer"
-            >
-              Find friends →
-            </button>
-          )}
-        </div>
-      ) : (
-        <select
-          value={selectedKey}
-          onChange={(e) => setSelectedKey(e.target.value)}
-          className="w-full rounded-xl bg-white border border-slate-300 px-3 py-2.5 text-sm font-bold text-slate-900"
-        >
-          <option value="">Choose a friend…</option>
-          {friends.map((f, i) => (
-            <option key={friendKey(f, i)} value={friendKey(f, i)}>
-              {friendLabel(f)}
-            </option>
-          ))}
-        </select>
-      )}
-    </div>
-  );
-  return (
-    <LibraryItem
-      title="Taste Compatibility"
-      description="Your taste match score vs. a friend."
-      filename="weezer-taste-match.png"
-      controls={controls}
-      downloadDisabled={selectedKey === ''}
-      anchorKey="taste-match"
-    >
-      <TasteCompatibilityCardVisual
-        songs={songs}
-        friends={friends}
-        subtitle={subtitle}
-        selectedKey={selectedKey}
-      />
-    </LibraryItem>
-  );
-}
-
 export default function ShareablesGallery({
   songs,
   triageMap,
-  friends,
+  friends: _friends,
   subtitle,
   tierCharts,
   variant = 'full',
   onStartSorting,
-  onFindFriends,
+  onFindFriends: _onFindFriends,
 }: {
   /** Ranked songs only (already filtered to bucketed songs). */
   songs: ShareSong[];
   triageMap: Record<string, Bucket>;
+  /** Accepted but currently unused (Nov 5): the Taste Match card —
+   *  the gallery's only consumer of the friends list — is buried
+   *  for now (Mark's direction). The prop stays in the contract so
+   *  the hosts' calls and the card's return need no rewiring; the
+   *  component (TasteCompatibilityCard) and its data path are
+   *  untouched. */
   friends: FriendLike[];
   subtitle?: string;
   /** Optional tier-list data. The gallery renders it as TWO card
@@ -787,7 +648,8 @@ export default function ShareablesGallery({
    *  hosts pass it; without it the empty state is text-only and
    *  the one action it recommends isn't offered on the page. */
   onStartSorting?: () => void;
-  /** Zero-friends forward path for the Taste Match card. */
+  /** Zero-friends forward path for the Taste Match card —
+   *  retained with the friends prop while that card is buried. */
   onFindFriends?: () => void;
 }) {
   // The fanhood card is the one asset that doesn't come from
@@ -851,7 +713,6 @@ export default function ShareablesGallery({
         <ThumbnailItem shortTitle="Era DNA" filename="my-weezer-era-dna.png">
           <EraDnaCardVisual songs={songs} subtitle={subtitle} />
         </ThumbnailItem>
-        <CompatibilityThumbnailItem songs={songs} friends={friends} subtitle={subtitle} onFindFriends={onFindFriends} />
       </div>
     );
   }
@@ -903,7 +764,6 @@ export default function ShareablesGallery({
         >
           <EraDnaCardVisual songs={songs} subtitle={subtitle} />
         </LibraryItem>
-        <CompatibilityLibraryItem songs={songs} friends={friends} subtitle={subtitle} onFindFriends={onFindFriends} />
       </div>
     </div>
   );

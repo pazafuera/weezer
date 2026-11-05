@@ -37,7 +37,6 @@ const SHAREABLE_JUMP_KEYS = [
   'tier-albums',
   'tribe',
   'era-dna',
-  'taste-match',
   'game',
 ];
 

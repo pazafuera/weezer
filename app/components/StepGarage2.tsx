@@ -4,10 +4,12 @@
  * StepGarage2 — the "fan headquarters" dashboard, built as a LIVE
  * PROTOTYPE step (key: 'garage2') next to the current dashboard,
  * which it does not replace. Mark approved the Muse artifact
- * design on Nov 4, 2026 (poster-system hero, era shelf, game card,
- * Thread + shareables, fandom row, destinations grid — sorting
- * first, discovery second) and asked for it in the real app so it
- * can be prepped here and retrofitted across the site later.
+ * design on Nov 4, 2026 (poster-system hero, era shelf, Thread +
+ * shareables, Fan Stats feature, game card, fandom row,
+ * destinations grid — sorting first, Thread and Fan Stats
+ * promoted above the game on Mark's direction later that day)
+ * and asked for it in the real app so it can be prepped here and
+ * retrofitted across the site later.
  *
  * Reachable only by direct URL (?step=garage2). Deliberately NOT
  * in the menu or any nav. Every number on the page is real state
@@ -654,6 +656,37 @@ function ThreadSection() {
 }
 
 /* ------------------------------------------------------------------ */
+/* Fan Stats — feature card                                            */
+/* ------------------------------------------------------------------ */
+
+/** Fan Stats as a full-width feature card, built to the Thread
+ *  card's exact pattern so the two read as a matched pair of
+ *  doorways — both promoted above the game (Mark, Nov 4, 2026). */
+function FanStatsFeature() {
+  const { navigateTo } = useWeezer();
+
+  return (
+    <button
+      type="button"
+      onClick={() => navigateTo('fan_stats')}
+      className="group w-full cursor-pointer space-y-2 rounded-[2rem] border-2 border-slate-200/90 bg-white p-6 text-left shadow-xs transition-all hover:border-blue-300 sm:p-8"
+    >
+      <h2
+        className={`${displayFont.className} text-2xl tracking-wide text-slate-950 group-hover:text-[#0072CE] sm:text-3xl`}
+      >
+        Fan Stats
+      </h2>
+      <p className="max-w-lg text-sm font-medium leading-relaxed text-slate-500">
+        See how your taste stacks up against every other fan.
+      </p>
+      <div className="pt-1 text-xs font-black text-[#0072CE] group-hover:underline">
+        Take a look →
+      </div>
+    </button>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /* In the fandom                                                       */
 /* ------------------------------------------------------------------ */
 
@@ -665,43 +698,29 @@ function FandomSection() {
   return (
     <section className="space-y-3">
       <SectionHeading>In the fandom</SectionHeading>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <button
-          type="button"
-          onClick={() => navigateTo('fan_stats')}
-          className="group cursor-pointer space-y-1.5 rounded-3xl border-2 border-slate-200/90 bg-white p-5 text-left shadow-xs transition-all hover:border-slate-300"
-        >
-          <h3 className="text-base font-black text-slate-950 group-hover:text-[#0072CE]">
-            Fan Stats
-          </h3>
-          <p className="text-xs font-medium leading-relaxed text-slate-500 sm:text-sm">
-            See how your taste stacks up against every other fan.
-          </p>
-          <div className="pt-1 text-xs font-black text-[#0072CE] group-hover:underline">
-            Take a look →
-          </div>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => navigateTo(userId ? 'friends' : 'login')}
-          className="group cursor-pointer space-y-1.5 rounded-3xl border-2 border-slate-200/90 bg-white p-5 text-left shadow-xs transition-all hover:border-slate-300"
-        >
-          <h3 className="text-base font-black text-slate-950 group-hover:text-[#0072CE]">
-            Fan Friends
-          </h3>
-          <p className="text-xs font-medium leading-relaxed text-slate-500 sm:text-sm">
-            {!userId
-              ? 'Sign in to compare rankings with friends.'
-              : friendsCount > 0
-                ? `You're comparing rankings with ${friendsCount} friend${friendsCount === 1 ? '' : 's'}.`
-                : 'See what your friends are ranking.'}
-          </p>
-          <div className="pt-1 text-xs font-black text-[#0072CE] group-hover:underline">
-            {userId ? 'Take a look →' : 'Sign in →'}
-          </div>
-        </button>
-      </div>
+      {/* Fan Stats used to share this grid as a small card; it is
+          now the full-width feature card above the game, so the
+          grid is gone and Fan Friends stands as a full-width row
+          alongside the Leaderboard row. */}
+      <button
+        type="button"
+        onClick={() => navigateTo(userId ? 'friends' : 'login')}
+        className="group w-full cursor-pointer space-y-1.5 rounded-3xl border-2 border-slate-200/90 bg-white p-5 text-left shadow-xs transition-all hover:border-slate-300"
+      >
+        <h3 className="text-base font-black text-slate-950 group-hover:text-[#0072CE]">
+          Fan Friends
+        </h3>
+        <p className="text-xs font-medium leading-relaxed text-slate-500 sm:text-sm">
+          {!userId
+            ? 'Sign in to compare rankings with friends.'
+            : friendsCount > 0
+              ? `You're comparing rankings with ${friendsCount} friend${friendsCount === 1 ? '' : 's'}.`
+              : 'See what your friends are ranking.'}
+        </p>
+        <div className="pt-1 text-xs font-black text-[#0072CE] group-hover:underline">
+          {userId ? 'Take a look →' : 'Sign in →'}
+        </div>
+      </button>
 
       <button
         type="button"
@@ -818,8 +837,9 @@ export default function StepGarage2() {
     <div className="mx-auto w-full max-w-5xl space-y-6 pb-24 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <GarageHero />
       <EraShelf />
-      <GameCard />
       <ThreadSection />
+      <FanStatsFeature />
+      <GameCard />
       <FandomSection />
       <DestinationsGrid />
     </div>

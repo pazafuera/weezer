@@ -2,7 +2,6 @@
 
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { FlyingWIcon } from './SharedUI';
-import { displayFont } from './shareables/fonts';
 import {
   WELCOME_SESSION_KEY,
   WELCOME_LAST_SHOWN_KEY,
@@ -25,11 +24,10 @@ import {
  *   a ~2.6s minimum (Mark's playtest note, Nov 4, 2026: the
  *   first cut's ~900ms "needs to run a few more seconds to
  *   have the full effect") — then fades.
- * - The look is the share-card poster system (Mark, same
- *   note: "more fun treatment — the yellow highlighted text,
- *   headline with shadow"): flat #039AD1 + halftone dots, a
- *   rotated yellow tape strip, and the phrase as a Lilita One
- *   headline with a hard offset shadow.
+ * - The look stays WHITE and minimal — just the record and
+ *   the phrase (Mark's correction, Nov 4, 2026: an earlier cut
+ *   dressed this screen in the poster treatment; that
+ *   treatment belongs on the DASHBOARD hero, not here).
  * - NOT eligible: the overlay stays out of the way (the shell
  *   + skeleton carry the boot). If the boot is STILL loading
  *   after ~1500ms, the overlay appears purely as a loading
@@ -146,55 +144,31 @@ export default function WelcomeInterstitial({
   return (
     <div
       aria-hidden={phase === 'fading'}
-      className={`fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#039AD1] transition-opacity duration-300 ${
+      className={`fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white transition-opacity duration-300 ${
         phase === 'fading' ? 'pointer-events-none opacity-0' : 'opacity-100'
       }`}
     >
-      {/* Halftone dots — the poster texture, same recipe as the
-          dashboard hero's overlay. */}
+      {/* The record: black disc, concentric grooves (repeating
+          radial gradient), brand-blue center label carrying the
+          white Flying W, spindle hole. It spins via the
+          .welcome-record-spin keyframes (globals.css), which
+          respect prefers-reduced-motion. */}
       <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0"
+        className="welcome-record-spin relative h-36 w-36 rounded-full shadow-2xl sm:h-44 sm:w-44"
         style={{
-          backgroundImage:
-            'radial-gradient(rgba(255,255,255,0.22) 1.5px, transparent 1.6px)',
-          backgroundSize: '14px 14px',
+          background:
+            'repeating-radial-gradient(circle at center, #0b0b0c 0px, #1a1a1c 2px, #0b0b0c 4px)',
         }}
-      />
-      <div className="relative flex flex-col items-center px-6">
-        {/* The yellow tape strip — the poster's eyebrow label. */}
-        <div className="-rotate-2 bg-[#FFD84D] px-4 py-1.5 shadow-md">
-          <span className="text-xs font-black uppercase tracking-[0.18em] text-slate-950 sm:text-sm">
-            All My Favorite Songs
-          </span>
+      >
+        <div className="absolute inset-0 rounded-full border border-black/50" />
+        <div className="absolute left-1/2 top-1/2 flex h-[38%] w-[38%] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-[#0072CE] shadow-inner">
+          <FlyingWIcon className="h-auto w-3/5 text-white" />
         </div>
-        {/* The record: black disc, concentric grooves (repeating
-            radial gradient), brand-blue center label carrying the
-            white Flying W, spindle hole. It spins via the
-            .welcome-record-spin keyframes (globals.css), which
-            respect prefers-reduced-motion. */}
-        <div
-          className="welcome-record-spin relative mt-8 h-40 w-40 rounded-full shadow-2xl sm:h-48 sm:w-48"
-          style={{
-            background:
-              'repeating-radial-gradient(circle at center, #0b0b0c 0px, #1a1a1c 2px, #0b0b0c 4px)',
-          }}
-        >
-          <div className="absolute inset-0 rounded-full border border-black/50" />
-          <div className="absolute left-1/2 top-1/2 flex h-[38%] w-[38%] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-[#0072CE] shadow-inner">
-            <FlyingWIcon className="h-auto w-3/5 text-white" />
-          </div>
-          <div className="absolute left-1/2 top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#039AD1]" />
-        </div>
-        {/* The headline — display font, hard offset shadow, the
-            poster treatment from the share cards. */}
-        <p
-          className={`${displayFont.className} mt-8 text-center text-4xl leading-[1.05] tracking-wide text-white sm:text-5xl`}
-          style={{ textShadow: '0.06em 0.06em 0 rgba(1, 66, 102, 0.55)' }}
-        >
-          Wrestling with Jimmy…
-        </p>
+        <div className="absolute left-1/2 top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white" />
       </div>
+      <p className="mt-6 text-sm font-bold text-slate-500">
+        Wrestling with Jimmy…
+      </p>
     </div>
   );
 }

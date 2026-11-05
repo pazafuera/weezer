@@ -53,13 +53,61 @@ const TOTAL_SONGS = FULL_SONG_POOL.length;
 /* Shared bits                                                         */
 /* ------------------------------------------------------------------ */
 
-function SectionHeading({ children }: { children: React.ReactNode }) {
+const POSTER_CARD_SHADOW =
+  'shadow-[0_10px_28px_rgba(11,30,63,0.12),0_2px_0_rgba(11,30,63,0.9)]';
+const POSTER_HARD_SHADOW = 'shadow-[4px_4px_0_rgba(11,30,63,0.85)]';
+const POSTER_BUTTON_SMALL =
+  'inline-flex cursor-pointer items-center justify-center rounded-[11px] border-[2.5px] border-[#0C1220] bg-white px-4 py-[9px] text-sm font-black text-[#005CA8] shadow-[2px_2px_0_#0C1220] transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_#0C1220]';
+
+function SectionHeading({
+  children,
+  sub,
+  tag,
+}: {
+  children: React.ReactNode;
+  sub?: string;
+  tag?: React.ReactNode;
+}) {
   return (
-    <h2
-      className={`${displayFont.className} text-2xl tracking-wide text-slate-950`}
+    <div className="mb-[14px] flex items-end justify-between gap-[14px]">
+      <div>
+        <h2
+          className={`${displayFont.className} text-[clamp(26px,5vw,34px)] leading-none tracking-wide text-[#0C1220]`}
+        >
+          {children}
+        </h2>
+        {sub && (
+          <p className="mt-1 text-[14.5px] font-semibold leading-snug text-[#3D4A63]">
+            {sub}
+          </p>
+        )}
+      </div>
+      {tag}
+    </div>
+  );
+}
+
+type PosterTapeTone = 'yellow' | 'blue' | 'pink';
+
+function PosterTape({
+  children,
+  tone = 'yellow',
+}: {
+  children: React.ReactNode;
+  tone?: PosterTapeTone;
+}) {
+  const toneClass =
+    tone === 'blue'
+      ? 'rotate-[1.5deg] bg-[#BDE9FF] text-[#07314f]'
+      : tone === 'pink'
+        ? '-rotate-[1.5deg] bg-[#F6A8C1] text-[#4a0f28]'
+        : '-rotate-2 bg-[#FFE066] text-[#231a00]';
+  return (
+    <span
+      className={`inline-block whitespace-nowrap px-2.5 py-[5px] text-[10px] font-black uppercase tracking-[0.12em] shadow-[0_2px_5px_rgba(0,0,0,0.18)] sm:text-[11px] sm:tracking-[0.14em] ${toneClass}`}
     >
       {children}
-    </h2>
+    </span>
   );
 }
 
@@ -130,7 +178,7 @@ function ProgressRing({
 function TapeStrip({ children }: { children: React.ReactNode }) {
   return (
     <div>
-      <span className="inline-block -rotate-2 bg-[#FFE066] px-2.5 py-[5px] text-[11px] font-black uppercase tracking-[0.14em] text-[#231a00] shadow-[0_2px_5px_rgba(0,0,0,0.18)] sm:text-xs">
+      <span className="inline-block -rotate-2 whitespace-nowrap bg-[#FFE066] px-2.5 py-[5px] text-[10px] font-black uppercase tracking-[0.12em] text-[#231a00] shadow-[0_2px_5px_rgba(0,0,0,0.18)] sm:text-xs sm:tracking-[0.14em]">
         {children}
       </span>
     </div>
@@ -348,6 +396,14 @@ const SHELF_LABELS: Record<string, string> = {
   new: 'New Horizons',
 };
 
+const SHELF_SPINE_COLORS: Record<string, string> = {
+  blue: '#0072CE',
+  y2k: '#E4572E',
+  red: '#C1272D',
+  comeback: '#2E933C',
+  new: '#5B2A86',
+};
+
 function EraShelf() {
   const { triageMap, navigateTo } = useWeezer();
 
@@ -369,58 +425,92 @@ function EraShelf() {
     navigateTo('triage');
   };
 
+  const eraStats = ERAS.map((era) => {
+    const songs = FULL_SONG_POOL.filter(
+      (s) => (s.year || 0) > 0 && era.test(s.year)
+    );
+    const sorted = songs.filter(
+      (s) => triageMap[s.id] !== undefined
+    ).length;
+    const pct = songs.length
+      ? Math.round((sorted / songs.length) * 100)
+      : 0;
+    return {
+      era,
+      songs,
+      sorted,
+      pct,
+      label: SHELF_LABELS[era.key] ?? era.name,
+    };
+  });
+  const allComplete = eraStats.every((stat) => stat.pct === 100);
+  const totalSorted = eraStats.reduce(
+    (sum, stat) => sum + stat.sorted,
+    0
+  );
+  const completedEra = eraStats.find((stat) => stat.pct === 100);
+  const neediestEra = eraStats.reduce((lowest, stat) =>
+    stat.pct < lowest.pct ? stat : lowest
+  );
+  const shelfNote = allComplete
+    ? 'Five eras, one shelf — the whole catalog from the Blue Album to today.'
+    : totalSorted === 0
+      ? null
+      : completedEra
+        ? `${completedEra.label} is complete. ${neediestEra.label} needs the most love.`
+        : `${neediestEra.label} needs the most love.`;
+
   return (
-    <section className="space-y-3">
-      <SectionHeading>Your shelf</SectionHeading>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        {ERAS.map((era) => {
-          const songs = FULL_SONG_POOL.filter(
-            (s) => (s.year || 0) > 0 && era.test(s.year)
-          );
-          const sorted = songs.filter(
-            (s) => triageMap[s.id] !== undefined
-          ).length;
-          const pct = songs.length
-            ? Math.round((sorted / songs.length) * 100)
-            : 0;
-          return (
+    <section>
+      <SectionHeading
+        sub={
+          allComplete
+            ? 'Every era, on the record. Tap a spine to open that era’s songs.'
+            : 'Some eras are done. Some are still on the turntable.'
+        }
+        tag={
+          allComplete ? (
+            <PosterTape tone="blue">All eras complete</PosterTape>
+          ) : undefined
+        }
+      >
+        Your shelf
+      </SectionHeading>
+      <div
+        className={`rounded-[18px] border-[3px] border-[#0C1220] bg-white p-[18px_16px_14px] ${POSTER_CARD_SHADOW}`}
+      >
+        <div className="flex gap-2">
+          {eraStats.map(({ era, songs, sorted, pct, label }) => (
             <button
               key={era.key}
               type="button"
               onClick={() => jumpToAlbum(songs[0]?.album)}
-              aria-label={`Jump to the ${SHELF_LABELS[era.key] ?? era.name} in Sort — ${sorted} of ${songs.length} sorted`}
-              className="group flex cursor-pointer overflow-hidden rounded-3xl border-2 border-slate-200/90 bg-white text-left shadow-xs transition-all hover:border-slate-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0072CE] focus-visible:ring-offset-1"
+              aria-label={`Jump to the ${label} in Sort — ${sorted} of ${songs.length} sorted`}
+              className="flex h-[178px] min-w-0 flex-1 cursor-pointer flex-col items-center gap-2 rounded-[8px_8px_4px_4px] border-[2.5px] border-[#0C1220] px-1 py-3 pb-2.5 text-center text-white transition-transform duration-150 hover:-translate-y-[5px] active:-translate-y-[1px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0072CE] focus-visible:ring-offset-2 min-[521px]:h-[196px]"
+              style={{
+                backgroundColor:
+                  SHELF_SPINE_COLORS[era.key] ?? era.color,
+              }}
             >
+              <span className="whitespace-nowrap rounded-full bg-white/90 px-[7px] py-[3px] text-[11px] font-black leading-none text-[#0C1220]">
+                {pct}%
+              </span>
               <span
-                aria-hidden
-                className="w-2.5 shrink-0"
-                style={{ backgroundColor: era.color }}
-              />
-              <span className="min-w-0 flex-1 space-y-1.5 p-4">
-                <span
-                  className={`${displayFont.className} block text-lg leading-tight tracking-wide text-slate-950 group-hover:text-[#0072CE]`}
-                >
-                  {SHELF_LABELS[era.key] ?? era.name}
-                </span>
-                <span className="block text-[11px] font-bold tracking-wide text-slate-400">
-                  {era.label}
-                </span>
-                <span className="block text-xs font-black text-slate-900">
-                  {sorted} of {songs.length} sorted
-                </span>
-                <span className="block h-1.5 overflow-hidden rounded-full bg-slate-100">
-                  <span
-                    className="block h-full rounded-full transition-all duration-500"
-                    style={{
-                      width: `${pct}%`,
-                      backgroundColor: era.color,
-                    }}
-                  />
-                </span>
+                className={`${displayFont.className} flex-1 text-[14.5px] leading-[1.1] tracking-[0.04em] [writing-mode:vertical-rl] min-[521px]:text-[16.5px]`}
+              >
+                {label}
+              </span>
+              <span className="text-[10px] font-extrabold leading-[1.25] max-[520px]:hidden">
+                {pct === 100 ? 'Fully sorted' : 'Still sorting'}
               </span>
             </button>
-          );
-        })}
+          ))}
+        </div>
+        {shelfNote && (
+          <p className="mx-[2px] mb-[2px] mt-3 text-[13.5px] font-semibold leading-snug text-[#3D4A63]">
+            {shelfNote}
+          </p>
+        )}
       </div>
     </section>
   );
@@ -450,30 +540,77 @@ function JourneyBar({ total }: { total: number }) {
   const reachedIdx = TOTAL_STOPS.findIndex((s) => s.title === stop.title);
   const pos = journeyPosition(total);
   return (
-    <div className="space-y-1.5">
-      <div className="relative h-2 rounded-full bg-white/10">
+    <div
+      role="img"
+      aria-label={`Journey progress: ${total.toLocaleString()} points, at ${stop.title}`}
+      className="mx-1 mb-[46px] mt-[42px]"
+    >
+      <div className="relative h-3 rounded-full border-2 border-white/25 bg-[#22386B]">
         <div
-          className="absolute inset-y-0 left-0 rounded-full bg-amber-400 transition-all duration-700 ease-out"
+          className="absolute inset-y-0 left-0 rounded-full bg-[#FFC72C] transition-all duration-[1200ms] ease-out"
           style={{ width: `${pos}%` }}
         />
-        {TOTAL_STOPS.map((s, i) => (
+        {TOTAL_STOPS.map((s, i) => {
+          const done = i <= reachedIdx;
+          const labelPosition =
+            i === 0
+              ? 'left-0 text-left'
+              : i === TOTAL_STOPS.length - 1
+                ? 'right-0 text-right'
+                : 'left-1/2 -translate-x-1/2 text-center';
+          return (
+            <span
+              key={s.title}
+              aria-hidden
+              className={`absolute top-1/2 z-[2] h-4 w-4 -translate-y-1/2 rounded-full border-[3px] ${
+                done
+                  ? 'border-[#FFC72C] bg-[#FFC72C]'
+                  : 'border-[#8FA8D8] bg-[#22386B]'
+              }`}
+              style={{
+                left:
+                  i === TOTAL_STOPS.length - 1
+                    ? undefined
+                    : `calc(${(i / (TOTAL_STOPS.length - 1)) * 100}% - 8px)`,
+                right: i === TOTAL_STOPS.length - 1 ? '-8px' : undefined,
+              }}
+            >
+              <span
+                className={`absolute w-[86px] text-[10.5px] font-extrabold leading-[1.2] ${
+                  i % 2 === 0 ? 'top-4' : 'bottom-4'
+                } ${labelPosition} ${done ? 'text-white' : 'text-[#AFC6EA]'}`}
+              >
+                {s.title}
+              </span>
+            </span>
+          );
+        })}
+        <span
+          aria-hidden
+          className="absolute top-1/2 z-[3] grid h-[34px] w-[34px] -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-[3px] border-[#0C1220] bg-[#FFC72C] shadow-[0_4px_10px_rgba(0,0,0,0.4)]"
+          style={{ left: `${pos}%` }}
+        >
+          <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-[9.5px] font-black tracking-[0.14em] text-[#FFC72C]">
+            YOU
+          </span>
           <span
-            key={s.title}
-            aria-hidden
-            className={`absolute top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full ${
-              i <= reachedIdx ? 'bg-amber-400' : 'bg-white/25'
-            }`}
-            style={{ left: `${(i / (TOTAL_STOPS.length - 1)) * 100}%` }}
-          />
-        ))}
-      </div>
-      <div className="flex items-center justify-between text-[10px] font-bold tracking-wide text-slate-500">
-        <span>{TOTAL_STOPS[0].title}</span>
-        <span>{TOTAL_STOPS[TOTAL_STOPS.length - 1].title}</span>
+            className={`${displayFont.className} text-xs leading-none text-[#0C1220]`}
+          >
+            =W=
+          </span>
+        </span>
       </div>
     </div>
   );
 }
+
+const GAME_BUTTON_GOLD =
+  'inline-flex w-full cursor-pointer items-center justify-center rounded-[14px] border-[2.5px] border-[#0C1220] bg-[#FFC72C] px-[26px] py-4 text-lg font-black text-[#0C1220] shadow-[3px_3px_0_#0C1220] transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_#0C1220]';
+const GAME_HALFTONE_STYLE = {
+  backgroundImage:
+    'radial-gradient(rgba(255,255,255,0.09) 1.4px, transparent 1.5px)',
+  backgroundSize: '16px 16px',
+} as const;
 
 function GameCard() {
   const { userId, triageMap, navigateTo } = useWeezer();
@@ -513,28 +650,33 @@ function GameCard() {
       <button
         type="button"
         onClick={() => navigateTo('triage')}
-        className="group w-full cursor-pointer space-y-2 rounded-[2rem] bg-slate-950 p-6 text-left shadow-md transition-all sm:p-8"
+        className={`relative w-full cursor-pointer overflow-hidden rounded-[26px] border-[3px] border-[#0C1220] bg-[#0B1E3F] p-[26px_22px_24px] text-left text-white ${POSTER_CARD_SHADOW} sm:p-[30px_28px_26px]`}
       >
-        <div className="flex items-center justify-between gap-2">
-          <h2
-            className={`${displayFont.className} text-2xl tracking-wide text-white sm:text-3xl`}
-          >
-            Can You Get Back to the Shack?
-          </h2>
-          <span className="shrink-0 text-xs font-black text-slate-500">
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-0"
+          style={GAME_HALFTONE_STYLE}
+        />
+        <span className="relative flex flex-col">
+          <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-[#0C1220] px-2.5 py-[5px] text-[11px] font-black uppercase tracking-[0.1em] text-white">
             Locked 🔒
           </span>
-        </div>
-        <p className="max-w-lg text-sm font-medium leading-relaxed text-slate-400">
-          {remainingAlbums.length === 2
-            ? 'The game unlocks once you\u2019ve sorted the Blue Album and Pinkerton.'
-            : remainingAlbums[0] === 'Pinkerton'
-              ? 'The Blue Album is sorted — Pinkerton is all that stands between you and the game.'
-              : 'Pinkerton is sorted — the Blue Album is all that stands between you and the game.'}
-        </p>
-        <div className="pt-1 text-xs font-black text-amber-400 group-hover:underline">
-          Keep sorting →
-        </div>
+          <span
+            className={`${displayFont.className} mt-3 text-[clamp(28px,5.6vw,38px)] leading-[1.02] tracking-wide`}
+          >
+            Can You Get Back to the Shack?
+          </span>
+          <span className="mt-2 max-w-lg text-[16.5px] font-semibold leading-[1.45] text-[#D7E6FA]">
+            {remainingAlbums.length === 2
+              ? 'The game unlocks once you\u2019ve sorted the Blue Album and Pinkerton.'
+              : remainingAlbums[0] === 'Pinkerton'
+                ? 'The Blue Album is sorted — Pinkerton is all that stands between you and the game.'
+                : 'Pinkerton is sorted — the Blue Album is all that stands between you and the game.'}
+          </span>
+          <span className="mt-[18px] inline-flex w-full items-center justify-center rounded-[14px] border-[2.5px] border-[#0a1430] bg-[#42557E] px-[22px] py-[14px] text-base font-black text-[#B9C8E2] shadow-[2px_2px_0_#0a1430]">
+            Keep sorting →
+          </span>
+        </span>
       </button>
     );
   }
@@ -549,59 +691,75 @@ function GameCard() {
   // Signed in, nothing on the device record yet, and the account
   // merge still in flight: the standing is unresolved, not absent.
   const awaitingStanding = !!userId && !display && !standingSettled;
+  const roundNumber = upNextIdx >= 0 ? upNextIdx + 1 : played + 1;
 
   return (
-    <section className="space-y-4 rounded-[2rem] bg-slate-950 p-6 shadow-md sm:p-8">
-      <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500">
-        The game
-      </p>
-      <h2
-        className={`${displayFont.className} text-3xl leading-tight tracking-wide text-white sm:text-4xl`}
-      >
-        Can You Get Back to the Shack?
-      </h2>
-
-      {display ? (
-        <div className="space-y-3">
-          <p className="text-base font-bold text-white">
-            {youreAtPhrase(display.stop)} —{' '}
-            {display.depth.toLocaleString()} points.
-          </p>
-          <JourneyBar total={display.depth} />
-          {next && (
-            <p className="text-sm font-medium text-slate-400">
-              {next.pointsTo.toLocaleString()} points to {next.title}.
-            </p>
-          )}
+    <section
+      className={`relative flex flex-col overflow-hidden rounded-[26px] border-[3px] border-[#0C1220] bg-[#0B1E3F] p-[26px_22px_24px] text-white ${POSTER_CARD_SHADOW} sm:p-[30px_28px_26px]`}
+    >
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={GAME_HALFTONE_STYLE}
+      />
+      <div className="relative flex flex-1 flex-col">
+        <div>
+          <PosterTape tone="pink">The game</PosterTape>
         </div>
-      ) : awaitingStanding ? (
-        <p className="max-w-lg text-sm font-medium leading-relaxed text-slate-400">
-          Loading your standing…
-        </p>
-      ) : (
-        <p className="max-w-lg text-sm font-medium leading-relaxed text-slate-400">
-          Five rounds. Thirty-five questions. One trip through Weezer
-          history.
-        </p>
-      )}
+        <h2
+          className={`${displayFont.className} mt-3 text-[clamp(28px,5.6vw,38px)] leading-[1.02] tracking-wide`}
+        >
+          Can You Get Back to the Shack?
+        </h2>
 
-      {awaitingStanding ? null : allPlayed ? (
-        <button
-          type="button"
-          onClick={() => openLeaderboard((s) => navigateTo(s))}
-          className="cursor-pointer rounded-2xl bg-amber-400 px-6 py-3.5 text-sm font-black text-slate-950 shadow-md transition-all hover:bg-amber-300 active:scale-95"
-        >
-          See the leaderboard
-        </button>
-      ) : (
-        <button
-          type="button"
-          onClick={() => navigateTo('lore')}
-          className="cursor-pointer rounded-2xl bg-amber-400 px-6 py-3.5 text-sm font-black text-slate-950 shadow-md transition-all hover:bg-amber-300 active:scale-95"
-        >
-          Play Round {upNextIdx >= 0 ? upNextIdx + 1 : played + 1}
-        </button>
-      )}
+        {!awaitingStanding && !allPlayed && (
+          <p className="mt-2 text-[19px] font-extrabold leading-snug text-[#FFC72C]">
+            Round {roundNumber} is up next.
+          </p>
+        )}
+
+        {display ? (
+          <div>
+            <p className="mt-2 text-[16.5px] font-semibold leading-[1.45] text-[#D7E6FA]">
+              {youreAtPhrase(display.stop)} —{' '}
+              {display.depth.toLocaleString()} points.
+            </p>
+            <JourneyBar total={display.depth} />
+            {next && (
+              <p className="mb-[18px] rounded-[10px] border-[1.5px] border-dashed border-white/40 bg-white/10 px-3 py-[9px] text-center text-[14.5px] font-extrabold leading-snug text-white">
+                {next.pointsTo.toLocaleString()} points to {next.title}.
+              </p>
+            )}
+          </div>
+        ) : awaitingStanding ? (
+          <p className="mt-2 max-w-lg text-[16.5px] font-semibold leading-[1.45] text-[#D7E6FA]">
+            Loading your standing…
+          </p>
+        ) : (
+          <p className="mt-2 max-w-lg text-[16.5px] font-semibold leading-[1.45] text-[#D7E6FA]">
+            Five rounds. Thirty-five questions. One trip through Weezer
+            history.
+          </p>
+        )}
+
+        {awaitingStanding ? null : allPlayed ? (
+          <button
+            type="button"
+            onClick={() => openLeaderboard((s) => navigateTo(s))}
+            className={`${GAME_BUTTON_GOLD} mt-auto`}
+          >
+            See the leaderboard
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => navigateTo('lore')}
+            className={`${GAME_BUTTON_GOLD} mt-auto`}
+          >
+            Play Round {roundNumber}
+          </button>
+        )}
+      </div>
     </section>
   );
 }
@@ -627,7 +785,7 @@ const SHARE_TILES: {
   {
     title: 'Tier List',
     line: 'All 206, tier by tier.',
-    tileClass: 'bg-white border-2 border-slate-200 hover:border-slate-300',
+    tileClass: 'bg-white hover:bg-slate-50',
     titleClass: 'text-slate-950',
     lineClass: 'text-slate-500',
   },
@@ -654,11 +812,17 @@ const SHARE_TILES: {
   },
 ];
 
+const THREAD_DECO_STYLE = {
+  background:
+    'repeating-radial-gradient(circle at center, rgba(246,168,193,0.5) 0 3px, transparent 3px 12px)',
+} as const;
+
 function ThreadSection() {
-  const { triageMap, masterList, navigateTo } = useWeezer();
+  const { userId, triageMap, masterList, navigateTo } = useWeezer();
   const progress = getProgressState(triageMap, masterList);
-  const isSortingComplete =
-    countCategorizedSongs(triageMap) >= TOTAL_SONGS;
+  const categorized = countCategorizedSongs(triageMap);
+  const isSortingComplete = categorized >= TOTAL_SONGS;
+  const isGuestTeaser = !userId && categorized === 0;
 
   if (!progress.isWrappedUnlocked) {
     /* The Thread isn't compiled until the ranking is refined, so
@@ -666,58 +830,99 @@ function ThreadSection() {
        the guard would bounce. Sorted-but-unrefined names its own
        unlock, since "the last song" is already sorted there. */
     return (
-      <section className="space-y-2 rounded-[2rem] border-2 border-slate-200/90 bg-white p-6 shadow-xs sm:p-8">
-        <h2
-          className={`${displayFont.className} text-2xl tracking-wide text-slate-950`}
+      <section>
+        <SectionHeading sub="Your ranking, ready to share.">
+          Show it off
+        </SectionHeading>
+        <div
+          className={`relative overflow-hidden rounded-[18px] border-[3px] border-[#0C1220] bg-[#0C1220] p-6 text-white ${POSTER_CARD_SHADOW} sm:p-[22px]`}
         >
-          Your Sweater Thread
-        </h2>
-        <p className="text-sm font-medium leading-relaxed text-slate-500">
-          {isSortingComplete
-            ? 'Your Thread unravels once your ranking is refined.'
-            : 'Your Thread unravels when the last song is sorted.'}
-        </p>
-        {isSortingComplete && (
-          <button
-            type="button"
-            onClick={() => navigateTo('rank_buckets')}
-            className="cursor-pointer pt-0.5 text-xs font-black text-[#0072CE] hover:underline"
-          >
-            Refine your ranking →
-          </button>
-        )}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -right-[30px] -top-[30px] h-[170px] w-[170px] rounded-full"
+            style={THREAD_DECO_STYLE}
+          />
+          <div className="relative">
+            {isGuestTeaser ? (
+              <PosterTape tone="pink">At the end</PosterTape>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-[#0C1220] px-2.5 py-[5px] text-[11px] font-black uppercase tracking-[0.1em] text-white">
+                <svg
+                  viewBox="0 0 24 24"
+                  className="h-3 w-3"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={3}
+                  aria-hidden
+                >
+                  <rect x="5" y="11" width="14" height="9" rx="2" />
+                  <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+                </svg>
+                Locked
+              </span>
+            )}
+            <h3
+              className={`${displayFont.className} mt-[10px] max-w-[22ch] text-[clamp(24px,5vw,30px)] leading-[1.1] tracking-wide`}
+            >
+              Your Sweater Thread
+            </h3>
+            <p className="mb-[18px] max-w-[44ch] font-semibold leading-[1.5] text-[#C9D6EA]">
+              {isSortingComplete
+                ? 'Your Thread unravels once your ranking is refined.'
+                : 'Your Thread unravels when the last song is sorted.'}
+            </p>
+            {isSortingComplete && (
+              <button
+                type="button"
+                onClick={() => navigateTo('rank_buckets')}
+                className={POSTER_BUTTON_SMALL}
+              >
+                Refine your ranking →
+              </button>
+            )}
+          </div>
+        </div>
       </section>
     );
   }
 
   return (
-    <section className="space-y-4">
+    <section>
+      <SectionHeading sub="Your ranking, ready to share.">
+        Show it off
+      </SectionHeading>
       <button
         type="button"
         onClick={() => navigateTo('wrapped')}
-        className="group w-full cursor-pointer space-y-2 rounded-[2rem] border-2 border-slate-200/90 bg-white p-6 text-left shadow-xs transition-all hover:border-blue-300 sm:p-8"
+        className={`relative w-full cursor-pointer overflow-hidden rounded-[18px] border-[3px] border-[#0C1220] bg-[#0C1220] p-[30px_26px] text-left text-white ${POSTER_CARD_SHADOW} sm:p-[34px_30px]`}
       >
-        <h2
-          className={`${displayFont.className} text-2xl tracking-wide text-slate-950 group-hover:text-[#0072CE] sm:text-3xl`}
-        >
-          Your Sweater Thread
-        </h2>
-        <p className="max-w-lg text-sm font-medium leading-relaxed text-slate-500">
-          Your whole ranking, unraveled — eras, tiers, and the songs
-          that define you.
-        </p>
-        <div className="pt-1 text-xs font-black text-[#0072CE] group-hover:underline">
-          Take a look →
-        </div>
+        <span
+          aria-hidden
+          className="pointer-events-none absolute -right-[30px] -top-[30px] h-[170px] w-[170px] rounded-full"
+          style={THREAD_DECO_STYLE}
+        />
+        <span className="relative block">
+          <PosterTape>The main event</PosterTape>
+          <span
+            className={`${displayFont.className} mt-[10px] block max-w-[26ch] text-[clamp(27px,5.4vw,36px)] leading-[1.1] tracking-wide`}
+          >
+            Your Sweater Thread
+          </span>
+          <span className="mb-[18px] block max-w-[44ch] font-semibold leading-[1.5] text-[#C9D6EA]">
+            Your whole ranking, unraveled — eras, tiers, and the songs
+            that define you.
+          </span>
+          <span className={POSTER_BUTTON_SMALL}>Take a look →</span>
+        </span>
       </button>
 
-      <div className="flex gap-3 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="mt-4 flex snap-x snap-mandatory gap-[14px] overflow-x-auto px-[2px] pb-[14px] pt-[6px] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {SHARE_TILES.map((tile) => (
           <button
             key={tile.title}
             type="button"
             onClick={() => navigateTo('shareables')}
-            className={`flex min-h-[120px] w-40 shrink-0 cursor-pointer flex-col justify-between rounded-3xl p-4 text-left shadow-xs transition-all active:scale-95 ${tile.tileClass}`}
+            className={`flex min-h-[120px] w-40 shrink-0 cursor-pointer snap-start flex-col justify-between overflow-hidden rounded-[14px] border-[3px] border-[#0C1220] p-4 text-left ${POSTER_HARD_SHADOW} transition-transform duration-150 hover:-translate-y-1 hover:-rotate-[0.5deg] active:translate-x-[2px] active:translate-y-[2px] ${tile.tileClass}`}
           >
             <span
               className={`${displayFont.className} text-xl leading-tight tracking-wide ${tile.titleClass}`}
@@ -750,19 +955,17 @@ function FanStatsFeature() {
     <button
       type="button"
       onClick={() => navigateTo('fan_stats')}
-      className="group w-full cursor-pointer space-y-2 rounded-[2rem] border-2 border-slate-200/90 bg-white p-6 text-left shadow-xs transition-all hover:border-blue-300 sm:p-8"
+      className={`w-full cursor-pointer rounded-[18px] border-[3px] border-[#0C1220] bg-white p-[30px_26px] text-left text-[#0C1220] ${POSTER_CARD_SHADOW} transition-transform duration-150 hover:-translate-y-[3px] sm:p-[34px_30px]`}
     >
       <h2
-        className={`${displayFont.className} text-2xl tracking-wide text-slate-950 group-hover:text-[#0072CE] sm:text-3xl`}
+        className={`${displayFont.className} text-[clamp(27px,5.4vw,36px)] leading-[1.1] tracking-wide`}
       >
         Fan Stats
       </h2>
-      <p className="max-w-lg text-sm font-medium leading-relaxed text-slate-500">
+      <p className="mb-[18px] mt-[6px] max-w-[44ch] text-[16.5px] font-semibold leading-[1.5] text-[#3D4A63]">
         See how your taste stacks up against every other fan.
       </p>
-      <div className="pt-1 text-xs font-black text-[#0072CE] group-hover:underline">
-        Take a look →
-      </div>
+      <span className={POSTER_BUTTON_SMALL}>Take a look →</span>
     </button>
   );
 }
@@ -777,8 +980,10 @@ function FandomSection() {
     userId && Array.isArray(friendsList) ? friendsList.length : 0;
 
   return (
-    <section className="space-y-3">
-      <SectionHeading>In the fandom</SectionHeading>
+    <section>
+      <SectionHeading sub="You ranked yours. Here’s everyone else.">
+        In the fandom
+      </SectionHeading>
       {/* Fan Stats used to share this grid as a small card; it is
           now the full-width feature card above the game, so the
           grid is gone and Fan Friends stands as a full-width row
@@ -786,39 +991,83 @@ function FandomSection() {
       <button
         type="button"
         onClick={() => navigateTo(userId ? 'friends' : 'login')}
-        className="group w-full cursor-pointer space-y-1.5 rounded-3xl border-2 border-slate-200/90 bg-white p-5 text-left shadow-xs transition-all hover:border-slate-300"
+        className={`flex w-full cursor-pointer items-start gap-4 rounded-[18px] border-[3px] border-[#0C1220] bg-white p-5 text-left text-[#0C1220] ${POSTER_CARD_SHADOW} transition-transform duration-150 hover:-translate-y-[3px] active:translate-y-0`}
       >
-        <h3 className="text-base font-black text-slate-950 group-hover:text-[#0072CE]">
-          Fan Friends
-        </h3>
-        <p className="text-xs font-medium leading-relaxed text-slate-500 sm:text-sm">
-          {!userId
-            ? 'Sign in to compare rankings with friends.'
-            : friendsCount > 0
-              ? `You're comparing rankings with ${friendsCount} friend${friendsCount === 1 ? '' : 's'}.`
-              : 'See what your friends are ranking.'}
-        </p>
-        <div className="pt-1 text-xs font-black text-[#0072CE] group-hover:underline">
-          {userId ? 'Take a look →' : 'Sign in →'}
-        </div>
+        <span className="grid h-[52px] w-[52px] flex-none place-items-center rounded-[14px] border-[2.5px] border-[#0C1220] bg-[#FF6B4A] text-white">
+          <svg
+            viewBox="0 0 24 24"
+            className="h-[26px] w-[26px]"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2.2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden
+          >
+            <circle cx="9" cy="8" r="3.5" />
+            <path d="M2.5 20c.8-3.2 3.4-5 6.5-5s5.7 1.8 6.5 5" />
+            <circle cx="17.5" cy="9" r="2.6" />
+            <path d="M16 15.2c2.6.3 4.6 1.9 5.3 4.8" />
+          </svg>
+        </span>
+        <span className="min-w-0 flex-1">
+          <span
+            className={`${displayFont.className} block text-[21px] leading-tight tracking-wide`}
+          >
+            Fan Friends
+          </span>
+          <span className="mt-[5px] block text-[14.5px] font-semibold leading-[1.45] text-[#3D4A63]">
+            {!userId
+              ? 'Sign in to compare rankings with friends.'
+              : friendsCount > 0
+                ? `You're comparing rankings with ${friendsCount} friend${friendsCount === 1 ? '' : 's'}.`
+                : 'See what your friends are ranking.'}
+          </span>
+        </span>
+        <span
+          className={`${displayFont.className} ml-auto flex-none self-center text-[22px] leading-none text-[#0072CE]`}
+          aria-hidden
+        >
+          →
+        </span>
       </button>
 
       <button
         type="button"
         onClick={() => openLeaderboard((s) => navigateTo(s))}
-        className="group flex w-full cursor-pointer items-center justify-between gap-4 rounded-3xl border-2 border-slate-200/90 bg-white p-5 text-left shadow-xs transition-all hover:border-slate-300"
+        className={`mt-[14px] flex w-full cursor-pointer items-center gap-[14px] rounded-[18px] border-[3px] border-[#0C1220] bg-[#FFC72C] p-[18px_20px] text-left text-[#0C1220] ${POSTER_CARD_SHADOW} transition-transform duration-150 hover:-translate-y-[3px]`}
       >
-        <span className="space-y-1">
-          <span className="block text-base font-black text-slate-950 group-hover:text-[#0072CE]">
+        <span className="grid h-[52px] w-[52px] flex-none place-items-center rounded-[14px] border-[2.5px] border-[#0C1220] bg-[#0C1220] text-[#FFC72C]">
+          <svg
+            viewBox="0 0 24 24"
+            className="h-[26px] w-[26px]"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2.2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden
+          >
+            <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4Z" />
+            <path d="M7 6H4a1 1 0 0 0-1 1c0 2 1.6 3.5 4 3.5M17 6h3a1 1 0 0 1 1 1c0 2-1.6 3.5-4 3.5" />
+          </svg>
+        </span>
+        <span className="min-w-0 flex-1">
+          <span
+            className={`${displayFont.className} block text-[21px] leading-tight tracking-wide`}
+          >
             Leaderboard
           </span>
-          <span className="block text-xs font-medium text-slate-500 sm:text-sm">
+          <span className="mt-[3px] block text-sm font-bold leading-snug text-[#4d3a00]">
             See how your score stacks up against Weezer fans
             everywhere.
           </span>
         </span>
-        <span className="shrink-0 text-xs font-black text-[#0072CE] group-hover:underline">
-          View →
+        <span
+          className={`${displayFont.className} ml-auto flex-none self-center text-[22px] leading-none`}
+          aria-hidden
+        >
+          →
         </span>
       </button>
     </section>
@@ -828,6 +1077,97 @@ function FandomSection() {
 /* ------------------------------------------------------------------ */
 /* Destinations grid                                                   */
 /* ------------------------------------------------------------------ */
+
+const DESTINATION_STYLES: Record<
+  string,
+  { color: string; icon: React.ReactNode }
+> = {
+  Sort: {
+    color: '#0072CE',
+    icon: (
+      <>
+        <path d="M12 3v10m0 0 4-4m-4 4-4-4" />
+        <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
+      </>
+    ),
+  },
+  Refine: {
+    color: '#039AD1',
+    icon: (
+      <>
+        <path d="M4 8h10M18 8h2M4 16h2M10 16h10" />
+        <circle cx="16" cy="8" r="2.2" />
+        <circle cx="8" cy="16" r="2.2" />
+      </>
+    ),
+  },
+  'My Rankings': {
+    color: '#5B2A86',
+    icon: (
+      <>
+        <path d="M8 6h13M8 12h13M8 18h13" />
+        <path d="M3.5 6h.01M3.5 12h.01M3.5 18h.01" />
+      </>
+    ),
+  },
+  'Sweater Thread': {
+    color: '#D6336C',
+    icon: (
+      <>
+        <path d="M4 5c6 0 6 4 12 4 3 0 4-1.5 4-3" />
+        <path d="M20 19c-6 0-6-4-12-4-3 0-4 1.5-4 3" />
+        <circle cx="4" cy="5" r="1.6" />
+        <circle cx="20" cy="19" r="1.6" />
+      </>
+    ),
+  },
+  'The Game': {
+    color: '#12295A',
+    icon: (
+      <>
+        <path d="M6 12h4m-2-2v4" />
+        <circle cx="15.5" cy="10.5" r=".8" />
+        <circle cx="18" cy="13.5" r=".8" />
+        <path d="M17.3 5H6.7a5 5 0 0 0-5 5v3.2A2.8 2.8 0 0 0 7 14.6L8.6 12h6.8l1.6 2.6a2.8 2.8 0 0 0 5.3-1.4V10a5 5 0 0 0-5-5Z" />
+      </>
+    ),
+  },
+  'Fan Stats': {
+    color: '#E4572E',
+    icon: <path d="M4 20V10M10 20V4M16 20v-8M22 20H2" />,
+  },
+  'Fan Friends': {
+    color: '#C1272D',
+    icon: (
+      <>
+        <circle cx="9" cy="8" r="3.5" />
+        <path d="M2.5 20c.8-3.2 3.4-5 6.5-5s5.7 1.8 6.5 5" />
+        <circle cx="17.5" cy="9" r="2.6" />
+        <path d="M16 15.2c2.6.3 4.6 1.9 5.3 4.8" />
+      </>
+    ),
+  },
+  Shareables: {
+    color: '#2E933C',
+    icon: (
+      <>
+        <circle cx="6" cy="12" r="2.5" />
+        <circle cx="18" cy="6" r="2.5" />
+        <circle cx="18" cy="18" r="2.5" />
+        <path d="m8.2 10.8 7.6-3.6M8.2 13.2l7.6 3.6" />
+      </>
+    ),
+  },
+  Leaderboard: {
+    color: '#E8A800',
+    icon: (
+      <>
+        <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4Z" />
+        <path d="M7 6H4a1 1 0 0 0-1 1c0 2 1.6 3.5 4 3.5M17 6h3a1 1 0 0 1 1 1c0 2-1.6 3.5-4 3.5" />
+      </>
+    ),
+  },
+};
 
 function DestinationsGrid() {
   const { userId, navigateTo } = useWeezer();
@@ -880,26 +1220,48 @@ function DestinationsGrid() {
   ];
 
   return (
-    <section className="space-y-3">
-      <SectionHeading>Jump to</SectionHeading>
+    <section>
+      <SectionHeading sub="The whole site, one tap away.">
+        Everywhere you can go
+      </SectionHeading>
       <div className="grid grid-cols-3 gap-3">
-        {tiles.map((tile) => (
-          <button
-            key={tile.label}
-            type="button"
-            onClick={tile.action}
-            className="group cursor-pointer rounded-3xl border-2 border-slate-200/90 bg-white p-4 text-left shadow-xs transition-all hover:border-blue-300 active:scale-95"
-          >
-            <span
-              className={`${displayFont.className} block text-base leading-tight tracking-wide text-slate-950 group-hover:text-[#0072CE] sm:text-lg`}
+        {tiles.map((tile) => {
+          const style = DESTINATION_STYLES[tile.label];
+          return (
+            <button
+              key={tile.label}
+              type="button"
+              onClick={tile.action}
+              className={`flex cursor-pointer flex-col gap-[10px] rounded-[18px] border-[3px] border-[#0C1220] bg-white p-[18px_16px] text-left text-[#0C1220] ${POSTER_HARD_SHADOW} transition-all duration-[130ms] hover:-translate-x-[1px] hover:-translate-y-[3px] hover:shadow-[6px_7px_0_rgba(11,30,63,0.85)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_rgba(11,30,63,0.85)]`}
             >
-              {tile.label}
-            </span>
-            <span className="mt-1 block text-[11px] font-semibold leading-snug text-slate-400">
-              {tile.caption}
-            </span>
-          </button>
-        ))}
+              <span
+                className="grid h-11 w-11 place-items-center rounded-[12px] border-[2.5px] border-[#0C1220] text-white"
+                style={{ backgroundColor: style?.color }}
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  className="h-[22px] w-[22px]"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2.1}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden
+                >
+                  {style?.icon}
+                </svg>
+              </span>
+              <span
+                className={`${displayFont.className} block text-[19px] leading-[1.05] tracking-wide`}
+              >
+                {tile.label}
+              </span>
+              <span className="block text-[13px] font-semibold leading-[1.4] text-[#3D4A63]">
+                {tile.caption}
+              </span>
+            </button>
+          );
+        })}
       </div>
     </section>
   );
@@ -972,19 +1334,31 @@ function ProfileSetupBanner() {
 
 export default function StepGarage2() {
   return (
-    /* AppShell's main caps at max-w-5xl on small screens and
-       lg:max-w-6xl on large; this wrapper holds the prototype at
-       max-w-5xl at every width (AppShell's width handling is
-       prop-driven, not step-driven, so the cap lives here). */
-    <div className="mx-auto w-full max-w-5xl space-y-6 pb-24 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <GarageHero />
-      <ProfileSetupBanner />
-      <EraShelf />
-      <ThreadSection />
-      <FanStatsFeature />
-      <GameCard />
-      <FandomSection />
-      <DestinationsGrid />
+    /* The prototype page backdrop bleeds through AppShell's main
+       padding: negative margins match that padding at each
+       breakpoint, and the inner wrapper restores the same inset
+       while holding the content at max-w-5xl. AppShell's main caps
+       at max-w-5xl on small screens and lg:max-w-6xl on large;
+       its width handling is prop-driven, not step-driven, so the
+       content cap lives here. */
+    <div
+      className="-mx-4 -my-4 bg-[#DCEEF8] sm:-mx-6 sm:-my-6 lg:-mx-8 lg:-my-8"
+      style={{
+        backgroundImage:
+          'radial-gradient(rgba(0,114,206,0.10) 1.2px, transparent 1.3px)',
+        backgroundSize: '22px 22px',
+      }}
+    >
+      <div className="mx-auto w-full max-w-5xl space-y-[34px] px-4 pb-24 pt-4 animate-in fade-in slide-in-from-bottom-4 duration-500 sm:px-6 sm:pt-6 lg:px-8 lg:pt-8">
+        <GarageHero />
+        <ProfileSetupBanner />
+        <EraShelf />
+        <ThreadSection />
+        <FanStatsFeature />
+        <GameCard />
+        <FandomSection />
+        <DestinationsGrid />
+      </div>
     </div>
   );
 }

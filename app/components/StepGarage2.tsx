@@ -396,12 +396,17 @@ const SHELF_LABELS: Record<string, string> = {
   new: 'New Horizons',
 };
 
+/** Spine colors are the APP's era colors (the ERAS table in
+ *  EraDnaCard) — the same colors the Era DNA card, Fan Stats and
+ *  the rest of the site use for these eras. The prototype mock's
+ *  spine palette differed; Mark flagged era consistency on
+ *  Nov 4, 2026 and the app's palette wins. */
 const SHELF_SPINE_COLORS: Record<string, string> = {
-  blue: '#0072CE',
-  y2k: '#E4572E',
-  red: '#C1272D',
-  comeback: '#2E933C',
-  new: '#5B2A86',
+  blue: '#d97706',
+  y2k: '#059669',
+  red: '#dc2626',
+  comeback: '#0284c7',
+  new: '#9333ea',
 };
 
 function EraShelf() {

@@ -6,6 +6,7 @@ import { supabase } from '@/utils/supabase';
 import { Song, BucketType, ALBUM_NAME_TO_ID } from '@/app/data/constants';
 import { AlbumArtwork } from '@/app/components/SharedUI';
 import AppShell from '@/app/components/AppShell';
+import { displayFont } from '@/app/components/shareables/fonts';
 
 interface FriendProfile {
   id: string;
@@ -19,41 +20,41 @@ function getWeezerCompatibilityQuip(score: number) {
     return {
       title: 'Soulmates in Blue 💙',
       phrase: '"In the Garage together forever." Your taste canons are virtually identical!',
-      color: 'text-emerald-400',
+      color: 'text-emerald-600',
     };
   }
   if (score >= 75) {
     return {
       title: 'Island in the Sun ☀️️',
       phrase: '"On an island in the sun..." Harmonizing on almost every single album cut.',
-      color: 'text-emerald-400',
+      color: 'text-emerald-600',
     };
   }
   if (score >= 50) {
     return {
       title: 'The Good Life 🎸',
       phrase: '"Shaking booty, making sweet love..." Solid agreement with a few fun B-Side debates.',
-      color: 'text-blue-400',
+      color: 'text-[#0072CE]',
     };
   }
   if (score >= 35) {
     return {
       title: 'Hash Pipe ⚡️',
       phrase: 'A little chaotic and loud, but you can definitely rock out together.',
-      color: 'text-amber-400',
+      color: 'text-amber-600',
     };
   }
   if (score >= 20) {
     return {
       title: "Say It Ain't So 🥀",
       phrase: 'Major structural disagreements on album quality. Tread carefully!',
-      color: 'text-rose-400',
+      color: 'text-rose-600',
     };
   }
   return {
     title: 'Pink Triangle 📐',
     phrase: '"If anyone’s gonna be the one, it’s not you." Complete taste incompatibility!',
-    color: 'text-rose-500',
+    color: 'text-rose-600',
   };
 }
 
@@ -305,7 +306,7 @@ export default function PublicProfilePage() {
               friends. A fresh load parses it for real. */}
           <a
             href="/?step=friends"
-            className="inline-flex items-center gap-1.5 text-xs font-black text-[#0072CE] hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-3.5 py-2 rounded-full transition-colors cursor-pointer border border-blue-200/60"
+            className="inline-flex items-center gap-1.5 text-xs font-black text-[#0C1220] bg-white hover:bg-sky-50 px-3.5 py-2 rounded-full transition-colors cursor-pointer border-[2.5px] border-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)]"
           >
             ← Back to Fan Friends
           </a>
@@ -313,7 +314,7 @@ export default function PublicProfilePage() {
 
         {/* LIGHT FRIENDS CAROUSEL SWITCHER */}
         {allFriends.length > 1 && (
-          <div className="bg-white border border-slate-200 rounded-2xl p-2.5 flex items-center justify-between shadow-xs">
+          <div className="bg-white border-[2.5px] border-[#0C1220] rounded-2xl p-2.5 flex items-center justify-between shadow-[2px_2px_0_rgba(11,30,63,0.85)]">
             {/* Prev/Next only make sense when the profile being
                 viewed IS in the list — at index −1 (a non-friend's
                 public profile) the modulo math jumped to
@@ -322,7 +323,7 @@ export default function PublicProfilePage() {
             {currentFriendIdx !== -1 && (
               <button
                 onClick={handlePrevFriend}
-                className="p-1.5 hover:bg-slate-100 rounded-xl transition-colors text-slate-600 font-black text-xs cursor-pointer flex items-center gap-1 shrink-0"
+                className="p-1.5 hover:bg-slate-100 rounded-xl transition-colors text-[#3D4A63] font-black text-xs cursor-pointer flex items-center gap-1 shrink-0"
               >
                 ← Prev
               </button>
@@ -338,8 +339,8 @@ export default function PublicProfilePage() {
                     onClick={() => router.push(`/u/${f.username}`)}
                     className={`px-3 py-1 rounded-full text-xs font-black shrink-0 transition-all cursor-pointer ${
                       isActive
-                        ? 'bg-[#0072CE] text-white shadow-xs'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        ? 'bg-[#0072CE] border-2 border-[#0C1220] text-white'
+                        : 'bg-white border-2 border-[#0C1220] text-[#0C1220] hover:bg-slate-50'
                     }`}
                   >
                     @{f.username}
@@ -351,7 +352,7 @@ export default function PublicProfilePage() {
             {currentFriendIdx !== -1 && (
               <button
                 onClick={handleNextFriend}
-                className="p-1.5 hover:bg-slate-100 rounded-xl transition-colors text-slate-600 font-black text-xs cursor-pointer flex items-center gap-1 shrink-0"
+                className="p-1.5 hover:bg-slate-100 rounded-xl transition-colors text-[#3D4A63] font-black text-xs cursor-pointer flex items-center gap-1 shrink-0"
               >
                 Next →
               </button>
@@ -362,15 +363,15 @@ export default function PublicProfilePage() {
         {loading ? (
           <div className="py-24 text-center space-y-3">
             <div className="w-8 h-8 border-4 border-[#0072CE] border-t-transparent rounded-full animate-spin mx-auto" />
-            <p className="text-xs font-bold text-slate-400 animate-pulse">
+            <p className="text-xs font-bold text-[#3D4A63] animate-pulse">
               Calculating compatibility...
             </p>
           </div>
         ) : errorMsg || !targetProfile ? (
-          <div className="bg-white border border-slate-200 rounded-3xl p-10 text-center space-y-4 shadow-sm">
+          <div className="bg-white border-[3px] border-[#0C1220] rounded-[18px] shadow-[4px_4px_0_rgba(11,30,63,0.85)] p-10 text-center space-y-4">
             <div className="text-5xl">🔍</div>
-            <h2 className="text-2xl font-black text-slate-900">Profile Not Found</h2>
-            <p className="text-xs font-bold text-slate-500 max-w-sm mx-auto">{errorMsg}</p>
+            <h2 className="text-2xl font-black text-[#0C1220]">Profile Not Found</h2>
+            <p className="text-xs font-bold text-[#3D4A63] max-w-sm mx-auto">{errorMsg}</p>
             <a
               href="/?step=friends"
               className="inline-block bg-[#0072CE] text-white px-6 py-3 rounded-xl font-black text-xs shadow-md cursor-pointer"
@@ -386,44 +387,44 @@ export default function PublicProfilePage() {
               <span className="text-[10px] font-black uppercase tracking-widest text-[#0072CE] block mb-1">
                 {hasVisitorData ? 'Head-to-Head Matchup' : 'Fan Profile'}
               </span>
-              <h1 className="text-3xl sm:text-5xl font-black text-slate-950 tracking-tight">
+              <h1 className="${displayFont.className} text-3xl sm:text-5xl text-[#0C1220]">
                 {hasVisitorData ? 'Clash of Canons' : `${tName}'s Master List`}
               </h1>
             </div>
 
             {/* ENHANCED MATCH SCORECARD */}
             {hasVisitorData && stats && stats.sharedSample >= 2 ? (
-              <div className="bg-slate-950 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden border border-slate-800 text-white space-y-6">
+              <div className="bg-white border-[3px] border-[#0C1220] rounded-[18px] shadow-[4px_4px_0_rgba(11,30,63,0.85)] p-6 sm:p-8 relative overflow-hidden text-[#0C1220] space-y-6">
                 
                 {/* SCORES AND NAMES ROW */}
                 <div className="flex justify-between items-center relative z-10">
                   
                   {/* VISITOR NAME */}
                   <div className="flex flex-col items-start w-2/5 min-w-0">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-[#3D4A63]">
                       You
                     </span>
-                    <h2 className="text-lg sm:text-2xl font-black text-white truncate leading-tight w-full">
+                    <h2 className="text-lg sm:text-2xl font-black text-[#0C1220] truncate leading-tight w-full">
                       {vName}
                     </h2>
                   </div>
 
                   {/* SCORE BADGE */}
                   <div className="flex flex-col items-center justify-center shrink-0 px-2">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-[#3D4A63] mb-0.5">
                       Match
                     </span>
-                    <span className={`text-4xl sm:text-5xl font-black ${stats.quip.color} drop-shadow-md`}>
+                    <span className={`text-4xl sm:text-5xl font-black ${stats.quip.color}`}>
                       {stats.compatibilityScore}%
                     </span>
                   </div>
 
                   {/* TARGET NAME */}
                   <div className="flex flex-col items-end w-2/5 min-w-0 text-right">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-[#3D4A63]">
                       Friend
                     </span>
-                    <h2 className="text-lg sm:text-2xl font-black text-white truncate leading-tight w-full">
+                    <h2 className="text-lg sm:text-2xl font-black text-[#0C1220] truncate leading-tight w-full">
                       {tName}
                     </h2>
                   </div>
@@ -431,11 +432,11 @@ export default function PublicProfilePage() {
                 </div>
 
                 {/* WEEZER THEMED QUIP & VERDICT BANNER */}
-                <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 text-center space-y-1">
+                <div className="bg-white border-2 border-[#0C1220] rounded-2xl p-4 text-center space-y-1">
                   <span className={`text-xs font-black uppercase tracking-wider block ${stats.quip.color}`}>
                     {stats.quip.title}
                   </span>
-                  <p className="text-xs sm:text-sm font-medium text-slate-300 leading-snug italic">
+                  <p className="text-xs sm:text-sm font-medium text-[#3D4A63] leading-snug italic">
                     {stats.quip.phrase}
                   </p>
                 </div>
@@ -443,12 +444,12 @@ export default function PublicProfilePage() {
               </div>
             ) : !hasVisitorData ? (
               /* GUEST BANNER */
-              <div className="bg-blue-50 border border-blue-200 rounded-3xl p-6 text-center shadow-sm">
+              <div className="bg-blue-50 border-[3px] border-[#0C1220] rounded-[18px] shadow-[4px_4px_0_rgba(11,30,63,0.85)] p-6 text-center">
                 <div className="text-3xl mb-2">👀</div>
-                <h3 className="text-lg font-black text-slate-900 mb-1">
+                <h3 className="text-lg font-black text-[#0C1220] mb-1">
                   Want to see how you match up?
                 </h3>
-                <p className="text-xs font-semibold text-slate-500 mb-4 max-w-sm mx-auto">
+                <p className="text-xs font-semibold text-[#3D4A63] mb-4 max-w-sm mx-auto">
                   Create your own Weezer ranking to unlock your compatibility score and see where you and {tName} disagree.
                 </p>
                 {/* Full-load anchor, same reason as the Back
@@ -456,7 +457,7 @@ export default function PublicProfilePage() {
                     re-run the provider's entry logic. */}
                 <a
                   href="/"
-                  className="inline-block bg-[#0072CE] text-white px-5 py-2.5 rounded-xl font-black text-xs shadow-md hover:bg-blue-600 transition-colors cursor-pointer"
+                  className="inline-block bg-[#0072CE] border-2 border-[#0C1220] text-white px-5 py-2.5 rounded-xl font-black text-xs hover:bg-blue-600 transition-colors cursor-pointer"
                 >
                   Start Your Ranking
                 </a>
@@ -465,11 +466,11 @@ export default function PublicProfilePage() {
               /* Signed in WITH rankings, but fewer than 2 shared
                  top songs: the chain used to render null here —
                  no scorecard, no word of explanation. */
-              <div className="bg-slate-50 border border-slate-200 rounded-3xl p-6 text-center shadow-sm">
-                <h3 className="text-lg font-black text-slate-900 mb-1">
+              <div className="bg-white border-[3px] border-[#0C1220] rounded-[18px] shadow-[4px_4px_0_rgba(11,30,63,0.85)] p-6 text-center">
+                <h3 className="text-lg font-black text-[#0C1220] mb-1">
                   Not enough overlap to score — yet
                 </h3>
-                <p className="text-xs font-semibold text-slate-500 max-w-sm mx-auto">
+                <p className="text-xs font-semibold text-[#3D4A63] max-w-sm mx-auto">
                   A match score needs at least 2 songs you&apos;ve both put
                   in your top buckets. As your rankings grow, this fills in.
                 </p>
@@ -478,7 +479,7 @@ export default function PublicProfilePage() {
 
             {/* THE BIGGEST FIGHT */}
             {hasVisitorData && stats?.biggestFight && (
-              <div className="bg-rose-50 border border-rose-200 rounded-3xl p-6 sm:p-8 shadow-sm">
+              <div className="bg-rose-50 border-[3px] border-[#0C1220] rounded-[18px] shadow-[4px_4px_0_rgba(11,30,63,0.85)] p-6 sm:p-8">
                 <span className="text-[10px] font-black uppercase tracking-widest text-rose-500 block mb-1 text-center">
                   🥊 The Biggest War
                 </span>
@@ -486,14 +487,14 @@ export default function PublicProfilePage() {
                   You two completely disagree on this track.
                 </h3>
 
-                <div className="bg-white p-5 rounded-2xl border border-rose-100 shadow-sm flex flex-col items-center text-center relative overflow-hidden">
-                  <span className="text-lg font-black text-slate-900 mb-5 px-2 relative z-10">
+                <div className="bg-white p-5 rounded-2xl border-2 border-[#0C1220] flex flex-col items-center text-center relative overflow-hidden">
+                  <span className="text-lg font-black text-[#0C1220] mb-5 px-2 relative z-10">
                     {stats.biggestFight.song.title}
                   </span>
 
                   <div className="flex items-center w-full justify-around relative z-10">
                     <div className="flex flex-col items-center w-2/5">
-                      <span className="text-[9px] font-black uppercase text-slate-400 mb-1">
+                      <span className="text-[9px] font-black uppercase text-[#3D4A63] mb-1">
                         {vName}
                       </span>
                       <span className="text-2xl font-black text-rose-500">
@@ -502,7 +503,7 @@ export default function PublicProfilePage() {
                     </div>
                     <div className="w-px h-10 bg-rose-100" />
                     <div className="flex flex-col items-center w-2/5">
-                      <span className="text-[9px] font-black uppercase text-slate-400 mb-1">
+                      <span className="text-[9px] font-black uppercase text-[#3D4A63] mb-1">
                         {tName}
                       </span>
                       <span className="text-2xl font-black text-rose-500">
@@ -516,7 +517,7 @@ export default function PublicProfilePage() {
 
             {/* COMMON GROUND */}
             {hasVisitorData && stats?.sharedFavorites && stats.sharedFavorites.length > 0 && (
-              <div className="bg-emerald-50 border border-emerald-200 rounded-3xl p-6 sm:p-8 shadow-sm">
+              <div className="bg-emerald-50 border-[3px] border-[#0C1220] rounded-[18px] shadow-[4px_4px_0_rgba(11,30,63,0.85)] p-6 sm:p-8">
                 <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 block mb-1 text-center">
                   🤝 Common Ground
                 </span>
@@ -529,17 +530,17 @@ export default function PublicProfilePage() {
                     return (
                       <div
                         key={song.id}
-                        className="flex items-center gap-3 bg-white p-3 rounded-2xl border border-emerald-100 shadow-sm"
+                        className="flex items-center gap-3 bg-white p-3 rounded-2xl border-2 border-[#0C1220]"
                       >
                         <AlbumArtwork
                           albumId={resolvedId}
-                          className="w-10 h-10 rounded-xl shadow-sm object-cover"
+                          className="w-10 h-10 rounded-xl border-2 border-[#0C1220] object-cover"
                         />
                         <div className="min-w-0 flex-1">
-                          <h4 className="text-xs sm:text-sm font-extrabold text-slate-900 truncate">
+                          <h4 className="text-xs sm:text-sm font-extrabold text-[#0C1220] truncate">
                             {song.title}
                           </h4>
-                          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest truncate">
+                          <p className="text-[9px] font-bold text-[#3D4A63] uppercase tracking-widest truncate">
                             {song.album}
                           </p>
                         </div>
@@ -551,12 +552,12 @@ export default function PublicProfilePage() {
             )}
 
             {/* SIDE-BY-SIDE TOP 10 */}
-            <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm">
-              <div className="text-center mb-6 border-b border-slate-100 pb-4">
+            <div className="bg-white border-[3px] border-[#0C1220] rounded-[18px] shadow-[4px_4px_0_rgba(11,30,63,0.85)] p-6 sm:p-8">
+              <div className="text-center mb-6 border-b-2 border-[#0C1220] pb-4">
                 <span className="text-[10px] font-black uppercase tracking-widest text-[#0072CE] block mb-1">
                   The Canons
                 </span>
-                <h3 className="text-xl sm:text-2xl font-black tracking-tight text-slate-950">
+                <h3 className="${displayFont.className} text-xl sm:text-2xl text-[#0C1220]">
                   Top 10 Comparison
                 </h3>
               </div>
@@ -566,7 +567,7 @@ export default function PublicProfilePage() {
                 {hasVisitorData && (
                   <div className="flex-1 w-1/2">
                     <div className="text-center mb-3">
-                      <span className="text-xs font-black uppercase text-slate-900 block truncate px-2">
+                      <span className="text-xs font-black uppercase text-[#0C1220] block truncate px-2">
                         {vName}
                       </span>
                     </div>
@@ -576,15 +577,15 @@ export default function PublicProfilePage() {
                           key={song.id}
                           className="flex flex-col items-center sm:flex-row sm:items-start text-center sm:text-left gap-2 group"
                         >
-                          <span className="text-[10px] font-black text-slate-400 w-4 hidden sm:block pt-1">
+                          <span className="text-[10px] font-black text-[#3D4A63] w-4 hidden sm:block pt-1">
                             {i + 1}.
                           </span>
                           <AlbumArtwork
                             albumId={song.albumId || ALBUM_NAME_TO_ID[song.album]}
-                            className="w-9 h-9 rounded-xl shadow-sm object-cover"
+                            className="w-9 h-9 rounded-xl border-2 border-[#0C1220] object-cover"
                           />
                           <div className="min-w-0 flex-1">
-                            <h4 className="text-xs font-extrabold text-slate-800 leading-tight truncate">
+                            <h4 className="text-xs font-extrabold text-[#0C1220] leading-tight truncate">
                               {song.title}
                             </h4>
                           </div>
@@ -595,12 +596,12 @@ export default function PublicProfilePage() {
                 )}
 
                 {/* DIVIDER */}
-                {hasVisitorData && <div className="w-px bg-slate-100 hidden sm:block" />}
+                {hasVisitorData && <div className="w-px bg-[#0C1220] hidden sm:block" />}
 
                 {/* TARGET COLUMN */}
                 <div className={`flex-1 ${!hasVisitorData ? 'w-full max-w-sm mx-auto' : 'w-1/2'}`}>
                   <div className="text-center mb-3">
-                    <span className="text-xs font-black uppercase text-slate-900 block truncate px-2">
+                    <span className="text-xs font-black uppercase text-[#0C1220] block truncate px-2">
                       {tName}
                     </span>
                   </div>
@@ -610,15 +611,15 @@ export default function PublicProfilePage() {
                         key={song.id}
                         className="flex flex-col items-center sm:flex-row sm:items-start text-center sm:text-left gap-2"
                       >
-                        <span className="text-[10px] font-black text-slate-400 w-4 hidden sm:block pt-1">
+                        <span className="text-[10px] font-black text-[#3D4A63] w-4 hidden sm:block pt-1">
                           {i + 1}.
                         </span>
                         <AlbumArtwork
                           albumId={song.albumId || ALBUM_NAME_TO_ID[song.album]}
-                          className="w-9 h-9 rounded-xl shadow-sm object-cover"
+                          className="w-9 h-9 rounded-xl border-2 border-[#0C1220] object-cover"
                         />
                         <div className="min-w-0 flex-1">
-                          <h4 className="text-xs font-extrabold text-slate-800 leading-tight truncate">
+                          <h4 className="text-xs font-extrabold text-[#0C1220] leading-tight truncate">
                             {song.title}
                           </h4>
                         </div>

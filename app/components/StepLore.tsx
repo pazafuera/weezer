@@ -2175,7 +2175,14 @@ export default function StepLore() {
     phase === 'reveal';
 
   return (
-    <div className="relative flex w-full flex-1 flex-col animate-in fade-in slide-in-from-bottom-4 duration-500">
+    /* bg-slate-100 is deliberate (Nov 5): the GradientBackdrop
+       below is translucent (opacity-30) and composites over
+       whatever sits behind it — until now that was AppShell's
+       slate root. The shell now carries the poster backdrop
+       (#DCEEF8 + dots), which would tint and speckle the game's
+       world; this explicit backing keeps the composite — and the
+       game's look — exactly as it was. */
+    <div className="relative flex w-full flex-1 flex-col bg-slate-100 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <GradientBackdrop />
       <div className="relative flex w-full flex-1 flex-col">
         {/* HEADER — one compact row (Mark, Oct 27: the old two-line

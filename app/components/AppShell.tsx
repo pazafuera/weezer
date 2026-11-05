@@ -435,7 +435,22 @@ export default function AppShell({
   ).filter((section) => section.items.length > 0);
 
   return (
-    <div className="min-h-screen bg-slate-100 font-sans text-slate-900 flex flex-col selection:bg-amber-300 selection:text-slate-950">
+    /* The shell carries the poster backdrop now (the Nov 5
+       foundation move): flat #DCEEF8 with the dashboard's halftone
+       dot layer — the exact recipe StepGarage2 bleeds over the old
+       slate. Every step inherits it; the refreshed pages keep their
+       negative-margin bleeds this round (harmless duplication — the
+       same backdrop over itself). The lore step paints its own
+       explicit slate backing (see StepLore) because its gradient
+       backdrop is translucent and the game must not change. */
+    <div
+      className="min-h-screen bg-[#DCEEF8] font-sans text-slate-900 flex flex-col selection:bg-amber-300 selection:text-slate-950"
+      style={{
+        backgroundImage:
+          'radial-gradient(rgba(0,114,206,0.10) 1.2px, transparent 1.3px)',
+        backgroundSize: '22px 22px',
+      }}
+    >
       {/* WEEZER BLUE TOP HEADER (SCALED UP FOR DESKTOP) */}
       <header className="bg-[#0072CE] border-b border-blue-600 sticky top-0 z-30 shadow-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 lg:h-16 flex items-center justify-between">

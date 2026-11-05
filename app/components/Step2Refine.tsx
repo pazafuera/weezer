@@ -455,9 +455,12 @@ export default function Step2Refine({
                     )}
 
                     <div className="min-w-0 flex-1">
+                      {/* Titles never truncate (owner, Nov 5) — same
+                          rule F3 applied on Final Review: long titles
+                          wrap to a second line instead of ellipsizing. */}
                       <h3
                         onClick={handleSongTitleClick}
-                        className={`text-sm font-bold leading-tight truncate cursor-pointer hover:text-[#0072CE] transition-colors ${
+                        className={`text-sm font-bold leading-tight min-w-0 cursor-pointer hover:text-[#0072CE] transition-colors ${
                           isTouchDrag ? 'text-white font-extrabold' : 'text-[#0C1220]'
                         }`}
                         title="Tap to preview audio"

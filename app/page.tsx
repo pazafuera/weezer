@@ -128,6 +128,7 @@ export default function WeezerRankerPage() {
         <Step2Refine
           bucketRanks={bucketRanks}
           triageMap={triageMap}
+          masterList={masterList}
           onUpdateRanks={updateAndSyncBucketRanks}
           handleFinishBucketRanking={() => {
             normalizeMasterList();

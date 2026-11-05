@@ -3,6 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { BucketType, Song, BUCKET_CONFIG, BUCKET_TRANSITIONS } from '../data/constants';
 import type { TriageValue } from '../context/WeezerContext';
 import { FlyingWIcon, AudioPreviewButton, SortingIncompleteNotice } from './SharedUI';
+import { getRankedSongs } from '@/utils/rankingUtils';
 import Step1_5Matchups from './Step1_5Matchups';
 import { displayFont } from './shareables/fonts';
 
@@ -28,6 +29,7 @@ const REFINEMENT_STAGES: { bucket: BucketType; title: string; desc: string; next
 export default function Step2Refine({
   bucketRanks,
   triageMap,
+  masterList,
   onUpdateRanks,
   handleFinishBucketRanking,
   onBackToTriage,
@@ -38,6 +40,7 @@ export default function Step2Refine({
 }: {
   bucketRanks: Record<BucketType, Song[]>;
   triageMap: Record<string, TriageValue>;
+  masterList: Song[];
   onUpdateRanks: (newRanks: Record<BucketType, Song[]>, newMap?: Record<string, TriageValue>) => void;
   handleFinishBucketRanking: () => void;
   onBackToTriage: () => void;
@@ -83,6 +86,26 @@ export default function Step2Refine({
   const bucket = currentStage.bucket;
 
   const songs = bucketRanks[bucket] || [];
+
+  // TRUE OVERALL RANK NUMBERS (owner, Nov 5): the chip on a stage
+  // row shows the song's rank in the overall ranking — the same
+  // number Final Review shows for it — not its position within
+  // this bucket (his #1 Slap is his #21 song overall). Derived
+  // from the exact source Final Review uses — getRankedSongs over
+  // the master list, counting only the rankable buckets (Banger /
+  // Lowkey Slaps) in order — so the two pages can never disagree.
+  // Display-only: no ordering, data, or state changes. The
+  // within-bucket index remains as a defensive fallback for a
+  // song with no master-list position (unreachable in normal
+  // flow: bucketRanks is itself derived from the master list).
+  const rankNumberById = new Map<string, number>();
+  getRankedSongs(masterList, triageMap).forEach((s) => {
+    const b = triageMap[s.id];
+    if (b === 'banger' || b === 'slaps') {
+      rankNumberById.set(s.id, rankNumberById.size + 1);
+    }
+  });
+
   const cfg = BUCKET_CONFIG[bucket];
   const hasSlider = bucket === 'banger' || bucket === 'slaps';
   const transitions = BUCKET_TRANSITIONS[bucket];
@@ -419,7 +442,7 @@ export default function Step2Refine({
                       <span className={`w-7 h-7 font-black text-[11px] rounded-lg flex items-center justify-center shrink-0 transition-colors ${
                         isTouchDrag ? 'bg-amber-400 text-slate-950 font-black ring-2 ring-amber-300' : 'bg-[#0072CE] text-white'
                       }`}>
-                        #{idx + 1}
+                        #{rankNumberById.get(song.id) ?? idx + 1}
                       </span>
                     )}
 

@@ -20,8 +20,11 @@ import type { FanhoodRecord } from '../../lib/fanhood';
  *  in any deployed chunk), making the element type undefined and
  *  crashing the Sweater Thread/Shareables gallery (React #130) for
  *  every player with an established standing. A module-local copy
- *  cannot be dropped that way. (ShareCardShell keeps its own export —
- *  Top10Card still imports it there.) */
+ *  cannot be dropped that way. (ShareCardShell keeps its own export,
+ *  but since 2026-11-04 every card that renders the doodle —
+ *  FanhoodCard, Top10Card, Top10AlbumsCard — carries a local copy;
+ *  the shared export's wiring fault recurred in the 2026-11-04
+ *  preview build of the shareables round.) */
 function MusicNotesDoodle({
   className = '',
   style,

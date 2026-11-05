@@ -4,6 +4,7 @@ import React, { useEffect, useMemo } from 'react';
 import { useWeezer, isRealBucket } from '../context/WeezerContext';
 import { ALBUMS_BY_ID, ALBUM_NAME_TO_ID, FULL_SONG_POOL } from '../data/constants';
 import { ShareablesGallery } from './shareables';
+import { displayFont } from './shareables/fonts';
 
 const BUCKET_POINTS: Record<string, number> = {
   banger: 5,
@@ -162,16 +163,29 @@ export default function StepShareables() {
       : undefined;
 
   return (
-    <div className="pb-24 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="max-w-5xl mx-auto px-4 space-y-6">
+    /* The dashboard's page backdrop, same bleed treatment as
+       StepGarage2's root: negative margins match AppShell's main
+       padding at each breakpoint and the inner wrapper restores
+       the inset. */
+    <div
+      className="-mx-4 -my-4 bg-[#DCEEF8] sm:-mx-6 sm:-my-6 lg:-mx-8 lg:-my-8"
+      style={{
+        backgroundImage:
+          'radial-gradient(rgba(0,114,206,0.10) 1.2px, transparent 1.3px)',
+        backgroundSize: '22px 22px',
+      }}
+    >
+      <div className="mx-auto w-full max-w-5xl space-y-6 px-4 pb-24 pt-4 animate-in fade-in slide-in-from-bottom-4 duration-500 sm:px-6 sm:pt-6 lg:px-8 lg:pt-8">
         {/* No in-page exit pill: the "← Dashboard" pill that
             sat here was removed app-wide at the owner's call
             (Oct 19) — the app menu is the way to the dashboard. */}
         <div>
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight">
+          <h1
+            className={`${displayFont.className} text-[clamp(26px,5vw,34px)] leading-none tracking-wide text-[#0C1220]`}
+          >
             Shareables
           </h1>
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+          <p className="mt-1 text-[14.5px] font-semibold leading-snug text-[#3D4A63]">
             Your asset library — view, save, and share your cards
           </p>
         </div>

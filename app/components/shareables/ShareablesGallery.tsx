@@ -14,6 +14,16 @@ import { useFanhood } from '../../lib/fanhood';
 import type { FanhoodRecord } from '../../lib/fanhood';
 import TierListChart from '../TierListChart';
 import type { RankedAlbum as TierRankedAlbum, RankedSong as TierRankedSong } from '../TierListChart';
+import { displayFont } from './fonts';
+
+/** The dashboard poster system's shadows (StepGarage2's
+ *  constants, same values): card shadow for floating panels,
+ *  hard shadow for framed cards in the page flow. Page chrome
+ *  only — the card VISUALS (Top10Card, TribeBadgeCard, …) are
+ *  already poster art and keep their own rendering. */
+const POSTER_CARD_SHADOW =
+  'shadow-[0_10px_28px_rgba(11,30,63,0.12),0_2px_0_rgba(11,30,63,0.9)]';
+const POSTER_HARD_SHADOW = 'shadow-[4px_4px_0_rgba(11,30,63,0.85)]';
 
 /** Everything a tier-list card needs. The gallery builds its own
  *  fixed-mode TierListChart instances from this data — Songs and
@@ -98,7 +108,7 @@ function LibraryItem({
   return (
     <div
       data-shareable={anchorKey}
-      className={`bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs space-y-4${anchorKey ? ' scroll-mt-28' : ''}`}
+      className={`rounded-[18px] border-[3px] border-[#0C1220] bg-white p-5 ${POSTER_HARD_SHADOW} space-y-4${anchorKey ? ' scroll-mt-28' : ''}`}
     >
       {/* Scaled preview (visual only — exports never use this node).
           The scale is MEASURED from this box (useFitScale), so the
@@ -115,7 +125,7 @@ function LibraryItem({
           aspect), falling back to the old 400px until first measure. */}
       <div
         ref={boxRef}
-        className="relative overflow-hidden rounded-2xl bg-slate-100 border border-slate-200"
+        className="relative overflow-hidden rounded-[14px] border-[2.5px] border-[#0C1220] bg-[#F2F8FC]"
         style={{ height: scale > 0 ? CARD_NATURAL_HEIGHT * scale : 400 }}
       >
         <div
@@ -132,8 +142,8 @@ function LibraryItem({
       </div>
 
       <div>
-        <h3 className="font-black text-lg text-slate-950 leading-tight">{title}</h3>
-        <p className="text-xs font-semibold text-slate-400 mt-0.5">{description}</p>
+        <h3 className={`${displayFont.className} text-[21px] leading-tight tracking-wide text-[#0C1220]`}>{title}</h3>
+        <p className="mt-0.5 text-[13px] font-semibold leading-snug text-[#3D4A63]">{description}</p>
       </div>
 
       {controls}
@@ -232,14 +242,14 @@ function CardModal({
       aria-label={title}
     >
       <div
-        className="relative flex max-h-[92vh] max-w-full flex-col overflow-hidden rounded-3xl bg-white shadow-2xl"
+        className={`relative flex max-h-[92vh] max-w-full flex-col overflow-hidden rounded-[18px] border-[3px] border-[#0C1220] bg-white ${POSTER_CARD_SHADOW}`}
         onClick={(e) => e.stopPropagation()}
       >
         <button
           type="button"
           onClick={onClose}
           aria-label="Close"
-          className="absolute right-3 top-3 z-20 flex h-11 w-11 cursor-pointer items-center justify-center rounded-full bg-white/95 text-base font-black text-slate-900 shadow-lg ring-1 ring-slate-900/25 transition hover:bg-white"
+          className="absolute right-3 top-3 z-20 flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border-[2.5px] border-[#0C1220] bg-white/95 text-base font-black text-[#0C1220] shadow-[2px_2px_0_#0C1220] transition hover:bg-white"
         >
           ✕
         </button>
@@ -273,7 +283,7 @@ function ThumbnailButton({
     >
       <div
         ref={boxRef}
-        className="relative aspect-[4/5] overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 shadow-xs transition group-hover:border-slate-300"
+        className={`relative aspect-[4/5] overflow-hidden rounded-[14px] border-[2.5px] border-[#0C1220] bg-[#F2F8FC] ${POSTER_HARD_SHADOW} transition`}
       >
         <div
           className="pointer-events-none absolute left-0 top-0"
@@ -287,7 +297,7 @@ function ThumbnailButton({
           {children}
         </div>
       </div>
-      <p className="mt-2 text-center text-sm font-black text-slate-800">
+      <p className={`${displayFont.className} mt-2 text-center text-[15px] tracking-wide text-[#0C1220]`}>
         {shortTitle}
       </p>
     </button>
@@ -397,7 +407,7 @@ function ThumbnailItem({
           title={shortTitle}
           onClose={() => setOpen(false)}
           footer={
-            <div className="border-t border-slate-200 bg-white p-4">
+            <div className="border-t-[3px] border-[#0C1220] bg-white p-4">
               <button
                 onClick={download}
                 disabled={busy || downloadDisabled}
@@ -578,7 +588,7 @@ function TierThumbnailItem({
           title={shortTitle}
           onClose={() => setOpen(false)}
           footer={
-            <div className="border-t border-slate-200 bg-white p-4">
+            <div className="border-t-[3px] border-[#0C1220] bg-white p-4">
               <button
                 type="button"
                 onClick={saveFromModal}
@@ -619,13 +629,13 @@ function TierLibrarySection({
   return (
     <div
       data-shareable={mode === 'songs' ? 'tier-songs' : 'tier-albums'}
-      className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs scroll-mt-28"
+      className={`rounded-[18px] border-[3px] border-[#0C1220] bg-white p-5 ${POSTER_HARD_SHADOW} scroll-mt-28`}
     >
       <div className="mb-4">
-        <h3 className="font-black text-lg text-slate-950 leading-tight">
+        <h3 className={`${displayFont.className} text-[21px] leading-tight tracking-wide text-[#0C1220]`}>
           {mode === 'songs' ? 'Tier List — Songs' : 'Tier List — Albums'}
         </h3>
-        <p className="text-xs font-semibold text-slate-400 mt-0.5">
+        <p className="mt-0.5 text-[13px] font-semibold leading-snug text-[#3D4A63]">
           {mode === 'songs'
             ? 'Your full song tier list, S to F.'
             : 'Your albums in tiers, S to F.'}
@@ -797,16 +807,16 @@ export default function ShareablesGallery({
       );
     }
     return (
-      <div className="bg-white border border-slate-200/90 rounded-3xl p-10 text-center shadow-xs">
-        <p className="text-xl font-black text-slate-950">No shareables yet</p>
-        <p className="mt-1 text-sm font-semibold text-slate-400">
+      <div className={`rounded-[18px] border-[3px] border-[#0C1220] bg-white p-10 text-center ${POSTER_HARD_SHADOW}`}>
+        <p className={`${displayFont.className} text-[24px] leading-tight tracking-wide text-[#0C1220]`}>No shareables yet</p>
+        <p className="mt-1 text-sm font-semibold leading-snug text-[#3D4A63]">
           Bucket and rank some songs first — your cards will appear here.
         </p>
         {onStartSorting && (
           <button
             type="button"
             onClick={onStartSorting}
-            className="mt-5 bg-[#0072CE] hover:bg-blue-600 text-white font-black text-sm px-6 py-3 rounded-full transition-colors cursor-pointer"
+            className="mt-5 cursor-pointer rounded-[11px] border-[2.5px] border-[#0C1220] bg-[#0072CE] px-6 py-3 text-sm font-black text-white shadow-[3px_3px_0_#0C1220] transition-all hover:bg-blue-600 active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_#0C1220]"
           >
             Start sorting →
           </button>

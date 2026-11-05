@@ -386,16 +386,6 @@ function GarageHero() {
 /* The record shelf — the five eras as record spines                   */
 /* ------------------------------------------------------------------ */
 
-/** Short spine names for the eras; the era definitions themselves
- *  (year tests, catalog membership) are the app's ERAS table. */
-const SHELF_LABELS: Record<string, string> = {
-  blue: 'Blue Era',
-  y2k: 'Y2K',
-  red: 'Red Era',
-  comeback: 'Comeback',
-  new: 'New Horizons',
-};
-
 /** Spine colors are the APP's era colors (the ERAS table in
  *  EraDnaCard) — the same colors the Era DNA card, Fan Stats and
  *  the rest of the site use for these eras. The prototype mock's
@@ -445,7 +435,7 @@ function EraShelf() {
       songs,
       sorted,
       pct,
-      label: SHELF_LABELS[era.key] ?? era.name,
+      label: era.name,
     };
   });
   const allComplete = eraStats.every((stat) => stat.pct === 100);

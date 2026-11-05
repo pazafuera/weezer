@@ -19,6 +19,7 @@ import { FlyingWIcon, AlbumArtwork } from './SharedUI';
 import { encodeShareData } from '@/utils/shareHelper';
 import { ShareablesGallery } from './shareables';
 import { displayFont } from './shareables/fonts';
+import { ERAS } from './shareables/EraDnaCard';
 import {
   ARCHETYPE_MODEL_VERSION,
   ARCHETYPE_VIBES,
@@ -633,83 +634,51 @@ export default function Step4Wrapped({
     const { biggestBetrayal, hiddenGem } = deriveRankClashes(rankedComparisons);
 
     // EXPLICIT RANKING ANALYTICS
-    const allEras = [
-      {
-        id: 'classic',
-        name: 'The Classic Era',
-        subtitle: 'Blue, Pinkerton & B-Sides',
-        min: 1994,
-        max: 1999,
-        mid: 1996,
-        years: '1994–1999',
-        color: 'bg-[#0072CE]',
-        text: 'text-white',
-      },
-      {
-        id: 'reunion',
-        name: 'The Reunion Era',
+    // The era taxonomy is the app's canonical ERAS table (EraDnaCard)
+    // — the same five eras, names, years and colors as the dashboard
+    // record shelf and the Era DNA card. The Thread used to keep its
+    // own six-era split here; it now maps ERAS into the shape the
+    // carousel consumes, with only the year spans (for the era find
+    // below) and the Thread's own album-list subtitles defined
+    // locally. Songs in the gap years between eras (1997–2000,
+    // 2006–07, 2011–13, 2020) fall in no era — the same treatment
+    // the canonical ERAS tests give them.
+    const THREAD_ERA_DETAILS: Record<
+      string,
+      { min: number; max: number; subtitle: string }
+    > = {
+      blue: { min: 1994, max: 1996, subtitle: 'Blue & Pinkerton' },
+      y2k: {
+        min: 2001,
+        max: 2005,
         subtitle: 'Green, Maladroit, Make Believe',
-        min: 2000,
-        max: 2007,
-        mid: 2003,
-        years: '2000–2007',
-        color: 'bg-emerald-600',
-        text: 'text-white',
       },
-      {
-        id: 'wildwest',
-        name: 'The Wild West',
-        subtitle: 'Red, Raditude, Hurley',
-        min: 2008,
-        max: 2013,
-        mid: 2010,
-        years: '2008–2013',
-        color: 'bg-red-600',
-        text: 'text-white',
-      },
-      {
-        id: 'renaissance',
-        name: 'The Renaissance',
-        subtitle: 'EWBAITE, White, Pacific Daydream',
+      red: { min: 2008, max: 2010, subtitle: 'Red, Raditude, Hurley' },
+      comeback: {
         min: 2014,
         max: 2019,
-        mid: 2016,
-        years: '2014–2019',
-        color: 'bg-orange-500',
-        text: 'text-white',
+        subtitle: 'EWBAITE, White, Pacific Daydream',
       },
-      {
-        id: 'modern',
-        name: 'The Modern Era',
-        subtitle: 'OK Human, Van Weezer, SZNZ',
-        min: 2020,
-        max: 2023,
-        mid: 2021,
-        years: '2020–2023',
-        color: 'bg-purple-600',
-        text: 'text-white',
-      },
-      {
-        id: 'gold',
-        name: 'The Gold Era',
-        subtitle: 'The Gold Album & Beyond',
-        min: 2024,
+      new: {
+        min: 2021,
         max: 2030,
-        mid: 2026,
-        years: '2024–Present',
-        color: 'bg-amber-400',
-        text: 'text-amber-950',
+        subtitle: 'OK Human, Van Weezer, SZNZ',
       },
-    ];
-
-    const eraWeights: Record<string, number> = {
-      classic: 0,
-      reunion: 0,
-      wildwest: 0,
-      renaissance: 0,
-      modern: 0,
-      gold: 0,
     };
+
+    const allEras = ERAS.map((era) => ({
+      id: era.key,
+      name: era.name,
+      subtitle: THREAD_ERA_DETAILS[era.key].subtitle,
+      min: THREAD_ERA_DETAILS[era.key].min,
+      max: THREAD_ERA_DETAILS[era.key].max,
+      years: era.label,
+      color: era.color,
+    }));
+
+    const eraWeights: Record<string, number> = Object.fromEntries(
+      ERAS.map((era) => [era.key, 0])
+    );
 
     let totalRankWeight = 0;
     let rankedDeepCutCount = 0;
@@ -914,9 +883,9 @@ export default function Step4Wrapped({
 
     if (topSongTitle === 'Island in the Sun') {
       finalGif = '/img/vibes/island-in-the-sun.webp';
-    } else if (topSongTitle === 'Keep Fishin' || sortedEras[0]?.id === 'reunion') {
+    } else if (topSongTitle === 'Keep Fishin' || sortedEras[0]?.id === 'y2k') {
       finalGif = '/img/vibes/keep-fishin.gif';
-    } else if (sortedEras[0]?.id === 'gold' || modernAverage > 4.3) {
+    } else if (sortedEras[0]?.id === 'new' || modernAverage > 4.3) {
       finalGif = '/img/vibes/gold.webp';
     }
 
@@ -1556,8 +1525,9 @@ export default function Step4Wrapped({
                 <React.Fragment key={era.id}>
                   <div
                     className={`w-[85vw] sm:w-[360px] lg:w-[400px] shrink-0 snap-center rounded-3xl p-6 sm:p-8 transition-all relative overflow-hidden flex flex-col justify-between shadow-md ${
-                      era.color
-                    } ${idx !== 0 && 'opacity-90'}`}
+                      idx !== 0 && 'opacity-90'
+                    }`}
+                    style={{ backgroundColor: era.color }}
                   >
                     {idx === 0 ? (
                       <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white text-slate-900 text-[10px] font-black uppercase px-4 py-1.5 rounded-full tracking-widest shadow-sm whitespace-nowrap">
@@ -1570,21 +1540,17 @@ export default function Step4Wrapped({
                     )}
 
                     <div className="text-center mt-8 mb-8">
-                      <h3
-                        className={`text-3xl font-black mb-2 tracking-tight truncate ${era.text}`}
-                      >
+                      <h3 className="text-3xl font-black mb-2 tracking-tight truncate text-white">
                         {era.name}
                       </h3>
 
-                      <p className={`text-sm font-bold opacity-90 ${era.text}`}>
+                      <p className="text-sm font-bold opacity-90 text-white">
                         {era.subtitle}
                       </p>
                     </div>
 
                     <div className="mt-auto">
-                      <span
-                        className={`text-[9px] font-black uppercase tracking-[0.2em] block mb-3 text-center opacity-80 ${era.text}`}
-                      >
+                      <span className="text-[9px] font-black uppercase tracking-[0.2em] block mb-3 text-center opacity-80 text-white">
                         {era.years}
                       </span>
 

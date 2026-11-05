@@ -4,6 +4,7 @@ import { forwardRef } from 'react';
 import type { CSSProperties } from 'react';
 import {
   FactsBurst,
+  FlyingW,
   POSTER_BLUE,
   PosterDomain,
   SaveImageButton,
@@ -80,6 +81,13 @@ export const FanhoodCardVisual = forwardRef<
   const stopSize = stop
     ? Math.max(76, Math.min(168, Math.floor(1740 / stop.length)))
     : 0;
+  // The header question renders on ONE line too (Nov 5 one-line
+  // rule) — the same size-to-fit rule applied to its 30 characters
+  // (it wrapped to two lines at the old fixed 76px).
+  const headerSize = Math.max(
+    44,
+    Math.min(76, Math.floor(1740 / 'CAN YOU GET BACK TO THE SHACK?'.length))
+  );
 
   return (
     <div
@@ -100,7 +108,8 @@ export const FanhoodCardVisual = forwardRef<
         <>
           {/* Header: the game's headline question, in display type. */}
           <h2
-            className={`absolute inset-x-[64px] top-[104px] text-center text-[76px] leading-[1.05] text-white ${displayFont.className}`}
+            className={`absolute inset-x-[64px] top-[104px] whitespace-nowrap text-center leading-none text-white ${displayFont.className}`}
+            style={{ fontSize: headerSize }}
           >
             CAN YOU GET BACK TO THE SHACK?
           </h2>
@@ -143,13 +152,20 @@ export const FanhoodCardVisual = forwardRef<
               signature album). */}
           <MusicNotesDoodle className="absolute right-[64px] top-[880px] h-[300px] w-[320px]" />
 
-          <p className="absolute inset-x-[40px] bottom-[92px] text-center text-[27px] font-semibold uppercase leading-snug tracking-[0.14em] text-white/95">
-            All My Favorite Songs: The Weezer Song Ranking Project
-          </p>
+          {/* THE standard card footer (Nov 5 — one footer on every
+              card). Replaces this card's colon-form line and its
+              "see if YOU can get back to the shack…" CTA; recorded
+              in REPORT.md (C1). */}
+          <div className="absolute inset-x-12 bottom-[92px] z-10 flex items-center justify-center gap-[14px]">
+            <FlyingW className="h-[26px] w-[48px] text-white" />
+            <span className="whitespace-nowrap text-[22px] font-black uppercase tracking-[0.22em] text-white/95">
+              All My Favorite Songs · The Weezer Song Ranking Project
+            </span>
+          </div>
           <p
-            className={`absolute inset-x-[40px] bottom-[26px] text-center text-[46px] font-bold leading-none ${handFont.className}`}
+            className={`absolute inset-x-12 bottom-[30px] z-10 whitespace-nowrap text-center text-[44px] font-bold leading-none text-white ${handFont.className}`}
           >
-            see if YOU can get back to the shack at rankingweezer.com
+            JOIN THE DEBATE AT RANKINGWEEZER.COM
           </p>
         </>
       )}

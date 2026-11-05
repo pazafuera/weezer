@@ -5,6 +5,7 @@ import type { CSSProperties } from 'react';
 import {
   FlyingW,
   POSTER_BLUE,
+  PosterDomain,
   VinylDisc,
   resolveAlbumId,
 } from './ShareCardShell';
@@ -95,32 +96,45 @@ export const Top10AlbumsCardVisual = forwardRef<
       className="relative h-[1350px] w-[1080px] overflow-hidden text-white"
       style={{ backgroundColor: POSTER_BLUE }}
     >
+      <PosterDomain />
+
       {/* hand-drawn music notes, as in Abby's mock */}
       <MusicNotesDoodle className="absolute left-[16px] top-[16px] z-20 w-[240px] -rotate-6" />
       <MusicNotesDoodle className="absolute right-[10px] top-[1030px] z-20 w-[230px] rotate-[14deg]" />
 
       {/* vinyl-record header: a big black disc with a gray label,
-          the title set over it in chunky display type */}
+          the title set over it in chunky display type — same ink
+          stroke + hard poster shadow as the songs card (Nov 5), so
+          the white type stops washing out over the record */}
       <VinylDisc
         labelColor="#d4d8db"
         className="absolute left-1/2 top-[-120px] h-[700px] w-[700px] -translate-x-1/2 shadow-[0_24px_60px_rgba(2,60,90,0.35)]"
       />
       <div className="absolute inset-x-0 top-[104px] z-10 text-center">
         <h2
-          className={`text-[160px] leading-none text-white ${displayFont.className}`}
+          className={`whitespace-nowrap text-[160px] leading-none text-white ${displayFont.className}`}
+          style={{
+            WebkitTextStroke: '3px #0C1220',
+            textShadow: '5px 5px 0 rgba(12,18,32,0.9)',
+          }}
         >
           MY TOP 10
         </h2>
         <p
-          className={`mt-[2px] text-[66px] font-bold leading-none text-white ${handFont.className}`}
+          className={`mt-[2px] whitespace-nowrap text-[66px] font-bold leading-none text-white ${handFont.className}`}
+          style={{
+            WebkitTextStroke: '2px #0C1220',
+            textShadow: '4px 4px 0 rgba(12,18,32,0.9)',
+          }}
         >
           Weezer Albums
         </p>
       </div>
 
       {/* the Top 10 Songs card's challenge bubble, kept verbatim —
-          it speaks about rankings generally, not songs specifically */}
-      <div className="absolute right-[80px] top-[438px] z-20 rotate-2 rounded-2xl rounded-br-sm bg-white px-5 py-2.5 shadow-lg">
+          it speaks about rankings generally, not songs specifically
+          (Nov 5: ink frame + hard shadow, as on the songs card) */}
+      <div className="absolute right-[80px] top-[438px] z-20 rotate-2 rounded-2xl rounded-br-sm border-[3px] border-[#0C1220] bg-white px-5 py-2.5 shadow-[4px_4px_0_rgba(12,18,32,0.9)]">
         <span
           className={`whitespace-nowrap text-[33px] leading-none text-slate-800 ${handFont.className}`}
         >
@@ -130,8 +144,9 @@ export const Top10AlbumsCardVisual = forwardRef<
 
       {/* the ranked list on a white paper panel, same geometry as
           the songs card: rank numeral + album name (never truncated),
-          with the album's top song as the second line */}
-      <div className="absolute left-[96px] right-[96px] top-[500px] z-10 bg-white px-[40px] pb-[18px] pt-[24px] shadow-[0_24px_48px_rgba(2,60,90,0.35)]">
+          with the album's top song as the second line. Nov 5: the
+          panel takes the card system's ink frame + hard shadow. */}
+      <div className="absolute left-[96px] right-[96px] top-[500px] z-10 rounded-[20px] border-[3px] border-[#0C1220] bg-white px-[40px] pb-[18px] pt-[24px] shadow-[6px_6px_0_rgba(12,18,32,0.9)]">
         {top.map((entry, i) => {
           const topSong = topSongFor(entry, songs);
           return (
@@ -151,7 +166,7 @@ export const Top10AlbumsCardVisual = forwardRef<
                 </span>
               </div>
               {topSong && (
-                <span className="mt-[5px] text-[19px] font-bold leading-none text-slate-500">
+                <span className="mt-[5px] text-[19px] font-bold leading-none text-[#3D4A63]">
                   Top song: {topSong.title} · #{topSong.rank}
                 </span>
               )}

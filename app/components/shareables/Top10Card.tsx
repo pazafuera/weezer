@@ -6,6 +6,7 @@ import { ALBUMS_BY_ID } from '../../data/constants';
 import {
   FlyingW,
   POSTER_BLUE,
+  PosterDomain,
   SaveImageButton,
   VinylDisc,
   resolveAlbumId,
@@ -94,32 +95,46 @@ export const Top10CardVisual = forwardRef<
       className="relative h-[1350px] w-[1080px] overflow-hidden text-white"
       style={{ backgroundColor: POSTER_BLUE }}
     >
+      <PosterDomain />
+
       {/* hand-drawn music notes, as in Abby's mock */}
       <MusicNotesDoodle className="absolute left-[16px] top-[16px] z-20 w-[240px] -rotate-6" />
       <MusicNotesDoodle className="absolute right-[10px] top-[1030px] z-20 w-[230px] rotate-[14deg]" />
 
       {/* vinyl-record header: a big black disc with a gray label,
-          the title set over it in chunky display type */}
+          the title set over it in chunky display type. Nov 5: the
+          white type washed out over the record's grooves, so it
+          carries an ink stroke + hard poster shadow now — it reads
+          against the black disc AND the blue label ring. */}
       <VinylDisc
         labelColor="#d4d8db"
         className="absolute left-1/2 top-[-120px] h-[700px] w-[700px] -translate-x-1/2 shadow-[0_24px_60px_rgba(2,60,90,0.35)]"
       />
       <div className="absolute inset-x-0 top-[104px] z-10 text-center">
         <h2
-          className={`text-[160px] leading-none text-white ${displayFont.className}`}
+          className={`whitespace-nowrap text-[160px] leading-none text-white ${displayFont.className}`}
+          style={{
+            WebkitTextStroke: '3px #0C1220',
+            textShadow: '5px 5px 0 rgba(12,18,32,0.9)',
+          }}
         >
           MY TOP 10
         </h2>
         <p
-          className={`mt-[2px] text-[66px] font-bold leading-none text-white ${handFont.className}`}
+          className={`mt-[2px] whitespace-nowrap text-[66px] font-bold leading-none text-white ${handFont.className}`}
+          style={{
+            WebkitTextStroke: '2px #0C1220',
+            textShadow: '4px 4px 0 rgba(12,18,32,0.9)',
+          }}
         >
           Weezer Songs
         </p>
       </div>
 
       {/* the shipped challenge bubble, kept verbatim, restyled as a
-          white speech bubble over the disc's lower edge */}
-      <div className="absolute right-[80px] top-[438px] z-20 rotate-2 rounded-2xl rounded-br-sm bg-white px-5 py-2.5 shadow-lg">
+          white speech bubble over the disc's lower edge (Nov 5: ink
+          frame + hard shadow, the card system's panel treatment) */}
+      <div className="absolute right-[80px] top-[438px] z-20 rotate-2 rounded-2xl rounded-br-sm border-[3px] border-[#0C1220] bg-white px-5 py-2.5 shadow-[4px_4px_0_rgba(12,18,32,0.9)]">
         <span
           className={`whitespace-nowrap text-[33px] leading-none text-slate-800 ${handFont.className}`}
         >
@@ -129,8 +144,9 @@ export const Top10CardVisual = forwardRef<
 
       {/* the ranked list on a white paper panel, centered title over
           album tag, as in Abby's mock; rank numbers stay — the
-          ranking is the content */}
-      <div className="absolute left-[96px] right-[96px] top-[500px] z-10 bg-white px-[40px] pb-[18px] pt-[24px] shadow-[0_24px_48px_rgba(2,60,90,0.35)]">
+          ranking is the content. Nov 5: the panel takes the card
+          system's ink frame + hard shadow. */}
+      <div className="absolute left-[96px] right-[96px] top-[500px] z-10 rounded-[20px] border-[3px] border-[#0C1220] bg-white px-[40px] pb-[18px] pt-[24px] shadow-[6px_6px_0_rgba(12,18,32,0.9)]">
         {top.map((song, i) => (
           <div
             key={song.id}
@@ -152,7 +168,7 @@ export const Top10CardVisual = forwardRef<
                 </span>
               )}
             </div>
-            <span className="mt-[5px] text-[19px] font-bold uppercase leading-none tracking-[0.14em] text-slate-500">
+            <span className="mt-[5px] text-[19px] font-bold uppercase leading-none tracking-[0.14em] text-[#3D4A63]">
               {albumTag(song)}
             </span>
           </div>

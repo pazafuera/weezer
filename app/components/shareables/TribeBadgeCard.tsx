@@ -4,6 +4,7 @@ import { forwardRef, Fragment } from 'react';
 import { albumCoverSrc, resolveAlbumId } from './ShareCardShell';
 import {
   FactsBurst,
+  FlyingW,
   GuitarSilhouette,
   POSTER_BLUE,
   PosterDomain,
@@ -173,19 +174,27 @@ export const TribeBadgeCardVisual = forwardRef<
         </div>
       ) : (
         <>
-          <p className="absolute inset-x-[80px] top-[104px] text-center text-[54px] font-light leading-[1.25]">
+          {/* Nov 5 one-line rule: the intro renders on ONE line —
+              sized down from 54px and set nowrap so it can never
+              wrap or bleed. */}
+          <p className="absolute inset-x-[60px] top-[96px] whitespace-nowrap text-center text-[40px] font-light leading-none">
             Based on my ranking of every Weezer song, I&apos;m a...
           </p>
 
-          <GuitarSilhouette className="absolute left-0 top-[318px] h-[400px] w-[1080px]" />
+          {/* Structured grid: intro 96 / name 308 / diagnosis 782 /
+              facts + album 866–880 / footer. The guitar is drawn in
+              card coordinates behind the name block — only its
+              smooth shoulder crosses the name zone's lower band;
+              the diagnosis sits on clean blue below it. */}
+          <GuitarSilhouette className="absolute inset-0 h-full w-full" />
           <h2
-            className={`absolute inset-x-0 top-[400px] whitespace-nowrap text-center leading-none text-white ${displayFont.className}`}
+            className={`absolute inset-x-0 top-[308px] whitespace-nowrap text-center leading-none text-white ${displayFont.className}`}
             style={{ fontSize: nameSize }}
           >
             {tribe.displayName}
           </h2>
           <p
-            className={`absolute inset-x-[60px] top-[596px] text-center text-[54px] font-bold leading-tight ${handFont.className}`}
+            className={`absolute inset-x-[60px] top-[782px] text-center text-[54px] font-bold leading-tight ${handFont.className}`}
           >
             {diagnosisParts.map((part, i) => (
               <Fragment key={i}>
@@ -198,7 +207,7 @@ export const TribeBadgeCardVisual = forwardRef<
           </p>
 
           {/* THE FACTS — burst + the fact, left column */}
-          <div className="absolute left-[64px] top-[776px] w-[400px]">
+          <div className="absolute left-[64px] top-[880px] w-[400px]">
             <FactsBurst className="-ml-[30px] h-[104px] w-[420px] -rotate-2">
               <span
                 className={`text-[48px] leading-none text-black ${displayFont.className}`}
@@ -211,12 +220,12 @@ export const TribeBadgeCardVisual = forwardRef<
 
           {/* Signature album: white frame, vinyl peeking out */}
           {domAlbumId && (
-            <div className="absolute right-[64px] top-[752px] w-[430px]">
+            <div className="absolute right-[64px] top-[866px] w-[336px]">
               <VinylDisc
                 labelColor={ink}
-                className="absolute -right-[168px] top-1/2 h-[440px] w-[440px] -translate-y-1/2"
+                className="absolute -right-[150px] top-[-12px] h-[360px] w-[360px]"
               />
-              <div className="relative z-10 bg-white p-[14px] shadow-[0_24px_48px_rgba(2,60,90,0.35)]">
+              <div className="relative z-10 border-[3px] border-[#0C1220] bg-white p-[14px] shadow-[6px_6px_0_rgba(12,18,32,0.9)]">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={albumCoverSrc(domAlbumId)}
@@ -227,13 +236,21 @@ export const TribeBadgeCardVisual = forwardRef<
             </div>
           )}
 
-          <p className="absolute inset-x-[40px] bottom-[92px] text-center text-[27px] font-semibold uppercase leading-snug tracking-[0.14em] text-white/95">
-            All My Favorite Songs: The Weezer Song Ranking Project
-          </p>
+          {/* THE standard card footer (Nov 5 — one footer on every
+              card, at Mark's direction). This REPLACES this card's
+              locked colon-form footer and its "find out what kind
+              of fan YOU are…" line; the override is recorded in
+              REPORT.md (C1). */}
+          <div className="absolute inset-x-12 bottom-[92px] z-10 flex items-center justify-center gap-[14px]">
+            <FlyingW className="h-[26px] w-[48px] text-white" />
+            <span className="whitespace-nowrap text-[22px] font-black uppercase tracking-[0.22em] text-white/95">
+              All My Favorite Songs · The Weezer Song Ranking Project
+            </span>
+          </div>
           <p
-            className={`absolute inset-x-[40px] bottom-[26px] text-center text-[46px] font-bold leading-none ${handFont.className}`}
+            className={`absolute inset-x-12 bottom-[30px] z-10 whitespace-nowrap text-center text-[44px] font-bold leading-none text-white ${handFont.className}`}
           >
-            find out what kind of fan YOU are at rankingweezer.com
+            JOIN THE DEBATE AT RANKINGWEEZER.COM
           </p>
         </>
       )}

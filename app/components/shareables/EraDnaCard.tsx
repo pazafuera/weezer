@@ -2,6 +2,7 @@
 
 import { forwardRef } from 'react';
 import {
+  FlyingW,
   POSTER_BLUE,
   PosterDomain,
   SaveImageButton,
@@ -167,19 +168,22 @@ export const EraDnaCardVisual = forwardRef<
             </span>
           </h2>
 
-          <p className="absolute inset-x-[60px] top-[424px] text-center text-[42px] leading-snug">
+          <p className="absolute inset-x-[64px] top-[424px] text-center text-[42px] leading-snug">
             {ERA_QUIPS[top.key]}
           </p>
 
-          {/* All five eras, her bars: name + pct over a gray-blue track */}
-          <div className="absolute left-[72px] right-[72px] top-[512px]">
+          {/* All five eras, her bars: name + pct over a lightened
+              track (Nov 5: track white/35 per the card-system mock;
+              rows compressed slightly so the album strip below can
+              clear the standard two-line footer) */}
+          <div className="absolute left-[64px] right-[64px] top-[512px]">
             {withPct.map((d) => (
-              <div key={d.key} className="mb-[24px] last:mb-0">
+              <div key={d.key} className="mb-[18px] last:mb-0">
                 <div className="flex items-baseline justify-between">
-                  <p className="text-[34px] font-medium leading-none">{d.name}</p>
-                  <p className="text-[34px] font-semibold leading-none">{d.pct}%</p>
+                  <p className="text-[32px] font-medium leading-none">{d.name}</p>
+                  <p className="text-[32px] font-semibold leading-none">{d.pct}%</p>
                 </div>
-                <div className="mt-[10px] h-[46px] overflow-hidden rounded-full bg-[#9DB3C4]">
+                <div className="mt-[8px] h-[42px] overflow-hidden rounded-full bg-white/35">
                   <div
                     className="h-full rounded-full"
                     style={{
@@ -192,8 +196,10 @@ export const EraDnaCardVisual = forwardRef<
             ))}
           </div>
 
-          {/* Halftone album strip along the bottom, one cover per era */}
-          <div className="absolute inset-x-0 bottom-[64px] flex h-[216px]">
+          {/* Halftone album strip along the bottom, one cover per
+              era (Nov 5: raised + slightly shortened so it clears
+              the standard two-line footer below it) */}
+          <div className="absolute inset-x-0 bottom-[138px] flex h-[200px]">
             {stripIds.map((id, i) => (
               <div key={`${id}-${i}`} className="relative h-full flex-1 overflow-hidden">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -207,10 +213,20 @@ export const EraDnaCardVisual = forwardRef<
             ))}
           </div>
 
+          {/* THE standard card footer (Nov 5 — one footer on every
+              card). This card previously carried only a Caveat
+              colon-form line and no CTA line; both are replaced by
+              the standard pair. */}
+          <div className="absolute inset-x-12 bottom-[92px] z-10 flex items-center justify-center gap-[14px]">
+            <FlyingW className="h-[26px] w-[48px] text-white" />
+            <span className="whitespace-nowrap text-[22px] font-black uppercase tracking-[0.22em] text-white/95">
+              All My Favorite Songs · The Weezer Song Ranking Project
+            </span>
+          </div>
           <p
-            className={`absolute inset-x-[40px] bottom-[12px] text-center text-[38px] font-bold leading-none ${handFont.className}`}
+            className={`absolute inset-x-12 bottom-[30px] z-10 whitespace-nowrap text-center text-[44px] font-bold leading-none text-white ${handFont.className}`}
           >
-            All My Favorite Songs: The Weezer Song Ranking Project
+            JOIN THE DEBATE AT RANKINGWEEZER.COM
           </p>
         </>
       )}

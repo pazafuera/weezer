@@ -44,10 +44,14 @@ const ERA_SIGNATURE_ALBUM: Record<string, string> = {
   new: 'van-weezer',
 };
 
+/* First person throughout (Nov 5): the card says "My era DNA:", so
+ * the quips speak as the fan, not to them — pronoun swaps only,
+ * every other word as written. Two quips (y2k, comeback, new) carry
+ * no pronoun and are unchanged. (Three quips: y2k, comeback, new.) */
 const ERA_QUIPS: Record<string, string> = {
-  blue: 'You romanticize 1994. Same, honestly.',
+  blue: 'I romanticize 1994. Same, honestly.',
   y2k: 'Green Album summers, forever.',
-  red: 'You stuck around for the weird years. Respect.',
+  red: 'I stuck around for the weird years. Respect.',
   comeback: 'Loyal through every era. A real one.',
   new: 'Here for the new stuff. Bold.',
 };
@@ -158,7 +162,7 @@ export const EraDnaCardVisual = forwardRef<
             className={`absolute inset-x-0 top-[148px] text-center leading-[1.0] ${displayFont.className}`}
           >
             <span className="block text-[116px] text-white">
-              YOU ARE {topPct}%
+              I AM {topPct}%
             </span>
             <span
               className="block text-[110px]"

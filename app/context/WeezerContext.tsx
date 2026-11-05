@@ -1289,6 +1289,16 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
       setGuardNotice(null);
     }
 
+    // Capture the scroll position of the step being left BEFORE
+    // setStep runs: setStep force-scrolls to the top, so a
+    // window.scrollY read after it records 0 for the entry being
+    // left — which is exactly what the first scroll-restoration
+    // build did, and why every Back landing "restored" the top
+    // in Mark's Nov 4 playtest. The push branch below records
+    // THIS value into the nav stack.
+    const leavingScrollY =
+      typeof window !== 'undefined' ? window.scrollY : 0;
+
     setStep(guardedStep);
 
     if (typeof window !== 'undefined') {
@@ -1347,9 +1357,11 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         writeNavEntry('replace');
       } else if (guardedStep !== step) {
         // Leaving this entry for a fresh one: record how far
-        // the user had scrolled it, so Back restores the spot.
+        // the user had scrolled it (captured above, before
+        // setStep scrolled the new step to the top), so Back
+        // restores the spot.
         navStackRef.current = pushNavStep(
-          recordNavScroll(navStackRef.current, window.scrollY),
+          recordNavScroll(navStackRef.current, leavingScrollY),
           guardedStep
         );
         writeNavEntry('push');

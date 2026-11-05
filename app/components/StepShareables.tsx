@@ -32,6 +32,7 @@ const BUCKET_POINTS: Record<string, number> = {
  *  storage is not a jump and is ignored. */
 const SHAREABLE_JUMP_KEYS = [
   'top10',
+  'top10-albums',
   'tier-songs',
   'tier-albums',
   'tribe',

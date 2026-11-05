@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { exportNodeAsPng } from './exportImage';
 import { Top10CardVisual } from './Top10Card';
+import { Top10AlbumsCardVisual } from './Top10AlbumsCard';
 import type { Bucket, ShareSong } from './Top10Card';
 import { TribeBadgeCardVisual } from './TribeBadgeCard';
 import { EraDnaCardVisual } from './EraDnaCard';
@@ -772,7 +773,7 @@ export default function ShareablesGallery({
   /** Optional tier-list data. The gallery renders it as TWO card
    *  entries — "Tier List — Songs" and "Tier List — Albums" — each
    *  pinned to its mode. In the 'full' variant they are full-width
-   *  sections under the card grid (the standalone library page); in
+   *  sections between the two card grids (the standalone library page); in
    *  'thumbnails' they are two grid items opening modals with pinned
    *  Saves. (Previously hosts passed one pre-built tierSection node
    *  with a Songs/Albums toggle inside; that node is gone — the
@@ -827,12 +828,23 @@ export default function ShareablesGallery({
   if (variant === 'thumbnails') {
     return (
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-        {fanhood ? (
-          <FanhoodThumbnailItem fanhood={fanhood} subtitle={subtitle} />
-        ) : null}
         <ThumbnailItem shortTitle="Top 10 Songs" filename="my-weezer-top-10.png">
           <Top10CardVisual songs={songs} subtitle={subtitle} />
         </ThumbnailItem>
+        {tierCharts && tierCharts.rankedAlbums.length > 0 ? (
+          <ThumbnailItem shortTitle="Top 10 Albums" filename="my-weezer-top-10-albums.png">
+            <Top10AlbumsCardVisual albums={tierCharts.rankedAlbums} songs={songs} subtitle={subtitle} />
+          </ThumbnailItem>
+        ) : null}
+        {tierCharts ? (
+          <>
+            <TierThumbnailItem shortTitle="Tier List — Albums" tierCharts={tierCharts} mode="albums" />
+            <TierThumbnailItem shortTitle="Tier List — Songs" tierCharts={tierCharts} mode="songs" />
+          </>
+        ) : null}
+        {fanhood ? (
+          <FanhoodThumbnailItem fanhood={fanhood} subtitle={subtitle} />
+        ) : null}
         <ThumbnailItem shortTitle="Fan Tribe" filename="my-weezer-tribe.png">
           <TribeBadgeCardVisual songs={songs} triageMap={triageMap} subtitle={subtitle} />
         </ThumbnailItem>
@@ -840,21 +852,12 @@ export default function ShareablesGallery({
           <EraDnaCardVisual songs={songs} subtitle={subtitle} />
         </ThumbnailItem>
         <CompatibilityThumbnailItem songs={songs} friends={friends} subtitle={subtitle} onFindFriends={onFindFriends} />
-        {tierCharts ? (
-          <>
-            <TierThumbnailItem shortTitle="Tier List — Songs" tierCharts={tierCharts} mode="songs" />
-            <TierThumbnailItem shortTitle="Tier List — Albums" tierCharts={tierCharts} mode="albums" />
-          </>
-        ) : null}
       </div>
     );
   }
   return (
     <div>
       <div className="grid gap-6 md:grid-cols-2">
-        {fanhood ? (
-          <FanhoodLibraryItem fanhood={fanhood} subtitle={subtitle} />
-        ) : null}
         <LibraryItem
           title="Top 10 Songs"
           description="Your ranked top 10 as a shareable graphic."
@@ -863,6 +866,27 @@ export default function ShareablesGallery({
         >
           <Top10CardVisual songs={songs} subtitle={subtitle} />
         </LibraryItem>
+        {tierCharts && tierCharts.rankedAlbums.length > 0 ? (
+          <LibraryItem
+            title="Top 10 Albums"
+            description="Your top 10 albums as a shareable graphic."
+            filename="my-weezer-top-10-albums.png"
+            anchorKey="top10-albums"
+          >
+            <Top10AlbumsCardVisual albums={tierCharts.rankedAlbums} songs={songs} subtitle={subtitle} />
+          </LibraryItem>
+        ) : null}
+      </div>
+      {tierCharts && (
+        <div className="mt-6 space-y-6">
+          <TierLibrarySection tierCharts={tierCharts} mode="albums" />
+          <TierLibrarySection tierCharts={tierCharts} mode="songs" />
+        </div>
+      )}
+      <div className="mt-6 grid gap-6 md:grid-cols-2">
+        {fanhood ? (
+          <FanhoodLibraryItem fanhood={fanhood} subtitle={subtitle} />
+        ) : null}
         <LibraryItem
           title="Fan Tribe Badge"
           description="Which Weezer tribe do you belong to?"
@@ -881,12 +905,6 @@ export default function ShareablesGallery({
         </LibraryItem>
         <CompatibilityLibraryItem songs={songs} friends={friends} subtitle={subtitle} onFindFriends={onFindFriends} />
       </div>
-      {tierCharts && (
-        <div className="mt-6 space-y-6">
-          <TierLibrarySection tierCharts={tierCharts} mode="songs" />
-          <TierLibrarySection tierCharts={tierCharts} mode="albums" />
-        </div>
-      )}
     </div>
   );
 }

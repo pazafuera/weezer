@@ -20,6 +20,8 @@ export { markerFont, handFont, displayFont } from './fonts';
 export { exportNodeAsPng } from './exportImage';
 export type { ExportMode } from './exportImage';
 export { Top10Card, Top10CardVisual } from './Top10Card';
+export { Top10AlbumsCardVisual } from './Top10AlbumsCard';
+export type { ShareRankedAlbum } from './Top10AlbumsCard';
 export type { ShareSong, Bucket } from './Top10Card';
 export { default as TribeBadgeCard, TribeBadgeCardVisual, computeTribe } from './TribeBadgeCard';
 export type { Tribe } from './TribeBadgeCard';

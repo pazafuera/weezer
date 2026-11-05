@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../utils/supabase';
 import { useWeezer } from '../context/WeezerContext';
+import { displayFont } from './shareables/fonts';
 import { LORE_GAMES } from '../data/loreGame';
 import type { LoreGameId } from '../data/loreGame';
 import {
@@ -101,7 +102,7 @@ export default function FanhoodLeaderboard({
   return (
     <div className="mx-auto w-full max-w-2xl space-y-4 px-4 pb-10 sm:px-6">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-lg sm:text-xl font-black tracking-tight text-slate-950">
+        <h2 className="${displayFont.className} text-lg sm:text-xl text-[#0C1220]">
           Leaderboard
         </h2>
         <button
@@ -125,8 +126,8 @@ export default function FanhoodLeaderboard({
             onClick={() => setTab(t.id)}
             className={`rounded-full px-4 py-2 text-xs font-black transition-all cursor-pointer ${
               tab === t.id
-                ? 'bg-slate-950 text-white'
-                : 'bg-white border border-slate-200 text-slate-600 hover:border-slate-300'
+                ? 'bg-[#0C1220] border-[2.5px] border-[#0C1220] text-white'
+                : 'bg-white border-[2.5px] border-[#0C1220] text-[#0C1220] hover:bg-slate-50'
             }`}
           >
             {t.label}
@@ -135,8 +136,8 @@ export default function FanhoodLeaderboard({
       </div>
 
       {tab === 'friends' && !userId ? (
-        <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs space-y-3">
-          <p className="text-sm font-medium text-slate-500 leading-relaxed">
+        <div className="bg-white border-[3px] border-[#0C1220] rounded-[18px] shadow-[4px_4px_0_rgba(11,30,63,0.85)] p-5 space-y-3">
+          <p className="text-sm font-medium text-[#3D4A63] leading-relaxed">
             Sign in to see your friends&apos; board — the worldwide board
             above is open to everyone.
           </p>
@@ -155,8 +156,8 @@ export default function FanhoodLeaderboard({
               onClick={() => setScope('all')}
               className={`rounded-full px-3 py-1.5 text-[11px] font-black transition-all cursor-pointer ${
                 scope === 'all'
-                  ? 'bg-[#0072CE] text-white'
-                  : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                  ? 'bg-[#0072CE] border-2 border-[#0C1220] text-white'
+                  : 'bg-white border-2 border-[#0C1220] text-[#0C1220] hover:bg-slate-50'
               }`}
             >
               All rounds
@@ -167,8 +168,8 @@ export default function FanhoodLeaderboard({
                 onClick={() => setScope(game.id as LoreGameId)}
                 className={`rounded-full px-3 py-1.5 text-[11px] font-black transition-all cursor-pointer ${
                   scope === game.id
-                    ? 'bg-[#0072CE] text-white'
-                    : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                    ? 'bg-[#0072CE] border-2 border-[#0C1220] text-white'
+                    : 'bg-white border-2 border-[#0C1220] text-[#0C1220] hover:bg-slate-50'
                 }`}
               >
                 Round {i + 1}
@@ -177,17 +178,17 @@ export default function FanhoodLeaderboard({
           </div>
 
           {entries === null ? (
-            <p className="text-sm font-bold text-slate-400">
+            <p className="text-sm font-bold text-[#3D4A63]">
               Loading the board…
             </p>
           ) : visible.length === 0 ? (
-            <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs">
-              <p className="text-sm font-medium text-slate-500 leading-relaxed">
+            <div className="bg-white border-[3px] border-[#0C1220] rounded-[18px] shadow-[4px_4px_0_rgba(11,30,63,0.85)] p-5">
+              <p className="text-sm font-medium text-[#3D4A63] leading-relaxed">
                 {emptyMessage()}
               </p>
             </div>
           ) : (
-            <div className="bg-white border border-slate-200/90 rounded-3xl shadow-xs divide-y divide-slate-100 overflow-hidden">
+            <div className="bg-white border-[3px] border-[#0C1220] rounded-[18px] shadow-[4px_4px_0_rgba(11,30,63,0.85)] divide-y-2 divide-[#0C1220] overflow-hidden">
               {visible.map((entry, i) => {
                 const isYou = ownUsername !== null && entry.username === ownUsername;
                 const gameScore =
@@ -199,18 +200,18 @@ export default function FanhoodLeaderboard({
                       isYou ? 'bg-[#E0F2FE]' : ''
                     }`}
                   >
-                    <span className="w-7 shrink-0 text-sm font-black text-slate-400">
+                    <span className="w-7 shrink-0 text-sm font-black text-[#3D4A63]">
                       {i + 1}
                     </span>
                     <button
                       onClick={() => router.push(`/u/${entry.username}`)}
                       className="min-w-0 flex-1 text-left cursor-pointer"
                     >
-                      <span className="block truncate text-sm font-black text-slate-900 hover:text-[#0072CE]">
+                      <span className="block truncate text-sm font-black text-[#0C1220] hover:text-[#0072CE]">
                         @{entry.username}
                         {isYou ? ' · you' : ''}
                       </span>
-                      <span className="block text-xs font-bold text-slate-400">
+                      <span className="block text-xs font-bold text-[#3D4A63]">
                         {scope === 'all'
                           ? `${entry.gamesPlayed} of ${TOTAL_GAMES} games`
                           : `${entry.totalDepth.toLocaleString()} total`}
@@ -229,7 +230,7 @@ export default function FanhoodLeaderboard({
             </div>
           )}
 
-          <p className="text-xs font-bold leading-relaxed text-slate-400">
+          <p className="text-xs font-bold leading-relaxed text-[#3D4A63]">
             Finished games only, scores locked in for good. Fans who
             finished all five rank first, by total.
           </p>

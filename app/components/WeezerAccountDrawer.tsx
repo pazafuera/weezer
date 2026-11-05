@@ -5,6 +5,7 @@ import { supabase } from '@/utils/supabase';
 import { useWeezer } from '../context/WeezerContext';
 import { COUNTRY_OPTIONS, US_STATES } from './WeezerOnboardingModal';
 import Link from 'next/link';
+import { displayFont } from './shareables/fonts';
 
 interface WeezerAccountDrawerProps {
   isOpen: boolean;
@@ -417,14 +418,14 @@ export default function WeezerAccountDrawer({
         role="dialog"
         aria-modal="true"
         aria-labelledby="account-drawer-title"
-        className="w-full max-w-sm bg-white h-full shadow-2xl border-l border-slate-200 p-6 flex flex-col justify-between overflow-y-auto animate-in slide-in-from-right duration-300"
+        className="w-full max-w-sm bg-white h-full shadow-[-6px_0_0_rgba(11,30,63,0.85)] border-l-[3px] border-[#0C1220] p-6 flex flex-col justify-between overflow-y-auto animate-in slide-in-from-right duration-300"
       >
         <div>
           {/* HEADER */}
-          <div className="flex items-center justify-between pb-6 border-b border-slate-100">
+          <div className="flex items-center justify-between pb-6 border-b-2 border-[#0C1220]">
             <h2
               id="account-drawer-title"
-              className="text-xl font-black text-slate-950 tracking-tight"
+              className="${displayFont.className} text-xl text-[#0C1220]"
             >
               Account & Profile
             </h2>
@@ -432,7 +433,7 @@ export default function WeezerAccountDrawer({
               ref={closeButtonRef}
               onClick={onClose}
               aria-label="Close account drawer"
-              className="text-slate-400 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm transition-colors cursor-pointer"
+              className="text-[#0C1220] bg-white hover:bg-sky-50 border-[2.5px] border-[#0C1220] rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm transition-colors cursor-pointer"
             >
               ✕
             </button>
@@ -447,14 +448,14 @@ export default function WeezerAccountDrawer({
           {userId ? (
             <div className="py-6 space-y-6">
               {/* PROFILE BADGE */}
-              <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                <div className="w-12 h-12 bg-[#0072CE] text-white rounded-xl flex items-center justify-center font-black text-xl shadow-md shrink-0">
+              <div className="flex items-center gap-4 bg-white p-4 rounded-2xl border-[2.5px] border-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)]">
+                <div className="w-12 h-12 bg-[#0072CE] text-white rounded-xl flex items-center justify-center font-black text-xl border-[2.5px] border-[#0C1220] shrink-0">
                   {userProfile?.displayName
                     ? userProfile.displayName.charAt(0).toUpperCase()
                     : 'W'}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h3 className="text-base font-black text-slate-900 truncate">
+                  <h3 className="text-base font-black text-[#0C1220] truncate">
                     {userProfile?.displayName || 'Your account'}
                   </h3>
                   <p className="text-xs font-bold text-[#0072CE]">
@@ -471,7 +472,7 @@ export default function WeezerAccountDrawer({
                   link box with a Copy button that copies nothing. */}
               {userProfile?.username ? (
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">
+                  <label className="text-[10px] font-black uppercase text-[#3D4A63] tracking-wider block">
                     Your Public Profile Link
                   </label>
                   <div className="flex items-center gap-2">
@@ -479,36 +480,36 @@ export default function WeezerAccountDrawer({
                       type="text"
                       readOnly
                       value={publicUrl || ''}
-                      className="flex-1 px-3 py-2 bg-slate-100 border border-slate-200 rounded-xl text-xs font-mono text-slate-600 truncate focus:outline-none"
+                      className="flex-1 px-3 py-2 bg-white border-2 border-[#0C1220] rounded-xl text-xs font-mono text-[#3D4A63] truncate focus:outline-none"
                     />
                     <button
                       onClick={handleCopyLink}
-                      className="bg-[#0072CE] hover:bg-blue-600 text-white text-xs font-black px-3 py-2 rounded-xl transition-colors cursor-pointer shrink-0"
+                      className="bg-[#0072CE] hover:bg-blue-600 border-2 border-[#0C1220] text-white text-xs font-black px-3 py-2 rounded-xl transition-colors cursor-pointer shrink-0"
                     >
                       {copiedLink ? 'Copied! ✓' : 'Copy'}
                     </button>
                   </div>
                 </div>
               ) : (
-                <p className="text-xs font-bold text-slate-500 leading-relaxed">
+                <p className="text-xs font-bold text-[#3D4A63] leading-relaxed">
                   Add a username in Edit Profile below to claim your
                   public profile link.
                 </p>
               )}
 
               {/* PROFILE DETAILS + EDIT */}
-              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-3">
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 block">
+              <div className="bg-white p-4 rounded-2xl border-[2.5px] border-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)] space-y-3">
+                <span className="text-[10px] font-black uppercase tracking-widest text-[#3D4A63] block">
                   Profile Details
                 </span>
                 {rowLoading ? (
-                  <p className="text-xs font-bold text-slate-400">
+                  <p className="text-xs font-bold text-[#3D4A63]">
                     Loading profile…
                   </p>
                 ) : (
-                  <div className="grid grid-cols-2 gap-2 text-xs font-bold text-slate-700">
+                  <div className="grid grid-cols-2 gap-2 text-xs font-bold text-[#0C1220]">
                     <div>
-                      <span className="text-[9px] uppercase text-slate-400 block">
+                      <span className="text-[9px] uppercase text-[#3D4A63] block">
                         Display Name
                       </span>
                       <span>
@@ -518,13 +519,13 @@ export default function WeezerAccountDrawer({
                       </span>
                     </div>
                     <div>
-                      <span className="text-[9px] uppercase text-slate-400 block">
+                      <span className="text-[9px] uppercase text-[#3D4A63] block">
                         Username
                       </span>
                       <span>@{profileRow?.username || userProfile?.username || '—'}</span>
                     </div>
                     <div>
-                      <span className="text-[9px] uppercase text-slate-400 block">
+                      <span className="text-[9px] uppercase text-[#3D4A63] block">
                         Birth Year
                       </span>
                       <span>
@@ -534,7 +535,7 @@ export default function WeezerAccountDrawer({
                       </span>
                     </div>
                     <div>
-                      <span className="text-[9px] uppercase text-slate-400 block">
+                      <span className="text-[9px] uppercase text-[#3D4A63] block">
                         Location
                       </span>
                       <span>
@@ -564,12 +565,12 @@ export default function WeezerAccountDrawer({
                     <div>
                       <label
                         htmlFor="account-edit-username"
-                        className="text-[10px] font-black uppercase text-slate-500 tracking-wider block mb-1"
+                        className="text-[10px] font-black uppercase text-[#3D4A63] tracking-wider block mb-1"
                       >
                         Username *
                       </label>
                       <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-black text-sm">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#3D4A63] font-black text-sm">
                           @
                         </span>
                         <input
@@ -578,10 +579,10 @@ export default function WeezerAccountDrawer({
                           required
                           value={editUsername}
                           onChange={(e) => setEditUsername(e.target.value)}
-                          className="w-full pl-8 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-[#0072CE]"
+                          className="w-full pl-8 pr-4 py-2.5 bg-white border-2 border-[#0C1220] rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-[#0072CE]"
                         />
                       </div>
-                      <p className="text-[10px] font-medium text-slate-400 mt-1">
+                      <p className="text-[10px] font-medium text-[#3D4A63] mt-1">
                         Lowercase letters, numbers, and underscores only · min 3
                         characters. Changing it updates your public link.
                       </p>
@@ -590,7 +591,7 @@ export default function WeezerAccountDrawer({
                     <div>
                       <label
                         htmlFor="account-edit-display-name"
-                        className="text-[10px] font-black uppercase text-slate-500 tracking-wider block mb-1"
+                        className="text-[10px] font-black uppercase text-[#3D4A63] tracking-wider block mb-1"
                       >
                         Display Name
                       </label>
@@ -600,7 +601,7 @@ export default function WeezerAccountDrawer({
                         placeholder="Rivers C."
                         value={editDisplayName}
                         onChange={(e) => setEditDisplayName(e.target.value)}
-                        className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-[#0072CE]"
+                        className="w-full px-4 py-2.5 bg-white border-2 border-[#0C1220] rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-[#0072CE]"
                       />
                     </div>
 
@@ -608,7 +609,7 @@ export default function WeezerAccountDrawer({
                       <div>
                         <label
                           htmlFor="account-edit-birth-year"
-                          className="text-[10px] font-black uppercase text-slate-500 tracking-wider block mb-1"
+                          className="text-[10px] font-black uppercase text-[#3D4A63] tracking-wider block mb-1"
                         >
                           Birth Year
                         </label>
@@ -620,13 +621,13 @@ export default function WeezerAccountDrawer({
                           max={new Date().getFullYear()}
                           value={editBirthYear}
                           onChange={(e) => setEditBirthYear(e.target.value)}
-                          className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-[#0072CE]"
+                          className="w-full px-4 py-2.5 bg-white border-2 border-[#0C1220] rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-[#0072CE]"
                         />
                       </div>
                       <div>
                         <label
                           htmlFor="account-edit-country"
-                          className="text-[10px] font-black uppercase text-slate-500 tracking-wider block mb-1"
+                          className="text-[10px] font-black uppercase text-[#3D4A63] tracking-wider block mb-1"
                         >
                           Country
                         </label>
@@ -637,7 +638,7 @@ export default function WeezerAccountDrawer({
                             setEditCountry(e.target.value);
                             setEditStateCode('');
                           }}
-                          className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-[#0072CE]"
+                          className="w-full px-3 py-2.5 bg-white border-2 border-[#0C1220] rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-[#0072CE]"
                         >
                           <option value="">Not set</option>
                           {COUNTRY_OPTIONS.map((c) =>
@@ -664,7 +665,7 @@ export default function WeezerAccountDrawer({
                       <div>
                         <label
                           htmlFor="account-edit-state"
-                          className="text-[10px] font-black uppercase text-slate-500 tracking-wider block mb-1"
+                          className="text-[10px] font-black uppercase text-[#3D4A63] tracking-wider block mb-1"
                         >
                           State
                         </label>
@@ -672,7 +673,7 @@ export default function WeezerAccountDrawer({
                           id="account-edit-state"
                           value={editStateCode}
                           onChange={(e) => setEditStateCode(e.target.value)}
-                          className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-[#0072CE]"
+                          className="w-full px-3 py-2.5 bg-white border-2 border-[#0C1220] rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-[#0072CE]"
                         >
                           <option value="">Select State...</option>
                           {US_STATES.map((st) => (
@@ -718,18 +719,18 @@ export default function WeezerAccountDrawer({
               </div>
 
               {/* PASSWORD RESET */}
-              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-3">
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 block">
+              <div className="bg-white p-4 rounded-2xl border-[2.5px] border-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)] space-y-3">
+                <span className="text-[10px] font-black uppercase tracking-widest text-[#3D4A63] block">
                   Security
                 </span>
-                <p className="text-xs font-medium text-slate-600 leading-relaxed">
+                <p className="text-xs font-medium text-[#3D4A63] leading-relaxed">
                   Forgot your password? We&apos;ll email you a secure reset
                   link.
                 </p>
                 <button
                   onClick={handlePasswordReset}
                   disabled={resetSending}
-                  className="w-full bg-slate-900 hover:bg-slate-700 disabled:opacity-50 text-white font-black py-2.5 rounded-xl transition-colors text-xs cursor-pointer"
+                  className="w-full bg-[#0C1220] hover:bg-slate-700 border-[2.5px] border-[#0C1220] disabled:opacity-50 text-white font-black py-2.5 rounded-xl transition-colors text-xs cursor-pointer"
                 >
                   {resetSending ? 'Sending…' : 'Send password reset email'}
                 </button>
@@ -831,14 +832,14 @@ export default function WeezerAccountDrawer({
           ) : (
             /* USER LOGGED OUT / GUEST */
             <div className="py-8 text-center space-y-4">
-              <div className="w-16 h-16 bg-blue-50 text-[#0072CE] rounded-2xl flex items-center justify-center font-black text-2xl mx-auto border border-blue-100">
+              <div className="w-16 h-16 bg-blue-50 text-[#0072CE] rounded-2xl flex items-center justify-center font-black text-2xl mx-auto border-[2.5px] border-[#0C1220]">
                 👤
               </div>
               <div>
-                <h3 className="text-lg font-black text-slate-900">
+                <h3 className="text-lg font-black text-[#0C1220]">
                   Guest Mode
                 </h3>
-                <p className="text-xs font-semibold text-slate-500 mt-1 max-w-xs mx-auto leading-relaxed">
+                <p className="text-xs font-semibold text-[#3D4A63] mt-1 max-w-xs mx-auto leading-relaxed">
                   Your song rankings are currently stored locally in your browser.
                   Claim your handle to save your Sweater Thread and compare rankings
                   with friends.
@@ -861,18 +862,18 @@ export default function WeezerAccountDrawer({
         {/* FOOTER / LOGOUT — every signed-in user gets a Sign
             Out, username or not. */}
         {userId && (
-          <div className="pt-4 border-t border-slate-100">
+          <div className="pt-4 border-t-2 border-[#0C1220]">
             <button
               onClick={() => {
                 onLogout();
                 onClose();
               }}
-              className="w-full bg-rose-50 hover:bg-rose-100 text-rose-600 font-black py-3 rounded-xl transition-colors text-xs cursor-pointer"
+              className="w-full bg-rose-50 hover:bg-rose-100 border-2 border-rose-200 text-rose-600 font-black py-3 rounded-xl transition-colors text-xs cursor-pointer"
             >
               Sign Out
             </button>
               {/* LEGAL LINKS */}
-              <div className="flex items-center justify-center gap-2 pt-3 text-[11px] text-slate-400">
+              <div className="flex items-center justify-center gap-2 pt-3 text-[11px] text-[#3D4A63]">
                 <Link href="/privacy" className="hover:text-slate-600 transition-colors">
                   Privacy Policy
                 </Link>

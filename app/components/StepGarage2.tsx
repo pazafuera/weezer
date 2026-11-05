@@ -805,6 +805,10 @@ const SHARE_TILES: {
   tileClass: string;
   titleClass: string;
   lineClass: string;
+  /** Anchor key of the matching library item on the Shareables
+   *  page (its data-shareable value) — tapping the tile hands the
+   *  key over via sessionStorage and the page scrolls to it. */
+  jump: string;
 }[] = [
   {
     title: 'Top 10',
@@ -812,6 +816,7 @@ const SHARE_TILES: {
     tileClass: 'bg-[#039AD1] hover:bg-[#0284b5]',
     titleClass: 'text-white',
     lineClass: 'text-sky-100',
+    jump: 'top10',
   },
   {
     title: 'Tier List',
@@ -819,6 +824,7 @@ const SHARE_TILES: {
     tileClass: 'bg-white hover:bg-slate-50',
     titleClass: 'text-slate-950',
     lineClass: 'text-slate-500',
+    jump: 'tier-songs',
   },
   {
     title: 'Your Tribe',
@@ -826,6 +832,7 @@ const SHARE_TILES: {
     tileClass: 'bg-[#8A44F2] hover:bg-[#7c35dd]',
     titleClass: 'text-white',
     lineClass: 'text-violet-100',
+    jump: 'tribe',
   },
   {
     title: 'Era DNA',
@@ -833,6 +840,7 @@ const SHARE_TILES: {
     tileClass: 'bg-slate-900 hover:bg-slate-950',
     titleClass: 'text-white',
     lineClass: 'text-slate-400',
+    jump: 'era-dna',
   },
   {
     title: 'Game Card',
@@ -840,6 +848,7 @@ const SHARE_TILES: {
     tileClass: 'bg-slate-950 hover:bg-black',
     titleClass: 'text-amber-400',
     lineClass: 'text-slate-400',
+    jump: 'game',
   },
 ];
 
@@ -854,6 +863,19 @@ function ThreadSection() {
   const categorized = countCategorizedSongs(triageMap);
   const isSortingComplete = categorized >= TOTAL_SONGS;
   const isGuestTeaser = !userId && categorized === 0;
+
+  /** Share-tile jump: hand the tile's anchor key to the
+   *  Shareables page via sessionStorage — the same hand-off
+   *  pattern as the shelf's weezer-triage-jump-album — so the
+   *  page lands on the tapped card instead of its top. */
+  const openShareTile = (jump: string) => {
+    try {
+      window.sessionStorage.setItem('weezer-shareables-jump', jump);
+    } catch {
+      /* sessionStorage unavailable — navigate without the jump */
+    }
+    navigateTo('shareables');
+  };
 
   if (!progress.isWrappedUnlocked) {
     /* The Thread isn't compiled until the ranking is refined, so
@@ -952,7 +974,7 @@ function ThreadSection() {
           <button
             key={tile.title}
             type="button"
-            onClick={() => navigateTo('shareables')}
+            onClick={() => openShareTile(tile.jump)}
             className={`flex min-h-[120px] w-40 shrink-0 cursor-pointer snap-start flex-col justify-between overflow-hidden rounded-[14px] border-[3px] border-[#0C1220] p-4 text-left ${POSTER_HARD_SHADOW} transition-transform duration-150 hover:-translate-y-1 hover:-rotate-[0.5deg] active:translate-x-[2px] active:translate-y-[2px] ${tile.tileClass}`}
           >
             <span

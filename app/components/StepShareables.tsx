@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useWeezer, isRealBucket } from '../context/WeezerContext';
 import { ALBUMS_BY_ID, ALBUM_NAME_TO_ID, FULL_SONG_POOL } from '../data/constants';
 import { ShareablesGallery } from './shareables';
@@ -25,8 +25,59 @@ const BUCKET_POINTS: Record<string, number> = {
  * shrinkage-adjusted bucket-score average as the Wrapped stats
  * (K = 5 toward the global mean).
  */
+/** Anchor keys the gallery's full variant stamps on its items
+ *  (data-shareable). A dashboard share tile hands one over via
+ *  sessionStorage ('weezer-shareables-jump'); anything else in
+ *  storage is not a jump and is ignored. */
+const SHAREABLE_JUMP_KEYS = [
+  'top10',
+  'tier-songs',
+  'tier-albums',
+  'tribe',
+  'era-dna',
+  'taste-match',
+  'game',
+];
+
 export default function StepShareables() {
   const { masterList, triageMap, friendCards, userProfile, navigateTo } = useWeezer();
+
+  // Dashboard share-tile jump: consume the handed-over anchor key
+  // ONCE on mount (removed as it's read, so an ordinary later
+  // visit lands at the top) and scroll the matching library item
+  // into view. Items render from context data that's already
+  // here, but the fanhood card can settle in a beat late (its
+  // record reconciles on mount), so retry on a short ladder —
+  // first success wins and later attempts stand down.
+  useEffect(() => {
+    let key: string | null = null;
+    try {
+      key = window.sessionStorage.getItem('weezer-shareables-jump');
+      if (key) window.sessionStorage.removeItem('weezer-shareables-jump');
+    } catch {
+      key = null;
+    }
+    if (!key || !SHAREABLE_JUMP_KEYS.includes(key)) return;
+    const jumpKey = key;
+    let done = false;
+    const attempt = () => {
+      if (done) return;
+      const el = document.querySelector(`[data-shareable="${jumpKey}"]`);
+      if (el) {
+        done = true;
+        el.scrollIntoView({ block: 'start' });
+      }
+    };
+    const raf = requestAnimationFrame(attempt);
+    const t1 = setTimeout(attempt, 150);
+    const t2 = setTimeout(attempt, 450);
+    return () => {
+      done = true;
+      cancelAnimationFrame(raf);
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, []);
   // Only real buckets feed the cards — an 'unknown' mark is not a rating.
   const ranked = masterList.filter((s) => isRealBucket(triageMap[s.id]));
   const subtitle = userProfile?.username ? `@${userProfile.username}` : undefined;

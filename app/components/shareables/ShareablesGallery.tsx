@@ -47,6 +47,7 @@ function LibraryItem({
   filename,
   controls,
   downloadDisabled,
+  anchorKey,
   children,
 }: {
   title: string;
@@ -56,6 +57,11 @@ function LibraryItem({
   /** When true, the card is showing an empty/placeholder state and
    *  there is nothing worth downloading yet. */
   downloadDisabled?: boolean;
+  /** Library-page anchor (full variant only): the dashboard's
+   *  share tiles hand this key over via sessionStorage and the
+   *  page scrolls the matching item into view. Thumbnail-variant
+   *  items never receive one — they use ThumbnailItem instead. */
+  anchorKey?: string;
   children: ReactNode;
 }) {
   const exportRef = useRef<HTMLDivElement>(null);
@@ -90,7 +96,10 @@ function LibraryItem({
   };
 
   return (
-    <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs space-y-4">
+    <div
+      data-shareable={anchorKey}
+      className={`bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs space-y-4${anchorKey ? ' scroll-mt-28' : ''}`}
+    >
       {/* Scaled preview (visual only — exports never use this node).
           The scale is MEASURED from this box (useFitScale), so the
           rendered width is always exactly the box width. It used to
@@ -608,7 +617,10 @@ function TierLibrarySection({
   mode: 'songs' | 'albums';
 }) {
   return (
-    <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs">
+    <div
+      data-shareable={mode === 'songs' ? 'tier-songs' : 'tier-albums'}
+      className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs scroll-mt-28"
+    >
       <div className="mb-4">
         <h3 className="font-black text-lg text-slate-950 leading-tight">
           {mode === 'songs' ? 'Tier List — Songs' : 'Tier List — Albums'}
@@ -640,6 +652,7 @@ function FanhoodLibraryItem({
       title="Back to the Shack"
       description="Your stop in Back to the Shack"
       filename="my-weezer-fanhood.png"
+      anchorKey="game"
     >
       <FanhoodCardVisual fanhood={fanhood} subtitle={subtitle} />
     </LibraryItem>
@@ -719,6 +732,7 @@ function CompatibilityLibraryItem({
       filename="weezer-taste-match.png"
       controls={controls}
       downloadDisabled={selectedKey === ''}
+      anchorKey="taste-match"
     >
       <TasteCompatibilityCardVisual
         songs={songs}
@@ -835,6 +849,7 @@ export default function ShareablesGallery({
           title="Top 10 Songs"
           description="Your ranked top 10 as a shareable graphic."
           filename="my-weezer-top-10.png"
+          anchorKey="top10"
         >
           <Top10CardVisual songs={songs} subtitle={subtitle} />
         </LibraryItem>
@@ -842,6 +857,7 @@ export default function ShareablesGallery({
           title="Fan Tribe Badge"
           description="Which Weezer tribe do you belong to?"
           filename="my-weezer-tribe.png"
+          anchorKey="tribe"
         >
           <TribeBadgeCardVisual songs={songs} triageMap={triageMap} subtitle={subtitle} />
         </LibraryItem>
@@ -849,6 +865,7 @@ export default function ShareablesGallery({
           title="Era DNA"
           description="Where your taste lives across Weezer history."
           filename="my-weezer-era-dna.png"
+          anchorKey="era-dna"
         >
           <EraDnaCardVisual songs={songs} subtitle={subtitle} />
         </LibraryItem>

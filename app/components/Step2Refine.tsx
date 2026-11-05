@@ -383,9 +383,17 @@ export default function Step2Refine({
         </div>
       )}
 
-      {/* HEADER */}
+      {/* HEADER — the headline wraps balanced (owner, Nov 5):
+          "Rank Your Lowkey Slaps" used to break as "Rank Your
+          Lowkey / Slaps", stranding a single word on the second
+          line. text-wrap: balance redistributes the break
+          ("Rank Your / Lowkey Slaps"); the other four stage
+          titles fit one line at this size, so no size change was
+          needed. Layout only — the strings are untouched. (The
+          arbitrary-property form is deliberate: this project is
+          on Tailwind 3.3, which has no text-balance utility.) */}
       <div className="text-center space-y-2 px-4 mb-8 pt-2">
-        <h1 className={`${displayFont.className} text-[32px] text-[#0C1220]`}>{currentStage.title}</h1>
+        <h1 className={`${displayFont.className} text-[32px] text-[#0C1220] [text-wrap:balance]`}>{currentStage.title}</h1>
         <p className="text-sm font-bold text-[#3D4A63] max-w-sm mx-auto leading-tight">{currentStage.desc}</p>
       </div>
 
@@ -464,7 +472,7 @@ export default function Step2Refine({
                         >
                           <AudioPreviewButton title={song.title} />
                         </div>
-                        <span className={`text-[10px] font-semibold truncate ${isTouchDrag ? 'text-slate-300' : 'text-[#3D4A63]'}`}>
+                        <span className={`text-[10px] font-semibold ${isTouchDrag ? 'text-slate-300' : 'text-[#3D4A63]'}`}>
                           {song.album} ({song.year})
                         </span>
                       </div>

@@ -1,21 +1,22 @@
 'use client';
 
 /**
- * StepGarage2 — the "fan headquarters" dashboard, built as a LIVE
- * PROTOTYPE step (key: 'garage2') next to the current dashboard,
- * which it does not replace. Mark approved the Muse artifact
- * design on Nov 4, 2026 (poster-system hero, era shelf, Thread +
- * shareables, Fan Stats feature, game card, fandom row,
- * destinations grid — sorting first, Thread and Fan Stats
- * promoted above the game on Mark's direction later that day)
- * and asked for it in the real app so it can be prepped here and
- * retrofitted across the site later.
+ * StepGarage2 — the "fan headquarters" dashboard. Built as a LIVE
+ * PROTOTYPE step (key: 'garage2') next to the old dashboard from
+ * the Muse artifact design Mark approved on Nov 4, 2026
+ * (poster-system hero, era shelf, Thread + shareables, Fan Stats
+ * feature, game card, fandom row, destinations grid — sorting
+ * first, Thread and Fan Stats promoted above the game on Mark's
+ * direction later that day). That evening Mark promoted it to
+ * THE dashboard: page.tsx renders this component for the
+ * 'dashboard' step as well as the 'garage2' alias (his bookmark),
+ * and the old StepDashboard stays in the tree, unreferenced, for
+ * rollback.
  *
- * Reachable only by direct URL (?step=garage2). Deliberately NOT
- * in the menu or any nav. Every number on the page is real state
- * from the existing contexts/libs — nothing is hard-coded.
- * Sections are small sub-components in this file so they can be
- * lifted out one by one when the retrofit happens.
+ * Every number on the page is real state from the existing
+ * contexts/libs — nothing is hard-coded. Sections are small
+ * sub-components in this file so they can be lifted out one by
+ * one when the retrofit happens.
  */
 
 import React, { useEffect, useState } from 'react';
@@ -44,6 +45,7 @@ import {
 import { fanhoodReconcileSettled } from '../lib/fanhoodSync';
 import { ERAS } from './shareables/EraDnaCard';
 import { displayFont } from './shareables/fonts';
+import WeezerOnboardingModal from './WeezerOnboardingModal';
 
 const TOTAL_SONGS = FULL_SONG_POOL.length;
 
@@ -825,6 +827,67 @@ function DestinationsGrid() {
 }
 
 /* ------------------------------------------------------------------ */
+/* Profile setup — parity port from the old dashboard                  */
+/* ------------------------------------------------------------------ */
+
+/** The old dashboard was the ONLY host of the first-run profile
+ *  prompt: a signed-in user with no username yet got the "Claim
+ *  Your Weezer Song Ranking Username" banner, opening
+ *  WeezerOnboardingModal — and the sign-up flow auto-bounces new
+ *  users to the dashboard, so this banner is the landing behavior
+ *  that flow depends on. Its onSuccess also pushes the local
+ *  rankings to the account (syncRankingsToDatabase). Ported
+ *  verbatim (banner classes/copy, modal props, success handler)
+ *  so the promotion changes none of it. The modal stays mounted
+ *  always, exactly as the old dashboard mounted it; only the
+ *  banner is conditional. */
+function ProfileSetupBanner() {
+  const {
+    userId,
+    userProfile,
+    setUserProfile,
+    triageMap,
+    masterList,
+    syncRankingsToDatabase,
+  } = useWeezer();
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
+
+  return (
+    <>
+      <WeezerOnboardingModal
+        isOpen={isOnboardingOpen}
+        onClose={() => setIsOnboardingOpen(false)}
+        currentUserId={userId}
+        onSuccess={(newProfile) => {
+          setUserProfile(newProfile);
+          syncRankingsToDatabase(triageMap, masterList);
+        }}
+      />
+
+      {userId && !userProfile?.username && (
+        <div className="bg-amber-50 border-2 border-amber-300/80 rounded-3xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
+          <div className="space-y-1">
+            <h3 className="font-extrabold text-amber-950 text-sm sm:text-base">
+              Claim Your Weezer Song Ranking Username
+            </h3>
+            <p className="text-xs font-medium text-amber-900/80 leading-relaxed">
+              Set up your profile so you can save rankings and compare with friends.
+            </p>
+          </div>
+
+          <button
+            onClick={() => setIsOnboardingOpen(true)}
+            className="w-full sm:w-auto bg-amber-500 hover:bg-amber-600 active:scale-95 text-slate-950 font-black text-xs px-4 py-3 rounded-xl transition-all shadow-md cursor-pointer shrink-0 text-center"
+          >
+            Setup Profile
+          </button>
+        </div>
+      )}
+    </>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /* The step                                                            */
 /* ------------------------------------------------------------------ */
 
@@ -836,6 +899,7 @@ export default function StepGarage2() {
        prop-driven, not step-driven, so the cap lives here). */
     <div className="mx-auto w-full max-w-5xl space-y-6 pb-24 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <GarageHero />
+      <ProfileSetupBanner />
       <EraShelf />
       <ThreadSection />
       <FanStatsFeature />

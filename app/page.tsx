@@ -7,7 +7,6 @@ import { GuardNotice, SyncNotice } from './components/SharedUI';
 
 import Step0Splash from './components/Step0Splash';
 import Step05Orientation from './components/Step05Orientation';
-import StepDashboard from './components/StepDashboard';
 import StepGarage2 from './components/StepGarage2';
 import Step1Triage from './components/Step1Triage';
 import Step2Refine from './components/Step2Refine';
@@ -87,7 +86,12 @@ export default function WeezerRankerPage() {
 
       {step === 'orientation' && <Step05Orientation />}
 
-      {step === 'dashboard' && <StepDashboard />}
+      {/* The dashboard IS the headquarters page (Mark's call,
+          Nov 4, 2026): StepGarage2 renders for 'dashboard' and
+          keeps its 'garage2' alias below. The old StepDashboard
+          component stays in the tree, unreferenced, for rollback —
+          repoint this line at it to revert. */}
+      {step === 'dashboard' && <StepGarage2 />}
 
       {step === 'garage2' && <StepGarage2 />}
 

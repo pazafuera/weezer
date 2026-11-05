@@ -384,13 +384,49 @@ const getDerivedBucketRanks = (
   };
 };
 
+/** The rankings-row shape the boot path passes around. */
+type RankingsRow = {
+  triage_map?: Record<string, TriageValue> | null;
+  master_list?: Song[] | null;
+} | null;
+
 /**
- * Copies guest rankings stored in localStorage to Supabase for the authenticated user.
+ * Copies guest rankings stored in localStorage to Supabase for the
+ * authenticated user, and returns the rankings row the caller
+ * should load from.
+ *
+ * Boot de-duplication (Nov 4, 2026): the migration's "does the
+ * account already have rankings?" read and the caller's main
+ * rankings fetch are the SAME row, so the caller fires its fetch
+ * up front and passes the promise in — weezer_rankings is read
+ * once per boot, not twice. When the migration writes, it returns
+ * the row it just wrote (the upsert payload, verbatim) instead of
+ * making the caller re-read it; when the write fails, it returns
+ * the fetched row — exactly what the caller's own post-migration
+ * fetch would have produced before this fold. Without a passed
+ * promise it reads the row itself, as before. The
+ * never-overwrite semantics are unchanged.
  */
-export const migrateGuestRankingsToUser = async (newUserId: string) => {
-  if (typeof window === 'undefined') return;
+export const migrateGuestRankingsToUser = async (
+  newUserId: string,
+  rankingsRowPromise?: PromiseLike<{ data: RankingsRow }>
+): Promise<RankingsRow> => {
+  const fetchExisting = async (): Promise<RankingsRow> => {
+    if (rankingsRowPromise) {
+      const { data } = await rankingsRowPromise;
+      return data;
+    }
+    const { data } = await supabase
+      .from('weezer_rankings')
+      .select('triage_map, master_list')
+      .eq('user_id', newUserId)
+      .maybeSingle();
+    return data as RankingsRow;
+  };
+
+  if (typeof window === 'undefined') return fetchExisting();
   const localState = localStorage.getItem('weezer_ranker_state');
-  if (!localState) return;
+  if (!localState) return fetchExisting();
 
   try {
     const { triageMap, masterList } = JSON.parse(localState);
@@ -399,46 +435,56 @@ export const migrateGuestRankingsToUser = async (newUserId: string) => {
       (triageMap && Object.keys(triageMap).length > 0) ||
       (masterList && masterList.length > 0);
 
-    if (hasProgress) {
-      // NEVER overwrite rankings the account already has. Guest picks
-      // only migrate into an account that has none yet — otherwise,
-      // logging in from a browser holding leftover guest picks would
-      // erase the account's real saved rankings. (Bit us Oct 16, 2026:
-      // temp test picks replaced a real account's rankings at login.)
-      const { data: existing } = await supabase
-        .from('weezer_rankings')
-        .select('triage_map, master_list')
-        .eq('user_id', newUserId)
-        .maybeSingle();
+    if (!hasProgress) return fetchExisting();
 
-      // Only REAL buckets count as existing rankings here: an account
-      // whose triage_map holds nothing but 'unknown' ("Don't Know It")
-      // marks has no ratings to protect, so guest picks may still
-      // migrate in.
-      const accountTriageMap = existing?.triage_map as
-        | Record<string, unknown>
-        | undefined;
-      const accountHasProgress =
-        (accountTriageMap &&
-          Object.values(accountTriageMap).some((value) =>
-            isRealBucket(value as TriageValue | undefined)
-          )) ||
-        (existing?.master_list && existing.master_list.length > 0);
+    const existing = await fetchExisting();
 
-      if (accountHasProgress) return;
+    // NEVER overwrite rankings the account already has. Guest picks
+    // only migrate into an account that has none yet — otherwise,
+    // logging in from a browser holding leftover guest picks would
+    // erase the account's real saved rankings. (Bit us Oct 16, 2026:
+    // temp test picks replaced a real account's rankings at login.)
+    //
+    // Only REAL buckets count as existing rankings here: an account
+    // whose triage_map holds nothing but 'unknown' ("Don't Know It")
+    // marks has no ratings to protect, so guest picks may still
+    // migrate in.
+    const accountTriageMap = existing?.triage_map as
+      | Record<string, unknown>
+      | undefined;
+    const accountHasProgress =
+      (accountTriageMap &&
+        Object.values(accountTriageMap).some((value) =>
+          isRealBucket(value as TriageValue | undefined)
+        )) ||
+      (existing?.master_list && existing.master_list.length > 0);
 
-      await supabase.from('weezer_rankings').upsert(
-        {
-          user_id: newUserId,
-          triage_map: triageMap || {},
-          master_list: masterList || [],
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'user_id' }
-      );
+    if (accountHasProgress) return existing;
+
+    const { error } = await supabase.from('weezer_rankings').upsert(
+      {
+        user_id: newUserId,
+        triage_map: triageMap || {},
+        master_list: masterList || [],
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'user_id' }
+    );
+    if (error) {
+      // The write didn't land (the old code never read this error
+      // and the caller's fetch simply re-read the unchanged row):
+      // hand back the fetched row so the session loads exactly
+      // what it would have loaded before the fold.
+      console.error('Failed to migrate guest rankings:', error);
+      return existing;
     }
+    return {
+      triage_map: triageMap || {},
+      master_list: masterList || [],
+    };
   } catch (err) {
     console.error('Failed to migrate guest rankings:', err);
+    return fetchExisting();
   }
 };
 
@@ -865,15 +911,28 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         // degrades to local-only until the fanhood table is live).
         reconcileAccountFanhood(uid);
 
-        // Migrate guest rankings from localStorage to Supabase
-        await migrateGuestRankingsToUser(uid);
-
-        // Fetch User Profile
-        const { data: profileData } = await supabase
+        // Boot fetches (Nov 4, 2026): the profile read and the
+        // rankings read are independent, so both fire NOW, in
+        // parallel, instead of serially around the migration.
+        // The guest migration folds into the rankings fetch (its
+        // account-progress check reads this very row) and returns
+        // the row to load from.
+        const profilePromise = supabase
           .from('profiles')
           .select('username, display_name, birth_year, country_code, state_code')
           .eq('id', uid)
           .maybeSingle();
+        const rankingsPromise = supabase
+          .from('weezer_rankings')
+          .select('*')
+          .eq('user_id', uid)
+          .maybeSingle();
+
+        // Migrate guest rankings from localStorage to Supabase
+        const rankData = await migrateGuestRankingsToUser(uid, rankingsPromise);
+
+        // Fetch User Profile
+        const { data: profileData } = await profilePromise;
 
         if (profileData) {
           const locationStr =
@@ -896,21 +955,19 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
           });
         }
 
-        // Fetch Rankings for logged in user
+        // Rankings for the logged in user: rankData is the row
+        // the migration returned above — the boot's single
+        // rankings read, or the row the migration just wrote.
         const validSongIds = new Set(FULL_SONG_POOL.map((s) => s.id));
-        const { data: rankData } = await supabase
-          .from('weezer_rankings')
-          .select('*')
-          .eq('user_id', uid)
-          .maybeSingle();
 
         if (rankData) {
           let loadedTriage: Record<string, TriageValue> = {};
           let loadedMaster: Song[] = [];
 
-          if (rankData.triage_map) {
-            Object.keys(rankData.triage_map).forEach((id) => {
-              if (validSongIds.has(id)) loadedTriage[id] = rankData.triage_map[id];
+          const savedTriageMap = rankData.triage_map;
+          if (savedTriageMap) {
+            Object.keys(savedTriageMap).forEach((id) => {
+              if (validSongIds.has(id)) loadedTriage[id] = savedTriageMap[id];
             });
             setTriageMap(loadedTriage);
           }

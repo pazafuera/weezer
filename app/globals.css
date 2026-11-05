@@ -58,6 +58,28 @@ body {
   animation: deck-tutorial-sway 2.8s ease-in-out infinite;
 }
 
+/* Welcome interstitial (WelcomeInterstitial.tsx): the vinyl
+   record turns at a calm 33⅓-ish pace. Reduced-motion users
+   get a still record — the welcome still reads fine static. */
+@keyframes welcome-record-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.welcome-record-spin {
+  animation: welcome-record-spin 2.4s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .welcome-record-spin {
+    animation: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .deck-tutorial-sway {
     animation: none;

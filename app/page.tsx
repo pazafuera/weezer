@@ -3,6 +3,7 @@
 import React from 'react';
 import { useWeezer } from './context/WeezerContext';
 import AppShell from './components/AppShell';
+import WelcomeInterstitial from './components/WelcomeInterstitial';
 import { GuardNotice, SyncNotice } from './components/SharedUI';
 
 import Step0Splash from './components/Step0Splash';
@@ -45,17 +46,6 @@ export default function WeezerRankerPage() {
     userId,
   } = useWeezer();
 
-  if (loadingUser) {
-    return (
-      <div className="flex flex-col h-screen items-center justify-center bg-slate-50 gap-4">
-        <div className="w-8 h-8 border-4 border-[#0072CE] border-t-transparent rounded-full animate-spin" />
-        <p className="text-sm font-bold text-slate-500 animate-pulse">
-          Busy wrestling with Jimmy...
-        </p>
-      </div>
-    );
-  }
-
   const handleFinishTriage = () => {
     setAutoStartMatchups(true);
     navigateTo('rank_buckets');
@@ -68,7 +58,16 @@ export default function WeezerRankerPage() {
   const isGuest = userId === null;
 
   return (
-    <AppShell fullWidth={step === 'wrapped'} fullBleed={step === 'lore'}>
+    <>
+      {/* Welcome / boot overlay (Nov 4, 2026): session-gated —
+          covers the boot on a new session or a return after 8h+,
+          or when the boot runs long; never on step changes. It
+          reads loadingUser only and touches no step state, so
+          history init (which keys off the landing settling in
+          the context) is unaffected. */}
+      <WelcomeInterstitial loading={loadingUser} />
+
+      <AppShell fullWidth={step === 'wrapped'} fullBleed={step === 'lore'}>
       {/* Guard-rewrite explanation (UAT P-1): renders only when
           the guard rewrote the landing the user just arrived on
           (rewrites land on triage or rank_buckets; context clears
@@ -79,6 +78,26 @@ export default function WeezerRankerPage() {
           when a rankings write exhausted its retries. */}
       <SyncNotice show={syncNotice} onDismiss={dismissSyncNotice} />
 
+      {loadingUser ? (
+        /* Boot placeholder: the shell's normal chrome over a
+           quiet skeleton while the initial load settles. The
+           actual step renders only after settling — no
+           wrong-screen flash, no guard changes — but the boot
+           no longer feels like a full-screen interstitial. */
+        <div
+          aria-busy="true"
+          aria-label="Loading"
+          className="animate-pulse space-y-4 pt-2 sm:space-y-6"
+        >
+          <div className="h-44 rounded-[2rem] bg-slate-200/70 sm:h-52" />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="h-28 rounded-[2rem] bg-slate-200/60" />
+            <div className="h-28 rounded-[2rem] bg-slate-200/60" />
+          </div>
+          <div className="h-28 rounded-[2rem] bg-slate-200/50" />
+        </div>
+      ) : (
+        <>
       {step === 'splash' && <Step0Splash />}
 
       {step === 'login' && <Login />}
@@ -176,6 +195,9 @@ export default function WeezerRankerPage() {
       {step === 'friends' && <WeezerFriends />}
 
       {step === 'lore' && <StepLore />}
-    </AppShell>
+        </>
+      )}
+      </AppShell>
+    </>
   );
 }

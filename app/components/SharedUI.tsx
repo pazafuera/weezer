@@ -68,7 +68,7 @@ export function SortingIncompleteNotice({
   const sortedCount = countCategorizedSongs(triageMap);
   if (sortedCount >= FULL_SONG_POOL.length) return null;
   return (
-    <div className="bg-amber-400 border-2 border-amber-600 rounded-2xl px-4 py-3 shadow-sm">
+    <div className="bg-amber-400 border-[3px] border-[#0C1220] rounded-2xl px-4 py-3 shadow-[2px_2px_0_rgba(11,30,63,0.85)]">
       <p className="text-sm sm:text-base font-bold text-slate-950 leading-snug text-center">
         You haven&apos;t finished sorting — {sortedCount} of {FULL_SONG_POOL.length} songs
         sorted. This page only covers the songs you&apos;ve sorted so far.{' '}

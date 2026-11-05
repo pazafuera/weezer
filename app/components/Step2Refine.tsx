@@ -4,6 +4,18 @@ import { BucketType, Song, BUCKET_CONFIG, BUCKET_TRANSITIONS } from '../data/con
 import type { TriageValue } from '../context/WeezerContext';
 import { FlyingWIcon, AudioPreviewButton, SortingIncompleteNotice } from './SharedUI';
 import Step1_5Matchups from './Step1_5Matchups';
+import { displayFont } from './shareables/fonts';
+
+// The bucket band's pastel strip (Round 2): the -100 tint of the
+// bucket's own badge family in BUCKET_CONFIG (badgeBg's bg token),
+// worn as a framed band above the stage list.
+const BAND_BG: Record<BucketType, string> = {
+  banger: 'bg-emerald-100',
+  slaps: 'bg-blue-100',
+  mid: 'bg-amber-100',
+  skip: 'bg-orange-100',
+  trash: 'bg-rose-100',
+};
 
 const REFINEMENT_STAGES: { bucket: BucketType; title: string; desc: string; nextBtn: string }[] = [
   { bucket: 'banger', title: 'Rank Your Bangers', desc: "These are the absolute best of the best. Rank them, or demote the ones that don't survive the cut!", nextBtn: "Next: Rank Slaps →" },
@@ -350,23 +362,23 @@ export default function Step2Refine({
 
       {/* HEADER */}
       <div className="text-center space-y-2 px-4 mb-8 pt-2">
-        <h1 className="text-3xl font-black text-slate-950 tracking-tight">{currentStage.title}</h1>
-        <p className="text-sm font-bold text-slate-500 max-w-sm mx-auto leading-tight">{currentStage.desc}</p>
+        <h1 className={`${displayFont.className} text-[32px] text-[#0C1220]`}>{currentStage.title}</h1>
+        <p className="text-sm font-bold text-[#3D4A63] max-w-sm mx-auto leading-tight">{currentStage.desc}</p>
       </div>
 
       {/* ACTIVE BUCKET DRAG-AND-DROP CONTAINER */}
-      <div className="bg-white border border-slate-200 rounded-3xl p-3 sm:p-5 shadow-xs" onDragOver={hasSlider ? handleDragOver : undefined} onDrop={hasSlider ? () => handleDrop(bucket, songs.length) : undefined}>
+      <div className="bg-white border-[3px] border-[#0C1220] rounded-[18px] p-3 sm:p-5 shadow-[4px_4px_0_rgba(11,30,63,0.85)]" onDragOver={hasSlider ? handleDragOver : undefined} onDrop={hasSlider ? () => handleDrop(bucket, songs.length) : undefined}>
 
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-3 px-1">
+        <div className={`flex items-center justify-between ${BAND_BG[bucket]} border-[2.5px] border-[#0C1220] rounded-xl px-2.5 py-2 mb-3`}>
           <h2 className={`text-sm sm:text-base font-black uppercase tracking-wider ${cfg.color}`}>
-            {cfg.emoji} {cfg.label} <span className="text-slate-400">({songs.length})</span>
+            {cfg.emoji} {cfg.label} <span className="text-[#3D4A63]">({songs.length})</span>
           </h2>
-          
+
           {/* HELP ME RANK BUTTON */}
           {hasSlider && songs.length >= 2 && (
             <button
               onClick={() => setShowMatchups(true)}
-              className="text-[11px] font-black text-[#0072CE] hover:bg-blue-50 border border-blue-200 px-3 py-1 rounded-xl transition cursor-pointer flex gap-1 items-center"
+              className="text-[11px] font-black text-[#0C1220] bg-white hover:bg-slate-50 border-2 border-[#0C1220] px-3 py-1 rounded-[10px] transition cursor-pointer flex gap-1 items-center"
             >
               <span>⚡️</span>
               Help Me Rank
@@ -399,7 +411,7 @@ export default function Step2Refine({
                       ? 'opacity-40 border-2 border-dashed border-slate-300 bg-slate-100 scale-[0.98]'
                       : isTouchDrag
                       ? 'bg-slate-900 border-2 border-amber-400 text-white scale-[1.02] shadow-2xl z-30 relative ring-4 ring-amber-400/20'
-                      : 'bg-slate-50 border border-slate-200 shadow-2xs hover:border-blue-300 text-slate-900'
+                      : 'bg-white border-2 border-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)] text-[#0C1220]'
                   }`}
                 >
                   <div className="flex items-center gap-2.5 min-w-0 flex-1">
@@ -415,7 +427,7 @@ export default function Step2Refine({
                       <h3
                         onClick={handleSongTitleClick}
                         className={`text-sm font-bold leading-tight truncate cursor-pointer hover:text-[#0072CE] transition-colors ${
-                          isTouchDrag ? 'text-white font-extrabold' : 'text-slate-900'
+                          isTouchDrag ? 'text-white font-extrabold' : 'text-[#0C1220]'
                         }`}
                         title="Tap to preview audio"
                       >
@@ -429,7 +441,7 @@ export default function Step2Refine({
                         >
                           <AudioPreviewButton title={song.title} />
                         </div>
-                        <span className={`text-[10px] font-semibold truncate ${isTouchDrag ? 'text-slate-300' : 'text-slate-500'}`}>
+                        <span className={`text-[10px] font-semibold truncate ${isTouchDrag ? 'text-slate-300' : 'text-[#3D4A63]'}`}>
                           {song.album} ({song.year})
                         </span>
                       </div>
@@ -443,7 +455,7 @@ export default function Step2Refine({
                           type="button"
                           onClick={() => promptMoveSong(song, transitions.above!)}
                           className={`px-1.5 h-7 rounded-md flex items-center justify-center gap-0.5 text-[11px] border font-black transition cursor-pointer ${
-                            isTouchDrag ? 'bg-slate-800 border-slate-700 text-white' : BUCKET_CONFIG[transitions.above].badgeBg
+                            isTouchDrag ? 'bg-slate-800 border-slate-700 text-white' : `${BUCKET_CONFIG[transitions.above].badgeBg} !border-2 !border-[#0C1220]`
                           }`}
                           title={`Promote to ${BUCKET_CONFIG[transitions.above].label}`}
                         >
@@ -456,7 +468,7 @@ export default function Step2Refine({
                           type="button"
                           onClick={() => promptMoveSong(song, transitions.below!)}
                           className={`px-1.5 h-7 rounded-md flex items-center justify-center gap-0.5 text-[11px] border font-black transition cursor-pointer ${
-                            isTouchDrag ? 'bg-slate-800 border-slate-700 text-white' : BUCKET_CONFIG[transitions.below].badgeBg
+                            isTouchDrag ? 'bg-slate-800 border-slate-700 text-white' : `${BUCKET_CONFIG[transitions.below].badgeBg} !border-2 !border-[#0C1220]`
                           }`}
                           title={`Demote to ${BUCKET_CONFIG[transitions.below].label}`}
                         >
@@ -472,7 +484,7 @@ export default function Step2Refine({
                         onTouchMove={handleTouchMove}
                         onTouchEnd={handleTouchEnd}
                         className={`w-6 h-8 flex items-center justify-center text-lg cursor-grab active:cursor-grabbing select-none touch-none transition-transform ${
-                          isTouchDrag ? 'text-amber-400 scale-125' : 'text-slate-400 hover:text-slate-600'
+                          isTouchDrag ? 'text-amber-400 scale-125' : 'text-[#0C1220]'
                         }`} 
                       >
                         ☰
@@ -490,7 +502,7 @@ export default function Step2Refine({
       <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-auto flex items-center gap-3">
         <button
           onClick={handleBack}
-          className="bg-slate-800 hover:bg-slate-700 text-white border-2 border-slate-700 font-black text-sm px-5 py-4 rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.2)] transition transform hover:scale-105 cursor-pointer flex items-center gap-1.5 whitespace-nowrap"
+          className="bg-white hover:bg-slate-50 text-[#0C1220] border-[3px] border-[#0C1220] font-black text-sm px-5 py-4 rounded-full shadow-[2px_2px_0_rgba(11,30,63,0.85)] transition active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_rgba(11,30,63,0.85)] cursor-pointer flex items-center gap-1.5 whitespace-nowrap"
         >
           <span>←</span>
           <span>Back</span>
@@ -498,7 +510,7 @@ export default function Step2Refine({
 
         <button
           onClick={handleNext}
-          className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm px-8 py-4 rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.35)] transition transform hover:scale-105 cursor-pointer border-2 border-amber-200 flex items-center gap-2.5 whitespace-nowrap"
+          className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm px-8 py-4 rounded-full shadow-[2px_2px_0_rgba(11,30,63,0.85)] transition active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_rgba(11,30,63,0.85)] cursor-pointer border-[3px] border-[#0C1220] flex items-center gap-2.5 whitespace-nowrap"
         >
           {stageIdx === REFINEMENT_STAGES.length - 1 && <FlyingWIcon className="w-6 h-4 text-slate-950" />}
           <span>{currentStage.nextBtn}</span>

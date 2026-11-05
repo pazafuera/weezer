@@ -16,7 +16,7 @@
  * lifted out one by one when the retrofit happens.
  */
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   useWeezer,
   countCategorizedSongs,
@@ -39,6 +39,7 @@ import {
   seriesRowState,
   useFanhood,
 } from '../lib/fanhood';
+import { fanhoodReconcileSettled } from '../lib/fanhoodSync';
 import { ERAS } from './shareables/EraDnaCard';
 import { displayFont } from './shareables/fonts';
 
@@ -392,9 +393,36 @@ function JourneyBar({ total }: { total: number }) {
 }
 
 function GameCard() {
-  const { triageMap, navigateTo } = useWeezer();
+  const { userId, triageMap, navigateTo } = useWeezer();
   const record = useFanhood();
   const unlocked = isLoreUnlocked(triageMap);
+
+  /* The record every fanhood surface reads is the DEVICE record;
+     a signed-in player's account record merges into it once per
+     session (WeezerContext's init fires reconcileAccountFanhood,
+     fire-and-forget). This card is a deep-link surface: on a fresh
+     origin the device record starts empty, so "no games yet" is
+     indistinguishable from "the merge hasn't landed" — and the
+     card presented the never-played pitch as fact while the
+     account already held finished games (Mark's preview retest,
+     Nov 4, 2026). Kick the same reconcile from here and hold a
+     loading state until it settles; only a settled-empty record
+     earns the pitch. Guests have no account merge to wait for. */
+  const [standingSettled, setStandingSettled] = useState(false);
+  useEffect(() => {
+    if (!userId) {
+      setStandingSettled(false);
+      return;
+    }
+    let live = true;
+    setStandingSettled(false);
+    void fanhoodReconcileSettled(userId).then(() => {
+      if (live) setStandingSettled(true);
+    });
+    return () => {
+      live = false;
+    };
+  }, [userId]);
 
   if (!unlocked) {
     const remainingAlbums = loreGateRemainingAlbums(triageMap);
@@ -435,6 +463,9 @@ function GameCard() {
     (g) => seriesRowState(record, g.id) === 'up-next'
   );
   const next = display ? nextStopForTotal(display.depth) : null;
+  // Signed in, nothing on the device record yet, and the account
+  // merge still in flight: the standing is unresolved, not absent.
+  const awaitingStanding = !!userId && !display && !standingSettled;
 
   return (
     <section className="space-y-4 rounded-[2rem] bg-slate-950 p-6 shadow-md sm:p-8">
@@ -460,6 +491,10 @@ function GameCard() {
             </p>
           )}
         </div>
+      ) : awaitingStanding ? (
+        <p className="max-w-lg text-sm font-medium leading-relaxed text-slate-400">
+          Loading your standing…
+        </p>
       ) : (
         <p className="max-w-lg text-sm font-medium leading-relaxed text-slate-400">
           Five rounds. Thirty-five questions. One trip through Weezer
@@ -467,7 +502,7 @@ function GameCard() {
         </p>
       )}
 
-      {allPlayed ? (
+      {awaitingStanding ? null : allPlayed ? (
         <button
           type="button"
           onClick={() => openLeaderboard((s) => navigateTo(s))}

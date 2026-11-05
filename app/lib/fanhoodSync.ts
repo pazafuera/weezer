@@ -115,6 +115,12 @@ async function reconcileRecords(
 
 let reconciledUserId: string | null = null;
 let reconcileInFlight = false;
+// The current user's reconcile as a settle promise, so a surface
+// that renders FROM the record (the garage2 game card is the first)
+// can tell "no fanhood yet" apart from "the account merge hasn't
+// landed yet" — the fetch itself is unchanged, still one attempt.
+let reconcileSettle: { userId: string; promise: Promise<void> } | null =
+  null;
 
 export function reconcileAccountFanhood(userId: string): void {
   if (!userId) return;
@@ -124,7 +130,7 @@ export function reconcileAccountFanhood(userId: string): void {
   if (reconciledUserId === userId || reconcileInFlight) return;
   reconciledUserId = userId;
   reconcileInFlight = true;
-  void (async () => {
+  const promise = (async () => {
     try {
       await reconcileRecords(userId, readFanhood());
     } catch {
@@ -133,6 +139,26 @@ export function reconcileAccountFanhood(userId: string): void {
       reconcileInFlight = false;
     }
   })();
+  reconcileSettle = { userId, promise };
+  void promise;
+}
+
+/**
+ * Resolves once the session reconcile for this user has settled —
+ * merged, confirmed empty, or silently degraded to local-only.
+ * Starts the same reconcile first when it hasn't run for this
+ * user (a deep-linked surface can mount before the session init
+ * gets there). Never rejects: a failed merge is a settled state.
+ */
+export function fanhoodReconcileSettled(
+  userId: string | null
+): Promise<void> {
+  if (!userId) return Promise.resolve();
+  if (reconcileSettle?.userId === userId) return reconcileSettle.promise;
+  reconcileAccountFanhood(userId);
+  return reconcileSettle?.userId === userId
+    ? reconcileSettle.promise
+    : Promise.resolve();
 }
 
 /** Sign-out: forget who was reconciled so a different account
@@ -141,6 +167,7 @@ export function reconcileAccountFanhood(userId: string): void {
  *  and surfaces fall back to it (today's guest semantics). */
 export function forgetAccountFanhoodSync(): void {
   reconciledUserId = null;
+  reconcileSettle = null;
 }
 
 /* ------------------------------------------------------------------ */

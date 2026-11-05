@@ -170,6 +170,7 @@ export const COUNTRY_OPTIONS = [
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabase';
+import { displayFont } from './shareables/fonts';
 
 interface WeezerOnboardingModalProps {
   isOpen: boolean;
@@ -373,12 +374,12 @@ export default function WeezerOnboardingModal({
       onClick={onClose}
     >
       <div
-        className="bg-white border border-slate-200 w-full max-w-md rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden"
+        className="bg-white border-[3px] border-[#0C1220] w-full max-w-md rounded-[18px] p-6 sm:p-8 shadow-[4px_4px_0_rgba(255,255,255,0.35)] relative overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm transition-colors cursor-pointer"
+          className="absolute top-4 right-4 text-[#0C1220] bg-white hover:bg-sky-50 border-[2.5px] border-[#0C1220] rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm transition-colors cursor-pointer"
         >
           ✕
         </button>
@@ -388,16 +389,16 @@ export default function WeezerOnboardingModal({
           <div className="space-y-5">
             <div className="text-center space-y-1">
               <span className="text-2xl block mb-1">🧵</span>
-              <h2 className="text-2xl font-black text-slate-950 tracking-tight">
+              <h2 className={`${displayFont.className} text-2xl text-[#0C1220]`}>
                 Create Your Account
               </h2>
-              <p className="text-xs font-semibold text-slate-500">
+              <p className="text-xs font-semibold text-[#3D4A63]">
                 Save your rankings, claim your handle, and compare with friends.
               </p>
             </div>
 
             {/* METHOD TOGGLE BUTTONS */}
-            <div className="flex bg-slate-100 p-1 rounded-xl">
+            <div className="flex bg-white border-2 border-[#0C1220] p-1 rounded-xl">
               <button
                 type="button"
                 onClick={() => {
@@ -406,7 +407,7 @@ export default function WeezerOnboardingModal({
                 }}
                 className={`flex-1 py-2 text-xs font-black rounded-lg transition-all cursor-pointer ${
                   authMethod === 'password'
-                    ? 'bg-white text-slate-950 shadow-xs'
+                    ? 'bg-white text-[#0C1220] border-2 border-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)]'
                     : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
@@ -420,7 +421,7 @@ export default function WeezerOnboardingModal({
                 }}
                 className={`flex-1 py-2 text-xs font-black rounded-lg transition-all cursor-pointer ${
                   authMethod === 'magic'
-                    ? 'bg-white text-slate-950 shadow-xs'
+                    ? 'bg-white text-[#0C1220] border-2 border-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)]'
                     : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
@@ -437,7 +438,7 @@ export default function WeezerOnboardingModal({
               ) : (
                 <form onSubmit={handleMagicLink} className="space-y-3">
                   <div>
-                    <label htmlFor="onboarding-email-magic" className="text-[10px] font-black uppercase text-slate-500 tracking-wider block mb-1">
+                    <label htmlFor="onboarding-email-magic" className="text-[10px] font-black uppercase text-[#3D4A63] tracking-wider block mb-1">
                       Email Address
                     </label>
                     <input
@@ -446,7 +447,7 @@ export default function WeezerOnboardingModal({
                       id="onboarding-email-magic" name="email" autoComplete="email" placeholder="you@example.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-[#0072CE]"
+                      className="w-full px-4 py-2.5 bg-white border-2 border-[#0C1220] rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-[#0072CE]"
                     />
                   </div>
 
@@ -459,7 +460,7 @@ export default function WeezerOnboardingModal({
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-[#0072CE] hover:bg-blue-600 text-white font-black py-3.5 rounded-xl shadow-md transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer text-sm"
+                    className="w-full bg-white hover:bg-sky-50 text-[#0C1220] font-black py-3.5 rounded-xl border-[3px] border-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)] transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_rgba(11,30,63,0.85)] disabled:opacity-50 cursor-pointer text-sm"
                   >
                     {loading ? 'Sending...' : 'Send Magic Link →'}
                   </button>
@@ -468,7 +469,7 @@ export default function WeezerOnboardingModal({
             ) : (
               <form onSubmit={handleProceedToProfileStep} className="space-y-3">
                 <div>
-                  <label htmlFor="onboarding-email-password" className="text-[10px] font-black uppercase text-slate-500 tracking-wider block mb-1">
+                  <label htmlFor="onboarding-email-password" className="text-[10px] font-black uppercase text-[#3D4A63] tracking-wider block mb-1">
                     Email Address
                   </label>
                   <input
@@ -477,12 +478,12 @@ export default function WeezerOnboardingModal({
                     id="onboarding-email-password" name="email" autoComplete="email" placeholder="you@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-[#0072CE]"
+                    className="w-full px-4 py-2.5 bg-white border-2 border-[#0C1220] rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-[#0072CE]"
                   />
                 </div>
 
                 <div>
-                  <label className="text-[10px] font-black uppercase text-slate-500 tracking-wider block mb-1">
+                  <label className="text-[10px] font-black uppercase text-[#3D4A63] tracking-wider block mb-1">
                     Password
                   </label>
                   <input
@@ -491,7 +492,7 @@ export default function WeezerOnboardingModal({
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-[#0072CE]"
+                    className="w-full px-4 py-2.5 bg-white border-2 border-[#0C1220] rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-[#0072CE]"
                   />
                 </div>
 
@@ -503,7 +504,7 @@ export default function WeezerOnboardingModal({
 
                 <button
                   type="submit"
-                  className="w-full bg-[#0072CE] hover:bg-blue-600 text-white font-black py-3.5 rounded-xl shadow-md transition-all active:scale-[0.98] cursor-pointer text-sm"
+                  className="w-full bg-white hover:bg-sky-50 text-[#0C1220] font-black py-3.5 rounded-xl border-[3px] border-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)] transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_rgba(11,30,63,0.85)] cursor-pointer text-sm"
                 >
                   Continue to Profile →
                 </button>
@@ -519,21 +520,21 @@ export default function WeezerOnboardingModal({
               <span className="text-[10px] font-black uppercase tracking-widest text-[#0072CE] block mb-1">
                 Step 2 of 2
               </span>
-              <h2 className="text-2xl font-black text-slate-950 tracking-tight">
+              <h2 className={`${displayFont.className} text-2xl text-[#0C1220]`}>
                 Complete Your Profile
               </h2>
-              <p className="text-xs font-semibold text-slate-500 mt-1">
+              <p className="text-xs font-semibold text-[#3D4A63] mt-1">
                 Pick your unique handle and display name for friend matchups.
               </p>
             </div>
 
             <form onSubmit={handleCompleteSignUp} className="space-y-4">
               <div>
-                <label className="text-[10px] font-black uppercase text-slate-500 tracking-wider block mb-1">
+                <label className="text-[10px] font-black uppercase text-[#3D4A63] tracking-wider block mb-1">
                   Unique Username (Handle) *
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-black text-sm">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#3D4A63] font-black text-sm">
                     @
                   </span>
                   <input
@@ -542,17 +543,17 @@ export default function WeezerOnboardingModal({
                     id="onboarding-username" name="username" autoComplete="username" placeholder="your_handle"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    className="w-full pl-8 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-[#0072CE]"
+                    className="w-full pl-8 pr-4 py-2.5 bg-white border-2 border-[#0C1220] rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-[#0072CE]"
                   />
                 </div>
               </div>
 
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="text-[10px] font-black uppercase text-slate-500 tracking-wider">
+                  <label className="text-[10px] font-black uppercase text-[#3D4A63] tracking-wider">
                     Display Name
                   </label>
-                  <span className="text-[9px] font-bold text-slate-400">
+                  <span className="text-[9px] font-bold text-[#3D4A63]">
                     First Name + Last Initial Suggested
                   </span>
                 </div>
@@ -561,18 +562,18 @@ export default function WeezerOnboardingModal({
                   id="onboarding-display-name" name="displayName" autoComplete="nickname" placeholder="Display name"
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-[#0072CE]"
+                  className="w-full px-4 py-2.5 bg-white border-2 border-[#0C1220] rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-[#0072CE]"
                 />
               </div>
 
-              <div className="pt-2 border-t border-slate-100">
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-2">
+              <div className="pt-2 border-t-2 border-[#0C1220]">
+                <span className="text-[10px] font-black uppercase tracking-widest text-[#3D4A63] block mb-2">
                   Optional Demographics (For Fan Stats)
                 </span>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[9px] font-black uppercase text-slate-500 block mb-1">
+                    <label className="text-[9px] font-black uppercase text-[#3D4A63] block mb-1">
                       Birth Year
                     </label>
                     <input
@@ -582,18 +583,18 @@ export default function WeezerOnboardingModal({
                       max={new Date().getFullYear()}
                       value={birthYear}
                       onChange={(e) => setBirthYear(e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-[#0072CE]"
+                      className="w-full px-3 py-2 bg-white border-2 border-[#0C1220] rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-[#0072CE]"
                     />
                   </div>
 
                   <div>
-  <label className="block text-[9px] font-black text-slate-500 uppercase mb-1">
+  <label className="block text-[9px] font-black text-[#3D4A63] uppercase mb-1">
     Country
   </label>
   <select
     value={country}
     onChange={(e) => setCountry(e.target.value)}
-    className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#0072CE] outline-none font-bold text-slate-900 text-xs"
+    className="w-full px-3 py-2 rounded-xl border-2 border-[#0C1220] bg-white focus:border-[#0072CE] outline-none font-bold text-slate-900 text-xs"
   >
     {COUNTRY_OPTIONS.map((c) =>
       c.code === 'DIVIDER' ? (
@@ -612,13 +613,13 @@ export default function WeezerOnboardingModal({
 
                 {country === 'US' && (
                   <div className="mt-3">
-                    <label className="text-[9px] font-black uppercase text-slate-500 block mb-1">
+                    <label className="text-[9px] font-black uppercase text-[#3D4A63] block mb-1">
                       State
                     </label>
                     <select
                       value={stateCode}
                       onChange={(e) => setStateCode(e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-[#0072CE]"
+                      className="w-full px-3 py-2 bg-white border-2 border-[#0C1220] rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-[#0072CE]"
                     >
                       <option value="">Select State...</option>
                       {US_STATES.map((st) => (
@@ -642,7 +643,7 @@ export default function WeezerOnboardingModal({
                   <button
                     type="button"
                     onClick={() => setStepIndex(1)}
-                    className="w-1/3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-black py-3.5 rounded-xl transition-all cursor-pointer text-xs"
+                    className="w-1/3 bg-white hover:bg-sky-50 text-[#0C1220] border-[2.5px] border-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)] font-black py-3.5 rounded-xl transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_rgba(11,30,63,0.85)] cursor-pointer text-xs"
                   >
                     ← Back
                   </button>
@@ -650,7 +651,7 @@ export default function WeezerOnboardingModal({
                 <button
                   type="submit"
                   disabled={loading}
-                  className="flex-1 bg-[#0072CE] hover:bg-blue-600 text-white font-black py-3.5 rounded-xl shadow-md transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer text-xs"
+                  className="flex-1 bg-white hover:bg-sky-50 text-[#0C1220] font-black py-3.5 rounded-xl border-[3px] border-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)] transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_rgba(11,30,63,0.85)] disabled:opacity-50 cursor-pointer text-xs"
                 >
                   {loading ? 'Creating Account...' : 'Finish & Launch 🚀'}
                 </button>

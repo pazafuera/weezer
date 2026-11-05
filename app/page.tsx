@@ -22,7 +22,6 @@ export default function WeezerRankerPage() {
   const {
     loadingUser,
     step,
-    setStep,
     triageMap,
     
     bucketRanks,
@@ -113,7 +112,12 @@ export default function WeezerRankerPage() {
           onUpdateRanks={updateAndSyncBucketRanks}
           handleFinishBucketRanking={() => {
             normalizeMasterList();
-            setStep('master');
+            // Through navigateTo, not the raw setStep: this is a
+            // real user navigation, so it gets a history entry,
+            // the guard, and a recorded origin for Final Review's
+            // Back — the raw setter did none of that, and Back
+            // from Final Review used to leave the site.
+            navigateTo('master');
           }}
           onBackToTriage={() => closeRefine()}
           onKeepSorting={() => navigateTo('triage')}

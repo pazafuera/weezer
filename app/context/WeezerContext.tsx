@@ -11,6 +11,19 @@ import {
   forgetAccountFanhoodSync,
   reconcileAccountFanhood,
 } from '../lib/fanhoodSync';
+import {
+  createNavStack,
+  initNavStack,
+  resetNavStack,
+  pushNavStep,
+  replaceNavStep,
+  applyPopNavIndex,
+  parseNavMarker,
+  createNavMarker,
+  canGoBackInStack,
+  previousStackStep,
+} from '../lib/navigationHistory';
+import type { NavStack } from '../lib/navigationHistory';
 
 
 export type AppStep =
@@ -274,8 +287,29 @@ interface WeezerContextType {
   navigateTo: (
     targetStep: AppStep,
     authMode?: AuthModeType,
-    opts?: { preserveOrigins?: boolean }
+    opts?: {
+      preserveOrigins?: boolean;
+      /** Browser-history treatment for this navigation. Default:
+       *  a push for a distinct step (guard rewrites and same-step
+       *  navigations never push). 'replace' swaps the current
+       *  entry (post-auth landings — Back must never land on the
+       *  login screen); 'reset' re-anchors the stack at the
+       *  target (sign-out — Back must never resurrect signed-in
+       *  pages). */
+      history?: 'push' | 'replace' | 'reset';
+    }
   ) => void;
+  /** True when the in-app history stack has an entry behind the
+   *  current one — browser Back / iOS swipe-back will land on
+   *  another app step rather than leaving the site. */
+  canGoBack: boolean;
+  /** The step browser Back would land on, when the stack knows
+   *  it (after a reload it may be unknown until a pop reveals
+   *  it). Null when there is nowhere in-app to go back to. */
+  previousStep: AppStep | null;
+  /** Browser Back, when it stays inside the app. No-op on the
+   *  landing entry. */
+  goBack: () => void;
   closeLogin: () => void;
   closeOrientation: () => void;
   closeFanStats: () => void;
@@ -517,6 +551,86 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // ---- Browser history for steps (Nov 4, 2026) ------------------
+  // Steps used to live only in React state: navigateInternal
+  // replaceState'd ?step= onto the ONE browser entry, so Back and
+  // the iOS swipe-back gesture left the site from everywhere.
+  // Now every user navigation pushes a real history entry stamped
+  // with a marker (app/lib/navigationHistory.ts owns the pure
+  // stack model), and a popstate listener walks the steps back
+  // and forth. History is managed ONLY on the root path '/':
+  // /u/[username], /terms and /privacy are real routes and keep
+  // native Next history. The stack initializes when the initial
+  // landing settles (see the deep-link effect) — never before, so
+  // Smart Entry / guard decisions can't leak half-landed entries
+  // into the stack, and a deep link's Back exits as it should.
+  const navStackRef = useRef<NavStack<AppStep>>(createNavStack<AppStep>());
+  const [canGoBack, setCanGoBack] = useState(false);
+  const [previousStep, setPreviousStep] = useState<AppStep | null>(null);
+  // Mirrors for the mount-once popstate listener, which must read
+  // the CURRENT step and guard data, not first-render closures
+  // (same pattern as sendRankingsRef / userIdRef above).
+  const stepRef = useRef<AppStep>(step);
+  stepRef.current = step;
+  const navGuardDataRef = useRef({ triageMap, masterList });
+  navGuardDataRef.current = { triageMap, masterList };
+
+  const syncNavUi = () => {
+    const stack = navStackRef.current;
+    setCanGoBack(canGoBackInStack(stack));
+    setPreviousStep(previousStackStep(stack));
+  };
+
+  /** Stamp the stack's current position into the browser entry:
+   *  the marker (step + navIndex + generation) plus the ?step=
+   *  URL, kept in sync exactly as the old replaceState did. */
+  const writeNavEntry = (mode: 'push' | 'replace') => {
+    if (typeof window === 'undefined') return;
+    const stack = navStackRef.current;
+    const current = stack.entries[stack.index];
+    if (current === undefined) return;
+    const url = new URL(window.location.href);
+    url.searchParams.set('step', current);
+    const marker = createNavMarker(stack, current);
+    if (mode === 'push') {
+      window.history.pushState(marker, '', url.toString());
+    } else {
+      window.history.replaceState(marker, '', url.toString());
+    }
+  };
+
+  /** Anchor the stack at the step the initial landing settled on
+   *  (index 0, replacing the browser's initial entry). Idempotent
+   *  and root-path only: sessions that reach the app through a
+   *  sub-page keep native history until their first in-app
+   *  navigation lazily initializes the stack (navigateInternal). */
+  const initializeNavHistory = (landedStep: AppStep) => {
+    if (navStackRef.current.initialized) return;
+    if (typeof window === 'undefined') return;
+    if (window.location.pathname !== '/') return;
+    navStackRef.current = initNavStack(navStackRef.current, landedStep);
+    writeNavEntry('replace');
+    syncNavUi();
+  };
+
+  /**
+   * The origin bookkeeping for return-tracked steps, shared by
+   * navigateInternal (fresh entries) and the popstate listener
+   * (Forward landings): entering a tracked step records where the
+   * user came FROM — except from the step itself, and never from
+   * login (a detour, not a place a Back returns TO) — and entering
+   * an ordinary step consumes every recorded origin.
+   */
+  const recordReturnOrigins = (targetStep: AppStep, fromStep: AppStep) => {
+    if (RETURN_TRACKED_STEPS.indexOf(targetStep) !== -1) {
+      if (fromStep !== targetStep && fromStep !== 'login') {
+        returnStepRef.current[targetStep] = fromStep;
+      }
+    } else {
+      returnStepRef.current = {};
+    }
+  };
+
   // FETCH & CACHE COMMUNITY DATA IN BACKGROUND
   // Pre-launch security: reads the anonymized aggregate via the
   // get_community_rankings() SECURITY DEFINER function instead of
@@ -580,8 +694,13 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     const { raw, resolved } = deepLinkIntent;
 
     // No ?step= param: the existing Smart Entry behavior inside
-    // initUserAndLoadRankings already applies.
-    if (raw === null) return;
+    // initUserAndLoadRankings already applies. Either way the
+    // landing has now settled: anchor the history stack at the
+    // step it settled on (Back from a fresh arrival exits).
+    if (raw === null) {
+      initializeNavHistory(stepRef.current);
+      return;
+    }
 
     // Unknown ?step= value: never leave a blank screen. Signed-in users
     // with ranking progress land on the dashboard, everyone else on splash.
@@ -591,6 +710,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
       const fallback: AppStep = userId && hasProgress ? 'dashboard' : 'splash';
       setStepState(fallback);
       replaceStepInUrl(fallback);
+      initializeNavHistory(fallback);
       return;
     }
 
@@ -606,6 +726,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     }
 
     setStepState(guarded);
+    initializeNavHistory(guarded);
   }, [loadingUser, deepLinkIntent, triageMap, masterList, userId]);
 
   // Fetch community data once on initial startup
@@ -1039,7 +1160,8 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     targetStep: AppStep,
     authMode?: AuthModeType,
     isReturn: boolean = false,
-    preserveOrigins: boolean = false
+    preserveOrigins: boolean = false,
+    historyMode?: 'push' | 'replace' | 'reset'
   ) => {
     // Origin bookkeeping for the return-tracked steps. A return
     // navigation (the close* exits) skips it entirely:
@@ -1047,35 +1169,23 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     // back on another tracked step must not overwrite (or clear) that
     // step's recorded origin with the step just exited.
     if (!isReturn) {
-      if (RETURN_TRACKED_STEPS.indexOf(targetStep) !== -1) {
-        // Remember where the user is coming FROM so the step's exit
-        // control can take them back there. Re-entering a tracked
-        // step while already on it (the nav menu stays reachable from
-        // these steps) must not overwrite the recorded step with the
-        // step itself. The OTHER tracked step's origin is left alone:
-        // a tracked-to-tracked hop is a detour, not a fresh start.
-        // Login is never recorded as another step's origin: it is a
-        // detour, not a place a Back should return TO — the sign-up
-        // flow (login → orientation) otherwise overwrites
-        // orientation's real origin with 'login', and the login card
-        // auto-bounces a signed-in user to the dashboard, so the new
-        // user's first Back flashed the login card and dumped them
-        // on the dashboard instead of returning to the start.
-        if (step !== targetStep && step !== 'login') {
-          returnStepRef.current[targetStep] = step;
-        }
-      } else if (preserveOrigins) {
-        // A detour navigation (the help sheet's tutorial replay):
-        // the user is being pulled away mid-visit, not moving on,
-        // so the origins recorded for the tracked steps they were
-        // visiting survive — their Backs afterward still return
-        // where they should (UAT P-3).
-      } else {
-        // Any navigation to an ordinary step consumes every recorded
-        // origin — the user has moved on, and a later visit to a
-        // tracked step records a fresh origin on entry anyway.
-        returnStepRef.current = {};
+      if (
+        RETURN_TRACKED_STEPS.indexOf(targetStep) !== -1 ||
+        !preserveOrigins
+      ) {
+        // Entering a tracked step records where the user is coming
+        // FROM so the step's exit control can take them back there
+        // (recordReturnOrigins holds the exact rules: never the
+        // step itself, never from login — a detour, not a place a
+        // Back should return TO). Entering an ordinary step
+        // consumes every recorded origin — the user has moved on.
+        recordReturnOrigins(targetStep, step);
       }
+      // The remaining case — preserveOrigins into an ordinary
+      // step — is a detour navigation (the help sheet's tutorial
+      // replay): the user is being pulled away mid-visit, not
+      // moving on, so the origins recorded for the tracked steps
+      // they were visiting survive (UAT P-3).
     }
 
     if (authMode) {
@@ -1117,24 +1227,156 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     setStep(guardedStep);
 
     if (typeof window !== 'undefined') {
-      // If navigating from a sub-page (e.g. /u/username), redirect back to root with step param
+      // If navigating from a sub-page (e.g. /u/username), redirect back to root with step param.
+      // Real routes keep native Next history — unmanaged by the stack.
       if (window.location.pathname !== '/') {
         router.push(`/?step=${guardedStep}`);
-      } else {
+        return;
+      }
+
+      // Lazy init: the provider also mounts on sub-pages, where
+      // the landing never initializes the stack. A session that
+      // reached the app through one initializes on its first
+      // in-app navigation instead — anchored at the step it is
+      // leaving, so this navigation can push on top of it.
+      if (
+        !navStackRef.current.initialized &&
+        deepLinkConsumedRef.current &&
+        !loadingUser
+      ) {
+        initializeNavHistory(step);
+      }
+
+      if (!navStackRef.current.initialized) {
+        // The initial landing hasn't settled yet: keep the URL in
+        // sync exactly as before, without touching the stack.
         const url = new URL(window.location.href);
         url.searchParams.set('step', guardedStep);
         window.history.replaceState({}, '', url.toString());
+        return;
       }
+
+      if (historyMode === 'reset') {
+        // Sign-out: re-anchor the stack at the target. The
+        // generation bump inside reset orphans every marker
+        // written before it, so Back/Forward afterwards can
+        // never resurrect a signed-in page.
+        navStackRef.current = resetNavStack(navStackRef.current, guardedStep);
+        writeNavEntry('replace');
+      } else if (
+        historyMode === 'replace' ||
+        isReturn ||
+        guardedStep !== targetStep
+      ) {
+        // Replace, never push: explicit post-auth landings,
+        // returnFromStep's fallback path, and guard rewrites —
+        // a step the user didn't ask for (or can't see) must
+        // not become an entry Back can land on.
+        navStackRef.current = replaceNavStep(navStackRef.current, guardedStep);
+        writeNavEntry('replace');
+      } else if (guardedStep !== step) {
+        navStackRef.current = pushNavStep(navStackRef.current, guardedStep);
+        writeNavEntry('push');
+      }
+      // Same-step navigation pushes nothing (and the current
+      // entry already carries the right marker).
+      syncNavUi();
     }
   };
 
   const navigateTo = (
     targetStep: AppStep,
     authMode?: AuthModeType,
-    opts?: { preserveOrigins?: boolean }
+    opts?: {
+      preserveOrigins?: boolean;
+      history?: 'push' | 'replace' | 'reset';
+    }
   ) => {
-    navigateInternal(targetStep, authMode, false, opts?.preserveOrigins);
+    navigateInternal(
+      targetStep,
+      authMode,
+      false,
+      opts?.preserveOrigins,
+      opts?.history
+    );
   };
+
+  /** Browser Back, when it stays inside the app (see the
+   *  interface note). The popstate listener below performs the
+   *  actual landing. */
+  const goBack = () => {
+    if (typeof window === 'undefined') return;
+    if (canGoBackInStack(navStackRef.current)) {
+      window.history.back();
+    }
+  };
+
+  // POPSTATE — browser Back/Forward and the iOS swipe-back
+  // gesture. THE LOOP RULE: a pop landing applies its step
+  // WITHOUT pushing (the browser has already moved; pushing here
+  // would truncate the forward stack and re-enter the handler).
+  // Mount-once: everything mutable is read through refs.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const onPopState = (event: PopStateEvent) => {
+      if (window.location.pathname !== '/') return;
+      const stack = navStackRef.current;
+      if (!stack.initialized) return;
+      const marker = parseNavMarker(
+        event.state,
+        (s): s is AppStep => resolveUrlStep(s) === s
+      );
+      // Not one of ours (Next router state, a sub-page entry, a
+      // pre-history-build entry): leave it to the router.
+      if (!marker) return;
+      // Stale generation — an entry written before a sign-out
+      // reset. Never resurrect it; the app stays where it is.
+      if (marker.gen !== stack.gen) return;
+
+      const previousIndex = stack.index;
+      const applied = applyPopNavIndex(stack, marker);
+      navStackRef.current = applied.stack;
+      const requested = applied.step;
+
+      const { triageMap: tm, masterList: ml } = navGuardDataRef.current;
+      const guarded = resolveGuardedStep(requested, tm, ml);
+      if (guarded !== requested) {
+        // The entry names a step the guard no longer allows
+        // (e.g. rankings changed since it was written): rewrite
+        // THIS browser entry with the guarded step, exactly as
+        // navigateTo treats a guard rewrite, and explain it.
+        navStackRef.current = replaceNavStep(navStackRef.current, guarded);
+        writeNavEntry('replace');
+        setGuardNotice({ requested, landed: guarded });
+      } else {
+        setGuardNotice(null);
+      }
+
+      // Origin bookkeeping mirrors the two ways a landing can
+      // happen: a Back landing is a RETURN (origins untouched,
+      // like the close* exits — the recorded origins belong to
+      // the entries themselves and are consumed only by a real
+      // exit), while a Forward landing records origins like a
+      // fresh entry.
+      if (marker.navIndex > previousIndex) {
+        recordReturnOrigins(guarded, stepRef.current);
+      }
+
+      // Refine landings refresh the derived bucket lists (as any
+      // landing does), but a pop NEVER resets the stage or the
+      // matchup flag: Step2Refine writes its stage back as it
+      // moves, so Back/Forward returns to the work in progress.
+      if (guarded === 'rank_buckets') {
+        setBucketRanks(getDerivedBucketRanks(tm, ml));
+      }
+
+      setStep(guarded);
+      syncNavUi();
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /**
    * Shared exit for the return-tracked steps: leaves the step WITHOUT
@@ -1167,6 +1409,25 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     // nowhere recorded (or nowhere reachable) to go.
     if (resolveGuardedStep(target, triageMap, masterList) !== target) {
       target = 'dashboard';
+    }
+    // If the recorded origin is exactly the previous in-app
+    // history entry, go Back for real: the browser stack stays
+    // honest (Forward will return here afterwards) and the
+    // popstate listener performs the landing with return
+    // semantics. Any desync — no stack, a stale entry, an origin
+    // that isn't the previous entry — falls back to the replace
+    // navigation below, as before.
+    const navStack = navStackRef.current;
+    if (
+      typeof window !== 'undefined' &&
+      window.location.pathname === '/' &&
+      navStack.initialized &&
+      navStack.index > 0 &&
+      navStack.entries[navStack.index] === fromStep &&
+      navStack.entries[navStack.index - 1] === target
+    ) {
+      window.history.back();
+      return;
     }
     navigateInternal(target, undefined, true);
   };
@@ -1207,7 +1468,9 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     setPendingRequestsCount(0);
     setBucketRanks({ banger: [], slaps: [], mid: [], skip: [], trash: [] });
     localStorage.removeItem('weezer_ranker_state');
-    navigateTo('splash');
+    // History reset (see navigateInternal): Back after sign-out
+    // must never resurrect a signed-in page.
+    navigateTo('splash', undefined, { history: 'reset' });
   };
 
   return (
@@ -1227,6 +1490,9 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         dismissSyncNotice,
         initialAuthMode,
         navigateTo,
+        canGoBack,
+        previousStep,
+        goBack,
         closeLogin,
         closeOrientation,
         closeFanStats,

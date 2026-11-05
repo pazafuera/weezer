@@ -264,11 +264,13 @@ export default function Login() {
     }
   };
 
-  // If already logged in, redirect to main application view
+  // If already logged in, redirect to main application view.
+  // Replace, not push: this bounce is corrective, and Back after
+  // it must never land on the login screen it bounced from.
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        navigateTo('dashboard');
+        navigateTo('dashboard', undefined, { history: 'replace' });
       }
     });
   }, [navigateTo]);
@@ -297,7 +299,9 @@ export default function Login() {
           password,
         });
         if (error) throw error;
-        navigateTo('dashboard');
+        // Replace the login entry: Back after signing in never
+        // lands on the login screen.
+        navigateTo('dashboard', undefined, { history: 'replace' });
       } else if (authMode === 'signup') {
         // Validate Username
         const cleanUsername = username.toLowerCase().trim().replace(/[^a-z0-9_]/g, '');
@@ -342,7 +346,10 @@ export default function Login() {
         // the unknown-step handling like any other bad step name.
         if (authData.session || authData.user) {
           setAccountCreated(true);
-          navigateTo('orientation');
+          // Replace the login entry, like the sign-in landing:
+          // Back from orientation must not resurrect the
+          // sign-up form.
+          navigateTo('orientation', undefined, { history: 'replace' });
         } else {
           setMessage({
             type: 'success',

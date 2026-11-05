@@ -2,6 +2,7 @@
 
 import React, { useEffect } from 'react';
 import { useWeezer } from '../context/WeezerContext';
+import { displayFont } from './shareables/fonts';
 
 // The overall process (owner direction, Oct 17): orient on the
 // journey — sort, refine, Thread. The buckets themselves are
@@ -66,7 +67,7 @@ export default function Step05Orientation() {
           the login page) instead of the old signup_success step;
           the flag rides in context and clears on any exit. */}
       {accountCreated && (
-        <div className="pt-3 flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-2xl px-4 py-3">
+        <div className="pt-3 flex items-center gap-3 bg-emerald-50 border-2 border-[#0C1220] rounded-2xl px-4 py-3">
           <span className="w-8 h-8 shrink-0 bg-emerald-500 text-white rounded-full flex items-center justify-center font-black text-sm shadow-sm">
             ✓
           </span>
@@ -86,7 +87,7 @@ export default function Step05Orientation() {
       <div className="pt-2 flex items-center justify-start">
         <button
           onClick={closeOrientation}
-          className="text-xs font-black text-slate-400 hover:text-slate-600 transition-colors flex items-center gap-1 cursor-pointer"
+          className="text-xs font-black text-[#3D4A63] hover:text-[#0C1220] transition-colors flex items-center gap-1 cursor-pointer"
         >
           ← Back
         </button>
@@ -97,28 +98,35 @@ export default function Step05Orientation() {
           the old "How this works" sub-heading went with it — it
           only repeated the title). */}
       <div className="text-center">
-        <h1 className="text-2xl sm:text-5xl font-black text-slate-950 tracking-tighter whitespace-nowrap">
+        <h1
+          className={`text-2xl sm:text-5xl text-[#0C1220] tracking-wide whitespace-nowrap ${displayFont.className}`}
+        >
           How the Project Works
         </h1>
       </div>
 
       {/* THE PROCESS — sort, refine, Thread. The buckets
-          themselves are taught in the deck tutorial, not here. */}
+          themselves are taught in the deck tutorial, not here.
+          Nov 5: the three steps render as three poster step cards
+          (the audit's pattern: ink number circles, paper cards,
+          ink frames) instead of one slate list card. */}
       <div>
-        <div className="bg-white border border-slate-200/90 rounded-3xl p-4 sm:p-6 shadow-sm space-y-3">
+        <div className="space-y-3">
           {PROCESS_STEPS.map((step, idx) => (
             <div
               key={step.title}
-              className={`flex items-start gap-3.5 ${idx > 0 ? 'pt-3 border-t border-slate-100' : ''}`}
+              className="flex items-start gap-3.5 bg-white border-[3px] border-[#0C1220] rounded-[18px] shadow-[4px_4px_0_rgba(11,30,63,0.85)] p-4 sm:p-5"
             >
-              <div className="w-11 h-11 rounded-2xl border bg-blue-100 text-[#0072CE] border-blue-300 flex items-center justify-center text-lg font-black shrink-0 shadow-sm">
+              <div className="w-11 h-11 rounded-full bg-[#0C1220] text-white flex items-center justify-center text-lg font-black shrink-0 shadow-[2px_2px_0_rgba(11,30,63,0.35)]">
                 {idx + 1}
               </div>
               <div className="min-w-0">
-                <h3 className="text-lg sm:text-xl font-black text-slate-950 tracking-tight leading-tight">
+                <h3
+                  className={`text-lg sm:text-xl text-[#0C1220] tracking-wide leading-tight ${displayFont.className}`}
+                >
                   {step.title}
                 </h3>
-                <p className="text-xs sm:text-sm font-medium text-slate-600 leading-relaxed mt-0.5">
+                <p className="text-xs sm:text-sm font-medium text-[#3D4A63] leading-relaxed mt-0.5">
                   {step.desc}
                 </p>
               </div>
@@ -135,13 +143,13 @@ export default function Step05Orientation() {
 
       {/* CTA BAR — pinned under the scroll region (see the root
           comment): always visible, never scrolled to. */}
-      <div className="shrink-0 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] bg-white/90 backdrop-blur-md border-t border-slate-200/90 space-y-2.5">
+      <div className="shrink-0 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] bg-white/90 backdrop-blur-md border-t-[3px] border-t-[#0C1220] space-y-2.5">
         <button
           onClick={() => {
             setAccountCreated(false);
             navigateTo('triage');
           }}
-          className="w-full bg-[#0072CE] hover:bg-blue-600 active:scale-[0.99] text-white font-black text-base sm:text-lg py-4 rounded-2xl shadow-[0_10px_25px_rgba(0,114,206,0.3)] transition-all cursor-pointer flex items-center justify-center"
+          className="w-full bg-white hover:bg-sky-50 text-slate-950 font-black text-base sm:text-lg py-4 rounded-[14px] border-[2.5px] border-[#0C1220] shadow-[3px_3px_0_#0C1220] transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_#0C1220] cursor-pointer flex items-center justify-center"
         >
           Start Sorting
         </button>
@@ -154,7 +162,7 @@ export default function Step05Orientation() {
         {!userId && (
           <button
             onClick={() => navigateTo('login', 'signup')}
-            className="w-full bg-white hover:bg-slate-50 text-slate-600 font-bold py-3 px-6 rounded-2xl transition-all cursor-pointer text-xs border border-slate-200 text-center"
+            className="w-full bg-transparent hover:bg-white/60 text-[#0C1220] font-bold py-3 px-6 rounded-[14px] border-[2.5px] border-[#0C1220] shadow-[3px_3px_0_#0C1220] transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_#0C1220] cursor-pointer text-xs text-center"
           >
             Create an Account First
           </button>

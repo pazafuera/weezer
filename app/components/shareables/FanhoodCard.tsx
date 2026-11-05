@@ -13,6 +13,7 @@ import {
 import { displayFont, handFont } from './fonts';
 import { fanhoodDisplay } from '../../lib/fanhood';
 import type { FanhoodRecord } from '../../lib/fanhood';
+import { TOTAL_STOPS } from '../../data/loreGame';
 
 /** Why this doodle is defined locally instead of imported from
  *  ShareCardShell: on 2026-11-03 the deployed production bundle
@@ -64,10 +65,15 @@ function MusicNotesDoodle({
  * carries the play-the-game prompt for everyone else — so this
  * visual's null state is a defensive placeholder, never the plan.
  *
- * Copy (reframed Oct 28, 2026): the header is the game's headline
- * question, the statement is the standing stop ("You got back
- * to…" + the stop), and the facts are two — the total points and
- * the rarest answer, when one is stored.
+ * Copy (reframed Oct 28, 2026; context pass Nov 5, 2026): the
+ * header is the game's headline question, then a context line for
+ * viewers who have never seen the game (assembled from the game's
+ * own copy — the picker's "Five rounds. Thirty-five questions."
+ * and the gate's "Every point moves you closer to the Shack."),
+ * the standing stop huge, a first-person standing sentence built
+ * from the stop's own phrase fragment, a mini ladder of all six
+ * stops with the current one marked, and the facts — the total
+ * points and the rarest answer, when one is stored.
  */
 export const FanhoodCardVisual = forwardRef<
   HTMLDivElement,
@@ -88,6 +94,20 @@ export const FanhoodCardVisual = forwardRef<
     44,
     Math.min(76, Math.floor(1740 / 'CAN YOU GET BACK TO THE SHACK?'.length))
   );
+  // The standing sentence (Nov 5): first person, built from the
+  // stop's own phrase fragment in TOTAL_STOPS — the same fragments
+  // youreAtPhrase speaks in second person elsewhere. At the start
+  // stop the form is "I'm at Arnold's Diner."; everywhere else,
+  // "I made it {phrase}."
+  const stopEntry = stop
+    ? TOTAL_STOPS.find((s) => s.title === stop) ?? null
+    : null;
+  const standingSentence = stopEntry
+    ? stopEntry.min === 0
+      ? `I'm ${stopEntry.phrase}.`
+      : `I made it ${stopEntry.phrase}.`
+    : null;
+  const currentStopIdx = stopEntry ? TOTAL_STOPS.indexOf(stopEntry) : -1;
 
   return (
     <div
@@ -114,18 +134,95 @@ export const FanhoodCardVisual = forwardRef<
             CAN YOU GET BACK TO THE SHACK?
           </h2>
 
+          {/* Context for a viewer who has never seen the game
+              (Nov 5): one line, assembled from the game's own
+              copy — only the connective "The Weezer trivia game"
+              is new wording (flagged in REPORT.md, C3). */}
           <p
-            className={`absolute inset-x-[60px] top-[396px] text-center text-[72px] font-bold leading-none ${handFont.className}`}
+            className={`absolute inset-x-[80px] top-[196px] text-center text-[46px] font-bold leading-[1.15] ${handFont.className}`}
           >
-            You got back to...
+            The Weezer trivia game — five rounds, thirty-five
+            questions. Every point moves you closer to the Shack.
           </p>
 
           <h3
-            className={`absolute inset-x-0 top-[492px] whitespace-nowrap text-center leading-none text-white ${displayFont.className}`}
+            className={`absolute inset-x-0 top-[340px] whitespace-nowrap text-center leading-none text-white ${displayFont.className}`}
             style={{ fontSize: stopSize }}
           >
             {stop.toUpperCase()}
           </h3>
+
+          {/* The standing sentence, first person, under the stop
+              name (Nov 5 — replaces the old second-person "You got
+              back to…" lead-in). */}
+          {standingSentence && (
+            <p
+              className={`absolute inset-x-[60px] top-[552px] whitespace-nowrap text-center text-[64px] font-bold leading-none ${handFont.className}`}
+            >
+              {standingSentence}
+            </p>
+          )}
+
+          {/* The road so far (Nov 5): all six stops in order, the
+              dashboard journey bar's language at card scale — gold
+              fill up to the current stop, gold dots for stops
+              reached, the current stop's label in gold, stops ahead
+              dimmed. Labels alternate above/below the line so the
+              long names never collide. */}
+          <div className="absolute left-[64px] right-[64px] top-[676px] h-[150px]">
+            {TOTAL_STOPS.map((s, i) => {
+              const above = i % 2 === 0;
+              const isCurrent = i === currentStopIdx;
+              return (
+                <span
+                  key={s.title}
+                  className={`absolute w-[220px] whitespace-nowrap text-center text-[21px] font-black uppercase leading-tight tracking-wide ${
+                    isCurrent
+                      ? 'text-[#FFC72C]'
+                      : i < currentStopIdx
+                        ? 'text-white'
+                        : 'text-white/50'
+                  }`}
+                  style={{
+                    left: `${(i / (TOTAL_STOPS.length - 1)) * 100}%`,
+                    top: above ? 0 : 102,
+                    transform:
+                      i === 0
+                        ? 'translateX(0)'
+                        : i === TOTAL_STOPS.length - 1
+                          ? 'translateX(-100%)'
+                          : 'translateX(-50%)',
+                    textAlign:
+                      i === 0 ? 'left' : i === TOTAL_STOPS.length - 1 ? 'right' : 'center',
+                  }}
+                >
+                  {s.title}
+                </span>
+              );
+            })}
+            <div className="absolute inset-x-0 top-[64px] h-[12px] rounded-full bg-white/25">
+              <div
+                className="h-full rounded-full bg-[#FFC72C]"
+                style={{
+                  width: `${(currentStopIdx / (TOTAL_STOPS.length - 1)) * 100}%`,
+                }}
+              />
+            </div>
+            {TOTAL_STOPS.map((s, i) => (
+              <span
+                key={s.title}
+                className={`absolute top-[64px] rounded-full border-[3px] border-[#0C1220] ${
+                  i <= currentStopIdx ? 'bg-[#FFC72C]' : 'bg-white/40'
+                }`}
+                style={{
+                  left: `${(i / (TOTAL_STOPS.length - 1)) * 100}%`,
+                  width: i === currentStopIdx ? 34 : 26,
+                  height: i === currentStopIdx ? 34 : 26,
+                  transform: `translate(-50%, ${i === currentStopIdx ? -11 : -7}px)`,
+                }}
+              />
+            ))}
+          </div>
 
           {/* THE FACTS — burst + the record, left column (the Tribe
               card's facts zone, same coordinates). */}
@@ -138,7 +235,7 @@ export const FanhoodCardVisual = forwardRef<
               </span>
             </FactsBurst>
             <p className="mt-[28px] text-[46px] leading-[1.3]">
-              You scored {display.depth.toLocaleString()} points.
+              I scored {display.depth.toLocaleString()} points.
             </p>
             {display.deepest && (
               <p className="mt-[18px] text-[40px] leading-[1.3]">

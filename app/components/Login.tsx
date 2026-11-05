@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/utils/supabase';
 import { FlyingWIcon } from '@/app/components/SharedUI';
+import { displayFont } from './shareables/fonts';
 import { useWeezer } from '../context/WeezerContext';
 
 const US_STATES = [
@@ -369,15 +370,22 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col justify-center items-center p-4 selection:bg-amber-400 selection:text-slate-950 font-sans">
-      <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden relative">
+    <div
+      className="min-h-screen bg-[#DCEEF8] flex flex-col justify-center items-center p-4 selection:bg-amber-400 selection:text-slate-950 font-sans"
+      style={{
+        backgroundImage:
+          'radial-gradient(rgba(0,114,206,0.10) 1.2px, transparent 1.3px)',
+        backgroundSize: '22px 22px',
+      }}
+    >
+      <div className="max-w-md w-full bg-white rounded-[18px] shadow-[4px_4px_0_rgba(11,30,63,0.85)] border-[3px] border-[#0C1220] overflow-hidden relative">
         
         {/* CLOSE (X) BUTTON — abandons sign-in: back to the step the
             user came from (closeLogin), NOT hardcoded to splash. */}
         <button
           type="button"
           onClick={() => closeLogin()}
-          className="absolute top-4 right-4 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-black/20 hover:bg-black/30 text-white transition-all cursor-pointer"
+          className="absolute top-4 right-4 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-white hover:bg-sky-50 text-[#0C1220] border-[2.5px] border-[#0C1220] transition-all cursor-pointer"
           aria-label="Close"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
@@ -386,11 +394,11 @@ export default function Login() {
         </button>
 
         {/* BRANDED HEADER BANNER */}
-        <div className="bg-[#0072CE] p-8 text-center text-white space-y-2 relative">
-          <div className="w-12 h-12 bg-white/10 border border-white/20 rounded-2xl flex items-center justify-center mx-auto text-white shadow-inner">
-            <FlyingWIcon className="w-8 h-8 text-white drop-shadow-sm" />
+        <div className="bg-[#0072CE] p-8 text-center text-white space-y-2 relative border-b-[3px] border-[#0C1220]">
+          <div className="w-12 h-12 bg-white border-[2.5px] border-[#0C1220] rounded-[14px] flex items-center justify-center mx-auto">
+            <FlyingWIcon className="w-8 h-8 text-[#0072CE]" />
           </div>
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight leading-tight">
+          <h1 className={`${displayFont.className} text-2xl sm:text-3xl leading-tight`}>
             All My Favorite Songs
           </h1>
           <p className="text-[10px] font-bold text-blue-200 uppercase tracking-widest">
@@ -400,7 +408,7 @@ export default function Login() {
 
         <div className="p-6 sm:p-8 space-y-6">
           {/* AUTH MODE TOGGLE BUTTONS */}
-          <div className="flex bg-slate-100 rounded-xl p-1">
+          <div className="flex bg-white border-2 border-[#0C1220] rounded-xl p-1">
             <button
               type="button"
               onClick={() => {
@@ -409,7 +417,7 @@ export default function Login() {
               }}
               className={`flex-1 text-xs font-black py-2.5 rounded-lg transition-all cursor-pointer ${
                 authMode === 'signup'
-                  ? 'bg-white text-slate-900 shadow-xs'
+                  ? 'bg-white text-[#0C1220] border-2 border-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)]'
                   : 'text-slate-500 hover:text-slate-700'
               }`}
             >
@@ -423,7 +431,7 @@ export default function Login() {
               }}
               className={`flex-1 text-xs font-black py-2.5 rounded-lg transition-all cursor-pointer ${
                 authMode === 'login'
-                  ? 'bg-white text-slate-900 shadow-xs'
+                  ? 'bg-white text-[#0C1220] border-2 border-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)]'
                   : 'text-slate-500 hover:text-slate-700'
               }`}
             >
@@ -437,7 +445,7 @@ export default function Login() {
               }}
               className={`flex-1 text-xs font-black py-2.5 rounded-lg transition-all cursor-pointer ${
                 authMode === 'magic'
-                  ? 'bg-white text-[#0072CE] shadow-xs'
+                  ? 'bg-white text-[#0072CE] border-2 border-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)]'
                   : 'text-slate-500 hover:text-[#0072CE]'
               }`}
             >
@@ -451,7 +459,7 @@ export default function Login() {
             <div>
               <label
                 htmlFor="email"
-                className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1"
+                className="block text-[10px] font-black text-[#3D4A63] uppercase tracking-wider mb-1"
               >
                 Email Address *
               </label>
@@ -464,7 +472,7 @@ export default function Login() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
                 required
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#0072CE] focus:ring-2 focus:ring-blue-100 outline-none transition-all font-bold text-slate-900 text-base"
+                className="w-full px-4 py-3 rounded-xl border-2 border-[#0C1220] bg-white focus:border-[#0072CE] focus:ring-2 focus:ring-blue-100 outline-none transition-all font-bold text-slate-900 text-base"
               />
             </div>
 
@@ -473,7 +481,7 @@ export default function Login() {
               <div>
                 <label
                   htmlFor="password"
-                  className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1"
+                  className="block text-[10px] font-black text-[#3D4A63] uppercase tracking-wider mb-1"
                 >
                   Password *
                 </label>
@@ -487,7 +495,7 @@ export default function Login() {
                   placeholder="••••••••"
                   required
                   minLength={6}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#0072CE] focus:ring-2 focus:ring-blue-100 outline-none transition-all font-bold text-slate-900 text-base"
+                  className="w-full px-4 py-3 rounded-xl border-2 border-[#0C1220] bg-white focus:border-[#0072CE] focus:ring-2 focus:ring-blue-100 outline-none transition-all font-bold text-slate-900 text-base"
                 />
                 {authMode === 'login' && (
                   <div className="text-right mt-1.5">
@@ -506,17 +514,17 @@ export default function Login() {
 
             {/* EXPANDED PROFILE FIELDS ON SIGN UP */}
             {authMode === 'signup' && (
-              <div className="space-y-3 pt-2 border-t border-slate-100 animate-in fade-in duration-300">
+              <div className="space-y-3 pt-2 border-t-2 border-[#0C1220] animate-in fade-in duration-300">
                 <span className="text-[10px] font-black uppercase tracking-widest text-[#0072CE] block">
                   Profile Details
                 </span>
 
                 <div>
-                  <label htmlFor="login-username" className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">
+                  <label htmlFor="login-username" className="block text-[10px] font-black text-[#3D4A63] uppercase tracking-wider mb-1">
                     Unique Username (Handle) *
                   </label>
                   <div className="relative">
-                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-black text-base">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#3D4A63] font-black text-base">
                       @
                     </span>
                     <input
@@ -528,17 +536,17 @@ export default function Login() {
                       autoComplete="username"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
-                      className="w-full pl-8 pr-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#0072CE] outline-none font-bold text-slate-900 text-base"
+                      className="w-full pl-8 pr-4 py-2.5 rounded-xl border-2 border-[#0C1220] bg-white focus:border-[#0072CE] outline-none font-bold text-slate-900 text-base"
                     />
                   </div>
                 </div>
 
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label htmlFor="login-display-name" className="block text-[10px] font-black text-slate-500 uppercase tracking-wider">
+                    <label htmlFor="login-display-name" className="block text-[10px] font-black text-[#3D4A63] uppercase tracking-wider">
                       Display Name
                     </label>
-                    <span className="text-[9px] font-bold text-slate-400">
+                    <span className="text-[9px] font-bold text-[#3D4A63]">
                       First Name + Last Initial
                     </span>
                   </div>
@@ -550,13 +558,13 @@ export default function Login() {
                     autoComplete="nickname"
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#0072CE] outline-none font-bold text-slate-900 text-base"
+                    className="w-full px-4 py-2.5 rounded-xl border-2 border-[#0C1220] bg-white focus:border-[#0072CE] outline-none font-bold text-slate-900 text-base"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 pt-1">
                   <div>
-                    <label className="block text-[9px] font-black text-slate-500 uppercase mb-1">
+                    <label className="block text-[9px] font-black text-[#3D4A63] uppercase mb-1">
                       Birth Year
                     </label>
                     <input
@@ -566,18 +574,18 @@ export default function Login() {
                       max={new Date().getFullYear()}
                       value={birthYear}
                       onChange={(e) => setBirthYear(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#0072CE] outline-none font-bold text-slate-900 text-base"
+                      className="w-full px-3 py-2 rounded-xl border-2 border-[#0C1220] bg-white focus:border-[#0072CE] outline-none font-bold text-slate-900 text-base"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[9px] font-black text-slate-500 uppercase mb-1">
+                    <label className="block text-[9px] font-black text-[#3D4A63] uppercase mb-1">
                       Country
                     </label>
                     <select
                       value={country}
                       onChange={(e) => setCountry(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#0072CE] outline-none font-bold text-slate-900 text-base"
+                      className="w-full px-3 py-2 rounded-xl border-2 border-[#0C1220] bg-white focus:border-[#0072CE] outline-none font-bold text-slate-900 text-base"
                     >
                       {COUNTRY_OPTIONS.map((c) =>
                         c.code === 'DIVIDER' ? (
@@ -596,13 +604,13 @@ export default function Login() {
 
                 {country === 'US' && (
                   <div>
-                    <label className="block text-[9px] font-black text-slate-500 uppercase mb-1">
+                    <label className="block text-[9px] font-black text-[#3D4A63] uppercase mb-1">
                       State
                     </label>
                     <select
                       value={stateCode}
                       onChange={(e) => setStateCode(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#0072CE] outline-none font-bold text-slate-900 text-base"
+                      className="w-full px-3 py-2 rounded-xl border-2 border-[#0C1220] bg-white focus:border-[#0072CE] outline-none font-bold text-slate-900 text-base"
                     >
                       <option value="">Select State...</option>
                       {US_STATES.map((st) => (
@@ -638,7 +646,7 @@ export default function Login() {
                 (authMode !== 'magic' && !password) ||
                 (authMode === 'signup' && !username.trim())
               }
-              className="w-full bg-[#0072CE] hover:bg-blue-600 disabled:opacity-50 text-white font-black py-3.5 rounded-xl shadow-md transition-all active:scale-[0.98] cursor-pointer text-sm mt-2"
+              className="w-full bg-white hover:bg-sky-50 disabled:opacity-50 text-[#0C1220] font-black py-3.5 rounded-xl border-[3px] border-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)] transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_rgba(11,30,63,0.85)] cursor-pointer text-sm mt-2"
             >
               {loading
                 ? 'Processing...'

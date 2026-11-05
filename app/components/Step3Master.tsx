@@ -4,6 +4,7 @@ import { BucketType, Song, BUCKET_CONFIG } from '../data/constants';
 import { AudioPreviewButton, FlyingWIcon, SortingIncompleteNotice } from './SharedUI';
 import { getRankedSongs } from '@/utils/rankingUtils';
 import type { TriageValue } from '../context/WeezerContext';
+import { displayFont } from './shareables/fonts';
 
 export default function Step3Master({
   masterList,
@@ -59,15 +60,15 @@ export default function Step3Master({
           link (owner, Oct 18): Back now lives in the floating bar
           at the bottom, next to the Wrapped button. */}
       <div className="text-center space-y-2 px-4 mb-8 pt-2">
-        <h1 className="text-3xl font-black text-slate-950 tracking-tight">
+        <h1 className={`${displayFont.className} text-[32px] text-[#0C1220]`}>
           Final Review
         </h1>
-        <p className="text-sm font-bold text-slate-500 max-w-sm mx-auto leading-tight">
+        <p className="text-sm font-bold text-[#3D4A63] max-w-sm mx-auto leading-tight">
           Make any final tweaks to your top rankings. If a song is in the wrong bucket, go back to fix it!
         </p>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-3xl p-3 sm:p-5 shadow-xs">
+      <div className="bg-white border-[3px] border-[#0C1220] rounded-[18px] p-3 sm:p-5 shadow-[4px_4px_0_rgba(11,30,63,0.85)]">
         {rankedSongs.length === 0 ? (
           /* Reachable in an edge state (a master list whose songs
              are all un-bucketed after a data heal): the list used
@@ -149,7 +150,7 @@ export default function Step3Master({
             };
             
             return (
-              <div key={song.id} className="bg-slate-50 border border-slate-200 rounded-2xl p-2.5 flex items-center justify-between gap-3 hover:border-blue-300 transition-colors">
+              <div key={song.id} className="bg-white border-2 border-[#0C1220] rounded-2xl p-2.5 flex items-center justify-between gap-3 shadow-[2px_2px_0_rgba(11,30,63,0.85)] transition-colors">
                 
                 <div className="flex items-center gap-2.5 min-w-0 flex-1">
                   {/* ONLY SHOW RANK NUMBERS FOR TOP TWO BUCKETS */}
@@ -158,19 +159,19 @@ export default function Step3Master({
                       #{rankNumberById.get(song.id)}
                     </span>
                   ) : (
-                    <span className="w-7 h-7 bg-slate-200 text-slate-400 font-black text-[11px] rounded-lg flex items-center justify-center shrink-0 shadow-2xs opacity-50">
+                    <span className="w-7 h-7 bg-slate-200 text-[#3D4A63] font-black text-[11px] rounded-lg flex items-center justify-center shrink-0 shadow-2xs">
                       -
                     </span>
                   )}
-                  
+
                   <div className="min-w-0 text-left flex-1">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-0.5">
-                      <h3 className="text-sm font-bold text-slate-900 leading-tight truncate">{song.title}</h3>
-                      <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-md border ${cfg.badgeBg} w-fit leading-none flex items-center gap-1`}>
+                      <h3 className="text-sm font-bold text-[#0C1220] leading-tight truncate">{song.title}</h3>
+                      <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-md border ${cfg.badgeBg} !border-[1.5px] !border-[#0C1220] w-fit leading-none flex items-center gap-1`}>
                         <span className="text-[10px]">{cfg.emoji}</span> <span>{cfg.label}</span>
                       </span>
                     </div>
-                    <span className="text-[10px] font-semibold text-slate-500 block truncate">{song.album} ({song.year})</span>
+                    <span className="text-[10px] font-semibold text-[#3D4A63] block truncate">{song.album} ({song.year})</span>
                   </div>
                 </div>
 
@@ -183,14 +184,14 @@ export default function Step3Master({
                       <button
                         onClick={handleMoveUp}
                         disabled={idx === 0}
-                        className="w-7 h-7 rounded-lg bg-white hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-white text-slate-800 font-black text-sm flex items-center justify-center border border-slate-300 cursor-pointer shadow-2xs transition-colors"
+                        className="w-7 h-7 rounded-lg bg-white hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-white text-[#0C1220] font-black text-sm flex items-center justify-center border-2 border-[#0C1220] cursor-pointer shadow-2xs transition-colors"
                       >
                         ↑
                       </button>
                       <button
                         onClick={handleMoveDown}
                         disabled={idx >= lastRankableIndex}
-                        className="w-7 h-7 rounded-lg bg-white hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-white text-slate-800 font-black text-sm flex items-center justify-center border border-slate-300 cursor-pointer shadow-2xs transition-colors"
+                        className="w-7 h-7 rounded-lg bg-white hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-white text-[#0C1220] font-black text-sm flex items-center justify-center border-2 border-[#0C1220] cursor-pointer shadow-2xs transition-colors"
                       >
                         ↓
                       </button>
@@ -211,13 +212,13 @@ export default function Step3Master({
       <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-auto flex items-center gap-2 max-w-[calc(100vw-1rem)]">
         <button
           onClick={() => { triggerHaptic(15); onBack(); }}
-          className="bg-white hover:bg-slate-100 text-slate-700 font-black text-sm px-4 py-4 rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.35)] transition cursor-pointer border-2 border-slate-200 whitespace-nowrap shrink-0"
+          className="bg-white hover:bg-slate-100 text-[#0C1220] font-black text-sm px-4 py-4 rounded-full shadow-[2px_2px_0_rgba(11,30,63,0.85)] transition active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_rgba(11,30,63,0.85)] cursor-pointer border-[3px] border-[#0C1220] whitespace-nowrap shrink-0"
         >
           ← Back
         </button>
         <button
           onClick={() => { triggerHaptic(20); setStep('wrapped'); }}
-          className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm px-5 sm:px-8 py-4 rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.35)] transition transform hover:scale-105 cursor-pointer border-2 border-amber-200 flex items-center gap-2.5 whitespace-nowrap shrink-0"
+          className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm px-5 sm:px-8 py-4 rounded-full shadow-[2px_2px_0_rgba(11,30,63,0.85)] transition active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_rgba(11,30,63,0.85)] cursor-pointer border-[3px] border-[#0C1220] flex items-center gap-2.5 whitespace-nowrap shrink-0"
         >
           <FlyingWIcon className="w-6 h-4 text-slate-950" />
           <span>Generate Weezer Wrapped →</span>

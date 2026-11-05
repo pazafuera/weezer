@@ -171,6 +171,9 @@ type SectionMilestoneKind = 'blue' | 'pinkerton' | 'singles' | 'album';
 
 interface SectionMilestone {
   sectionKey: string;
+  /** The section's display title (TriageSection.title) — the
+   *  milestone card's tape strip wears it (Round 2). */
+  sectionTitle: string;
   kind: SectionMilestoneKind;
   headline: string;
   body: string | null;
@@ -316,7 +319,12 @@ function buildSectionMilestone(
           album: section.title,
         }
       : null;
-  const base = { sectionKey: section.key, cover, factoid: null };
+  const base = {
+    sectionKey: section.key,
+    sectionTitle: section.title,
+    cover,
+    factoid: null,
+  };
 
   // BLUE — pure tease. No factoid yet and no Save prompt (the
   // owner's flow puts the first save ask on the Pinkerton
@@ -934,7 +942,7 @@ function SaveProgressButton({ onClick }: { onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="w-full bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm px-4 py-3.5 rounded-full shadow-md transition transform hover:scale-105 cursor-pointer border-2 border-amber-200"
+      className="w-full bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm px-4 py-3.5 rounded-full shadow-[2px_2px_0_rgba(11,30,63,0.85)] transition active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_rgba(11,30,63,0.85)] cursor-pointer border-[3px] border-[#0C1220]"
     >
       Create free account, save progress
     </button>
@@ -1762,8 +1770,8 @@ export default function Step1Deck({
         onClick={dismissMilestone}
         className={
           showSave && isGuest
-            ? 'w-full text-sm font-extrabold text-slate-600 bg-white border border-slate-300 rounded-full px-6 py-3.5 hover:bg-slate-100 transition-all cursor-pointer whitespace-nowrap'
-            : 'w-full bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm px-6 py-3.5 rounded-full shadow-md transition transform hover:scale-105 cursor-pointer border-2 border-amber-200 whitespace-nowrap'
+            ? 'w-full text-sm font-extrabold text-[#0C1220] bg-white border-[2.5px] border-[#0C1220] rounded-full px-6 py-3.5 shadow-[2px_2px_0_rgba(11,30,63,0.85)] hover:bg-slate-50 transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_rgba(11,30,63,0.85)] cursor-pointer whitespace-nowrap'
+            : 'w-full bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm px-6 py-3.5 rounded-full shadow-[2px_2px_0_rgba(11,30,63,0.85)] transition active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_rgba(11,30,63,0.85)] cursor-pointer border-[3px] border-[#0C1220] whitespace-nowrap'
         }
       >
         {keepLabel ?? (isGuest ? 'Keep sorting as a guest' : 'Keep sorting')}
@@ -1774,13 +1782,13 @@ export default function Step1Deck({
               wording): both doors named, neither sold — it sits
               with the Refine offer wherever that offer is made
               to a partial sorter. */}
-          <p className="text-xs font-semibold text-slate-400 leading-snug max-w-xs text-center pt-1">
+          <p className="text-xs font-semibold text-[#3D4A63] leading-snug max-w-xs text-center pt-1">
             You can refine the songs you&apos;ve sorted so far, or
             keep sorting and refine the full set later.
           </p>
           <button
             onClick={handleFinishTriage}
-            className="text-sm font-bold text-slate-400 hover:text-[#0072CE] underline underline-offset-4 transition cursor-pointer py-1"
+            className="text-sm font-bold text-[#3D4A63] hover:text-[#0072CE] underline underline-offset-4 transition cursor-pointer py-1"
           >
             Refine →
           </button>
@@ -2495,25 +2503,31 @@ export default function Step1Deck({
              width, so the card grows to fit them in flow instead
              of the stack painting outside the card's bounds;
              stacks that fit render in exactly 362px, as before. */
-          <DeckCardShell adaptive>
+          <DeckCardShell adaptive paper>
             <div className="min-h-[362px] flex flex-col items-center justify-center text-center px-6 py-3 sm:px-8 sm:py-4 space-y-1.5 sm:space-y-2">
+              {/* Tape strip naming the section (Round 2) — the
+                  section's own title, the same words the Jump
+                  row and the album headlines use. */}
+              <span className="inline-block -rotate-2 bg-[#FFE066] text-[#231a00] text-xs font-black uppercase tracking-[0.14em] px-3.5 py-[5px] border-[2.5px] border-[#0C1220] shadow-[0_2px_5px_rgba(0,0,0,0.18)]">
+                {milestonePending.sectionTitle}
+              </span>
               {milestoneCover ? (
                 <>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={milestoneCover.src}
                     alt={`${milestoneCover.album} cover art`}
-                    className="h-28 w-28 object-cover rounded-2xl shadow-md"
+                    className="h-28 w-28 object-cover rounded-2xl border-[3px] border-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)]"
                   />
                 </>
               ) : (
                 <MilestoneRibbon />
               )}
-              <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-950">
+              <h2 className={`${displayFont.className} text-[25px] sm:text-3xl text-[#0C1220]`}>
                 {milestonePending.headline}
               </h2>
               {milestonePending.body && (
-                <p className="text-sm font-bold text-slate-500 leading-snug max-w-sm mx-auto">
+                <p className="text-sm font-bold text-[#3D4A63] leading-snug max-w-sm mx-auto">
                   {milestonePending.body}
                 </p>
               )}
@@ -2522,18 +2536,18 @@ export default function Step1Deck({
                   <span className="text-[44px] leading-none font-black tracking-tight text-[#0072CE]">
                     {milestoneFactoid.figure}
                   </span>
-                  <span className="text-sm font-bold text-slate-500 leading-snug max-w-sm mx-auto">
+                  <span className="text-sm font-bold text-[#3D4A63] leading-snug max-w-sm mx-auto">
                     {milestoneFactoid.label}
                   </span>
                   {milestoneFactoid.communityLine && (
-                    <span className="text-xs font-bold text-slate-400 leading-snug max-w-sm mx-auto">
+                    <span className="text-xs font-bold text-[#3D4A63] leading-snug max-w-sm mx-auto">
                       {milestoneFactoid.communityLine}
                     </span>
                   )}
                 </div>
               )}
               {milestonePending.compel && (
-                <p className="text-sm font-bold text-slate-400 leading-snug max-w-sm mx-auto">
+                <p className="text-sm font-bold text-[#3D4A63] leading-snug max-w-sm mx-auto">
                   {milestonePending.compel}
                 </p>
               )}

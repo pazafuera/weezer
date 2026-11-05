@@ -124,6 +124,40 @@ function ProgressRing({
   );
 }
 
+/** The prototype hero's tape strip: yellow label, slight tilt,
+ *  hard little shadow — sits above the headline in every hero
+ *  state. Recipe from the dashboard prototype's .tape rule. */
+function TapeStrip({ children }: { children: React.ReactNode }) {
+  return (
+    <div>
+      <span className="inline-block -rotate-2 bg-[#FFE066] px-2.5 py-[5px] text-[11px] font-black uppercase tracking-[0.14em] text-[#231a00] shadow-[0_2px_5px_rgba(0,0,0,0.18)] sm:text-xs">
+        {children}
+      </span>
+    </div>
+  );
+}
+
+/** The prototype .btn treatment for the hero's CTAs: ink border,
+ *  hard offset shadow, and a press that slides the button onto
+ *  its shadow. Primary stays white; secondary stays ghost. */
+const HERO_BTN_PRIMARY =
+  'cursor-pointer rounded-[14px] border-[2.5px] border-[#0C1220] bg-white px-6 py-3.5 text-sm font-black text-slate-950 shadow-[3px_3px_0_#0C1220] transition-all hover:bg-sky-50 active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_#0C1220]';
+const HERO_BTN_SECONDARY =
+  'cursor-pointer rounded-[14px] border-[2.5px] border-[#0C1220] px-6 py-3.5 text-sm font-black text-white shadow-[3px_3px_0_#0C1220] transition-all hover:bg-white/10 active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_#0C1220]';
+
+/** The five buckets as poster chips (prototype .bucket fills),
+ *  shown in the not-started hero under the sub copy. */
+const BUCKET_CHIPS = [
+  { label: 'Absolute Bangers', color: '#8FE3B0' },
+  { label: 'Lowkey Slaps', color: '#BDE9FF' },
+  { label: 'Mid', color: '#FFF3B0' },
+  { label: 'Skip', color: '#FFD3B6' },
+  { label: 'Trash', color: '#F6A8C1' },
+];
+
+const HERO_SUB_CLASS =
+  'max-w-[34ch] text-base font-semibold leading-[1.45] text-[#EAF7FF] sm:text-lg';
+
 function GarageHero() {
   const { userId, userProfile, triageMap, masterList, navigateTo } =
     useWeezer();
@@ -133,40 +167,64 @@ function GarageHero() {
   const isDone = categorized >= TOTAL_SONGS;
   const firstName =
     userProfile?.displayName?.trim().split(/\s+/)[0] || null;
+  // The finished hero's album-spread fact — the Tribe card's
+  // computation (computeTribe in TribeBadgeCard.tsx): distinct
+  // albums among the songs bucketed 'banger' or 'slaps'.
+  const topAlbumCount = new Set(
+    FULL_SONG_POOL.filter(
+      (s) => triageMap[s.id] === 'banger' || triageMap[s.id] === 'slaps'
+    ).map((s) => s.album)
+  ).size;
 
   return (
-    <section className="relative overflow-hidden rounded-[2rem] bg-[#039AD1] text-white shadow-md">
+    <section className="relative overflow-hidden rounded-[2rem] border-[3px] border-[#0C1220] bg-[#039AD1] text-white shadow-[0_14px_30px_rgba(11,30,63,0.18)]">
       {/* Halftone dots — the share-card poster texture, as a CSS
-          overlay (the same trick the poster cards draw by hand). */}
+          overlay (the same trick the poster cards draw by hand).
+          Recipe matched to the dashboard prototype's hero. */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0"
         style={{
           backgroundImage:
-            'radial-gradient(rgba(255,255,255,0.22) 1.5px, transparent 1.6px)',
-          backgroundSize: '14px 14px',
+            'radial-gradient(rgba(255,255,255,0.20) 1.6px, transparent 1.7px)',
+          backgroundSize: '18px 18px',
         }}
       />
       <div className="relative flex items-center gap-5 p-6 sm:gap-8 sm:p-9">
         <div className="min-w-0 flex-1 space-y-4">
           {categorized === 0 ? (
             <>
+              <TapeStrip>All My Favorite Songs</TapeStrip>
               <h1
-                className={`${displayFont.className} text-4xl leading-[1.05] tracking-wide sm:text-5xl`}
+                className={`${displayFont.className} text-4xl leading-[0.98] tracking-wide sm:text-5xl`}
+                style={{ textShadow: '3px 3px 0 rgba(11,30,63,0.35)' }}
               >
                 Every Weezer song. Ranked by you.
               </h1>
-              <p className="max-w-md text-sm font-medium leading-relaxed text-sky-50 sm:text-base">
-                Sort all {TOTAL_SONGS} songs into five buckets —
-                Absolute Bangers, Lowkey Slaps, Mid, Skip, and Trash
-                — then fine-tune the order and see what kind of fan
-                you are.
+              <p className={HERO_SUB_CLASS}>
+                Sort all {TOTAL_SONGS} songs into five buckets,
+                fine-tune the order, and see what kind of fan you
+                are.
               </p>
+              <div
+                className="flex flex-wrap gap-2"
+                aria-label="The five buckets"
+              >
+                {BUCKET_CHIPS.map((chip) => (
+                  <span
+                    key={chip.label}
+                    className="rounded-full border-[2.5px] border-[#0C1220] px-[13px] py-[7px] text-[13px] font-black text-[#0C1220] shadow-[2px_2px_0_#0C1220]"
+                    style={{ backgroundColor: chip.color }}
+                  >
+                    {chip.label}
+                  </span>
+                ))}
+              </div>
               <div className="flex flex-wrap gap-2 pt-1">
                 <button
                   type="button"
                   onClick={() => navigateTo('triage')}
-                  className="cursor-pointer rounded-2xl bg-white px-6 py-3.5 text-sm font-black text-slate-950 shadow-md transition-all hover:bg-sky-50 active:scale-95"
+                  className={HERO_BTN_PRIMARY}
                 >
                   Start sorting
                 </button>
@@ -174,7 +232,7 @@ function GarageHero() {
                   <button
                     type="button"
                     onClick={() => navigateTo('login', 'signup')}
-                    className="cursor-pointer rounded-2xl border-2 border-white px-6 py-3.5 text-sm font-black text-white transition-all hover:bg-white/10 active:scale-95"
+                    className={HERO_BTN_SECONDARY}
                   >
                     Create an account
                   </button>
@@ -183,13 +241,22 @@ function GarageHero() {
             </>
           ) : isDone ? (
             <>
+              <TapeStrip>The Garage — Your Home Base</TapeStrip>
               <h1
-                className={`${displayFont.className} text-4xl leading-[1.05] tracking-wide sm:text-5xl`}
+                className={`${displayFont.className} text-4xl leading-[0.98] tracking-wide sm:text-5xl`}
+                style={{ textShadow: '3px 3px 0 rgba(11,30,63,0.35)' }}
               >
                 It&rsquo;s all sorted, {firstName ?? 'there'}.
               </h1>
-              <p className="max-w-md text-sm font-medium leading-relaxed text-sky-50 sm:text-base">
+              <p className={HERO_SUB_CLASS}>
                 Every one of the {TOTAL_SONGS} songs, ranked by you.
+                {topAlbumCount > 0 && (
+                  <>
+                    {' '}
+                    Your top songs span {topAlbumCount} different
+                    albums — no era left behind.
+                  </>
+                )}
               </p>
               <div className="flex flex-wrap gap-2 pt-1">
                 {progress.isMasterUnlocked ? (
@@ -197,14 +264,14 @@ function GarageHero() {
                     <button
                       type="button"
                       onClick={() => navigateTo('master')}
-                      className="cursor-pointer rounded-2xl bg-white px-6 py-3.5 text-sm font-black text-slate-950 shadow-md transition-all hover:bg-sky-50 active:scale-95"
+                      className={HERO_BTN_PRIMARY}
                     >
                       My Rankings
                     </button>
                     <button
                       type="button"
                       onClick={() => navigateTo('rank_buckets')}
-                      className="cursor-pointer rounded-2xl border-2 border-white px-6 py-3.5 text-sm font-black text-white transition-all hover:bg-white/10 active:scale-95"
+                      className={HERO_BTN_SECONDARY}
                     >
                       Refine your ranking
                     </button>
@@ -216,7 +283,7 @@ function GarageHero() {
                   <button
                     type="button"
                     onClick={() => navigateTo('rank_buckets')}
-                    className="cursor-pointer rounded-2xl bg-white px-6 py-3.5 text-sm font-black text-slate-950 shadow-md transition-all hover:bg-sky-50 active:scale-95"
+                    className={HERO_BTN_PRIMARY}
                   >
                     Refine your ranking
                   </button>
@@ -225,20 +292,23 @@ function GarageHero() {
             </>
           ) : (
             <>
+              <TapeStrip>The Garage — Your Home Base</TapeStrip>
               <h1
-                className={`${displayFont.className} text-4xl leading-[1.05] tracking-wide sm:text-5xl`}
+                className={`${displayFont.className} text-4xl leading-[0.98] tracking-wide sm:text-5xl`}
+                style={{ textShadow: '3px 3px 0 rgba(11,30,63,0.35)' }}
               >
                 {categorized} of {TOTAL_SONGS} sorted — {remaining} to
                 go.
               </h1>
-              <p className="max-w-md text-sm font-medium leading-relaxed text-sky-50 sm:text-base">
-                Pick up right where you left off.
+              <p className={HERO_SUB_CLASS}>
+                {categorized} of {TOTAL_SONGS} sorted — {remaining}{' '}
+                to go. The finish line is closer than it looks.
               </p>
               <div className="flex flex-wrap gap-2 pt-1">
                 <button
                   type="button"
                   onClick={() => navigateTo('triage')}
-                  className="cursor-pointer rounded-2xl bg-white px-6 py-3.5 text-sm font-black text-slate-950 shadow-md transition-all hover:bg-sky-50 active:scale-95"
+                  className={HERO_BTN_PRIMARY}
                 >
                   Keep sorting
                 </button>
@@ -246,7 +316,7 @@ function GarageHero() {
                   <button
                     type="button"
                     onClick={() => navigateTo('login', 'signup')}
-                    className="cursor-pointer rounded-2xl border-2 border-white px-6 py-3.5 text-sm font-black text-white transition-all hover:bg-white/10 active:scale-95"
+                    className={HERO_BTN_SECONDARY}
                   >
                     Create an account to save it
                   </button>

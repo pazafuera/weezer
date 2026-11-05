@@ -242,6 +242,15 @@ function GarageHero() {
                 >
                   Keep sorting
                 </button>
+                {!userId && (
+                  <button
+                    type="button"
+                    onClick={() => navigateTo('login', 'signup')}
+                    className="cursor-pointer rounded-2xl border-2 border-white px-6 py-3.5 text-sm font-black text-white transition-all hover:bg-white/10 active:scale-95"
+                  >
+                    Create an account to save it
+                  </button>
+                )}
               </div>
             </>
           )}

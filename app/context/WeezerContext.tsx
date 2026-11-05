@@ -17,6 +17,7 @@ export type AppStep =
   | 'splash'
   | 'orientation'
   | 'dashboard'
+  | 'garage2'
   | 'triage'
   | 'rank_buckets'
   | 'master'
@@ -47,6 +48,7 @@ const KNOWN_APP_STEPS: readonly AppStep[] = [
   'splash',
   'orientation',
   'dashboard',
+  'garage2',
   'triage',
   'rank_buckets',
   'master',

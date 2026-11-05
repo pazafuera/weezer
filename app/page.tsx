@@ -8,6 +8,7 @@ import { GuardNotice, SyncNotice } from './components/SharedUI';
 import Step0Splash from './components/Step0Splash';
 import Step05Orientation from './components/Step05Orientation';
 import StepDashboard from './components/StepDashboard';
+import StepGarage2 from './components/StepGarage2';
 import Step1Triage from './components/Step1Triage';
 import Step2Refine from './components/Step2Refine';
 import Step3Master from './components/Step3Master';
@@ -87,6 +88,8 @@ export default function WeezerRankerPage() {
       {step === 'orientation' && <Step05Orientation />}
 
       {step === 'dashboard' && <StepDashboard />}
+
+      {step === 'garage2' && <StepGarage2 />}
 
       {step === 'triage' && (
         <Step1Triage

@@ -395,11 +395,11 @@ export default function FanStats({
     const dislikedSongs = combinedMetrics.filter(m => m.type === "Universally Disliked").sort((a, b) => b.pTrash - a.pTrash).slice(0, 10);
 
     const anatomyCategories = [
-      { id: 'loved', title: "Universally Loved", desc: "High Banger/Slaps, virtually zero Trash. The undisputed favorites.", color: "text-amber-600", badgeBg: "bg-amber-400/10 border-amber-400/30", songs: lovedSongs },
-      { id: 'divisive', title: "Deeply Divided", desc: "High Banger AND high Trash. Love it or hate it.", color: "text-rose-600", badgeBg: "bg-rose-500/10 border-rose-500/30", songs: dividedSongs },
-      { id: 'cult', title: "Hidden Gems", desc: "Intense praise from a small faction.", color: "text-indigo-600", badgeBg: "bg-indigo-500/10 border-indigo-500/30", songs: cultSongs },
-      { id: 'sleeper', title: "Safe Bets", desc: "Heavy concentration in Mid and Slaps. Consistently decent.", color: "text-blue-600", badgeBg: "bg-blue-500/10 border-blue-500/30", songs: safeSongs },
-      { id: 'hated', title: "Universally Disliked", desc: "Overwhelmingly skipped or trashed.", color: "text-slate-600", badgeBg: "bg-slate-500/10 border-slate-500/30", songs: dislikedSongs }
+      { id: 'loved', title: "Universally Loved", desc: "High Banger/Slaps, virtually zero Trash. The undisputed favorites.", accent: "#f59e0b", songs: lovedSongs },
+      { id: 'divisive', title: "Deeply Divided", desc: "High Banger AND high Trash. Love it or hate it.", accent: "#f43f5e", songs: dividedSongs },
+      { id: 'cult', title: "Hidden Gems", desc: "Intense praise from a small faction.", accent: "#6366f1", songs: cultSongs },
+      { id: 'sleeper', title: "Safe Bets", desc: "Heavy concentration in Mid and Slaps. Consistently decent.", accent: "#3b82f6", songs: safeSongs },
+      { id: 'hated', title: "Universally Disliked", desc: "Overwhelmingly skipped or trashed.", accent: "#64748b", songs: dislikedSongs }
     ].filter(cat => cat.songs.length > 0);
 
     return {
@@ -740,7 +740,7 @@ export default function FanStats({
 
       </div>
 
-      {/* SECTION 2: FULL-BLEED ANATOMY OF A JAM (Negative horizontal margins expand to screen edges) */}
+      {/* SECTION 2: ANATOMY OF A JAM (categories in one framed paper card) */}
       <div className="pt-10 pb-8 mt-10 border-t-[3px] border-[#0C1220]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center mb-8">
           <h2 className={`${displayFont.className} text-4xl sm:text-5xl tracking-wide text-[#0C1220] leading-tight`}>Anatomy of a Jam</h2>
@@ -760,26 +760,36 @@ export default function FanStats({
               {thinSample ? <PlaceholderNote /> : <EmptyBlockNote />}
             </div>
           )}
-          {communityStats.anatomyCategories.map((category) => (
-            <div key={category.id} className={`w-full ${category.badgeBg} border-y py-6 my-2 shadow-xs`}>
-              
-              {/* FULL BLEED BANNER HEADER (Centered inside max-width constraints) */}
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center sm:text-left mb-4">
-                <h3 className={`text-xl sm:text-2xl font-black tracking-tight ${category.color} leading-tight`}>
-                  {category.title}
-                </h3>
-                <p className={`text-xs font-bold opacity-80 mt-0.5 ${category.color}`}>
-                  {category.desc}
-                </p>
-              </div>
+          {/* All categories in ONE framed paper card (poster
+              treatment, Nov 4, 2026) — the tinted full-bleed bands
+              and the white gaps between them are gone; categories
+              are separated by the system's 3px ink divider, and
+              each category's color survives only as a chip beside
+              its title. */}
+          {communityStats.anatomyCategories.length > 0 && (
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="bg-white rounded-[18px] border-[3px] border-[#0C1220] shadow-[4px_4px_0_rgba(11,30,63,0.85)]">
+                {communityStats.anatomyCategories.map((category, categoryIdx) => (
+                  <div key={category.id} className={`px-4 py-6 sm:px-6 lg:px-8 ${categoryIdx > 0 ? 'border-t-[3px] border-[#0C1220]' : ''}`}>
 
-              {/* CAROUSEL */}
-              <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6">
-                <HorizontalCarousel itemCount={category.songs.length}>
+                    {/* CATEGORY HEADER */}
+                    <div className="text-center sm:text-left mb-4">
+                      <h3 className={`${displayFont.className} flex items-center justify-center sm:justify-start gap-2.5 text-xl sm:text-2xl tracking-wide text-[#0C1220] leading-tight`}>
+                        <span aria-hidden="true" className="w-4 h-4 sm:w-5 sm:h-5 rounded-[5px] border-2 border-[#0C1220] shrink-0" style={{ backgroundColor: category.accent }} />
+                        {category.title}
+                      </h3>
+                      <p className="text-xs font-bold text-[#3D4A63] mt-1">
+                        {category.desc}
+                      </p>
+                    </div>
+
+                    {/* CAROUSEL */}
+                    <div>
+                      <HorizontalCarousel itemCount={category.songs.length}>
                   {category.songs.map((m, songIdx) => {
                     const resolvedId = m.song.albumId || ALBUM_NAME_TO_ID[m.song.album] || "unknown";
                     return (
-                      <div key={`m.id-{songIdx}`} className="w-[260px] sm:w-[320px] shrink-0 snap-center bg-white border border-slate-200 p-5 rounded-3xl shadow-sm flex flex-col justify-between m-1">
+                      <div key={`m.id-{songIdx}`} className="w-[260px] sm:w-[320px] shrink-0 snap-center bg-white border-2 border-[#0C1220] p-5 rounded-[18px] shadow-[2px_2px_0_rgba(11,30,63,0.85)] flex flex-col justify-between m-1">
                         <div>
                           <div className="flex items-start gap-3 min-w-0 mb-3">
                             <AlbumArtwork albumId={resolvedId} className="w-12 h-12 rounded-lg shadow-sm border border-slate-100 shrink-0 object-cover" />
@@ -794,11 +804,13 @@ export default function FanStats({
                       </div>
                     );
                   })}
-                </HorizontalCarousel>
+                      </HorizontalCarousel>
+                    </div>
+                  </div>
+                ))}
               </div>
-
             </div>
-          ))}
+          )}
         </div>
       </div>
 

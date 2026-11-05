@@ -485,31 +485,57 @@ function EraShelf() {
         className={`rounded-[18px] border-[3px] border-[#0C1220] bg-white p-[18px_16px_14px] ${POSTER_CARD_SHADOW}`}
       >
         <div className="flex gap-2">
-          {eraStats.map(({ era, songs, sorted, pct, label }) => (
-            <button
-              key={era.key}
-              type="button"
-              onClick={() => jumpToAlbum(songs[0]?.album)}
-              aria-label={`Jump to the ${label} in Sort — ${sorted} of ${songs.length} sorted`}
-              className="flex h-[178px] min-w-0 flex-1 cursor-pointer flex-col items-center gap-2 rounded-[8px_8px_4px_4px] border-[2.5px] border-[#0C1220] px-1 py-3 pb-2.5 text-center text-white transition-transform duration-150 hover:-translate-y-[5px] active:-translate-y-[1px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0072CE] focus-visible:ring-offset-2 min-[521px]:h-[196px]"
-              style={{
-                backgroundColor:
-                  SHELF_SPINE_COLORS[era.key] ?? era.color,
-              }}
-            >
-              <span className="whitespace-nowrap rounded-full bg-white/90 px-[7px] py-[3px] text-[11px] font-black leading-none text-[#0C1220]">
-                {pct}%
-              </span>
-              <span
-                className={`${displayFont.className} flex-1 text-[14.5px] leading-[1.1] tracking-[0.04em] [writing-mode:vertical-rl] min-[521px]:text-[16.5px]`}
+          {eraStats.map(({ era, songs, sorted, pct, label }) => {
+            const spineColor =
+              SHELF_SPINE_COLORS[era.key] ?? era.color;
+            return (
+              <button
+                key={era.key}
+                type="button"
+                onClick={() => jumpToAlbum(songs[0]?.album)}
+                aria-label={`Jump to the ${label} in Sort — ${sorted} of ${songs.length} sorted`}
+                className="relative flex h-[178px] min-w-0 flex-1 cursor-pointer flex-col items-center gap-2 overflow-hidden rounded-[8px_8px_4px_4px] border-[2.5px] border-[#0C1220] px-1 py-3 pb-2.5 text-center text-[#0C1220] transition-transform duration-150 hover:-translate-y-[5px] active:-translate-y-[1px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0072CE] focus-visible:ring-offset-2 min-[521px]:h-[196px]"
+                style={{ backgroundColor: `${spineColor}24` }}
               >
-                {label}
-              </span>
-              <span className="text-[10px] font-extrabold leading-[1.25] max-[520px]:hidden">
-                {pct === 100 ? 'Fully sorted' : 'Still sorting'}
-              </span>
-            </button>
-          ))}
+                {/* The fill IS the reading (Mark, Nov 4, 2026: the
+                    solid full-height spines "didn't make sense" —
+                    maybe "column charts where the solid color
+                    fills the shape based on percentage sorted").
+                    The era color rises from the bottom to exactly
+                    the % sorted, so the shape itself is the chart;
+                    the pill repeats the number in figures. */}
+                <span
+                  aria-hidden
+                  className="absolute inset-x-0 bottom-0 transition-[height] duration-700"
+                  style={{
+                    height: `${pct}%`,
+                    backgroundColor: spineColor,
+                  }}
+                />
+                <span className="relative whitespace-nowrap rounded-full bg-white/90 px-[7px] py-[3px] text-[11px] font-black leading-none text-[#0C1220]">
+                  {pct}%
+                </span>
+                <span
+                  className={`${displayFont.className} relative flex-1 text-[14.5px] leading-[1.1] tracking-[0.04em] text-white [writing-mode:vertical-rl] min-[521px]:text-[16.5px]`}
+                  style={{
+                    textShadow:
+                      '1px 0 0 #0C1220, -1px 0 0 #0C1220, 0 1px 0 #0C1220, 0 -1px 0 #0C1220',
+                  }}
+                >
+                  {label}
+                </span>
+                <span
+                  className="relative text-[10px] font-extrabold leading-[1.25] text-white max-[520px]:hidden"
+                  style={{
+                    textShadow:
+                      '1px 0 0 #0C1220, -1px 0 0 #0C1220, 0 1px 0 #0C1220, 0 -1px 0 #0C1220',
+                  }}
+                >
+                  {pct === 100 ? 'Fully sorted' : 'Still sorting'}
+                </span>
+              </button>
+            );
+          })}
         </div>
         {shelfNote && (
           <p className="mx-[2px] mb-[2px] mt-3 text-[13.5px] font-semibold leading-snug text-[#3D4A63]">
@@ -1229,7 +1255,7 @@ function DestinationsGrid() {
       <SectionHeading sub="The whole site, one tap away.">
         Everywhere you can go
       </SectionHeading>
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 gap-3 min-[720px]:grid-cols-3">
         {tiles.map((tile) => {
           const style = DESTINATION_STYLES[tile.label];
           return (
@@ -1257,7 +1283,7 @@ function DestinationsGrid() {
                 </svg>
               </span>
               <span
-                className={`${displayFont.className} block text-[19px] leading-[1.05] tracking-wide`}
+                className={`${displayFont.className} block break-words text-[19px] leading-[1.05] tracking-wide`}
               >
                 {tile.label}
               </span>

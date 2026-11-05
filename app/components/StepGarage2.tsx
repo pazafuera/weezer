@@ -383,7 +383,7 @@ function GarageHero() {
 }
 
 /* ------------------------------------------------------------------ */
-/* Your shelf — the five eras as record spines                         */
+/* The record shelf — the five eras as record spines                   */
 /* ------------------------------------------------------------------ */
 
 /** Short spine names for the eras; the era definitions themselves
@@ -479,7 +479,7 @@ function EraShelf() {
           ) : undefined
         }
       >
-        Your shelf
+        The record shelf
       </SectionHeading>
       <div
         className={`rounded-[18px] border-[3px] border-[#0C1220] bg-white p-[18px_16px_14px] ${POSTER_CARD_SHADOW}`}

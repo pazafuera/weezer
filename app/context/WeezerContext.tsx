@@ -1503,25 +1503,62 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
 
   // SCROLL RESTORATION for popstate landings: once the landed
   // step has rendered, put the scroll back where the entry left
-  // it. Double rAF so the step's own mount effects (a couple of
-  // steps scroll themselves to the top on entry) have already
-  // run — the restore is deliberately the last word. Fresh
-  // navigations never set the pending ref, so they keep
-  // setStep's scroll-to-top.
+  // it. Fresh navigations never set the pending ref, so they
+  // keep setStep's scroll-to-top.
+  //
+  // The restore is a short retry loop, not a single scrollTo:
+  // the first version applied one scrollTo on double-rAF and
+  // Mark's phone test (Nov 4, 2026) still landed at the top —
+  // the landed step's data-driven sections (record shelf,
+  // Thread cards) are still mounting at that point, so the
+  // document isn't tall enough yet and the browser CLAMPS the
+  // offset to whatever height exists. The loop re-applies the
+  // target every frame until the scroll position actually
+  // sticks for two consecutive frames (i.e. the layout has
+  // grown enough to hold it), gives up after ~2s, and cancels
+  // the moment the user touches or wheels — their scroll wins.
   useEffect(() => {
     const pending = pendingScrollRef.current;
     if (!pending || pending.step !== step) return;
     pendingScrollRef.current = null;
     const y = pending.y;
-    let inner = 0;
-    const outer = requestAnimationFrame(() => {
-      inner = requestAnimationFrame(() => {
-        window.scrollTo(0, y);
-      });
+    if (y <= 0) return;
+    let raf = 0;
+    let cancelled = false;
+    let stuckFrames = 0;
+    const deadline = performance.now() + 2000;
+    const cancelOnUserScroll = () => {
+      cancelled = true;
+    };
+    window.addEventListener('touchstart', cancelOnUserScroll, {
+      passive: true,
+    });
+    window.addEventListener('wheel', cancelOnUserScroll, {
+      passive: true,
+    });
+    const attempt = () => {
+      if (cancelled) return;
+      window.scrollTo({ top: y, left: 0, behavior: 'instant' });
+      if (Math.abs(window.scrollY - y) <= 1) {
+        stuckFrames += 1;
+        if (stuckFrames >= 2) return;
+      } else {
+        stuckFrames = 0;
+        if (performance.now() > deadline) return;
+      }
+      raf = requestAnimationFrame(attempt);
+    };
+    // Double rAF before the first attempt so the step's own
+    // mount effects (a couple of steps scroll themselves to
+    // the top on entry) have already run.
+    raf = requestAnimationFrame(() => {
+      raf = requestAnimationFrame(attempt);
     });
     return () => {
-      cancelAnimationFrame(outer);
-      if (inner) cancelAnimationFrame(inner);
+      cancelled = true;
+      cancelAnimationFrame(raf);
+      window.removeEventListener('touchstart', cancelOnUserScroll);
+      window.removeEventListener('wheel', cancelOnUserScroll);
     };
   }, [step]);
 

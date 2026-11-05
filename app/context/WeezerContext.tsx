@@ -22,6 +22,8 @@ import {
   createNavMarker,
   canGoBackInStack,
   previousStackStep,
+  recordNavScroll,
+  navScrollFor,
 } from '../lib/navigationHistory';
 import type { NavStack } from '../lib/navigationHistory';
 
@@ -611,6 +613,12 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   // Smart Entry / guard decisions can't leak half-landed entries
   // into the stack, and a deep link's Back exits as it should.
   const navStackRef = useRef<NavStack<AppStep>>(createNavStack<AppStep>());
+  /** A scroll restoration owed to a popstate landing: the step
+   *  being landed on and the scrollY recorded when that entry was
+   *  last left. The restore effect below applies it after the
+   *  step renders (setStep's scroll-to-top is for FRESH entries;
+   *  a Back/Forward landing returns to where the user was). */
+  const pendingScrollRef = useRef<{ step: AppStep; y: number } | null>(null);
   const [canGoBack, setCanGoBack] = useState(false);
   const [previousStep, setPreviousStep] = useState<AppStep | null>(null);
   // Mirrors for the mount-once popstate listener, which must read
@@ -1328,11 +1336,22 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         // Replace, never push: explicit post-auth landings,
         // returnFromStep's fallback path, and guard rewrites —
         // a step the user didn't ask for (or can't see) must
-        // not become an entry Back can land on.
-        navStackRef.current = replaceNavStep(navStackRef.current, guardedStep);
+        // not become an entry Back can land on. The entry keeps
+        // its index but changes its step, so any scroll recorded
+        // for the old step is cleared: this landing starts at
+        // the top (setStep already scrolled there).
+        navStackRef.current = recordNavScroll(
+          replaceNavStep(navStackRef.current, guardedStep),
+          0
+        );
         writeNavEntry('replace');
       } else if (guardedStep !== step) {
-        navStackRef.current = pushNavStep(navStackRef.current, guardedStep);
+        // Leaving this entry for a fresh one: record how far
+        // the user had scrolled it, so Back restores the spot.
+        navStackRef.current = pushNavStep(
+          recordNavScroll(navStackRef.current, window.scrollY),
+          guardedStep
+        );
         writeNavEntry('push');
       }
       // Same-step navigation pushes nothing (and the current
@@ -1391,7 +1410,13 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
       if (marker.gen !== stack.gen) return;
 
       const previousIndex = stack.index;
-      const applied = applyPopNavIndex(stack, marker);
+      // Record how far the entry being left was scrolled BEFORE
+      // the stack index moves — a later Forward landing restores
+      // it, exactly as this landing restores its own entry's.
+      const applied = applyPopNavIndex(
+        recordNavScroll(stack, window.scrollY),
+        marker
+      );
       navStackRef.current = applied.stack;
       const requested = applied.step;
 
@@ -1402,7 +1427,12 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         // (e.g. rankings changed since it was written): rewrite
         // THIS browser entry with the guarded step, exactly as
         // navigateTo treats a guard rewrite, and explain it.
-        navStackRef.current = replaceNavStep(navStackRef.current, guarded);
+        // The rewritten entry's saved scroll belonged to the
+        // step that is no longer landing — clear it.
+        navStackRef.current = recordNavScroll(
+          replaceNavStep(navStackRef.current, guarded),
+          0
+        );
         writeNavEntry('replace');
         setGuardNotice({ requested, landed: guarded });
       } else {
@@ -1427,13 +1457,61 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         setBucketRanks(getDerivedBucketRanks(tm, ml));
       }
 
-      setStep(guarded);
+      if (guarded !== requested) {
+        // Guard-rewritten landing: a place the user didn't ask
+        // for — start it at the top, as a fresh entry would.
+        setStep(guarded);
+      } else {
+        // A true Back/Forward landing: return to the scroll
+        // position this entry had when it was left (top when
+        // none was recorded). setStepState, NOT setStep —
+        // setStep force-scrolls to the top on every landing,
+        // which is the bug this restores against. The restore
+        // effect applies the position once the step renders.
+        pendingScrollRef.current = {
+          step: guarded,
+          y: navScrollFor(navStackRef.current, marker.navIndex) ?? 0,
+        };
+        setStepState(guarded);
+      }
       syncNavUi();
     };
+    // The app manages scroll restoration itself (per-entry
+    // positions on the nav stack); the browser's automatic
+    // restoration fires before React renders the landed step
+    // and would be overwritten anyway — turn it off so the two
+    // never fight mid-landing.
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
+    }
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // SCROLL RESTORATION for popstate landings: once the landed
+  // step has rendered, put the scroll back where the entry left
+  // it. Double rAF so the step's own mount effects (a couple of
+  // steps scroll themselves to the top on entry) have already
+  // run — the restore is deliberately the last word. Fresh
+  // navigations never set the pending ref, so they keep
+  // setStep's scroll-to-top.
+  useEffect(() => {
+    const pending = pendingScrollRef.current;
+    if (!pending || pending.step !== step) return;
+    pendingScrollRef.current = null;
+    const y = pending.y;
+    let inner = 0;
+    const outer = requestAnimationFrame(() => {
+      inner = requestAnimationFrame(() => {
+        window.scrollTo(0, y);
+      });
+    });
+    return () => {
+      cancelAnimationFrame(outer);
+      if (inner) cancelAnimationFrame(inner);
+    };
+  }, [step]);
 
   /**
    * Shared exit for the return-tracked steps: leaves the step WITHOUT

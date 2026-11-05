@@ -37,6 +37,12 @@ export interface NavHistoryMarker<S extends string = string> {
 export interface NavStack<S extends string = string> {
   /** Sparse step record keyed by navIndex. */
   entries: Record<number, S>;
+  /** Sparse scroll positions (window.scrollY) keyed by navIndex,
+   *  recorded when an entry is left so a Back/Forward landing can
+   *  restore the place the user had scrolled to on that step
+   *  (added Nov 4, 2026 — Mark: Back to the dashboard dumped him
+   *  at the top instead of at the share card he had tapped). */
+  scrolls: Record<number, number>;
   /** navIndex of the current entry; -1 before init. */
   index: number;
   /** One past the highest navIndex ever assigned in this stack. */
@@ -48,7 +54,14 @@ export interface NavStack<S extends string = string> {
 }
 
 export function createNavStack<S extends string>(): NavStack<S> {
-  return { entries: {}, index: -1, length: 0, gen: 0, initialized: false };
+  return {
+    entries: {},
+    scrolls: {},
+    index: -1,
+    length: 0,
+    gen: 0,
+    initialized: false,
+  };
 }
 
 /**
@@ -63,6 +76,7 @@ export function initNavStack<S extends string>(
 ): NavStack<S> {
   return {
     entries: { 0: step },
+    scrolls: {},
     index: 0,
     length: 1,
     gen: stack.gen + 1,
@@ -95,13 +109,45 @@ export function pushNavStep<S extends string>(
   if (!stack.initialized) return initNavStack(stack, step);
   if (stack.entries[stack.index] === step) return stack;
   const entries: Record<number, S> = {};
+  const scrolls: Record<number, number> = {};
   Object.keys(stack.entries).forEach((key) => {
     const idx = Number(key);
     if (idx <= stack.index) entries[idx] = stack.entries[idx];
   });
+  Object.keys(stack.scrolls).forEach((key) => {
+    const idx = Number(key);
+    if (idx <= stack.index) scrolls[idx] = stack.scrolls[idx];
+  });
   const nextIndex = stack.index + 1;
   entries[nextIndex] = step;
-  return { ...stack, entries, index: nextIndex, length: nextIndex + 1 };
+  return { ...stack, entries, scrolls, index: nextIndex, length: nextIndex + 1 };
+}
+
+/**
+ * Record the scroll position of the stack's CURRENT entry (the
+ * context calls this whenever the user leaves an entry — a push
+ * navigation or a pop landing — with the live window.scrollY).
+ * Values are clamped to a finite, non-negative number; before
+ * init there is no entry to record against.
+ */
+export function recordNavScroll<S extends string>(
+  stack: NavStack<S>,
+  scrollY: number
+): NavStack<S> {
+  if (!stack.initialized || stack.index < 0) return stack;
+  const y = Number.isFinite(scrollY) ? Math.max(0, Math.round(scrollY)) : 0;
+  if (stack.scrolls[stack.index] === y) return stack;
+  return { ...stack, scrolls: { ...stack.scrolls, [stack.index]: y } };
+}
+
+/** The recorded scroll position for an entry, or undefined when
+ *  none was recorded (fresh entry, or a stack rebuilt by a
+ *  reload) — the caller treats undefined as "top". */
+export function navScrollFor<S extends string>(
+  stack: NavStack<S>,
+  navIndex: number
+): number | undefined {
+  return stack.scrolls[navIndex];
 }
 
 /**

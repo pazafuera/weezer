@@ -178,7 +178,7 @@ export const FanhoodCardVisual = forwardRef<
               (the share page's vibe-box move). The wrapper rides
               higher than the old plain text (552 → 530) so the
               box's padding keeps the sentence's visual center and
-              its bottom edge clears the ladder at 676. Words,
+              its bottom edge clears the ladder band at 714. Words,
               font and size unchanged. */}
           {standingSentence && (
             <div className="absolute inset-x-0 top-[530px] text-center">
@@ -193,41 +193,14 @@ export const FanhoodCardVisual = forwardRef<
           {/* The road so far (Nov 5): all six stops in order, the
               dashboard journey bar's language at card scale — gold
               fill up to the current stop, gold dots for stops
-              reached, the current stop's label in gold, stops ahead
-              dimmed. Labels alternate above/below the line so the
-              long names never collide. */}
-          <div className="absolute left-[64px] right-[64px] top-[676px] h-[150px]">
-            {TOTAL_STOPS.map((s, i) => {
-              const above = i % 2 === 0;
-              const isCurrent = i === currentStopIdx;
-              return (
-                <span
-                  key={s.title}
-                  className={`absolute w-[220px] whitespace-nowrap text-center text-[21px] font-black uppercase leading-tight tracking-wide ${
-                    isCurrent
-                      ? 'text-[#FFC72C]'
-                      : i < currentStopIdx
-                        ? 'text-white'
-                        : 'text-white/50'
-                  }`}
-                  style={{
-                    left: `${(i / (TOTAL_STOPS.length - 1)) * 100}%`,
-                    top: above ? 0 : 102,
-                    transform:
-                      i === 0
-                        ? 'translateX(0)'
-                        : i === TOTAL_STOPS.length - 1
-                          ? 'translateX(-100%)'
-                          : 'translateX(-50%)',
-                    textAlign:
-                      i === 0 ? 'left' : i === TOTAL_STOPS.length - 1 ? 'right' : 'center',
-                  }}
-                >
-                  {s.title}
-                </span>
-              );
-            })}
-            <div className="absolute inset-x-0 top-[64px] h-[12px] rounded-full bg-white/25">
+              reached, the current stop's dot enlarged, stops ahead
+              dimmed. The stop names came off the ladder the same
+              day (Mark's ruling): they crowded the line and the
+              standing sentence above already names the stop. With
+              the labels gone the band shrank to the dots and
+              re-centered in its old zone (676–826). */}
+          <div className="absolute left-[64px] right-[64px] top-[714px] h-[74px]">
+            <div className="absolute inset-x-0 top-[31px] h-[12px] rounded-full bg-white/25">
               <div
                 className="h-full rounded-full bg-[#FFC72C]"
                 style={{
@@ -238,7 +211,7 @@ export const FanhoodCardVisual = forwardRef<
             {TOTAL_STOPS.map((s, i) => (
               <span
                 key={s.title}
-                className={`absolute top-[64px] rounded-full border-[3px] border-[#0C1220] ${
+                className={`absolute top-[31px] rounded-full border-[3px] border-[#0C1220] ${
                   i <= currentStopIdx ? 'bg-[#FFC72C]' : 'bg-white/40'
                 }`}
                 style={{

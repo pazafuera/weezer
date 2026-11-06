@@ -2008,6 +2008,11 @@ function SmartShareModule({ stats, top10, userProfile }: any) {
     t: top10[0]?.title || 'Undecided',
     a: stats.rankedAlbums[0]?.name || 'Unknown Album',
     v: stats.scoredArchetypes[0]?.name || 'Weezer Scientist',
+    // The sharer's username rides along (when the profile has
+    // one) so the share page can link back to their public
+    // page — see the `u` field in utils/shareHelper. Omitted
+    // entirely when absent: older payload shape stays exact.
+    ...(userProfile?.username ? { u: userProfile.username } : {}),
   };
 
   const encodedData = encodeShareData(shareData);

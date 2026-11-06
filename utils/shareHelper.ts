@@ -4,6 +4,13 @@ export interface ShareData {
     t: string; // Top Song / Anthem
     a: string; // Top Album
     v: string; // Vibe / Archetype
+    u?: string; // Username — OPTIONAL, added Nov 5 so the share
+    // page can link to the sharer's public page (/u/[username]).
+    // Links minted before this field existed carry no `u` and
+    // must decode exactly as before (u === undefined): the
+    // encode/decode below round-trip the whole JSON object, so
+    // the field rides along only when a generator sets it
+    // (JSON.stringify drops undefined keys).
   }
   
   export function encodeShareData(data: ShareData): string {

@@ -48,9 +48,12 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
  * inside the card. The link-preview image (/api/og) is its
  * sibling, same design at 1200x630.
  *
- * Data is exactly the share payload's four fields (n/t/a/v via
+ * Data is the share payload's four fields (n/t/a/v via
  * utils/shareHelper) with the OG route's own defaults when a
  * field is empty, so the page and the preview never disagree.
+ * An OPTIONAL fifth field (u, the sharer's username — links
+ * minted before Nov 5 don't carry it) powers one extra element:
+ * a quiet link under the CTA to the sharer's public page.
  * The payload carries no pronoun, so the copy is neutral:
  * "their/theirs/they" where the mock (drawn for Mark) said
  * "his/he". The friend's name rides the tape strip; the headline
@@ -64,6 +67,7 @@ export default function SharePage({ searchParams }: Props) {
   const anthem = decoded?.t || 'Undecided';
   const album = decoded?.a || 'Unknown Album';
   const vibe = decoded?.v || 'Weezer Scientist';
+  const username = decoded?.u || null;
 
   return (
     <div
@@ -182,6 +186,20 @@ export default function SharePage({ searchParams }: Props) {
           >
             Start My Ranking
           </Link>
+
+          {/* The sharer's public page — only when the link
+              carries their username (the payload's optional `u`;
+              older links render nothing here). Deliberately
+              quiet next to the CTA: the footer's own Caveat
+              register, underlined so it reads as a link. */}
+          {username && (
+            <Link
+              href={`/u/${encodeURIComponent(username)}`}
+              className={`${handFont.className} mt-3 block text-[20px] font-bold leading-none text-white underline decoration-white/70 underline-offset-4 [text-shadow:1px_1px_0_rgba(12,18,32,0.45)]`}
+            >
+              See {name ?? 'A Fan'}&rsquo;s full ranking
+            </Link>
+          )}
 
           {/* Standard card footer (the Round 1 system footer, in
               the share design's white-on-blue register) */}

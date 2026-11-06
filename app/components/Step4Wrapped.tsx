@@ -992,26 +992,16 @@ export default function Step4Wrapped({
     rankedComparisons,
   ]);
 
-  // AGE DELTA COMMENTARY
+  // BIRTH-YEAR CALLOUT (owner, Nov 5): no age guessing — the old
+  // commentary asserted an apparent age ("You're 44") derived from
+  // the birth year and picked one of five delta-based variants.
+  // Now: when the profile carries a birth year, one short line
+  // pairs it with the listening age; without one, no callout at all.
   const ageComment = useMemo(() => {
     const birthYear = userProfile?.birthYear;
     if (!birthYear) return null;
 
-    const currentYear = new Date().getFullYear();
-    const actualAge = currentYear - birthYear;
-    const delta = stats.listeningAge - actualAge;
-
-    if (delta <= -8) {
-      return `Aging in reverse! You're ${actualAge}, but your ears are happily stuck in your youthful age of ${stats.listeningAge}.`;
-    } else if (delta < -2) {
-      return `Slightly younger musical spirit! At ${actualAge}, your playlist carries the energy of a ${stats.listeningAge}-year-old.`;
-    } else if (Math.abs(delta) <= 2) {
-      return `Spot on! At ${actualAge}, your musical clock matches your birth certificate almost perfectly.`;
-    } else if (delta <= 8) {
-      return `A fine vintage! At ${actualAge}, you carry the refined taste of a ${stats.listeningAge}-year-old music scholar.`;
-    } else {
-      return `An old soul (or exceptionally well-raised!). You're ${actualAge}, but your ears belong to a ${stats.listeningAge}-year-old veteran.`;
-    }
+    return `Born in ${birthYear}, ears stuck at ${stats.listeningAge}.`;
   }, [userProfile?.birthYear, stats.listeningAge]);
 
   const handleArchScroll = () => {
@@ -1722,12 +1712,6 @@ export default function Step4Wrapped({
                 Years Old
               </span>
             </div>
-
-            <p className="text-[11px] font-bold text-indigo-300/90 text-center max-w-sm leading-relaxed mb-6 -mt-2">
-              A playful estimate: we weight the release years of the songs
-              you rated by how much you loved them, then translate that era
-              into an age. It describes the vintage of your taste — not you.
-            </p>
 
             {ageComment && (
               <div className="bg-indigo-950/80 border border-indigo-700/60 rounded-2xl p-4 max-w-sm text-center">

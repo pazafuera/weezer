@@ -155,7 +155,10 @@ export function computeTribe(
   };
 }
 
-const TRIBE_INK: Record<string, string> = {
+/** Exported for the public profile page's tribe band, which paints
+ *  its rule under the tribe name in the tribe's own ink — the same
+ *  color the badge card stamps the name in. */
+export const TRIBE_INK: Record<string, string> = {
   "'90s Purist": '#0072CE',
   'Deep-Cuts Digger': '#7c3aed',
   'Catalog Completist': '#047857',

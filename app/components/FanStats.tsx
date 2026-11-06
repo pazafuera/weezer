@@ -772,11 +772,20 @@ export default function FanStats({
                 {communityStats.anatomyCategories.map((category, categoryIdx) => (
                   <div key={category.id} className={`px-4 py-6 sm:px-6 lg:px-8 ${categoryIdx > 0 ? 'border-t-[3px] border-[#0C1220]' : ''}`}>
 
-                    {/* CATEGORY HEADER */}
+                    {/* CATEGORY HEADER — the title pops on a tape
+                        strip in the category's OWN accent color
+                        (owner, Nov 5), at a noticeably larger size.
+                        The old color-square chip is gone: it said
+                        the same color twice once the tape arrived.
+                        Ink text on every tape (the poster system's
+                        tape language); the thinnest contrast is
+                        indigo/slate at ~4.1–4.3:1, fine at this
+                        display size. */}
                     <div className="text-center sm:text-left mb-4">
-                      <h3 className={`${displayFont.className} flex items-center justify-center sm:justify-start gap-2.5 text-xl sm:text-2xl tracking-wide text-[#0C1220] leading-tight`}>
-                        <span aria-hidden="true" className="w-4 h-4 sm:w-5 sm:h-5 rounded-[5px] border-2 border-[#0C1220] shrink-0" style={{ backgroundColor: category.accent }} />
-                        {category.title}
+                      <h3 className={`${displayFont.className} flex items-center justify-center sm:justify-start text-3xl sm:text-4xl tracking-wide text-[#0C1220] leading-tight`}>
+                        <span className="-rotate-1 px-3 py-1 shadow-[2px_2px_0_rgba(12,18,32,0.35)]" style={{ backgroundColor: category.accent }}>
+                          {category.title}
+                        </span>
                       </h3>
                       <p className="text-xs font-bold text-[#3D4A63] mt-1">
                         {category.desc}

@@ -113,7 +113,15 @@ export const FanhoodCardVisual = forwardRef<
     <div
       ref={ref}
       className="relative h-[1350px] w-[1080px] overflow-hidden text-white"
-      style={{ backgroundColor: POSTER_BLUE }}
+      style={{
+        backgroundColor: POSTER_BLUE,
+        // The share page's halftone dot field (same values as
+        // app/share/page.tsx) — texture behind everything, no
+        // layout impact.
+        backgroundImage:
+          'radial-gradient(rgba(255,255,255,0.16) 1.6px, transparent 1.7px)',
+        backgroundSize: '20px 20px',
+      }}
     >
       <PosterDomain />
       {!display || !stop ? (
@@ -126,10 +134,16 @@ export const FanhoodCardVisual = forwardRef<
         </div>
       ) : (
         <>
-          {/* Header: the game's headline question, in display type. */}
+          {/* Header: the game's headline question, in display
+              type — now with the Top 10 subtitle treatment (2px
+              ink stroke + 4px hard shadow). */}
           <h2
             className={`absolute inset-x-[64px] top-[104px] whitespace-nowrap text-center leading-none text-white ${displayFont.className}`}
-            style={{ fontSize: headerSize }}
+            style={{
+              fontSize: headerSize,
+              WebkitTextStroke: '2px #0C1220',
+              textShadow: '4px 4px 0 rgba(12,18,32,0.9)',
+            }}
           >
             CAN YOU GET BACK TO THE SHACK?
           </h2>
@@ -145,22 +159,35 @@ export const FanhoodCardVisual = forwardRef<
             questions. Every point moves you closer to the Shack.
           </p>
 
+          {/* The stop name takes the Top 10 headline treatment
+              (3px ink stroke + 5px hard shadow). */}
           <h3
             className={`absolute inset-x-0 top-[340px] whitespace-nowrap text-center leading-none text-white ${displayFont.className}`}
-            style={{ fontSize: stopSize }}
+            style={{
+              fontSize: stopSize,
+              WebkitTextStroke: '3px #0C1220',
+              textShadow: '5px 5px 0 rgba(12,18,32,0.9)',
+            }}
           >
             {stop.toUpperCase()}
           </h3>
 
           {/* The standing sentence, first person, under the stop
               name (Nov 5 — replaces the old second-person "You got
-              back to…" lead-in). */}
+              back to…" lead-in) — now set in an inverted ink box
+              (the share page's vibe-box move). The wrapper rides
+              higher than the old plain text (552 → 530) so the
+              box's padding keeps the sentence's visual center and
+              its bottom edge clears the ladder at 676. Words,
+              font and size unchanged. */}
           {standingSentence && (
-            <p
-              className={`absolute inset-x-[60px] top-[552px] whitespace-nowrap text-center text-[64px] font-bold leading-none ${handFont.className}`}
-            >
-              {standingSentence}
-            </p>
+            <div className="absolute inset-x-0 top-[530px] text-center">
+              <span
+                className={`inline-block whitespace-nowrap rounded-2xl bg-[#0C1220] px-[42px] pb-[20px] pt-[16px] text-[64px] font-bold leading-[1.1] text-white ${handFont.className}`}
+              >
+                {standingSentence}
+              </span>
+            </div>
           )}
 
           {/* The road so far (Nov 5): all six stops in order, the

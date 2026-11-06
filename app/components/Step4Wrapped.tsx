@@ -1735,9 +1735,8 @@ export default function Step4Wrapped({
                 </h3>
 
                 <p className="text-sm font-bold text-indigo-300 mb-8 max-w-sm mx-auto">
-                  Based on your raw bucket scores, this album had the highest
-                  average rating with the lowest variance. You rated almost every
-                  track a Banger or Slap.
+                  Your most consistent album — nearly every track a Banger or
+                  Slap.
                 </p>
               </div>
 

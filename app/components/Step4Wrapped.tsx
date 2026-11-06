@@ -1087,7 +1087,7 @@ export default function Step4Wrapped({
             onClick={() => setStep('fan_stats')}
             className="text-xs font-black text-[#0072CE] hover:text-blue-700 transition-colors flex items-center gap-1 cursor-pointer"
           >
-            Fan Stats →
+            Weezerverse →
           </button>
         </div>
 

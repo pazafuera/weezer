@@ -442,7 +442,7 @@ export default function FanStats({
             <div className="py-20 text-center space-y-3">
               <p className={`${displayFont.className} text-[24px] leading-tight tracking-wide text-[#0C1220]`}>No fan data yet</p>
               <p className="text-sm font-semibold text-[#3D4A63] max-w-sm mx-auto leading-snug">
-                Global Fan Stats fills in as fans finish and share
+                Weezerverse fills in as fans finish and share
                 their rankings. Check back once some rankings are in.
               </p>
             </div>
@@ -491,8 +491,8 @@ export default function FanStats({
 
         {/* HERO */}
         <div className="text-center mb-6">
-          <h1 className={`${displayFont.className} text-5xl sm:text-6xl md:text-7xl tracking-wide text-[#0C1220] leading-[1.02] mb-3`}>
-            The Fan <br /><span className="text-[#0072CE]">Club</span>
+          <h1 className={`${displayFont.className} whitespace-nowrap text-5xl sm:text-6xl md:text-7xl tracking-wide text-[#0C1220] leading-[1.02] mb-3`}>
+            Weezerverse
           </h1>
           <p className="text-base font-semibold text-[#3D4A63] max-w-sm mx-auto leading-relaxed">
             206 songs. Ranked by the fans who showed up — here&apos;s where participating fans land.
@@ -725,7 +725,7 @@ export default function FanStats({
         {/* TIER LIST VISUALIZATION SECTION */}
         <div className="pt-8 sm:pt-10">
           <TierListChart 
-            title="The Fan Club Tiers" 
+            title="Weezerverse Tiers" 
             subtitle="Community Consensus"
             rankedSongs={communityStats.globalTierListRankings} 
             

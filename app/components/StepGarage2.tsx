@@ -1003,7 +1003,7 @@ function FanStatsFeature() {
       <h2
         className={`${displayFont.className} text-[clamp(27px,5.4vw,36px)] leading-[1.1] tracking-wide`}
       >
-        Fan Stats
+        Weezerverse
       </h2>
       <p className="mb-[18px] mt-[6px] max-w-[44ch] text-[16.5px] font-semibold leading-[1.5] text-[#3D4A63]">
         See how your taste stacks up against every other fan.
@@ -1175,7 +1175,7 @@ const DESTINATION_STYLES: Record<
       </>
     ),
   },
-  'Fan Stats': {
+  Weezerverse: {
     color: '#E4572E',
     icon: <path d="M4 20V10M10 20V4M16 20v-8M22 20H2" />,
   },
@@ -1241,7 +1241,7 @@ function DestinationsGrid() {
       action: () => navigateTo('lore'),
     },
     {
-      label: 'Fan Stats',
+      label: 'Weezerverse',
       caption: 'Every fan, one picture',
       action: () => navigateTo('fan_stats'),
     },

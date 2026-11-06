@@ -226,7 +226,7 @@ export default function AppShell({
       group: 'fanhood',
     },
     {
-      label: 'Global Fan Stats',
+      label: 'Weezerverse',
       step: 'fan_stats',
       group: 'fanhood',
     },

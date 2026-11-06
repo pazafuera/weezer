@@ -568,7 +568,7 @@ export default function WeezerOnboardingModal({
 
               <div className="pt-2 border-t-2 border-[#0C1220]">
                 <span className="text-[10px] font-black uppercase tracking-widest text-[#3D4A63] block mb-2">
-                  Optional Demographics (For Fan Stats)
+                  Optional Demographics (For Weezerverse)
                 </span>
 
                 <div className="grid grid-cols-2 gap-3">

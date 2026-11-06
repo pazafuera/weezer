@@ -14,6 +14,7 @@ import { useFanhood } from '../../lib/fanhood';
 import type { FanhoodRecord } from '../../lib/fanhood';
 import TierListChart from '../TierListChart';
 import type { RankedAlbum as TierRankedAlbum, RankedSong as TierRankedSong } from '../TierListChart';
+import { SHARE_BUTTON_CLASS } from '../SharedUI';
 import { displayFont } from './fonts';
 
 /** The dashboard poster system's shadows (StepGarage2's
@@ -40,7 +41,7 @@ export interface TierChartData {
 
 /**
  * One asset in the library: a scaled preview, an optional control
- * row, and a single Download button — the tier card's one-button
+ * row, and a single Share button — the tier card's one-button
  * pattern (native share sheet on mobile, file download on desktop).
  *
  * Exports ALWAYS render from a hidden full-size off-screen copy (the
@@ -150,11 +151,11 @@ function LibraryItem({
       <button
         onClick={download}
         disabled={busy || downloadDisabled}
-        className={`w-full text-white font-black text-xs py-3 px-3 rounded-xl transition cursor-pointer disabled:opacity-50 ${
+        className={`w-full ${SHARE_BUTTON_CLASS} text-xs py-3 px-3 rounded-xl disabled:opacity-50 ${
           failed ? 'bg-rose-500' : saved ? 'bg-emerald-500' : 'bg-[#0072CE] hover:bg-blue-600'
         }`}
       >
-        {busy ? 'Generating Image...' : failed ? "Couldn't generate — try again" : saved ? '✓ Saved!' : '📸 Download'}
+        {busy ? 'Generating Image...' : failed ? "Couldn't generate — try again" : saved ? '✓ Saved!' : 'Share'}
       </button>
 
       {/* Hidden full-size export copy (TierListChart pattern) */}
@@ -171,7 +172,7 @@ function LibraryItem({
 /* ------------------------------------------------------------------ */
 /* Thumbnails variant (Sweater Thread): a grid of scaled previews with */
 /* short titles; tapping one opens the full-size card in a modal with  */
-/* the same single Download button.                                    */
+/* the same single Share button.                                       */
 /* ------------------------------------------------------------------ */
 
 /** Natural size of the scrapbook card visuals (they render at
@@ -206,7 +207,7 @@ function useFitScale(naturalWidth: number) {
  *  92vh whose content scrolls, a high-contrast panel-anchored ✕
  *  (light disc with a ≥44px tap target — readable over the cream
  *  portrait cards and the tier chart's dark frame alike, and it
- *  never scrolls away), and an optional pinned footer (the Download
+ *  never scrolls away), and an optional pinned footer (the Share
  *  bar). Esc closes; body scroll is locked while open. */
 function CardModal({
   title,
@@ -410,11 +411,11 @@ function ThumbnailItem({
               <button
                 onClick={download}
                 disabled={busy || downloadDisabled}
-                className={`w-full text-white font-black text-xs py-3 px-3 rounded-xl transition cursor-pointer disabled:opacity-50 ${
+                className={`w-full ${SHARE_BUTTON_CLASS} text-xs py-3 px-3 rounded-xl disabled:opacity-50 ${
                   failed ? 'bg-rose-500' : saved ? 'bg-emerald-500' : 'bg-[#0072CE] hover:bg-blue-600'
                 }`}
               >
-                {busy ? 'Generating Image...' : failed ? "Couldn't generate — try again" : saved ? '✓ Saved!' : '📸 Download'}
+                {busy ? 'Generating Image...' : failed ? "Couldn't generate — try again" : saved ? '✓ Saved!' : 'Share'}
               </button>
             </div>
           }

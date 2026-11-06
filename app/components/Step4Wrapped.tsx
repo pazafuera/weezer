@@ -15,7 +15,7 @@ import {
   ALBUMS_BY_ID,
   ALBUM_NAME_TO_ID,
 } from '../data/constants';
-import { FlyingWIcon, AlbumArtwork } from './SharedUI';
+import { FlyingWIcon, AlbumArtwork, SHARE_BUTTON_CLASS } from './SharedUI';
 import { encodeShareData } from '@/utils/shareHelper';
 import { ShareablesGallery } from './shareables';
 import { displayFont } from './shareables/fonts';
@@ -2121,7 +2121,7 @@ function SmartShareModule({ stats, top10, userProfile }: any) {
         <button
           onClick={handleShareClick}
           disabled={isSharing}
-          className="w-full bg-[#0072CE] hover:bg-blue-500 active:scale-95 text-white font-black text-lg py-5 px-8 rounded-2xl shadow-[0_10px_30px_rgba(0,114,206,0.4)] transition-all cursor-pointer flex items-center justify-center gap-3 disabled:opacity-70 disabled:active:scale-100"
+          className={`w-full ${SHARE_BUTTON_CLASS} bg-[#0072CE] hover:bg-blue-600 text-lg py-5 px-8 rounded-2xl flex items-center justify-center gap-3 disabled:opacity-70`}
         >
           {isSharing ? (
             <>
@@ -2129,10 +2129,7 @@ function SmartShareModule({ stats, top10, userProfile }: any) {
               <span>Preparing Card...</span>
             </>
           ) : (
-            <>
-              <span className="text-2xl">📸</span>
-              <span>SHARE MY RESULTS</span>
-            </>
+            <span>SHARE MY RESULTS</span>
           )}
         </button>
       </div>

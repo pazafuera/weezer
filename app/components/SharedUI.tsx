@@ -13,6 +13,24 @@ export function FlyingWIcon({ className = "w-8 h-5" }: { className?: string }) {
   );
 }
 
+// UNIFORM SHARE BUTTON (owner, Nov 5): ONE button style for
+// every save/share action — the Sweater Thread's SHARE MY
+// RESULTS hero (Step4Wrapped's SmartShareModule) and the
+// shareable cards' Share button (ShareablesGallery's LibraryItem
+// and ThumbnailItem modal). Brand-blue fill, white font-black
+// text, 3px ink border, hard offset shadow, and the Round 1
+// press recipe (active translate + shadow shrink) are defined
+// HERE, once; call sites add only their size/layout and the
+// state background. The resting fill is deliberately NOT in
+// this string — the gallery buttons flip to emerald/rose on
+// saved/failed, and their conditional background composition
+// (default 'bg-[#0072CE] hover:bg-blue-600') picks the fill
+// exactly as it did before this string existed. No icon or
+// emoji rides on either button (the 📸 is gone — also owner,
+// Nov 5).
+export const SHARE_BUTTON_CLASS =
+  'text-white font-black border-[3px] border-[#0C1220] shadow-[3px_3px_0_#0C1220] transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_#0C1220] cursor-pointer';
+
 // HELP BUTTON — the "?" affordance for the triage step's chrome
 // (deck progress row + list progress bar; both modes carry one,
 // styled and wired identically from this single component). The

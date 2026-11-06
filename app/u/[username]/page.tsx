@@ -3,10 +3,23 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/utils/supabase';
-import { Song, BucketType, ALBUM_NAME_TO_ID } from '@/app/data/constants';
+import { Song, BucketType, ALBUM_NAME_TO_ID, BUCKET_CONFIG } from '@/app/data/constants';
 import { AlbumArtwork } from '@/app/components/SharedUI';
 import AppShell from '@/app/components/AppShell';
-import { displayFont } from '@/app/components/shareables/fonts';
+import { displayFont, handFont } from '@/app/components/shareables/fonts';
+import { computeTribe, TRIBE_INK } from '@/app/components/shareables/TribeBadgeCard';
+import {
+  PROFILE_BUCKET_COLORS,
+  PROFILE_BUCKET_ORDER,
+  bucketCounts,
+  catalogTotal,
+  dominantTopAlbum,
+  eraShares,
+  listGroups,
+  rankedCount,
+  topEraTop10Note,
+  topTierSongs,
+} from '@/app/lib/profileStats';
 
 interface FriendProfile {
   id: string;
@@ -116,6 +129,15 @@ export default function PublicProfilePage() {
   // Friends list for quick switching
   const [allFriends, setAllFriends] = useState<FriendProfile[]>([]);
 
+  // Whether the visitor is signed in at all (regardless of whether
+  // they have rankings). The Back to Fan Friends pill only renders
+  // for them — a signed-out sharee has no Fan Friends to go back to.
+  const [signedIn, setSignedIn] = useState(false);
+
+  // Full-list expandable groups: the first two groups start open
+  // (the mock's drawn state); an entry here overrides that default.
+  const [groupOverrides, setGroupOverrides] = useState<Record<string, boolean>>({});
+
   useEffect(() => {
     if (username) fetchProfilesAndRankings();
   }, [username]);
@@ -153,6 +175,7 @@ export default function PublicProfilePage() {
 
       // 3. Fetch Visitor (Current Logged-In User)
       const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) setSignedIn(true);
       if (session?.user) {
         const vId = session.user.id;
         if (vId !== tProfile.id) {
@@ -289,28 +312,88 @@ export default function PublicProfilePage() {
     };
   }, [targetMaster, targetTriage, visitorMaster, visitorTriage]);
 
+  // --------------------------------------------------------
+  // PROFILE SECTIONS (the strengthened page): everything below is
+  // derived from the target fan's own payload — the master list
+  // and triage map this page already downloads. See
+  // app/lib/profileStats.ts for the derivations and their sources.
+  // --------------------------------------------------------
+  const profile = useMemo(() => {
+    if (!targetMaster.length) return null;
+    const topTier = topTierSongs(targetMaster, targetTriage);
+    const shares = eraShares(topTier);
+    const top10 = stats?.targetTop10 ?? topTier.slice(0, 10);
+    return {
+      topTier,
+      ranked: rankedCount(targetMaster, targetTriage),
+      total: catalogTotal(),
+      counts: bucketCounts(targetMaster, targetTriage),
+      shares,
+      topAlbum: dominantTopAlbum(topTier),
+      groups: listGroups(targetMaster, targetTriage),
+      eraNote: topEraTop10Note(top10, shares),
+      // The site's own tribe classification, verbatim (its fact
+      // and diagnosis lines are first-person by design — the
+      // tribe card speaks as the fan, and so does this band).
+      tribe: computeTribe(targetMaster, targetTriage),
+    };
+  }, [targetMaster, targetTriage, stats]);
+
   const tName = targetProfile?.display_name || targetProfile?.username;
   const vName = visitorProfile?.display_name || visitorProfile?.username || 'You';
   const hasVisitorData = visitorMaster.length > 0;
+
+  // Poster-hero facts (guest view). Coverage is the fan's real
+  // bucket coverage against the catalog — a partial ranker shows
+  // partial numbers, never a borrowed 206/206.
+  const heroRanked = profile?.ranked ?? 0;
+  const heroTotal = catalogTotal();
+  const heroTopSong = stats?.targetTop10?.[0] ?? null;
+
+  const tribeBand = profile?.tribe ? (
+    <div className="bg-white border-[3px] border-[#0C1220] rounded-[18px] shadow-[4px_4px_0_rgba(11,30,63,0.85)] p-5 sm:p-6">
+      <span className="text-[10px] font-black uppercase tracking-[2.2px] text-[#0072CE] block">
+        Fandom Archetype
+      </span>
+      <div className={`${displayFont.className} mt-2 text-[31px] leading-[1.05] text-[#0C1220]`}>
+        {profile.tribe.displayName}
+      </div>
+      <div
+        className="my-[10px] h-[7px] rounded-[4px]"
+        style={{ backgroundColor: TRIBE_INK[profile.tribe.name] || '#0C1220' }}
+      />
+      <p className="text-[14.5px] font-bold leading-[1.45] text-[#0C1220]">
+        {profile.tribe.fact}
+      </p>
+      <p className={`${handFont.className} mt-[2px] text-[22px] font-bold leading-tight text-[#3D4A63]`}>
+        {profile.tribe.diagnosis}
+      </p>
+    </div>
+  ) : null;
 
   return (
     <AppShell>
       <div className="max-w-3xl mx-auto pb-24 font-sans space-y-5">
         
-        {/* TOP BAR: BREADCRUMB TO FAN FRIENDS */}
-        <div className="flex items-center justify-between pt-1">
-          {/* A plain anchor (full load) on purpose: router.push
-              changes the URL but the app provider only parses
-              ?step= once, at ITS mount — a client-side push home
-              landed on splash/dashboard while the URL said
-              friends. A fresh load parses it for real. */}
-          <a
-            href="/?step=friends"
-            className="inline-flex items-center gap-1.5 text-xs font-black text-[#0C1220] bg-white hover:bg-sky-50 px-3.5 py-2 rounded-full transition-colors cursor-pointer border-[2.5px] border-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)]"
-          >
-            ← Back to Fan Friends
-          </a>
-        </div>
+        {/* TOP BAR: BREADCRUMB TO FAN FRIENDS — signed-in visitors
+            only. A signed-out sharee (now this page's main
+            audience, arriving from the share page) has no Fan
+            Friends step to go back to. */}
+        {signedIn && (
+          <div className="flex items-center justify-between pt-1">
+            {/* A plain anchor (full load) on purpose: router.push
+                changes the URL but the app provider only parses
+                ?step= once, at ITS mount — a client-side push home
+                landed on splash/dashboard while the URL said
+                friends. A fresh load parses it for real. */}
+            <a
+              href="/?step=friends"
+              className="inline-flex items-center gap-1.5 text-xs font-black text-[#0C1220] bg-white hover:bg-sky-50 px-3.5 py-2 rounded-full transition-colors cursor-pointer border-[2.5px] border-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)]"
+            >
+              ← Back to Fan Friends
+            </a>
+          </div>
+        )}
 
         {/* LIGHT FRIENDS CAROUSEL SWITCHER */}
         {allFriends.length > 1 && (
@@ -383,14 +466,126 @@ export default function PublicProfilePage() {
           <main className="space-y-6 animate-in fade-in duration-300">
             
             {/* HERO HEADER */}
-            <div className="text-center pt-1">
-              <span className="text-[10px] font-black uppercase tracking-widest text-[#0072CE] block mb-1">
-                {hasVisitorData ? 'Head-to-Head Matchup' : 'Fan Profile'}
-              </span>
-              <h1 className="${displayFont.className} text-3xl sm:text-5xl text-[#0C1220]">
-                {hasVisitorData ? 'Clash of Canons' : `${tName}'s Master List`}
-              </h1>
-            </div>
+            {hasVisitorData ? (
+              /* Signed-in head-to-head header — as before, except
+                 the display font now actually applies: its class
+                 was a literal "${displayFont.className}" string,
+                 so this headline (and the Top 10 one below) has
+                 been rendering in plain sans all along. */
+              <div className="text-center pt-1">
+                <span className="text-[10px] font-black uppercase tracking-widest text-[#0072CE] block mb-1">
+                  Head-to-Head Matchup
+                </span>
+                <h1 className={`${displayFont.className} text-3xl sm:text-5xl text-[#0C1220]`}>
+                  Clash of Canons
+                </h1>
+              </div>
+            ) : (
+              /* POSTER HERO (guest view) — the share page's design
+                 language, since the share page now sends its
+                 visitors here: tape naming the fan, ink pill,
+                 stroked display name, and three fact boxes derived
+                 from the fan's own ranking. No gendered pronouns
+                 anywhere: profiles carry no gender data, so every
+                 line uses the display name or neutral phrasing
+                 (the same rule the share page follows). */
+              <div className="relative mt-5">
+                <div className="absolute -top-[14px] left-1/2 z-10 -translate-x-1/2 -rotate-2 whitespace-nowrap bg-[#FFE066] px-[18px] pb-2 pt-[7px] text-center text-[#0C1220] shadow-[2px_2px_0_rgba(12,18,32,0.35)]">
+                  <div className={`${displayFont.className} text-base uppercase leading-none tracking-[1.2px]`}>
+                    Fan Profile
+                  </div>
+                  <div className="mt-[2px] text-[8.5px] font-black uppercase tracking-[2.4px]">
+                    @{targetProfile.username}
+                  </div>
+                </div>
+                <div
+                  className="relative rounded-[18px] border-[3px] border-[#0C1220] bg-[#039AD1] px-[18px] pb-5 pt-[34px] text-center shadow-[6px_6px_0_#0C1220]"
+                  style={{
+                    backgroundImage:
+                      'radial-gradient(rgba(255,255,255,0.16) 1.6px, transparent 1.7px)',
+                    backgroundSize: '20px 20px',
+                  }}
+                >
+                  <span
+                    className={`${displayFont.className} inline-block rounded-full bg-[#0C1220] px-[14px] pb-[4px] pt-[6px] text-[13px] tracking-[3px] text-white`}
+                  >
+                    THE FULL RANKING
+                  </span>
+                  <h1
+                    className={`${displayFont.className} mt-3 text-[clamp(36px,10vw,56px)] uppercase leading-[1.02] text-white [-webkit-text-stroke:1.5px_#0C1220] [text-shadow:4px_4px_0_#0C1220]`}
+                  >
+                    {tName}
+                  </h1>
+                  <p
+                    className={`${handFont.className} mt-[6px] text-[23px] font-bold leading-tight text-white [text-shadow:1px_1px_0_rgba(12,18,32,0.45)]`}
+                  >
+                    {heroRanked >= heroTotal && heroTotal > 0
+                      ? `Ranked all ${heroTotal} Weezer songs.`
+                      : `Ranked ${heroRanked} of ${heroTotal} Weezer songs.`}
+                  </p>
+
+                  <div className="mt-[15px] space-y-[13px] text-left">
+                    {heroTopSong && (
+                      <div className="flex items-center gap-3 rounded-[14px] border-[3px] border-[#0C1220] bg-white px-[14px] pb-[10px] pt-3 shadow-[4px_4px_0_#0C1220]">
+                        <AlbumArtwork
+                          albumId={heroTopSong.albumId || ALBUM_NAME_TO_ID[heroTopSong.album]}
+                          className="h-[46px] w-[46px] shrink-0 rounded-[10px] border-2 border-[#0C1220] object-cover"
+                        />
+                        <div className="min-w-0">
+                          <div className="text-[10px] font-black uppercase tracking-[2.4px] text-[#0072CE]">
+                            #1 Song
+                          </div>
+                          <div className={`${displayFont.className} text-[26px] leading-[1.08] text-[#0C1220]`}>
+                            {heroTopSong.title}
+                          </div>
+                          <div className="mt-[1px] text-[11px] font-bold text-[#3D4A63]">
+                            {heroTopSong.album} · {heroTopSong.year}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    {profile?.topAlbum && (
+                      <div className="flex items-center gap-3 rounded-[14px] border-[3px] border-[#0C1220] bg-white px-[14px] pb-[10px] pt-3 shadow-[4px_4px_0_#0C1220]">
+                        <AlbumArtwork
+                          albumId={profile.topAlbum.albumId}
+                          className="h-[46px] w-[46px] shrink-0 rounded-[10px] border-2 border-[#0C1220] object-cover"
+                        />
+                        <div className="min-w-0">
+                          <div className="text-[10px] font-black uppercase tracking-[2.4px] text-[#0072CE]">
+                            Top Album
+                          </div>
+                          <div className={`${displayFont.className} text-[26px] leading-[1.08] text-[#0C1220]`}>
+                            {profile.topAlbum.name}
+                          </div>
+                          <div className="mt-[1px] text-[11px] font-bold text-[#3D4A63]">
+                            {profile.topAlbum.count} of {tName}&apos;s top {profile.topAlbum.topCount} songs
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    <div className="rounded-[14px] border-[3px] border-[#0C1220] bg-[#0C1220] px-[14px] pb-[10px] pt-3 shadow-[4px_4px_0_rgba(12,18,32,0.4)]">
+                      <div className="text-[10px] font-black uppercase tracking-[2.4px] text-[#FFE066]">
+                        Songs Ranked
+                      </div>
+                      <div className={`${displayFont.className} text-[26px] uppercase leading-[1.08] text-white`}>
+                        {heroRanked} of {heroTotal}
+                      </div>
+                      <div className="mt-[1px] text-[11px] font-bold text-[#c8d3e4]">
+                        {heroRanked >= heroTotal && heroTotal > 0
+                          ? 'The whole catalog, sorted'
+                          : `${heroTotal - heroRanked} still to sort`}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TRIBE BAND — in the guest flow it sits right under
+                the hero (the mock's order); for signed-in visitors
+                it renders after the Top 10 panel instead, so the
+                matchup panels keep their places. */}
+            {!hasVisitorData && tribeBand}
 
             {/* ENHANCED MATCH SCORECARD */}
             {hasVisitorData && stats && stats.sharedSample >= 2 ? (
@@ -443,8 +638,12 @@ export default function PublicProfilePage() {
 
               </div>
             ) : !hasVisitorData ? (
-              /* GUEST BANNER */
-              <div className="bg-blue-50 border-[3px] border-[#0C1220] rounded-[18px] shadow-[4px_4px_0_rgba(11,30,63,0.85)] p-6 text-center">
+              /* GUEST BANNER — copy byte-identical to before; the
+                 panel and button take the poster treatment and
+                 the banner now sits under the tribe band. It
+                 stays the page's only CTA for signed-out
+                 visitors. */
+              <div className="bg-white border-[3px] border-[#0C1220] rounded-[18px] shadow-[4px_4px_0_rgba(11,30,63,0.85)] p-6 text-center">
                 <div className="text-3xl mb-2">👀</div>
                 <h3 className="text-lg font-black text-[#0C1220] mb-1">
                   Want to see how you match up?
@@ -457,7 +656,7 @@ export default function PublicProfilePage() {
                     re-run the provider's entry logic. */}
                 <a
                   href="/"
-                  className="inline-block bg-[#0072CE] border-2 border-[#0C1220] text-white px-5 py-2.5 rounded-xl font-black text-xs hover:bg-blue-600 transition-colors cursor-pointer"
+                  className="inline-block bg-[#0072CE] border-[3px] border-[#0C1220] text-white px-[22px] py-[11px] rounded-full font-black text-[13px] shadow-[3px_3px_0_#0C1220] hover:bg-blue-600 transition-colors cursor-pointer"
                 >
                   Start Your Ranking
                 </a>
@@ -553,11 +752,13 @@ export default function PublicProfilePage() {
 
             {/* SIDE-BY-SIDE TOP 10 */}
             <div className="bg-white border-[3px] border-[#0C1220] rounded-[18px] shadow-[4px_4px_0_rgba(11,30,63,0.85)] p-6 sm:p-8">
-              <div className="text-center mb-6 border-b-2 border-[#0C1220] pb-4">
+              <div className="text-center mb-[14px]">
                 <span className="text-[10px] font-black uppercase tracking-widest text-[#0072CE] block mb-1">
                   The Canons
                 </span>
-                <h3 className="${displayFont.className} text-xl sm:text-2xl text-[#0C1220]">
+                {/* Same literal-string font bug as the hero —
+                    fixed, so this heading gets the display font. */}
+                <h3 className={`${displayFont.className} text-2xl text-[#0C1220]`}>
                   Top 10 Comparison
                 </h3>
               </div>
@@ -571,23 +772,26 @@ export default function PublicProfilePage() {
                         {vName}
                       </span>
                     </div>
-                    <div className="space-y-3">
+                    <div>
                       {stats?.visitorTop10.map((song, i) => (
                         <div
                           key={song.id}
-                          className="flex flex-col items-center sm:flex-row sm:items-start text-center sm:text-left gap-2 group"
+                          className="flex items-center gap-[11px] border-b-[1.5px] border-dashed border-[#0C1220]/20 py-[7px] last:border-b-0"
                         >
-                          <span className="text-[10px] font-black text-[#3D4A63] w-4 hidden sm:block pt-1">
-                            {i + 1}.
+                          <span className={`${displayFont.className} w-[26px] shrink-0 text-right text-[19px] text-[#0072CE]`}>
+                            {i + 1}
                           </span>
                           <AlbumArtwork
                             albumId={song.albumId || ALBUM_NAME_TO_ID[song.album]}
-                            className="w-9 h-9 rounded-xl border-2 border-[#0C1220] object-cover"
+                            className="h-11 w-11 shrink-0 rounded-[11px] border-2 border-[#0C1220] object-cover"
                           />
                           <div className="min-w-0 flex-1">
-                            <h4 className="text-xs font-extrabold text-[#0C1220] leading-tight truncate">
+                            <h4 className="text-sm font-extrabold leading-[1.25] text-[#0C1220]">
                               {song.title}
                             </h4>
+                            <p className="mt-[1px] text-[10px] font-bold uppercase tracking-[1.2px] text-[#3D4A63]">
+                              {song.album} · {song.year}
+                            </p>
                           </div>
                         </div>
                       ))}
@@ -605,28 +809,206 @@ export default function PublicProfilePage() {
                       {tName}
                     </span>
                   </div>
-                  <div className="space-y-3">
+                  <div>
                     {stats?.targetTop10.map((song, i) => (
                       <div
                         key={song.id}
-                        className="flex flex-col items-center sm:flex-row sm:items-start text-center sm:text-left gap-2"
+                        className="flex items-center gap-[11px] border-b-[1.5px] border-dashed border-[#0C1220]/20 py-[7px] last:border-b-0"
                       >
-                        <span className="text-[10px] font-black text-[#3D4A63] w-4 hidden sm:block pt-1">
-                          {i + 1}.
+                        <span className={`${displayFont.className} w-[26px] shrink-0 text-right text-[19px] text-[#0072CE]`}>
+                          {i + 1}
                         </span>
                         <AlbumArtwork
                           albumId={song.albumId || ALBUM_NAME_TO_ID[song.album]}
-                          className="w-9 h-9 rounded-xl border-2 border-[#0C1220] object-cover"
+                          className="h-11 w-11 shrink-0 rounded-[11px] border-2 border-[#0C1220] object-cover"
                         />
                         <div className="min-w-0 flex-1">
-                          <h4 className="text-xs font-extrabold text-[#0C1220] leading-tight truncate">
+                          <h4 className="text-sm font-extrabold leading-[1.25] text-[#0C1220]">
                             {song.title}
                           </h4>
+                          <p className="mt-[1px] text-[10px] font-bold uppercase tracking-[1.2px] text-[#3D4A63]">
+                            {song.album} · {song.year}
+                          </p>
                         </div>
                       </div>
                     ))}
                   </div>
                 </div>
+              </div>
+            </div>
+
+            {/* TRIBE BAND — signed-in placement (guests got it
+                under the hero, above). */}
+            {hasVisitorData && tribeBand}
+
+            {/* ERA BARS — the Thread's rank-weighted "Weezer Era"
+                computation (profileStats.eraShares), NOT the Era
+                DNA card's coverage blend. */}
+            {profile && profile.topTier.length > 0 && (
+              <div className="bg-white border-[3px] border-[#0C1220] rounded-[18px] shadow-[4px_4px_0_rgba(11,30,63,0.85)] p-5 sm:p-6">
+                <div className="mb-[14px]">
+                  <span className="text-[10px] font-black uppercase tracking-[2.2px] text-[#0072CE] block">
+                    Weezer Era
+                  </span>
+                  <h3 className={`${displayFont.className} mt-[2px] text-2xl tracking-[0.4px] text-[#0C1220]`}>
+                    Where {tName}&apos;s Top Songs Live
+                  </h3>
+                </div>
+                <div>
+                  {profile.shares.map((era) => (
+                    <div key={era.key} className="mb-[11px] flex items-center gap-[10px] last:mb-0">
+                      <div className="w-[118px] shrink-0">
+                        <div className={`${displayFont.className} text-[15.5px] leading-[1.1] text-[#0C1220]`}>
+                          {era.name}
+                        </div>
+                        <div className="text-[9.5px] font-extrabold tracking-[1.4px] text-[#3D4A63]">
+                          {era.label}
+                        </div>
+                      </div>
+                      <div className="h-5 flex-1">
+                        <div
+                          className="h-5 rounded-[6px] border-[2.5px] border-[#0C1220]"
+                          style={{
+                            width: `${profile.shares[0].pct > 0 ? Math.round((era.pct / profile.shares[0].pct) * 100) : 0}%`,
+                            backgroundColor: era.color,
+                          }}
+                        />
+                      </div>
+                      <div className={`${displayFont.className} w-10 shrink-0 text-base text-[#0C1220]`}>
+                        {era.pct}%
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {profile.eraNote && (
+                  <p className={`${handFont.className} mt-[6px] text-xl font-bold leading-tight text-[#3D4A63]`}>
+                    {profile.eraNote.countWord} of {tName}&apos;s Top 10 are {profile.eraNote.eraAdjective} songs.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* BUCKET BREAKDOWN — straight triage counts under the
+                app's own bucket labels. */}
+            {profile && profile.ranked > 0 && (
+              <div className="bg-white border-[3px] border-[#0C1220] rounded-[18px] shadow-[4px_4px_0_rgba(11,30,63,0.85)] p-5 sm:p-6">
+                <div className="mb-[14px]">
+                  <span className="text-[10px] font-black uppercase tracking-[2.2px] text-[#0072CE] block">
+                    The Breakdown
+                  </span>
+                  <h3 className={`${displayFont.className} mt-[2px] text-2xl tracking-[0.4px] text-[#0C1220]`}>
+                    How the {profile.ranked} Shake Out
+                  </h3>
+                </div>
+                <div className="flex h-[26px] overflow-hidden rounded-lg border-[3px] border-[#0C1220]">
+                  {PROFILE_BUCKET_ORDER.map((b) =>
+                    profile.counts[b] > 0 ? (
+                      <div
+                        key={b}
+                        style={{
+                          width: `${(profile.counts[b] / profile.ranked) * 100}%`,
+                          minWidth: 4,
+                          backgroundColor: PROFILE_BUCKET_COLORS[b],
+                        }}
+                      />
+                    ) : null,
+                  )}
+                </div>
+                <div className="mt-3 flex flex-col gap-[6px]">
+                  {PROFILE_BUCKET_ORDER.map((b) =>
+                    profile.counts[b] > 0 ? (
+                      <div key={b} className="flex items-center gap-2 text-[13px] font-extrabold text-[#0C1220]">
+                        <span
+                          className="h-3 w-3 shrink-0 rounded-[4px] border-2 border-[#0C1220]"
+                          style={{ backgroundColor: PROFILE_BUCKET_COLORS[b] }}
+                        />
+                        {BUCKET_CONFIG[b].label}
+                        <span className={`${displayFont.className} ml-auto text-[15px]`}>
+                          {profile.counts[b]}
+                        </span>
+                      </div>
+                    ) : null,
+                  )}
+                </div>
+                {/* The mock's footnote, in the only condition it
+                    drew: a complete ranking with exactly one Skip. */}
+                {profile.ranked >= profile.total && profile.counts.skip === 1 && (
+                  <p className={`${handFont.className} mt-[10px] text-xl font-bold leading-tight text-[#3D4A63]`}>
+                    One single Skip in the whole catalog.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* THE FULL LIST — every bucket block, expandable; the
+                first two groups start open, as drawn. */}
+            {profile && profile.groups.length > 0 && (
+              <div className="bg-white border-[3px] border-[#0C1220] rounded-[18px] shadow-[4px_4px_0_rgba(11,30,63,0.85)] p-5 sm:p-6">
+                <div className="mb-[6px]">
+                  <span className="text-[10px] font-black uppercase tracking-[2.2px] text-[#0072CE] block">
+                    The Full List
+                  </span>
+                  <h3 className={`${displayFont.className} mt-[2px] text-2xl tracking-[0.4px] text-[#0C1220]`}>
+                    All {profile.ranked}, in {tName}&apos;s Order
+                  </h3>
+                </div>
+                {profile.groups.map((group, gi) => {
+                  const isOpen = groupOverrides[group.key] ?? gi < 2;
+                  const firstRank = group.songs[0].rank;
+                  const lastRank = group.songs[group.songs.length - 1].rank;
+                  return (
+                    <div key={group.key}>
+                      <button
+                        onClick={() =>
+                          setGroupOverrides((prev) => ({
+                            ...prev,
+                            [group.key]: !isOpen,
+                          }))
+                        }
+                        className="mt-[14px] flex w-full cursor-pointer items-baseline gap-2 rounded-[10px] border-[2.5px] border-[#0C1220] px-3 py-[9px] text-left"
+                        aria-expanded={isOpen}
+                      >
+                        <span className={`${displayFont.className} text-[16.5px] tracking-[0.4px] text-[#0C1220]`}>
+                          {group.label}
+                        </span>
+                        <span className="text-xs text-[#3D4A63]">{isOpen ? '▾' : '▸'}</span>
+                        <span className="ml-auto text-[10.5px] font-black tracking-[1px] text-[#3D4A63]">
+                          #{firstRank}–{lastRank} · {group.songs.length} SONGS
+                        </span>
+                      </button>
+                      {isOpen && (
+                        <div className="mt-[6px]">
+                          {group.songs.map(({ song, rank }) => (
+                            <div
+                              key={song.id}
+                              className="flex items-baseline gap-[9px] border-b border-[#0C1220]/10 px-[2px] py-[3.5px]"
+                            >
+                              <span className="w-6 shrink-0 text-right text-[11px] font-extrabold text-[#3D4A63]">
+                                {rank}
+                              </span>
+                              <span className="text-[12.5px] font-bold leading-[1.3] text-[#0C1220]">
+                                {song.title}
+                              </span>
+                              <span className="ml-auto shrink-0 pl-2 text-right text-[10px] font-bold text-[#3D4A63]">
+                                {song.album}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* PAGE FOOTER — the share cards' standard lines. */}
+            <div className="pt-1 text-center">
+              <div className="text-[9px] font-black uppercase tracking-[1.6px] text-[#3D4A63]">
+                All My Favorite Songs · The Weezer Song Ranking Project
+              </div>
+              <div className={`${handFont.className} mt-[3px] text-[21px] font-bold leading-none text-[#3D4A63]`}>
+                Join the debate at rankingweezer.com
               </div>
             </div>
 

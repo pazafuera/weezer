@@ -11,9 +11,8 @@ import {
   useShareableDownload,
 } from './ShareCardShell';
 import { displayFont, handFont } from './fonts';
-import type { ShareSong } from './Top10Card';
-import { FULL_SONG_POOL } from '../../data/constants';
-import { MIN_QUALIFYING_RATINGS } from '../../lib/fanStatsMethodology';
+import type { Bucket, ShareSong } from './Top10Card';
+import { eraShares } from '../../lib/profileStats';
 
 export const ERAS = [
   { key: 'blue', label: '1994–1996', name: 'The Blue Era', color: '#d97706', test: (y: number) => y >= 1994 && y <= 1996 },
@@ -98,40 +97,36 @@ function HalftoneOverlay() {
 
 export const EraDnaCardVisual = forwardRef<
   HTMLDivElement,
-  { songs: ShareSong[]; subtitle?: string }
->(function EraDnaCardVisual({ songs }, ref) {
-  // ERA DISTRIBUTION. `songs` is the user's RATED songs only (real
-  // buckets — 'unknown' marks and unrated songs never reach this card).
+  { songs: ShareSong[]; triageMap: Record<string, Bucket>; subtitle?: string }
+>(function EraDnaCardVisual({ songs, triageMap }, ref) {
+  // ERA DISTRIBUTION — the Sweater Thread's derivation (owner,
+  // Nov 6): where the fan's TOP songs live. `songs` is the user's
+  // RATED songs only (real buckets — 'unknown' marks and unrated
+  // songs never reach this card), in master order; the top tier is
+  // its Banger + Lowkey Slaps subset, and profileStats.eraShares —
+  // the exact function the Thread and the public profile page run —
+  // weights each top-tier song 1/√(its position in the top tier)
+  // toward its era. One implementation everywhere, so the card can
+  // never crown a different era than the Thread for the same fan.
   //
-  // With a real sample (>= MIN_QUALIFYING_RATINGS rated songs), each
-  // era's weight is its rated count BLENDED with coverage: the count is
-  // discounted by how much of the era's catalog the user actually
-  // knows — weight = count × (0.5 + 0.5 × count/catalog). Songs the
-  // user doesn't know count as absence, so the profile shifts toward
-  // the eras their fandom covers: rating 20 of 31 Blue-era songs and
-  // nothing else still reads as ~100% Blue Era, while a fan who rated
-  // everything keeps the plain count distribution (coverage is 1.0 in
-  // every era, so the discount vanishes). Below the sample floor, fall
-  // back to the plain share of rated songs so a brand-new fan's card
-  // isn't mostly absence.
+  // This replaces the card's own coverage blend (rated count ×
+  // (0.5 + 0.5 × coverage of the era's catalog), plain rated share
+  // under MIN_QUALIFYING_RATINGS): for a complete rater the blend
+  // degenerated to the catalog's own shape — the 60-song New
+  // Horizons catalog outweighed the fan's actual top songs — which
+  // is exactly the conflict the owner ruled against.
   const ratedTotal = songs.length;
-  const useCoverage = ratedTotal >= MIN_QUALIFYING_RATINGS;
-  const dist = ERAS.map((e) => {
-    const count = songs.filter((s) => (s.year || 0) > 0 && e.test(s.year)).length;
-    const catalog = FULL_SONG_POOL.filter(
-      (s) => (s.year || 0) > 0 && e.test(s.year)
-    ).length;
-    const coverage = catalog > 0 ? count / catalog : 0;
-    const weight = useCoverage ? count * (0.5 + 0.5 * coverage) : count;
-    return { ...e, count, weight };
-  });
-  const totalWeight = dist.reduce((a, d) => a + d.weight, 0);
-  const withPct = dist.map((d) => ({
-    ...d,
-    pct: totalWeight > 0 ? Math.round((d.weight / totalWeight) * 100) : 0,
-  }));
+  const topTier = songs.filter(
+    (s) => triageMap[s.id] === 'banger' || triageMap[s.id] === 'slaps',
+  );
+  const shares = eraShares(topTier);
+  const pctByKey = new Map(shares.map((s) => [s.key, s.pct]));
+  const withPct = ERAS.map((e) => ({ ...e, pct: pctByKey.get(e.key) ?? 0 }));
   const total = ratedTotal;
-  const top = withPct.reduce((a, d) => (d.weight > a.weight ? d : a), withPct[0]);
+  // eraShares returns heaviest first (rounded shares, canonical era
+  // order breaking ties) — its first entry IS the Thread's top era,
+  // taken as-is rather than re-picked here.
+  const top = withPct.find((d) => d.key === shares[0]?.key) ?? withPct[0];
   const topPct = top.pct;
   const stripIds = ERAS.map((e) => eraArtId(e, songs));
 
@@ -321,15 +316,17 @@ export const EraDnaCardVisual = forwardRef<
 
 export default function EraDnaCard({
   songs,
+  triageMap,
   subtitle,
 }: {
   songs: ShareSong[];
+  triageMap: Record<string, Bucket>;
   subtitle?: string;
 }) {
   const { ref, busy, download } = useShareableDownload('my-weezer-era-dna.png');
   return (
     <div>
-      <EraDnaCardVisual ref={ref} songs={songs} subtitle={subtitle} />
+      <EraDnaCardVisual ref={ref} songs={songs} triageMap={triageMap} subtitle={subtitle} />
       <div className="mt-4">
         <SaveImageButton onClick={download} busy={busy} />
       </div>

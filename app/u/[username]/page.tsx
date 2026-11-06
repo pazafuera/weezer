@@ -842,8 +842,8 @@ export default function PublicProfilePage() {
             {hasVisitorData && tribeBand}
 
             {/* ERA BARS — the Thread's rank-weighted "Weezer Era"
-                computation (profileStats.eraShares), NOT the Era
-                DNA card's coverage blend. */}
+                computation (profileStats.eraShares). The Era DNA
+                card runs the same function since Nov 6. */}
             {profile && profile.topTier.length > 0 && (
               <div className="bg-white border-[3px] border-[#0C1220] rounded-[18px] shadow-[4px_4px_0_rgba(11,30,63,0.85)] p-5 sm:p-6">
                 <div className="mb-[14px]">

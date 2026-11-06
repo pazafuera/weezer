@@ -744,7 +744,7 @@ export default function ShareablesGallery({
           <TribeBadgeCardVisual songs={songs} triageMap={triageMap} subtitle={subtitle} />
         </ThumbnailItem>
         <ThumbnailItem shortTitle="Era DNA" filename="my-weezer-era-dna.png">
-          <EraDnaCardVisual songs={songs} subtitle={subtitle} />
+          <EraDnaCardVisual songs={songs} triageMap={triageMap} subtitle={subtitle} />
         </ThumbnailItem>
         </div>
       </div>
@@ -796,7 +796,7 @@ export default function ShareablesGallery({
           filename="my-weezer-era-dna.png"
           anchorKey="era-dna"
         >
-          <EraDnaCardVisual songs={songs} subtitle={subtitle} />
+          <EraDnaCardVisual songs={songs} triageMap={triageMap} subtitle={subtitle} />
         </LibraryItem>
       </div>
     </div>

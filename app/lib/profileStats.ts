@@ -11,9 +11,12 @@
  *   explicitlyRankedSongs.
  * - Era shares = the Sweater Thread's "Weezer Era" computation
  *   (Step4Wrapped): top-tier songs weighted 1/√rank, canonical ERAS
- *   year ranges from EraDnaCard. NOT the Era DNA card's coverage
- *   blend — for a complete rater that degenerates to the catalog's
- *   own shape and stops describing the fan (owner call, Nov 5).
+ *   year ranges from EraDnaCard. The Era DNA card used to run its
+ *   own coverage blend instead — for a complete rater that
+ *   degenerated to the catalog's own shape and stopped describing
+ *   the fan, and the card could crown a different era than the
+ *   Thread for the same fan. Since Nov 6 the card consumes
+ *   eraShares too (owner ruling), so all three surfaces agree.
  * - Era bar colors = EraDnaCard's POSTER_ERA_COLORS, the poster
  *   system's brighter fills.
  * - Top album = the Tribe card's dominant-album method
@@ -130,8 +133,13 @@ const PROFILE_ERAS: {
  * rounded percentages, sorted heaviest first (ties keep canonical
  * era order, as the Thread's sort does). Gap-year songs (1997–2000,
  * 2006–07, 2011–13, 2020) belong to no era, exactly as in ERAS.
+ *
+ * The parameter is the minimal structural shape (only `year` is
+ * read) so the Era DNA card can pass its ShareSong top tier
+ * straight in — one implementation for the Thread, the profile
+ * page, and the card (Nov 6). The computation is unchanged.
  */
-export function eraShares(topTier: Song[]): ProfileEraShare[] {
+export function eraShares(topTier: readonly { year: number }[]): ProfileEraShare[] {
   const weights = new Map<string, number>(PROFILE_ERAS.map((e) => [e.key, 0]));
   let total = 0;
   topTier.forEach((s, idx) => {

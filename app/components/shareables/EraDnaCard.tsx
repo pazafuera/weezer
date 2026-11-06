@@ -162,32 +162,47 @@ export const EraDnaCardVisual = forwardRef<
         </div>
       ) : (
         <>
-          <p
-            className={`absolute inset-x-0 top-[72px] text-center text-[58px] font-bold leading-none ${handFont.className}`}
-          >
-            My era DNA:
-          </p>
+          {/* The eyebrow as the share page's opening stamp: the
+              same string in a solid ink pill, Lilita, tracked,
+              uppercase via CSS (strengthening pass, Nov 5 — the
+              approved era-dna-strengthen mock). */}
+          <div className="absolute inset-x-0 top-[64px] text-center">
+            <span
+              className={`inline-block whitespace-nowrap rounded-full bg-[#0C1220] px-[30px] pb-[10px] pt-[13px] text-[30px] uppercase leading-none tracking-[3px] text-white ${displayFont.className}`}
+            >
+              My era DNA:
+            </span>
+          </div>
 
-          {/* Both headline lines take the Top 10 headline
-              treatment (3px ink stroke + 5px hard shadow). On the
-              colored era name the stroke is a first use — the
-              audit lives in REPORT.md (cards recomposition, C2);
-              the ink outline carries the letterforms against the
-              field for every era color. */}
+          {/* Headline scaled up (116/110 → 148/136) per the
+              strengthening mock; the space comes from the eyebrow
+              zone and the era rows compressing. Both lines keep
+              the Top 10 headline treatment (3px ink stroke + 5px
+              hard shadow); the percentage takes the share page's
+              yellow numeral (#FFE066, its "206" device) while
+              "I AM" stays white and the era name keeps its poster
+              era color. On the colored era name the stroke audit
+              lives in REPORT.md (cards recomposition, C2, and the
+              strengthening pass): the ink outline carries the
+              letterforms against the field for every era color —
+              Blue's 3.39:1 fill-vs-stroke flag carries forward
+              unchanged (the ratio is size-independent; the
+              scale-up does not worsen it). */}
           <h2
-            className={`absolute inset-x-0 top-[148px] text-center leading-[1.0] ${displayFont.className}`}
+            className={`absolute inset-x-0 top-[130px] text-center leading-[1.0] ${displayFont.className}`}
           >
             <span
-              className="block text-[116px] text-white"
+              className="block whitespace-nowrap text-[148px] text-white"
               style={{
                 WebkitTextStroke: '3px #0C1220',
                 textShadow: '5px 5px 0 rgba(12,18,32,0.9)',
               }}
             >
-              I AM {topPct}%
+              I AM{' '}
+              <span style={{ color: '#FFE066' }}>{topPct}%</span>
             </span>
             <span
-              className="block text-[110px]"
+              className="block whitespace-nowrap text-[136px]"
               style={{
                 color: POSTER_ERA_COLORS[top.key],
                 WebkitTextStroke: '3px #0C1220',
@@ -198,32 +213,52 @@ export const EraDnaCardVisual = forwardRef<
             </span>
           </h2>
 
-          {/* The quip in an inverted ink box (the share page's
-              vibe-box move). The wrapper goes full-width, as the
-              mock draws it (the longest quip, Red Era, measures
-              867px + 76px box padding = 943px — audited in
-              REPORT.md, cards recomposition C2), and the box
-              rides 12px higher than the old plain text
-              (424 → 412) so its bottom edge clears the bars at
-              512. Sizes and words unchanged. */}
-          <div className="absolute inset-x-0 top-[412px] text-center">
-            <span className="inline-block whitespace-nowrap rounded-2xl bg-[#0C1220] px-[38px] py-[20px] text-[42px] leading-[1.3] text-white">
+          {/* The quip as a true inverted fact box (the share
+              page's Vibe-box anatomy: ink fill, 3px ink border,
+              14px radius, hard shadow), its text at poster weight
+              in Lilita 42 — strengthening pass, Nov 5. The wrapper
+              goes full-width, as the mock draws it; the longest
+              quip (Red Era) measures 775.4px in Lilita at 42px,
+              865.4px as a box — audited in REPORT.md. It stays the
+              card's one inverted element. */}
+          <div className="absolute inset-x-0 top-[436px] text-center">
+            <span
+              className={`inline-block whitespace-nowrap rounded-[14px] border-[3px] border-[#0C1220] bg-[#0C1220] px-[42px] py-[15px] text-[42px] leading-[1.1] text-white shadow-[5px_5px_0_rgba(12,18,32,0.9)] ${displayFont.className}`}
+            >
               {ERA_QUIPS[top.key]}
             </span>
           </div>
 
-          {/* All five eras, her bars: name + pct over a lightened
-              track (Nov 5: track white/35 per the card-system mock;
-              rows compressed slightly so the album strip below can
-              clear the standard two-line footer) */}
-          <div className="absolute left-[64px] right-[64px] top-[512px]">
+          {/* All five eras as white fact boxes (strengthening
+              pass, Nov 5 — the share page's Top Anthem / Top Album
+              box anatomy): 3px ink border, 16px radius, hard
+              shadow. Era color becomes structure: a solid 16px
+              spine block at the box's left edge plus the bar fill.
+              Name and percentage are Lilita in ink — two poster
+              era colors (Y2K lime, Comeback yellow) cannot carry
+              text on white, so the numerals stay ink for all five
+              (the mock's contrast ruling). The bar rides inside
+              the box on a #DCEEF8 track (the shell's backdrop
+              color) and keeps the card's longstanding 6% minimum
+              sliver for near-zero shares. Rows compress 482 →
+              442px of zone (78px boxes, 13px gaps) to fund the
+              headline scale-up; the strip keeps its full 200px. */}
+          <div className="absolute left-[64px] right-[64px] top-[542px] flex flex-col gap-[13px]">
             {withPct.map((d) => (
-              <div key={d.key} className="mb-[18px] last:mb-0">
-                <div className="flex items-baseline justify-between">
-                  <p className="text-[32px] font-medium leading-none">{d.name}</p>
-                  <p className="text-[32px] font-semibold leading-none">{d.pct}%</p>
-                </div>
-                <div className="mt-[8px] h-[42px] overflow-hidden rounded-full bg-white/35">
+              <div
+                key={d.key}
+                className="flex h-[78px] items-center overflow-hidden rounded-[16px] border-[3px] border-[#0C1220] bg-white pr-[24px] shadow-[4px_4px_0_#0C1220]"
+              >
+                <div
+                  className="mr-[22px] w-[16px] flex-none self-stretch"
+                  style={{ backgroundColor: POSTER_ERA_COLORS[d.key] }}
+                />
+                <p
+                  className={`whitespace-nowrap text-[40px] leading-none text-[#0C1220] ${displayFont.className}`}
+                >
+                  {d.name}
+                </p>
+                <div className="mx-[26px] h-[22px] flex-1 overflow-hidden rounded-full bg-[#DCEEF8]">
                   <div
                     className="h-full rounded-full"
                     style={{
@@ -232,14 +267,24 @@ export const EraDnaCardVisual = forwardRef<
                     }}
                   />
                 </div>
+                <p
+                  className={`min-w-[104px] text-right text-[54px] leading-none text-[#0C1220] ${displayFont.className}`}
+                >
+                  {d.pct}%
+                </p>
               </div>
             ))}
           </div>
 
           {/* Halftone album strip along the bottom, one cover per
-              era (Nov 5: raised + slightly shortened so it clears
-              the standard two-line footer below it) */}
-          <div className="absolute inset-x-0 bottom-[138px] flex h-[200px]">
+              era. Strengthening pass (Nov 5): the strip gains the
+              system's frame (3px ink border, 16px radius, hard
+              shadow) and pulls in from full bleed to the same
+              64px column as the era boxes, so the card reads as
+              one composed column. Top (y 1012) and height (200px)
+              unchanged; the covers and their black halftone
+              overlay are untouched. */}
+          <div className="absolute bottom-[138px] left-[64px] right-[64px] flex h-[200px] overflow-hidden rounded-[16px] border-[3px] border-[#0C1220] shadow-[5px_5px_0_rgba(12,18,32,0.9)]">
             {stripIds.map((id, i) => (
               <div key={`${id}-${i}`} className="relative h-full flex-1 overflow-hidden">
                 {/* eslint-disable-next-line @next/next/no-img-element */}

@@ -313,12 +313,19 @@ export const ScrapbookVisual = forwardRef<
 /** The flat field blue sampled from Abby's mockups. */
 export const POSTER_BLUE = '#039AD1';
 
-/** Domain line in the top-right corner, as in the mockups. */
+/** Domain line in the top-right corner, as in the mockups. It
+ *  paints ABOVE card graphics (z-20): every card renders it
+ *  first, so a later z-auto graphic that reaches the corner
+ *  would otherwise cover it — on the Top 10 twins the vinyl
+ *  disc hid its left ~125px (preview-7 defect: only
+ *  "ingweezer.com" showed). White Caveat reads fine over the
+ *  disc's black rim, and no other card seats anything over
+ *  the corner, so the layering is uniform across the family. */
 export function PosterDomain() {
   return (
     <p
       aria-hidden="true"
-      className={`absolute right-[48px] top-[30px] text-[42px] font-bold leading-none text-white ${handFont.className}`}
+      className={`absolute right-[48px] top-[30px] z-20 text-[42px] font-bold leading-none text-white ${handFont.className}`}
     >
       rankingweezer.com
     </p>

@@ -562,7 +562,7 @@ function DescentStage({
     );
     return (
       <div
-        className="relative overflow-hidden rounded-3xl border border-slate-900/25 shadow-md"
+        className="relative overflow-hidden rounded-[18px] border-[3px] border-[#0C1220] shadow-[6px_6px_0_#0C1220]"
         style={{ height: viewH }}
       >
         {DEPTH_BANDS.map((band, i) => {
@@ -1622,7 +1622,6 @@ export default function StepLore() {
   const resultNextThreshold = resultNext
     ? TOTAL_STOPS.find((s) => s.title === resultNext.title)?.min
     : undefined;
-  const resultTheme = CARD_THEMES[BAND_CARD_THEME[resultStopIdx]];
 
   const itemPrompt = item ? item.prompt.prompt : '';
 
@@ -2512,29 +2511,57 @@ export default function StepLore() {
                 the standing strip under the banner. The banner
                 keeps the standing stop's layer art. */}
             <div
-              className={`relative overflow-hidden rounded-3xl p-6 shadow-md space-y-3 ${BAND_STAGE[resultStopIdx].layer}`}
+              className={`relative overflow-hidden rounded-[18px] border-[3px] border-[#0C1220] p-6 shadow-[6px_6px_0_#0C1220] space-y-3 ${BAND_STAGE[resultStopIdx].layer}`}
               style={BAND_STAGE[resultStopIdx].textureStyle}
             >
-              <p className="text-[11px] font-black uppercase tracking-wider opacity-70">
+              {/* Banner treatment (game restyle, Nov 5 — the
+                  owner's "think twice about the dark, earthy
+                  colors" caution): the standing stop's layer art
+                  stays — its hue IS the standing's identity, and
+                  the journey map below reports the same colors —
+                  but a banner-local light sheen lifts the art
+                  toward the poster's brightness (light falling
+                  from the surface), and the ink frame + pill +
+                  stroked Lilita headline carry the register. The
+                  sheen lives ONLY here: BAND_STAGE itself is
+                  untouched, so the in-run stage and the map
+                  interior keep the true colors. */}
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-0"
+                style={{
+                  backgroundImage:
+                    'linear-gradient(to bottom, rgba(255,255,255,0.28), rgba(255,255,255,0.06) 55%, rgba(255,255,255,0))',
+                }}
+              />
+              <span
+                className={`${displayFont.className} relative inline-block rounded-full bg-[#0C1220] px-3 py-[5px] text-[12px] uppercase leading-none tracking-[0.16em] text-white`}
+              >
                 {activeGameId
                   ? `ROUND ${LORE_GAMES.findIndex((g) => g.id === activeGameId) + 1} OF 5 — FINISHED`
                   : 'ROUND FINISHED'}
-              </p>
+              </span>
               {/* De-dup (Nov 3, 2026): the headline is the
                   points alone — the eyebrow above already names
                   the round, and "Round 1: 4,040" read as one
                   continuous number. */}
-              <h2 className="text-4xl sm:text-5xl font-black tracking-tight leading-none">
+              <h2
+                className={`${displayFont.className} relative text-4xl sm:text-5xl leading-none text-white`}
+                style={{
+                  WebkitTextStroke: '1.5px #0C1220',
+                  textShadow: '4px 4px 0 #0C1220',
+                }}
+              >
                 {`${total.toLocaleString()} points.`}
               </h2>
               {alreadyRecorded ? (
-                <p className="text-xs font-bold opacity-70">
+                <p className="relative text-xs font-bold opacity-70">
                   This round was already on your card — a finished
                   round&apos;s score never changes, so this run added
                   nothing.
                 </p>
               ) : (
-                <p className="text-xs font-black">
+                <p className="relative text-xs font-black">
                   Locked in — this score is on your card for good.
                 </p>
               )}
@@ -2547,11 +2574,13 @@ export default function StepLore() {
                 The distance sentence names its scale ("for your
                 standing") and the stop's total-scale threshold
                 (Oct 31, 2026). */}
-            <div className="bg-slate-950 text-white rounded-3xl p-5 shadow-md space-y-1">
-              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-white/60">
+            <div className="bg-[#0C1220] text-white rounded-[18px] border-[3px] border-[#0C1220] p-5 shadow-[6px_6px_0_#039AD1] space-y-1">
+              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#FFE066]">
                 Your standing
               </p>
-              <p className="text-base sm:text-lg font-black leading-snug">
+              <p
+                className={`${displayFont.className} text-xl leading-snug`}
+              >
                 {resultCrossed
                   ? `You made it ${resultStop.phrase}.`
                   : `${youreAtPhrase(resultStop.title)}.`}
@@ -2587,19 +2616,21 @@ export default function StepLore() {
               journeyMap
             />
 
-            <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs space-y-3">
-              <h3 className="text-base font-black text-slate-950 tracking-tight">
+            <div className="bg-white border-[3px] border-[#0C1220] rounded-[18px] p-5 shadow-[4px_4px_0_#0C1220] space-y-3">
+              <h3
+                className={`${displayFont.className} text-[19px] leading-tight text-[#0C1220]`}
+              >
                 Your best answers this round
               </h3>
               {rarest && (
-                <p className="text-xs sm:text-sm font-bold text-slate-700 leading-relaxed">
+                <p className="text-xs sm:text-sm font-bold text-[#3D4A63] leading-relaxed">
                   Your rarest pull: {rarest.headline}
                   {rarest.tier ? ` — ${rarest.tier}` : ''}, worth{' '}
                   {rarest.depthEarned.toLocaleString()}.
                 </p>
               )}
               {deepest.length === 0 ? (
-                <p className="text-xs sm:text-sm font-medium text-slate-500 leading-relaxed">
+                <p className="text-xs sm:text-sm font-medium text-[#3D4A63] leading-relaxed">
                   Nothing landed this time — every answer is in the tables
                   below.
                 </p>
@@ -2608,9 +2639,9 @@ export default function StepLore() {
                   {deepest.map((a, i) => (
                     <div
                       key={i}
-                      className="flex items-baseline justify-between gap-3 border-b border-slate-100 pb-2 last:border-0 last:pb-0"
+                      className="flex items-baseline justify-between gap-3 border-b border-[#0C1220]/10 pb-2 last:border-0 last:pb-0"
                     >
-                      <span className="text-sm font-black text-slate-900">
+                      <span className="text-sm font-black text-[#0C1220]">
                         {a.headline}
                       </span>
                       <span className="text-sm font-black text-[#0072CE] shrink-0">
@@ -2621,27 +2652,33 @@ export default function StepLore() {
                 </div>
               )}
               <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                {/* The per-band plum borrow (resultTheme.dig)
+                    retires here (game restyle, Nov 5): both exits
+                    take the standard poster buttons, blue primary
+                    + white secondary, like the rest of the site. */}
                 <button
                   onClick={backToGames}
-                  className={`w-full sm:w-auto font-black text-xs sm:text-sm px-5 py-3 rounded-2xl transition-all active:scale-95 cursor-pointer ${resultTheme.dig}`}
+                  className="w-full sm:w-auto font-black text-xs sm:text-sm px-5 py-3 rounded-[14px] border-[3px] border-[#0C1220] bg-[#0072CE] text-white shadow-[4px_4px_0_#0C1220] transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_#0C1220] cursor-pointer"
                 >
                   Back to the rounds
                 </button>
                 <button
                   onClick={() => navigateTo('dashboard')}
-                  className="w-full sm:w-auto bg-white border-2 border-slate-200 hover:border-slate-300 active:scale-95 text-slate-700 font-black text-xs sm:text-sm px-5 py-3 rounded-2xl transition-all cursor-pointer"
+                  className="w-full sm:w-auto bg-white border-[3px] border-[#0C1220] active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_#0C1220] shadow-[4px_4px_0_#0C1220] text-[#0C1220] font-black text-xs sm:text-sm px-5 py-3 rounded-[14px] transition-all cursor-pointer"
                 >
                   Back to Dashboard
                 </button>
               </div>
             </div>
 
-            <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs space-y-3">
+            <div className="bg-white border-[3px] border-[#0C1220] rounded-[18px] p-5 shadow-[4px_4px_0_#0C1220] space-y-3">
               <div>
-                <h3 className="text-base font-black text-slate-950 tracking-tight">
+                <h3
+                  className={`${displayFont.className} text-[19px] leading-tight text-[#0C1220]`}
+                >
                   Every answer
                 </h3>
-                <p className="text-xs sm:text-sm font-medium text-slate-500 leading-relaxed">
+                <p className="text-xs sm:text-sm font-medium text-[#3D4A63] leading-relaxed">
                   Open a prompt to see every answer that would have landed, rarest first.
                 </p>
               </div>

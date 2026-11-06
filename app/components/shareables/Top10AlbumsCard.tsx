@@ -154,14 +154,19 @@ export const Top10AlbumsCardVisual = forwardRef<
       {/* the ranked list on a white paper panel, same geometry as
           the songs card: rank numeral + album name (never truncated),
           with the album's top song as the second line. Nov 5: the
-          panel takes the card system's ink frame + hard shadow. */}
-      <div className="absolute left-[96px] right-[96px] top-[500px] z-10 rounded-[20px] border-[3px] border-[#0C1220] bg-white px-[40px] pb-[18px] pt-[24px] shadow-[6px_6px_0_rgba(12,18,32,0.9)]">
+          panel takes the card system's ink frame + hard shadow.
+          Fix pass (preview-7 defects): same geometry change as the
+          songs card — rows 66→60, bottom padding 18→14, panel
+          bottom edge 1208→1144, clear of the footer — and the
+          footer line-1 span below regains the standard
+          whitespace-nowrap. See Top10Card / REPORT.md. */}
+      <div className="absolute left-[96px] right-[96px] top-[500px] z-10 rounded-[20px] border-[3px] border-[#0C1220] bg-white px-[40px] pb-[14px] pt-[24px] shadow-[6px_6px_0_rgba(12,18,32,0.9)]">
         {top.map((entry, i) => {
           const topSong = topSongFor(entry, songs);
           return (
             <div
               key={entry.id || entry.album}
-              className="flex h-[66px] flex-col items-center justify-center"
+              className="flex h-[60px] flex-col items-center justify-center"
             >
               <div className="flex items-baseline justify-center gap-[14px]">
                 <span
@@ -195,7 +200,7 @@ export const Top10AlbumsCardVisual = forwardRef<
           identical to the Top 10 Songs card */}
       <div className="absolute inset-x-12 bottom-[92px] z-10 flex items-center justify-center gap-[14px]">
         <FlyingW className="h-[26px] w-[48px] text-white" />
-        <span className="text-[22px] font-black uppercase tracking-[0.22em] text-white/95">
+        <span className="whitespace-nowrap text-[22px] font-black uppercase tracking-[0.22em] text-white/95">
           All My Favorite Songs · The Weezer Song Ranking Project
         </span>
       </div>

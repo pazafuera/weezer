@@ -93,7 +93,15 @@ export const Top10CardVisual = forwardRef<
     <div
       ref={ref}
       className="relative h-[1350px] w-[1080px] overflow-hidden text-white"
-      style={{ backgroundColor: POSTER_BLUE }}
+      style={{
+        backgroundColor: POSTER_BLUE,
+        // The share page's halftone dot field (same values as
+        // app/share/page.tsx) — texture behind everything, no
+        // layout impact.
+        backgroundImage:
+          'radial-gradient(rgba(255,255,255,0.16) 1.6px, transparent 1.7px)',
+        backgroundSize: '20px 20px',
+      }}
     >
       <PosterDomain />
 
@@ -155,7 +163,7 @@ export const Top10CardVisual = forwardRef<
             <div className="flex items-baseline justify-center gap-[14px]">
               <span
                 className={`text-[30px] leading-none ${displayFont.className}`}
-                style={{ color: POSTER_BLUE }}
+                style={{ color: '#0072CE' }}
               >
                 {i + 1}
               </span>

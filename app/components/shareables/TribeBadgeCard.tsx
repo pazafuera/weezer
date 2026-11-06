@@ -1,7 +1,6 @@
 'use client';
 
 import { forwardRef, Fragment } from 'react';
-import type { CSSProperties } from 'react';
 import { albumCoverSrc, resolveAlbumId } from './ShareCardShell';
 import {
   FactsBurst,
@@ -15,44 +14,6 @@ import {
 } from './ShareCardShell';
 import { displayFont, handFont } from './fonts';
 import type { Bucket, ShareSong } from './Top10Card';
-
-/** Why this doodle is defined locally instead of imported from
- *  ShareCardShell: the deployed-bundle fault proven on 2026-11-03
- *  (FanhoodCard, React #130) recurred on 2026-11-04 in the preview
- *  build — the shared export can be dropped from a deployed
- *  bundle, a module-local copy cannot. Top10Card, Top10AlbumsCard
- *  and FanhoodCard carry their own copies for the same reason.
- *  This card's copy fills with currentColor: the Option B badge
- *  layout sets it in white over the field, where the other cards'
- *  copies sit in black. */
-function MusicNotesDoodle({
-  className = '',
-  style,
-}: {
-  className?: string;
-  style?: CSSProperties;
-}) {
-  return (
-    <svg
-      viewBox="0 0 320 300"
-      className={className}
-      style={style}
-      fill="currentColor"
-      aria-hidden="true"
-    >
-      {/* beamed pair */}
-      <rect x="82" y="118" width="8" height="126" />
-      <rect x="172" y="94" width="8" height="126" />
-      <polygon points="82,118 180,94 180,126 82,150" />
-      <ellipse cx="58" cy="252" rx="27" ry="19" transform="rotate(-18 58 252)" />
-      <ellipse cx="148" cy="228" rx="27" ry="19" transform="rotate(-18 148 228)" />
-      {/* single flagged eighth note */}
-      <rect x="271" y="64" width="8" height="104" />
-      <path d="M271 64 C 302 76, 310 104, 298 134 C 304 102, 294 84, 271 74 Z" />
-      <ellipse cx="250" cy="176" rx="24" ry="17" transform="rotate(-18 250 176)" />
-    </svg>
-  );
-}
 
 export type Tribe = {
   /** Canonical tribe key, e.g. '90s Purist' — keys TRIBE_INK. */
@@ -167,6 +128,58 @@ export const TRIBE_INK: Record<string, string> = {
   'Banger Hunter': '#b3352b',
 };
 
+/** Diagnosis size-to-fit (Tribe punch-up): Caveat Bold at a 58px
+ *  cap, stepped down until the line fits the diagnosis box's 892px
+ *  measure — the mock's figure (952 box − 60px horizontal padding),
+ *  kept so the fitted sizes reproduce the mock's table exactly.
+ *  Em advances are hmtx sums measured from the bundled Caveat Bold
+ *  (app/api/og/fonts) — the conservative side, since kerning only
+ *  narrows. The six lines are a closed set (computeTribe's copy);
+ *  fitted sizes: Purist 58, Digger 56, Completist 58,
+ *  New School 58, Y2K 52, Banger Hunter 58. */
+const DIAGNOSIS_EM: Record<string, number> = {
+  "I haven't emotionally left 1997.": 10.737,
+  "The deep cuts aren't deep to me. They're home.": 15.706,
+  'I refuse to leave a single era behind.': 12.44,
+  'I like the new albums. Loudly, and in public.': 14.797,
+  "The 2000s weren't a comeback. They were my era.": 17.103,
+  "I don't overthink it. If it slaps, it slaps.": 13.524,
+};
+
+function diagnosisFontSize(diagnosis: string): number {
+  // An unlisted line (a future copy-sheet edit) is estimated from
+  // its length at 0.37 em/char — above the widest measured ratio
+  // (Y2K's 0.364) — so an unknown line errs small, never clipped.
+  const em = DIAGNOSIS_EM[diagnosis] ?? diagnosis.length * 0.37;
+  return Math.min(58, Math.floor(892 / em));
+}
+
+/** The fact with its count numerals wrapped in the tribe ink (the
+ *  punch-up gives the ink this second job, alongside the vinyl
+ *  label). The fact strings are single strings from computeTribe;
+ *  the counts in the six patterns run 1–3 digits (never more than
+ *  206 songs), while the year runs — 2014, 2001–2005 — are 4
+ *  digits and the "'90s" in the Purist line is a 2-digit run right
+ *  after an apostrophe. Neither of those is a count, so neither is
+ *  wrapped. */
+function renderFact(fact: string, ink: string) {
+  let offset = 0;
+  return fact.split(/(\d+)/).map((part, i) => {
+    const start = offset;
+    offset += part.length;
+    if (!/^\d+$/.test(part)) return <Fragment key={i}>{part}</Fragment>;
+    const isYear = part.length === 4;
+    const isNineties =
+      fact[start - 1] === "'" && fact[start + part.length] === 's';
+    if (isYear || isNineties) return <Fragment key={i}>{part}</Fragment>;
+    return (
+      <span key={i} style={{ color: ink }}>
+        {part}
+      </span>
+    );
+  });
+}
+
 function dominantAlbumId(songs: ShareSong[]): string | undefined {
   const counts = new Map<string, number>();
   for (const s of songs) {
@@ -191,11 +204,6 @@ export const TribeBadgeCardVisual = forwardRef<
   const tribe = computeTribe(songs, triageMap);
   const ink = (tribe && TRIBE_INK[tribe.name]) || '#141414';
   const domAlbumId = dominantAlbumId(songs);
-  // The tribe name ALWAYS renders on one line (the copy sheet's layout
-  // rule) — auto-sized down from the mockup's scale until it fits.
-  const nameSize = tribe
-    ? Math.max(84, Math.min(158, Math.floor(1740 / tribe.displayName.length)))
-    : 0;
   // Locked Purist flourish: the year is highlighted amber.
   const diagnosisParts = tribe ? tribe.diagnosis.split('1997') : [];
 
@@ -224,78 +232,119 @@ export const TribeBadgeCardVisual = forwardRef<
         </div>
       ) : (
         <>
-          {/* Option B — "the badge" (tribe-redesign mock, chosen
-              Nov 5): intro pill 92 / name stamped across the
-              upright guitar at 452 / diagnosis tight underneath
-              at 736 / facts 896 + album frame 892 / footer. The
-              guitar stands upright in solid ink at card center
-              behind the name; the diagnosis sits on clean blue
-              below the guitar's body (which ends ~694). Zone
-              audit in REPORT.md (cards recomposition, C4). */}
-          <GuitarSilhouette
-            className="absolute inset-0 h-full w-full"
-            transform="translate(190 300) scale(1.05)"
-            fill="#0C1220"
-            style={{ opacity: 0.95 }}
-          />
-          <MusicNotesDoodle className="absolute left-[812px] top-[178px] w-[104px] text-white opacity-90" />
+          {/* Punch-up composition (tribe-punch-mock, built from
+              scratch and approved Nov 5 — it supersedes Option B):
+              intro pill 88 / badge panel 190 (952×500, guitar
+              framed inside at scale 1.30, name STACKED at 152px
+              across its body) / diagnosis in the inverted ink fact
+              box at 716 / facts box + album frame as one bottom
+              row at 886 / standard footer. The music-notes doodle
+              is retired in this composition. Zone + fit audit in
+              REPORT.md (Tribe punch-up). */}
 
           {/* The intro as the share page's inverted ink pill —
-              same words, same 40px light line, still one line
-              (the pill fits: text 963px + 68px padding = 1031px
-              of the 1080 card, audited with real font metrics). */}
-          <div className="absolute inset-x-0 top-[92px] text-center">
+              same words, same audited 40px light line; it seats
+              at 88 so the pill→panel gap matches the
+              panel→diagnosis gap (26px each). */}
+          <div className="absolute inset-x-0 top-[88px] text-center">
             <span className="inline-block whitespace-nowrap rounded-2xl bg-[#0C1220] px-[34px] py-[18px] text-[40px] font-light leading-none text-white">
               Based on my ranking of every Weezer song, I&apos;m a...
             </span>
           </div>
 
-          <h2
-            className={`absolute inset-x-0 top-[452px] z-[5] whitespace-nowrap text-center leading-none text-white ${displayFont.className}`}
-            style={{
-              fontSize: nameSize,
-              WebkitTextStroke: '3px #0C1220',
-              textShadow: '5px 5px 0 rgba(12,18,32,0.9)',
-            }}
-          >
-            {tribe.displayName}
-          </h2>
-          <p
-            className={`absolute inset-x-[60px] top-[736px] whitespace-nowrap text-center text-[54px] font-bold leading-[1.2] ${handFont.className}`}
-          >
-            {diagnosisParts.map((part, i) => (
-              <Fragment key={i}>
-                {part}
-                {i < diagnosisParts.length - 1 && (
-                  <span className="text-amber-400">1997</span>
-                )}
-              </Fragment>
-            ))}
-          </p>
+          {/* Badge panel: the guitar scaled to 1.30 and framed in
+              a white plaque, its neck bleeding out of the frame's
+              right edge (the clip cuts it at the panel's inner
+              edge); the tribe name is stamped across the body,
+              stacked one word per line at a flat 152px — one size
+              serves all six tribes (binding word COMPLETIST
+              measures 855px against the panel's 904px inner
+              width; a one-line name caps at ~104px, which is why
+              it stacks). The svg element re-seats by the panel's
+              offset (-64 / -190) so the silhouette's card
+              coordinates match the mock's exactly. */}
+          <div className="absolute left-[64px] top-[190px] h-[500px] w-[952px] rounded-2xl border-[3px] border-[#0C1220] bg-white shadow-[6px_6px_0_rgba(12,18,32,0.9)]">
+            <div className="absolute inset-0 overflow-hidden rounded-[13px]">
+              <GuitarSilhouette
+                className="absolute left-[-64px] top-[-190px] h-[1350px] w-[1080px]"
+                transform="translate(174 190) scale(1.30)"
+                fill="#0C1220"
+                style={{ opacity: 0.95 }}
+              />
+            </div>
+            <h2
+              className={`absolute inset-0 z-[5] flex flex-col items-center justify-center text-center leading-[0.96] text-white ${displayFont.className}`}
+              style={{
+                fontSize: 152,
+                WebkitTextStroke: '3px #0C1220',
+                textShadow: '5px 5px 0 rgba(12,18,32,0.9)',
+              }}
+            >
+              {tribe.displayName.split(' ').map((word, i) => (
+                <span key={i} className="block whitespace-nowrap">
+                  {word}
+                </span>
+              ))}
+            </h2>
+          </div>
 
-          {/* THE FACTS — burst + the fact, left column (Option B
-              seats the block 16px lower than the old layout) */}
-          <div className="absolute left-[64px] top-[896px] w-[400px]">
-            <FactsBurst className="-ml-[30px] h-[104px] w-[420px] -rotate-2">
+          {/* The diagnosis in the family's one inverted fact box
+              (Era's quip slot): full column, Caveat Bold kept as
+              the fan's voice line, size-to-fit under a 58px cap —
+              see diagnosisFontSize. The Purist "1997" amber
+              highlight carries over untouched. */}
+          <div className="absolute left-[64px] top-[716px] flex h-[104px] w-[952px] items-center justify-center rounded-[14px] border-[3px] border-[#0C1220] bg-[#0C1220] px-[30px] shadow-[5px_5px_0_rgba(12,18,32,0.9)]">
+            <p
+              className={`whitespace-nowrap font-bold leading-[1.1] text-white ${handFont.className}`}
+              style={{ fontSize: diagnosisFontSize(tribe.diagnosis) }}
+            >
+              {diagnosisParts.map((part, i) => (
+                <Fragment key={i}>
+                  {part}
+                  {i < diagnosisParts.length - 1 && (
+                    <span className="text-amber-400">1997</span>
+                  )}
+                </Fragment>
+              ))}
+            </p>
+          </div>
+
+          {/* THE FACTS — the burst straddles the fact box's top
+              edge and gains the family's 3px ink outline so it
+              reads on the seam; the fact itself is poster type
+              (Lilita 60) in a white fact box, count numerals in
+              the tribe ink. At 60px every reachable fact string
+              wraps to at most 3 lines (234px in the box's 236px
+              text zone — audited over the patterns' maxima), so
+              no step-down is implemented. */}
+          <div className="absolute left-[34px] top-[830px] z-[6]">
+            <FactsBurst outline className="h-[104px] w-[420px] -rotate-2">
               <span
-                className={`text-[48px] leading-none text-black ${displayFont.className}`}
+                className={`text-[48px] leading-none text-[#0C1220] ${displayFont.className}`}
               >
                 THE FACTS:
               </span>
             </FactsBurst>
-            <p className="mt-[28px] text-[46px] leading-[1.3]">{tribe.fact}</p>
+          </div>
+          <div className="absolute left-[64px] top-[886px] h-[326px] w-[568px] rounded-2xl border-[3px] border-[#0C1220] bg-white pb-[20px] pl-[36px] pr-[32px] pt-[64px] shadow-[4px_4px_0_#0C1220]">
+            <p
+              className={`text-[60px] leading-[1.3] text-[#0C1220] ${displayFont.className}`}
+            >
+              {renderFact(tribe.fact, ink)}
+            </p>
           </div>
 
-          {/* Signature album: white frame, vinyl peeking out —
-              Option B steps the frame down to 280px and rescales
-              the peek to match (300px disc at -125 / -10) */}
+          {/* Signature album: the frame grows to 326px with the
+              Era strip's corners to hold its half of the bottom
+              row; the vinyl peek is unchanged (300px disc at
+              -125 / -10, tribe-ink label). */}
           {domAlbumId && (
-            <div className="absolute right-[64px] top-[892px] w-[280px]">
+            <div className="absolute right-[64px] top-[886px] w-[326px]">
               <VinylDisc
                 labelColor={ink}
                 className="absolute -right-[125px] top-[-10px] h-[300px] w-[300px]"
               />
-              <div className="relative z-10 border-[3px] border-[#0C1220] bg-white p-[14px] shadow-[6px_6px_0_rgba(12,18,32,0.9)]">
+              <div className="relative z-10 rounded-2xl border-[3px] border-[#0C1220] bg-white p-[14px] shadow-[5px_5px_0_rgba(12,18,32,0.9)]">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={albumCoverSrc(domAlbumId)}

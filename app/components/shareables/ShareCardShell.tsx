@@ -550,15 +550,20 @@ export function VinylDisc({
 
 /** White lightning-burst banner carrying the "THE FACTS:" label.
  *  Sized by the caller; the label text sits in the bolt's wide left
- *  section. */
+ *  section. `outline` adds the family's 3px ink outline — the Tribe
+ *  punch-up seats the burst on the seam of its white fact box,
+ *  where an unoutlined white bolt would bleed into the box; it is
+ *  off by default so the other callers render exactly as before. */
 export function FactsBurst({
   children,
   className = '',
   style,
+  outline = false,
 }: {
   children: ReactNode;
   className?: string;
   style?: CSSProperties;
+  outline?: boolean;
 }) {
   return (
     <div className={`relative ${className}`} style={style}>
@@ -571,6 +576,7 @@ export function FactsBurst({
         <polygon
           points="2,34 282,34 244,60 458,60 130,102 164,72 2,72"
           fill="#fff"
+          {...(outline ? { stroke: '#0C1220', strokeWidth: 3 } : {})}
         />
       </svg>
       <div className="relative z-10 flex h-full items-center pl-[26px]">

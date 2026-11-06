@@ -3,7 +3,7 @@
 import React, { useRef, useState, useMemo } from 'react';
 import { toPng } from 'html-to-image';
 import { ALBUM_NAME_TO_ID, BucketType } from '../data/constants';
-import { AlbumArtwork } from './SharedUI';
+import { AlbumArtwork, SHARE_BUTTON_CLASS } from './SharedUI';
 import { displayFont, handFont } from './shareables/fonts';
 import { POSTER_BLUE } from './shareables/ShareCardShell';
 import {
@@ -369,6 +369,7 @@ export default function TierListChart({
   const exportRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [exportFailed, setExportFailed] = useState(false);
+  const [exportSaved, setExportSaved] = useState(false);
   const [internalViewMode, setInternalViewMode] = useState<'songs' | 'albums'>('songs');
   const viewMode = fixedView ?? internalViewMode;
 
@@ -397,9 +398,17 @@ export default function TierListChart({
     });
   }, [currentTiers, rankedSongs, rankedAlbums, viewMode]);
 
+  /** The gallery buttons' saved flip (ShareablesGallery): a
+   *  successful export confirms on the button itself, briefly. */
+  const flashSaved = () => {
+    setExportSaved(true);
+    setTimeout(() => setExportSaved(false), 2500);
+  };
+
   const handleExport = async () => {
     if (!exportRef.current) return;
     setExportFailed(false);
+    setExportSaved(false);
     setIsExporting(true);
     
     setTimeout(async () => {
@@ -441,6 +450,7 @@ export default function TierListChart({
                 files,
                 title: 'My Weezer Tier List',
               });
+              flashSaved();
               setIsExporting(false);
               return;
             }
@@ -463,6 +473,7 @@ export default function TierListChart({
             await new Promise((r) => setTimeout(r, 250));
           }
         }
+        flashSaved();
 
       } catch (err) {
         console.error('Failed to export tier list', err);
@@ -668,17 +679,21 @@ export default function TierListChart({
         </div>
       </div>
 
-      {/* SAVE / SHARE BUTTON — data-tier-save marks this
-          instance's save control so the Tier List modal's pinned
-          footer button (ShareablesGallery) can trigger THIS
-          instance's export and mirror its state (UAT P-11). */}
+      {/* SHARE BUTTON — the uniform gallery button (owner,
+          Nov 6): SHARE_BUTTON_CLASS, label "Share", the same
+          busy/failed/saved flips as ShareablesGallery's
+          LibraryItem and ThumbnailItem buttons. The tier cards
+          were the last 📸 holdouts. data-tier-save still marks
+          this instance's share control so the Tier List modal's
+          pinned footer button (ShareablesGallery) can trigger
+          THIS instance's export and mirror its state (UAT P-11). */}
       <button
         onClick={handleExport}
         disabled={isExporting}
         data-tier-save="true"
-        className={`w-full ${exportFailed ? 'bg-rose-500' : 'bg-[#0072CE] hover:bg-blue-600'} active:scale-98 text-white font-black py-3.5 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer`}
+        className={`w-full ${SHARE_BUTTON_CLASS} text-xs py-3 px-3 rounded-xl disabled:opacity-50 ${exportFailed ? 'bg-rose-500' : exportSaved ? 'bg-emerald-500' : 'bg-[#0072CE] hover:bg-blue-600'}`}
       >
-        <span>{isExporting ? 'Generating Image...' : exportFailed ? "Couldn't generate — try again" : '📸 Save Tier List as Image'}</span>
+        <span>{isExporting ? 'Generating Image...' : exportFailed ? "Couldn't generate — try again" : exportSaved ? '✓ Saved!' : 'Share'}</span>
       </button>
     </div>
   );

@@ -452,8 +452,8 @@ function ThumbnailItem({
  *  instance — it activates that instance's own save button (marked
  *  data-tier-save in TierListChart), so the export uses the modal
  *  chart's mode and its export node, not the thumbnail's. A
- *  MutationObserver mirrors the instance's generating/failure state
- *  onto the pinned button so the feedback the chart shows on its own
+ *  MutationObserver mirrors the instance's generating/failure/saved
+ *  state onto the pinned button so the feedback the chart shows on its own
  *  button is not lost. (Sharing ONE chart instance between thumbnail
  *  and modal remains deliberately undone — the owner approved the
  *  pin only.) */
@@ -471,6 +471,7 @@ function TierThumbnailItem({
   const modalChartRef = useRef<HTMLDivElement>(null);
   const [pinnedBusy, setPinnedBusy] = useState(false);
   const [pinnedFailed, setPinnedFailed] = useState(false);
+  const [pinnedSaved, setPinnedSaved] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -482,6 +483,7 @@ function TierThumbnailItem({
     const sync = () => {
       setPinnedBusy(source.disabled);
       setPinnedFailed(source.textContent?.includes("Couldn't generate") ?? false);
+      setPinnedSaved(source.textContent?.includes('✓ Saved!') ?? false);
     };
     sync();
     const observer = new MutationObserver(sync);
@@ -521,15 +523,17 @@ function TierThumbnailItem({
                 type="button"
                 onClick={saveFromModal}
                 disabled={pinnedBusy}
-                className={`w-full text-white font-black text-xs py-3 px-3 rounded-xl transition cursor-pointer disabled:opacity-50 ${
-                  pinnedFailed ? 'bg-rose-500' : 'bg-[#0072CE] hover:bg-blue-600'
+                className={`w-full ${SHARE_BUTTON_CLASS} text-xs py-3 px-3 rounded-xl disabled:opacity-50 ${
+                  pinnedFailed ? 'bg-rose-500' : pinnedSaved ? 'bg-emerald-500' : 'bg-[#0072CE] hover:bg-blue-600'
                 }`}
               >
                 {pinnedBusy
                   ? 'Generating Image...'
                   : pinnedFailed
                   ? "Couldn't generate — try again"
-                  : '📸 Save Tier List as Image'}
+                  : pinnedSaved
+                  ? '✓ Saved!'
+                  : 'Share'}
               </button>
             </div>
           }

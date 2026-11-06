@@ -199,12 +199,13 @@ export const EraDnaCardVisual = forwardRef<
           </h2>
 
           {/* The quip in an inverted ink box (the share page's
-              vibe-box move). The wrapper goes full-width — the
-              longest quip (Red Era) only fits one line at the
-              card's full width once the box's padding is added —
-              and the box rides 12px higher than the old plain
-              text (424 → 412) so its bottom edge clears the bars
-              at 512. Sizes and words unchanged. */}
+              vibe-box move). The wrapper goes full-width, as the
+              mock draws it (the longest quip, Red Era, measures
+              867px + 76px box padding = 943px — audited in
+              REPORT.md, cards recomposition C2), and the box
+              rides 12px higher than the old plain text
+              (424 → 412) so its bottom edge clears the bars at
+              512. Sizes and words unchanged. */}
           <div className="absolute inset-x-0 top-[412px] text-center">
             <span className="inline-block whitespace-nowrap rounded-2xl bg-[#0C1220] px-[38px] py-[20px] text-[42px] leading-[1.3] text-white">
               {ERA_QUIPS[top.key]}

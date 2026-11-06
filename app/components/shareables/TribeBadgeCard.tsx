@@ -239,7 +239,7 @@ export const TribeBadgeCardVisual = forwardRef<
 
           {/* The intro as the share page's inverted ink pill —
               same words, same 40px light line, still one line
-              (the pill fits: text 967px + 68px padding = 1035px
+              (the pill fits: text 963px + 68px padding = 1031px
               of the 1080 card, audited with real font metrics). */}
           <div className="absolute inset-x-0 top-[92px] text-center">
             <span className="inline-block whitespace-nowrap rounded-2xl bg-[#0C1220] px-[34px] py-[18px] text-[40px] font-light leading-none text-white">

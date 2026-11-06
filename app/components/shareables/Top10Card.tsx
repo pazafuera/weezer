@@ -162,7 +162,7 @@ export const Top10CardVisual = forwardRef<
           panel's bottom edge from 1208 to 1144 — at the old geometry
           the panel's edge (and its 6px shadow) cut through the
           footer's first line; the panel now clears the one-line
-          footer block (top ≈1231) by 87px. Audit in REPORT.md. */}
+          footer block (top ≈1225) by 81px. Audit in REPORT.md. */}
       <div className="absolute left-[96px] right-[96px] top-[500px] z-10 rounded-[20px] border-[3px] border-[#0C1220] bg-white px-[40px] pb-[14px] pt-[24px] shadow-[6px_6px_0_rgba(12,18,32,0.9)]">
         {top.map((song, i) => {
           const tag = albumTag(song);

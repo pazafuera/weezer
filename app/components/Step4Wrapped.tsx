@@ -1004,6 +1004,12 @@ export default function Step4Wrapped({
     return `Born in ${birthYear}, ears stuck at ${stats.listeningAge}.`;
   }, [userProfile?.birthYear, stats.listeningAge]);
 
+  // CAROUSEL INDEXES (owner, Nov 5): both Wrapped carousels
+  // (archetypes, eras) once interleaved a skinny "Explore
+  // other…" half-card after the first card, and every index —
+  // the scroll-spy clamps below, the dot counts, the desktop
+  // arrow limits — counted it (+1). The half-cards are removed;
+  // indexes are pure card indexes now (0 … length − 1).
   const handleArchScroll = () => {
     if (!archScrollRef.current) return;
     const firstChild = archScrollRef.current.children[0];
@@ -1012,7 +1018,7 @@ export default function Step4Wrapped({
       archScrollRef.current.scrollLeft / (firstChild as HTMLElement).clientWidth
     );
     setActiveArchIndex(
-      Math.max(0, Math.min(stats.scoredArchetypes.length, index))
+      Math.max(0, Math.min(stats.scoredArchetypes.length - 1, index))
     );
   };
 
@@ -1023,7 +1029,7 @@ export default function Step4Wrapped({
     const index = Math.round(
       eraScrollRef.current.scrollLeft / (firstChild as HTMLElement).clientWidth
     );
-    setActiveEraIndex(Math.max(0, Math.min(stats.sortedEras.length, index)));
+    setActiveEraIndex(Math.max(0, Math.min(stats.sortedEras.length - 1, index)));
   };
 
   const scrollToArch = (index: number) => {
@@ -1179,10 +1185,10 @@ export default function Step4Wrapped({
               <button
                 onClick={() =>
                   scrollToArch(
-                    Math.min(stats.scoredArchetypes.length, activeArchIndex + 1)
+                    Math.min(stats.scoredArchetypes.length - 1, activeArchIndex + 1)
                   )
                 }
-                disabled={activeArchIndex === stats.scoredArchetypes.length}
+                disabled={activeArchIndex === stats.scoredArchetypes.length - 1}
                 className="w-10 h-10 rounded-full bg-white hover:bg-slate-100 text-[#0C1220] flex items-center justify-center font-black transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer border-[2.5px] border-[#0C1220] shadow-[2px_2px_0_#0C1220]"
               >
                 →
@@ -1196,8 +1202,8 @@ export default function Step4Wrapped({
             className="flex gap-4 overflow-x-auto snap-x snap-mandatory px-2 pb-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] items-stretch"
           >
             {stats.scoredArchetypes.map((arch, idx) => (
-              <React.Fragment key={arch.id}>
                 <div
+                  key={arch.id}
                   className={`w-[88vw] sm:w-[380px] lg:w-[420px] shrink-0 snap-center rounded-3xl p-6 sm:p-8 text-center border-2 transition-all relative overflow-hidden flex flex-col justify-center ${
                     idx === 0
                       ? 'bg-slate-900 text-white border-[#0072CE] shadow-xl'
@@ -1236,29 +1242,12 @@ export default function Step4Wrapped({
                     {arch.desc}
                   </p>
                 </div>
-
-                {idx === 0 && (
-                  <div
-                    onClick={() => scrollToArch(1)}
-                    className="w-[30vw] sm:w-[140px] shrink-0 snap-center rounded-3xl flex flex-col items-center justify-center border-2 border-slate-200 bg-white text-slate-600 cursor-pointer hover:bg-slate-100 transition-all shadow-2xs"
-                  >
-                    <span className="text-3xl mb-3">👀</span>
-                    <span className="text-xs font-black uppercase tracking-widest text-center leading-snug">
-                      Explore
-                      <br />
-                      Other
-                      <br />
-                      Matches
-                    </span>
-                  </div>
-                )}
-              </React.Fragment>
             ))}
           </div>
 
           <div className="flex items-center justify-center gap-2 mt-2 mb-4">
             {Array.from({
-              length: stats.scoredArchetypes.length + 1,
+              length: stats.scoredArchetypes.length,
             }).map((_, i) => (
               <button
                 key={i}
@@ -1491,10 +1480,10 @@ export default function Step4Wrapped({
                 <button
                   onClick={() =>
                     scrollToEra(
-                      Math.min(stats.sortedEras.length, activeEraIndex + 1)
+                      Math.min(stats.sortedEras.length - 1, activeEraIndex + 1)
                     )
                   }
-                  disabled={activeEraIndex === stats.sortedEras.length}
+                  disabled={activeEraIndex === stats.sortedEras.length - 1}
                   className="w-10 h-10 rounded-full bg-white hover:bg-slate-100 text-[#0C1220] flex items-center justify-center font-black transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer border-[2.5px] border-[#0C1220] shadow-[2px_2px_0_#0C1220]"
                 >
                   →
@@ -1512,8 +1501,8 @@ export default function Step4Wrapped({
               className="flex gap-4 overflow-x-auto snap-x snap-mandatory px-2 pb-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] items-stretch"
             >
               {stats.sortedEras.map((era, idx) => (
-                <React.Fragment key={era.id}>
                   <div
+                    key={era.id}
                     className={`w-[85vw] sm:w-[360px] lg:w-[400px] shrink-0 snap-center rounded-3xl p-6 sm:p-8 transition-all relative overflow-hidden flex flex-col justify-between shadow-md ${
                       idx !== 0 && 'opacity-90'
                     }`}
@@ -1556,30 +1545,12 @@ export default function Step4Wrapped({
                       </div>
                     </div>
                   </div>
-
-                  {idx === 0 && (
-                    <div
-                      onClick={() => scrollToEra(1)}
-                      className="w-[30vw] sm:w-[140px] shrink-0 snap-center rounded-3xl flex flex-col items-center justify-center border-2 border-slate-200 bg-white text-slate-600 cursor-pointer hover:bg-slate-100 transition-all shadow-2xs"
-                    >
-                      <span className="text-3xl mb-3">🎸</span>
-
-                      <span className="text-xs font-black uppercase tracking-widest text-center leading-snug">
-                        Explore
-                        <br />
-                        Other
-                        <br />
-                        Eras
-                      </span>
-                    </div>
-                  )}
-                </React.Fragment>
               ))}
             </div>
 
             <div className="flex items-center justify-center gap-2 mt-2 mb-4">
               {Array.from({
-                length: stats.sortedEras.length + 1,
+                length: stats.sortedEras.length,
               }).map((_, i) => (
                 <button
                   key={i}

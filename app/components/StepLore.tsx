@@ -2357,43 +2357,62 @@ export default function StepLore() {
               const gameNumber =
                 LORE_GAMES.findIndex((g) => g.id === game.id) + 1;
               return (
-                <div className="overflow-hidden rounded-3xl border border-slate-200/90 bg-white shadow-xs">
-                  <div className="bg-[#1e3a5f] p-5 text-center text-white">
-                    <p className="text-[10px] font-black uppercase tracking-[0.14em] text-white/60">
-                      Round {gameNumber} of 5
-                    </p>
-                    <h2
-                      className={`${displayFont.className} mt-1.5 text-[34px] leading-none`}
-                    >
-                      Round {gameNumber}
-                    </h2>
-                    <p className="mt-2 text-sm font-semibold leading-snug text-white/75">
-                      Every point moves you closer to the Shack.
-                    </p>
-                    {/* The standing chip rides inside the gate's
-                        header band, centered under the lead line
-                        (Nov 3, 2026) — the slim header's chip steps
-                        aside in the ready phase so the standing is
-                        never stated twice on one screen. */}
-                    {(() => {
-                      const display = fanhoodDisplay(fanhood);
-                      if (!display) return null;
-                      return (
-                        <span className="mt-3 inline-block rounded-full bg-white/10 px-3 py-1 text-[11px] font-black whitespace-nowrap text-white">
-                          {display.stop} ·{' '}
-                          {display.depth.toLocaleString()}
-                        </span>
-                      );
-                    })()}
+                <div className="overflow-hidden rounded-[18px] border-[3px] border-[#0C1220] bg-white shadow-[6px_6px_0_#0C1220]">
+                  <div className="relative overflow-hidden bg-[#039AD1] p-5 text-center text-white">
+                    {/* Halftone dots — the share page's card
+                        texture, as on the picker panel. */}
+                    <div
+                      aria-hidden
+                      className="pointer-events-none absolute inset-0"
+                      style={{
+                        backgroundImage:
+                          'radial-gradient(rgba(255,255,255,0.16) 1.6px, transparent 1.7px)',
+                        backgroundSize: '20px 20px',
+                      }}
+                    />
+                    <div className="relative">
+                      <span
+                        className={`${displayFont.className} inline-block rounded-full bg-[#0C1220] px-[13px] pb-[4px] pt-[6px] text-[12.5px] uppercase leading-none tracking-[0.2em] text-white`}
+                      >
+                        Round {gameNumber} of 5
+                      </span>
+                      <h2
+                        className={`${displayFont.className} mt-2.5 text-[34px] leading-none text-white`}
+                        style={{
+                          WebkitTextStroke: '1.5px #0C1220',
+                          textShadow: '4px 4px 0 #0C1220',
+                        }}
+                      >
+                        Round {gameNumber}
+                      </h2>
+                      <p className="mt-2 text-sm font-bold leading-snug text-white">
+                        Every point moves you closer to the Shack.
+                      </p>
+                      {/* The standing chip rides inside the gate's
+                          header band, centered under the lead line
+                          (Nov 3, 2026) — the slim header's chip steps
+                          aside in the ready phase so the standing is
+                          never stated twice on one screen. */}
+                      {(() => {
+                        const display = fanhoodDisplay(fanhood);
+                        if (!display) return null;
+                        return (
+                          <span className="mt-3 inline-block rounded-full border-[2.5px] border-[#0C1220] bg-white px-3 py-[5px] text-[11px] font-black whitespace-nowrap text-[#0C1220] shadow-[2px_2px_0_#0C1220]">
+                            {display.stop} ·{' '}
+                            {display.depth.toLocaleString()}
+                          </span>
+                        );
+                      })()}
+                    </div>
                   </div>
                   <div className="p-5">
-                    <div className="divide-y divide-slate-100">
+                    <div className="divide-y divide-[#0C1220]/10">
                       {GATE_RULES.map((rule) => (
                         <div
                           key={rule.text}
                           className="py-2.5 first:pt-0 last:pb-0"
                         >
-                          <p className="text-[15px] sm:text-base font-medium leading-relaxed text-slate-600">
+                          <p className="text-[15px] sm:text-base font-medium leading-relaxed text-[#3D4A63]">
                             {rule.text}
                           </p>
                         </div>
@@ -2407,12 +2426,12 @@ export default function StepLore() {
                           return (
                             <span
                               key={g.id}
-                              className={`h-1.5 flex-1 rounded-full ${
+                              className={`h-[7px] flex-1 rounded-full border-2 border-[#0C1220] ${
                                 current
                                   ? 'bg-[#0072CE]'
                                   : done
-                                    ? 'bg-slate-900'
-                                    : 'bg-slate-200'
+                                    ? 'bg-[#0C1220]'
+                                    : 'bg-white'
                               }`}
                             />
                           );
@@ -2421,13 +2440,13 @@ export default function StepLore() {
                     </div>
                     <button
                       onClick={startGatedGame}
-                      className="mt-4 w-full bg-[#0072CE] hover:bg-blue-700 active:scale-95 text-white font-black text-sm px-5 py-3.5 rounded-2xl transition-all shadow-md cursor-pointer"
+                      className="mt-4 w-full cursor-pointer rounded-[14px] border-[3px] border-[#0C1220] bg-[#0072CE] px-5 py-3.5 text-sm font-black text-white shadow-[4px_4px_0_#0C1220] transition-all hover:bg-blue-700 active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_#0C1220]"
                     >
                       Start Round {gameNumber}
                     </button>
                     <button
                       onClick={leaveGate}
-                      className="mt-2.5 w-full py-1 text-center text-xs font-extrabold text-slate-500 hover:text-slate-700 cursor-pointer"
+                      className="mt-2.5 w-full py-1 text-center text-xs font-extrabold text-[#3D4A63] hover:text-[#0C1220] cursor-pointer"
                     >
                       Not now
                     </button>

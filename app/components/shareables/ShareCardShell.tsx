@@ -326,26 +326,34 @@ export function PosterDomain() {
 }
 
 /**
- * Black ACOUSTIC-guitar silhouette, drawn directly in card
- * coordinates (viewBox 0 0 1080 1350 — the caller stretches it over
- * the whole card): round lower bout, pinched waist, smaller upper
- * bout, the soundhole carved out in field blue, a tapered neck
- * running diagonally down-right, and a paddle headstock with 3+3
- * tuner pegs. The outline is a Catmull-Rom-smoothed loop generated
- * numerically, and the placement is verified against the Tribe
- * card's text zones (name zone y 308–466, diagnosis zone y 782–849):
- * only the body's smooth shoulder crosses the name zone's lower
- * band; the soundhole clears it by 52px, the waist dip passes 2px
- * below it, and the headstock (x 916–1057, y 650–760) clears the
- * name zone by 184px and the diagnosis zone by 22px — nothing busy
- * sits near any text, and no pegs trail the tribe name.
+ * Guitar silhouette, drawn directly in card coordinates (viewBox
+ * 0 0 1080 1350 — the caller stretches it over the whole card).
+ * The path data is the CC0 Les Paul outline documented inline
+ * below; rendered in a single fill it collapses to the true
+ * outline. Placement is the caller's, via the `transform` prop:
+ * the default is the original diagonal placement (verified
+ * against the pre-Option-B Tribe layout's text zones — name
+ * 308–466, diagnosis 782–849 — in the card's git history); the
+ * Tribe card's Option B badge layout passes an upright placement
+ * whose zone audit lives in REPORT.md (cards recomposition, C4).
  */
 export function GuitarSilhouette({
   className = '',
   style,
+  transform = 'translate(64 306) scale(1.2905)',
+  fill = '#000',
 }: {
   className?: string;
   style?: CSSProperties;
+  /** Placement of the silhouette group in card coordinates.
+   *  Defaults to the original diagonal placement (body lower-left
+   *  to headstock upper-right); the Tribe card's Option B layout
+   *  passes an upright placement instead. Opacity rides the
+   *  existing `style` prop. */
+  transform?: string;
+  /** Single fill for every path (the collapse-into-outline trick
+   *  depends on it staying a single colour). */
+  fill?: string;
 }) {
   return (
     <svg
@@ -359,9 +367,10 @@ export function GuitarSilhouette({
           black.svg" (Open Clip Art Library). The source's filled paths are
           rendered in a single colour, which collapses its shading and
           hardware detail into the true outline; the drop-shadow path and the
-          stroke-only string paths are omitted. Placed to span the card
-          diagonally, body lower-left to headstock upper-right. */}
-      <g transform="translate(64 306) scale(1.2905)" fill="#000">
+          stroke-only string paths are omitted. Placed per the
+          `transform` prop (default: spanning the card diagonally,
+          body lower-left to headstock upper-right). */}
+      <g transform={transform} fill={fill}>
         <path d="m 14.1,275.5 c 0.1,-0.1 0.3,-0.2 0.5,-0.2 1,-0.3 3.2,1 4.6,2.2 0.6,0.5 0.9,-0.7 1.3,1.3 0.3,1.5 -0.1,0.8 -0.6,1.6 -0.8,1.4 -2.2,3.3 -3,3.5 -1.4,0.4 -2.9,-1.3 -3.5,-3.7 -0.5,-2.1 -0.2,-4 0.8,-4.7 z" />
         <path d="m 310.4,108.8 c 9.7,10.8 16.5,23.5 22.5,36.7 l 3.7,-1.8 c -12.2,-24.4 -14.4,-22.9 -26.2,-34.9 z" />
         <path d="m 281.2,98.8 c -20.5,0.4 -39.5,11.3 -51.7,27.4 -7.1,9.5 -17.8,17.5 -30.3,16.5 -20.4,-1.2 -38.6,-12.6 -58.6,-16.3 -26.8,-6.4 -55.9,-0.4 -77.8,16 -34.2,24.3 -53.8,67.3 -49.6,109.2 2.8,36.9 16.2,74.9 43.8,100.2 20.5,18.9 50.5,22.7 77.2,19.2 34,-4.7 65.2,-25.3 82.3,-55.1 9.7,-14.2 16.1,-33 32.8,-40.3 16.9,-4.5 34.8,-2 52.1,-3.6 11.7,-0.8 27,-3 31.2,-15.9 2.1,-3.7 -0.6,-9.5 -5.3,-7.9 -12,1.6 -20.9,-11 -23.4,-21.3 -3.4,-10.7 3.2,-21.4 12.1,-27 5.3,-3.8 11.6,-6.7 18.2,-7.1 -0,-14.7 1.4,-29.6 0.5,-44.3 -6,-21.7 -20.5,-44.8 -44.2,-49.1 -3.1,-0.5 -6.2,-0.9 -9.4,-0.8 z" />

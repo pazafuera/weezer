@@ -1,6 +1,7 @@
 'use client';
 
 import { forwardRef, Fragment } from 'react';
+import type { CSSProperties } from 'react';
 import { albumCoverSrc, resolveAlbumId } from './ShareCardShell';
 import {
   FactsBurst,
@@ -14,6 +15,44 @@ import {
 } from './ShareCardShell';
 import { displayFont, handFont } from './fonts';
 import type { Bucket, ShareSong } from './Top10Card';
+
+/** Why this doodle is defined locally instead of imported from
+ *  ShareCardShell: the deployed-bundle fault proven on 2026-11-03
+ *  (FanhoodCard, React #130) recurred on 2026-11-04 in the preview
+ *  build — the shared export can be dropped from a deployed
+ *  bundle, a module-local copy cannot. Top10Card, Top10AlbumsCard
+ *  and FanhoodCard carry their own copies for the same reason.
+ *  This card's copy fills with currentColor: the Option B badge
+ *  layout sets it in white over the field, where the other cards'
+ *  copies sit in black. */
+function MusicNotesDoodle({
+  className = '',
+  style,
+}: {
+  className?: string;
+  style?: CSSProperties;
+}) {
+  return (
+    <svg
+      viewBox="0 0 320 300"
+      className={className}
+      style={style}
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      {/* beamed pair */}
+      <rect x="82" y="118" width="8" height="126" />
+      <rect x="172" y="94" width="8" height="126" />
+      <polygon points="82,118 180,94 180,126 82,150" />
+      <ellipse cx="58" cy="252" rx="27" ry="19" transform="rotate(-18 58 252)" />
+      <ellipse cx="148" cy="228" rx="27" ry="19" transform="rotate(-18 148 228)" />
+      {/* single flagged eighth note */}
+      <rect x="271" y="64" width="8" height="104" />
+      <path d="M271 64 C 302 76, 310 104, 298 134 C 304 102, 294 84, 271 74 Z" />
+      <ellipse cx="250" cy="176" rx="24" ry="17" transform="rotate(-18 250 176)" />
+    </svg>
+  );
+}
 
 export type Tribe = {
   /** Canonical tribe key, e.g. '90s Purist' — keys TRIBE_INK. */
@@ -161,7 +200,15 @@ export const TribeBadgeCardVisual = forwardRef<
     <div
       ref={ref}
       className="relative h-[1350px] w-[1080px] overflow-hidden text-white"
-      style={{ backgroundColor: POSTER_BLUE }}
+      style={{
+        backgroundColor: POSTER_BLUE,
+        // The share page's halftone dot field (same values as
+        // app/share/page.tsx) — texture behind everything, no
+        // layout impact.
+        backgroundImage:
+          'radial-gradient(rgba(255,255,255,0.16) 1.6px, transparent 1.7px)',
+        backgroundSize: '20px 20px',
+      }}
     >
       <PosterDomain />
       {!tribe ? (
@@ -174,27 +221,44 @@ export const TribeBadgeCardVisual = forwardRef<
         </div>
       ) : (
         <>
-          {/* Nov 5 one-line rule: the intro renders on ONE line —
-              sized down from 54px and set nowrap so it can never
-              wrap or bleed. */}
-          <p className="absolute inset-x-[60px] top-[96px] whitespace-nowrap text-center text-[40px] font-light leading-none">
-            Based on my ranking of every Weezer song, I&apos;m a...
-          </p>
+          {/* Option B — "the badge" (tribe-redesign mock, chosen
+              Nov 5): intro pill 92 / name stamped across the
+              upright guitar at 452 / diagnosis tight underneath
+              at 736 / facts 896 + album frame 892 / footer. The
+              guitar stands upright in solid ink at card center
+              behind the name; the diagnosis sits on clean blue
+              below the guitar's body (which ends ~694). Zone
+              audit in REPORT.md (cards recomposition, C4). */}
+          <GuitarSilhouette
+            className="absolute inset-0 h-full w-full"
+            transform="translate(190 300) scale(1.05)"
+            fill="#0C1220"
+            style={{ opacity: 0.95 }}
+          />
+          <MusicNotesDoodle className="absolute left-[812px] top-[178px] w-[104px] text-white opacity-90" />
 
-          {/* Structured grid: intro 96 / name 308 / diagnosis 782 /
-              facts + album 866–880 / footer. The guitar is drawn in
-              card coordinates behind the name block — only its
-              smooth shoulder crosses the name zone's lower band;
-              the diagnosis sits on clean blue below it. */}
-          <GuitarSilhouette className="absolute inset-0 h-full w-full" />
+          {/* The intro as the share page's inverted ink pill —
+              same words, same 40px light line, still one line
+              (the pill fits: text 967px + 68px padding = 1035px
+              of the 1080 card, audited with real font metrics). */}
+          <div className="absolute inset-x-0 top-[92px] text-center">
+            <span className="inline-block whitespace-nowrap rounded-2xl bg-[#0C1220] px-[34px] py-[18px] text-[40px] font-light leading-none text-white">
+              Based on my ranking of every Weezer song, I&apos;m a...
+            </span>
+          </div>
+
           <h2
-            className={`absolute inset-x-0 top-[308px] whitespace-nowrap text-center leading-none text-white ${displayFont.className}`}
-            style={{ fontSize: nameSize }}
+            className={`absolute inset-x-0 top-[452px] z-[5] whitespace-nowrap text-center leading-none text-white ${displayFont.className}`}
+            style={{
+              fontSize: nameSize,
+              WebkitTextStroke: '3px #0C1220',
+              textShadow: '5px 5px 0 rgba(12,18,32,0.9)',
+            }}
           >
             {tribe.displayName}
           </h2>
           <p
-            className={`absolute inset-x-[60px] top-[782px] text-center text-[54px] font-bold leading-tight ${handFont.className}`}
+            className={`absolute inset-x-[60px] top-[736px] whitespace-nowrap text-center text-[54px] font-bold leading-[1.2] ${handFont.className}`}
           >
             {diagnosisParts.map((part, i) => (
               <Fragment key={i}>
@@ -206,8 +270,9 @@ export const TribeBadgeCardVisual = forwardRef<
             ))}
           </p>
 
-          {/* THE FACTS — burst + the fact, left column */}
-          <div className="absolute left-[64px] top-[880px] w-[400px]">
+          {/* THE FACTS — burst + the fact, left column (Option B
+              seats the block 16px lower than the old layout) */}
+          <div className="absolute left-[64px] top-[896px] w-[400px]">
             <FactsBurst className="-ml-[30px] h-[104px] w-[420px] -rotate-2">
               <span
                 className={`text-[48px] leading-none text-black ${displayFont.className}`}
@@ -218,12 +283,14 @@ export const TribeBadgeCardVisual = forwardRef<
             <p className="mt-[28px] text-[46px] leading-[1.3]">{tribe.fact}</p>
           </div>
 
-          {/* Signature album: white frame, vinyl peeking out */}
+          {/* Signature album: white frame, vinyl peeking out —
+              Option B steps the frame down to 280px and rescales
+              the peek to match (300px disc at -125 / -10) */}
           {domAlbumId && (
-            <div className="absolute right-[64px] top-[866px] w-[336px]">
+            <div className="absolute right-[64px] top-[892px] w-[280px]">
               <VinylDisc
                 labelColor={ink}
-                className="absolute -right-[150px] top-[-12px] h-[360px] w-[360px]"
+                className="absolute -right-[125px] top-[-10px] h-[300px] w-[300px]"
               />
               <div className="relative z-10 border-[3px] border-[#0C1220] bg-white p-[14px] shadow-[6px_6px_0_rgba(12,18,32,0.9)]">
                 {/* eslint-disable-next-line @next/next/no-img-element */}

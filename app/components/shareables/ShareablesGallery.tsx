@@ -658,11 +658,29 @@ export default function ShareablesGallery({
   // can exist even when no song is bucketed yet (a fan who marked
   // the gate albums "Don't Know It" has a fanhood but no cards).
   const fanhood = useFanhood();
+  // SECTION TITLE (owner, Nov 5): the Sweater Thread embeds this
+  // gallery (thumbnails variant) directly under its share hero,
+  // and the cards arrived with no heading of their own. The
+  // standalone Shareables page (full variant) already carries a
+  // page title ("Shareables", in StepShareables) — so the title
+  // renders ONLY in the thumbnails variant, never twice on the
+  // library page. Copy is a DRAFT (owner to confirm).
+  const sectionTitle =
+    variant === 'thumbnails' ? (
+      <h3
+        className={`${displayFont.className} mb-4 text-2xl leading-tight tracking-wide text-[#0C1220] sm:text-3xl`}
+      >
+        Shareable Cards
+      </h3>
+    ) : null;
   if (songs.length === 0) {
     if (fanhood) {
       return variant === 'thumbnails' ? (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          <FanhoodThumbnailItem fanhood={fanhood} subtitle={subtitle} />
+        <div>
+          {sectionTitle}
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            <FanhoodThumbnailItem fanhood={fanhood} subtitle={subtitle} />
+          </div>
         </div>
       ) : (
         <div className="grid gap-6 md:grid-cols-2">
@@ -670,7 +688,7 @@ export default function ShareablesGallery({
         </div>
       );
     }
-    return (
+    const emptyState = (
       <div className={`rounded-[18px] border-[3px] border-[#0C1220] bg-white p-10 text-center ${POSTER_HARD_SHADOW}`}>
         <p className={`${displayFont.className} text-[24px] leading-tight tracking-wide text-[#0C1220]`}>No shareables yet</p>
         <p className="mt-1 text-sm font-semibold leading-snug text-[#3D4A63]">
@@ -687,10 +705,20 @@ export default function ShareablesGallery({
         )}
       </div>
     );
+    return variant === 'thumbnails' ? (
+      <div>
+        {sectionTitle}
+        {emptyState}
+      </div>
+    ) : (
+      emptyState
+    );
   }
   if (variant === 'thumbnails') {
     return (
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+      <div>
+        {sectionTitle}
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         <ThumbnailItem shortTitle="Top 10 Songs" filename="my-weezer-top-10.png">
           <Top10CardVisual songs={songs} subtitle={subtitle} />
         </ThumbnailItem>
@@ -714,6 +742,7 @@ export default function ShareablesGallery({
         <ThumbnailItem shortTitle="Era DNA" filename="my-weezer-era-dna.png">
           <EraDnaCardVisual songs={songs} subtitle={subtitle} />
         </ThumbnailItem>
+        </div>
       </div>
     );
   }

@@ -5,6 +5,8 @@ import {
   shouldReloadForBuild,
   BUILD_RELOAD_GUARD_KEY,
 } from './buildVersion';
+import { readFreshPendingScrollRestore } from '../lib/pendingScrollRestore';
+import { logScrollDebug } from '../lib/scrollDebug';
 
 /** The build this bundle was compiled from, stamped at build time
  *  (next.config.js env: VERCEL_GIT_COMMIT_SHA). Empty outside a
@@ -22,7 +24,12 @@ const RUNNING_BUILD_ID = process.env.NEXT_PUBLIC_BUILD_ID || '';
  * behind the pre-seed Fan Stats his long-lived session showed
  * him on Oct 19, and behind frozen-overlay states that no
  * in-page control can escape. Any failure (offline, endpoint
- * missing, unreadable ids) quietly does nothing.
+ * missing, unreadable ids) quietly does nothing. One deliberate
+ * delay: while a fresh pending scroll restore exists (a
+ * Back/Forward landing mid-restore — its scroll position is the
+ * one piece of state a reload cannot carry), the reload waits
+ * for the next check cycle; see the inline note and
+ * app/lib/pendingScrollRestore.ts.
  */
 export default function BuildVersionCheck() {
   useEffect(() => {
@@ -55,6 +62,28 @@ export default function BuildVersionCheck() {
             alreadyReloadedFor
           )
         ) {
+          // One exception to "reload as soon as a stale build is
+          // proven": a Back/Forward landing whose scroll restore
+          // is still owed. The design note in buildVersion.ts
+          // calls a reload state-safe because the step survives
+          // in ?step= — but the landing's scroll position does
+          // not, and the owner's Nov 6 device log caught this
+          // exact reload wiping a restore 213ms after it started.
+          // A fresh persisted restore record
+          // (app/lib/pendingScrollRestore.ts) means a landing is
+          // mid-flight: skip THIS check cycle. The record clears
+          // when the restore consumes it and goes stale in 15s
+          // regardless, so the next mount/foreground check still
+          // catches a genuinely stale build moments later — and
+          // if a later reload does land, the record is what lets
+          // the rebooted app finish the restore.
+          const pendingRestore = readFreshPendingScrollRestore();
+          if (pendingRestore) {
+            logScrollDebug(
+              `watchdog reload SKIPPED fresh pending scroll restore step=${pendingRestore.step} y=${pendingRestore.y} navIndex=${pendingRestore.navIndex}`
+            );
+            return;
+          }
           try {
             window.sessionStorage.setItem(
               BUILD_RELOAD_GUARD_KEY,

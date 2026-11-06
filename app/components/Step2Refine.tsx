@@ -6,6 +6,7 @@ import { FlyingWIcon, AudioPreviewButton, SortingIncompleteNotice } from './Shar
 import { getRankedSongs } from '@/utils/rankingUtils';
 import Step1_5Matchups from './Step1_5Matchups';
 import { displayFont } from './shareables/fonts';
+import { logScrollDebug } from '../lib/scrollDebug';
 
 // The bucket band's pastel strip (Round 2): the -100 tint of the
 // bucket's own badge family in BUCKET_CONFIG (badgeBg's bg token),
@@ -121,6 +122,7 @@ export default function Step2Refine({
 
   const handleNext = () => {
     triggerHaptic(20);
+    logScrollDebug('scrollTo tag=Step2Refine-handleNext y=0');
     window.scrollTo(0, 0);
     if (stageIdx < REFINEMENT_STAGES.length - 1) {
       goToStage(stageIdx + 1);
@@ -132,6 +134,7 @@ export default function Step2Refine({
 
   const handleBack = () => {
     triggerHaptic(15);
+    logScrollDebug('scrollTo tag=Step2Refine-handleBack y=0');
     window.scrollTo(0, 0);
     if (stageIdx > 0) {
       goToStage(stageIdx - 1);

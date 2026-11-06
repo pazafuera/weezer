@@ -26,6 +26,8 @@ import {
   navScrollFor,
 } from '../lib/navigationHistory';
 import type { NavStack } from '../lib/navigationHistory';
+import { logScrollDebug } from '../lib/scrollDebug';
+import ScrollDebugOverlay from '../components/ScrollDebugOverlay';
 
 
 export type AppStep =
@@ -593,6 +595,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   const [communityLoaded, setCommunityLoaded] = useState<boolean>(false);
 
   const setStep = (newStep: AppStep) => {
+    logScrollDebug(`scrollTo tag=setStep from=${step} to=${newStep} y=0`);
     setStepState(newStep);
     if (typeof window !== 'undefined') {
       window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
@@ -646,6 +649,9 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     const url = new URL(window.location.href);
     url.searchParams.set('step', current);
     const marker = createNavMarker(stack, current);
+    logScrollDebug(
+      `writeEntry mode=${mode} step=${current} navIndex=${stack.index} recordedScroll=${navScrollFor(stack, stack.index) ?? 'none'}`
+    );
     if (mode === 'push') {
       window.history.pushState(marker, '', url.toString());
     } else {
@@ -1289,6 +1295,10 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
       setGuardNotice(null);
     }
 
+    logScrollDebug(
+      `navigate from=${step} target=${targetStep} guarded=${guardedStep} guardRewrote=${guardedStep !== targetStep} isReturn=${isReturn} historyMode=${historyMode ?? 'auto'} navIndexBefore=${navStackRef.current.index} scrollYNow=${typeof window !== 'undefined' ? Math.round(window.scrollY) : 0}`
+    );
+
     // Capture the scroll position of the step being left BEFORE
     // setStep runs: setStep force-scrolls to the top, so a
     // window.scrollY read after it records 0 for the entry being
@@ -1337,6 +1347,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         // written before it, so Back/Forward afterwards can
         // never resurrect a signed-in page.
         navStackRef.current = resetNavStack(navStackRef.current, guardedStep);
+        logScrollDebug(`navigate kind=reset navIndex=${navStackRef.current.index}`);
         writeNavEntry('replace');
       } else if (
         historyMode === 'replace' ||
@@ -1354,20 +1365,30 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
           replaceNavStep(navStackRef.current, guardedStep),
           0
         );
+        logScrollDebug(
+          `navigate kind=replace navIndex=${navStackRef.current.index} recordedScroll=0 (cleared)`
+        );
         writeNavEntry('replace');
       } else if (guardedStep !== step) {
         // Leaving this entry for a fresh one: record how far
         // the user had scrolled it (captured above, before
         // setStep scrolled the new step to the top), so Back
         // restores the spot.
+        const leavingIndex = navStackRef.current.index;
         navStackRef.current = pushNavStep(
           recordNavScroll(navStackRef.current, leavingScrollY),
           guardedStep
+        );
+        logScrollDebug(
+          `navigate kind=push leavingIndex=${leavingIndex} leavingScrollY=${Math.round(leavingScrollY)} recordedForLeaving=${navScrollFor(navStackRef.current, leavingIndex) ?? 'none'} navIndexAfter=${navStackRef.current.index}`
         );
         writeNavEntry('push');
       }
       // Same-step navigation pushes nothing (and the current
       // entry already carries the right marker).
+      logScrollDebug(
+        `navigate settled step=${guardedStep} navIndex=${navStackRef.current.index}`
+      );
       syncNavUi();
     }
   };
@@ -1407,19 +1428,32 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const onPopState = (event: PopStateEvent) => {
+      logScrollDebug(
+        `popstate EVENT path=${window.location.pathname} hasState=${event.state != null} scrollY=${Math.round(window.scrollY)}`
+      );
       if (window.location.pathname !== '/') return;
       const stack = navStackRef.current;
-      if (!stack.initialized) return;
+      if (!stack.initialized) {
+        logScrollDebug('popstate IGNORED stack not initialized');
+        return;
+      }
       const marker = parseNavMarker(
         event.state,
         (s): s is AppStep => resolveUrlStep(s) === s
       );
       // Not one of ours (Next router state, a sub-page entry, a
       // pre-history-build entry): leave it to the router.
-      if (!marker) return;
+      if (!marker) {
+        logScrollDebug('popstate IGNORED no weezer marker in event.state');
+        return;
+      }
       // Stale generation — an entry written before a sign-out
       // reset. Never resurrect it; the app stays where it is.
       if (marker.gen !== stack.gen) return;
+
+      logScrollDebug(
+        `popstate markerStep=${marker.step} markerIndex=${marker.navIndex} currentIndex=${stack.index} currentStep=${stepRef.current} scrollYAtPop=${Math.round(window.scrollY)} recordedForMarker=${navScrollFor(stack, marker.navIndex) ?? 'none'}`
+      );
 
       const previousIndex = stack.index;
       // Record how far the entry being left was scrolled BEFORE
@@ -1444,6 +1478,9 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         navStackRef.current = recordNavScroll(
           replaceNavStep(navStackRef.current, guarded),
           0
+        );
+        logScrollDebug(
+          `popstate GUARD REWRITE requested=${requested} landed=${guarded} recordedScrollCleared=0`
         );
         writeNavEntry('replace');
         setGuardNotice({ requested, landed: guarded });
@@ -1484,6 +1521,9 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
           step: guarded,
           y: navScrollFor(navStackRef.current, marker.navIndex) ?? 0,
         };
+        logScrollDebug(
+          `pending SET step=${guarded} y=${pendingScrollRef.current.y} (recordedForIndex=${navScrollFor(navStackRef.current, marker.navIndex) ?? 'none'})`
+        );
         setStepState(guarded);
       }
       syncNavUi();
@@ -1519,15 +1559,35 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   // the moment the user touches or wheels — their scroll wins.
   useEffect(() => {
     const pending = pendingScrollRef.current;
+    if (pending && pending.step !== step) {
+      logScrollDebug(
+        `pending NOT consumed: pendingStep=${pending.step} currentStep=${step} y=${pending.y} (left in ref)`
+      );
+    }
     if (!pending || pending.step !== step) return;
     pendingScrollRef.current = null;
+    logScrollDebug(`pending CONSUMED step=${pending.step} y=${pending.y}`);
     const y = pending.y;
-    if (y <= 0) return;
+    if (y <= 0) {
+      logScrollDebug('restore SKIPPED y<=0');
+      return;
+    }
     let raf = 0;
     let cancelled = false;
     let stuckFrames = 0;
+    let attempts = 0;
+    let finished = false;
     const deadline = performance.now() + 2000;
+    logScrollDebug(`restore START target=${y} scrollYNow=${Math.round(window.scrollY)}`);
+    const finish = (outcome: string) => {
+      if (finished) return;
+      finished = true;
+      logScrollDebug(
+        `restore END outcome=${outcome} target=${y} finalScrollY=${Math.round(window.scrollY)} attempts=${attempts}`
+      );
+    };
     const cancelOnUserScroll = () => {
+      if (!cancelled) finish('cancelled-by-touch-or-wheel');
       cancelled = true;
     };
     window.addEventListener('touchstart', cancelOnUserScroll, {
@@ -1538,13 +1598,25 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     });
     const attempt = () => {
       if (cancelled) return;
+      attempts += 1;
       window.scrollTo({ top: y, left: 0, behavior: 'instant' });
+      if (attempts <= 3 || attempts % 15 === 0) {
+        logScrollDebug(
+          `restore attempt #${attempts} observedScrollY=${Math.round(window.scrollY)} target=${y}`
+        );
+      }
       if (Math.abs(window.scrollY - y) <= 1) {
         stuckFrames += 1;
-        if (stuckFrames >= 2) return;
+        if (stuckFrames >= 2) {
+          finish('stuck');
+          return;
+        }
       } else {
         stuckFrames = 0;
-        if (performance.now() > deadline) return;
+        if (performance.now() > deadline) {
+          finish('deadline');
+          return;
+        }
       }
       raf = requestAnimationFrame(attempt);
     };
@@ -1555,10 +1627,21 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
       raf = requestAnimationFrame(attempt);
     });
     return () => {
+      finish('cleanup-effect-rerun-or-unmount');
       cancelled = true;
       cancelAnimationFrame(raf);
       window.removeEventListener('touchstart', cancelOnUserScroll);
       window.removeEventListener('wheel', cancelOnUserScroll);
+    };
+  }, [step]);
+
+  // SCROLLDEBUG (temporary): step mount/unmount trace, so the log
+  // shows which renders happened around a pop landing. No-op
+  // unless the debug flag is set (see app/lib/scrollDebug.ts).
+  useEffect(() => {
+    logScrollDebug(`step MOUNT ${step} scrollY=${Math.round(window.scrollY)}`);
+    return () => {
+      logScrollDebug(`step UNMOUNT ${step}`);
     };
   }, [step]);
 
@@ -1710,6 +1793,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
       }}
     >
       {children}
+      <ScrollDebugOverlay />
     </WeezerContext.Provider>
   );
 };

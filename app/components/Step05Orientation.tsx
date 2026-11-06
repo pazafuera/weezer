@@ -2,6 +2,7 @@
 
 import React, { useEffect } from 'react';
 import { useWeezer } from '../context/WeezerContext';
+import { logScrollDebug } from '../lib/scrollDebug';
 import { displayFont } from './shareables/fonts';
 
 // The overall process (owner direction, Oct 17): orient on the
@@ -33,6 +34,7 @@ export default function Step05Orientation() {
   } = useWeezer();
 
   useEffect(() => {
+    logScrollDebug('scrollTo tag=Step05Orientation-mount y=0');
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   }, []);
 

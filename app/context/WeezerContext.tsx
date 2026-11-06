@@ -27,6 +27,11 @@ import {
 } from '../lib/navigationHistory';
 import type { NavStack } from '../lib/navigationHistory';
 import { logScrollDebug } from '../lib/scrollDebug';
+import {
+  persistPendingScrollRestore,
+  readFreshPendingScrollRestore,
+  clearPendingScrollRestore,
+} from '../lib/pendingScrollRestore';
 import ScrollDebugOverlay from '../components/ScrollDebugOverlay';
 
 
@@ -620,7 +625,10 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
    *  being landed on and the scrollY recorded when that entry was
    *  last left. The restore effect below applies it after the
    *  step renders (setStep's scroll-to-top is for FRESH entries;
-   *  a Back/Forward landing returns to where the user was). */
+   *  a Back/Forward landing returns to where the user was). The
+   *  handler also writes it through to sessionStorage
+   *  (app/lib/pendingScrollRestore.ts) so the restore survives a
+   *  document reload landing mid-restore. */
   const pendingScrollRef = useRef<{ step: AppStep; y: number } | null>(null);
   const [canGoBack, setCanGoBack] = useState(false);
   const [previousStep, setPreviousStep] = useState<AppStep | null>(null);
@@ -636,6 +644,14 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     const stack = navStackRef.current;
     setCanGoBack(canGoBackInStack(stack));
     setPreviousStep(previousStackStep(stack));
+  };
+
+  /** A deliberate navigation supersedes any restore a pop landing
+   *  persisted: the user has moved on, and fresh entries start at
+   *  the top — exactly as they did before the record existed. */
+  const clearPersistedScrollRestore = (reason: string) => {
+    clearPendingScrollRestore();
+    logScrollDebug(`restore record CLEARED reason=${reason}`);
   };
 
   /** Stamp the stack's current position into the browser entry:
@@ -1348,6 +1364,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         // never resurrect a signed-in page.
         navStackRef.current = resetNavStack(navStackRef.current, guardedStep);
         logScrollDebug(`navigate kind=reset navIndex=${navStackRef.current.index}`);
+        clearPersistedScrollRestore('fresh-navigation-reset');
         writeNavEntry('replace');
       } else if (
         historyMode === 'replace' ||
@@ -1368,6 +1385,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         logScrollDebug(
           `navigate kind=replace navIndex=${navStackRef.current.index} recordedScroll=0 (cleared)`
         );
+        clearPersistedScrollRestore('fresh-navigation-replace');
         writeNavEntry('replace');
       } else if (guardedStep !== step) {
         // Leaving this entry for a fresh one: record how far
@@ -1382,6 +1400,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         logScrollDebug(
           `navigate kind=push leavingIndex=${leavingIndex} leavingScrollY=${Math.round(leavingScrollY)} recordedForLeaving=${navScrollFor(navStackRef.current, leavingIndex) ?? 'none'} navIndexAfter=${navStackRef.current.index}`
         );
+        clearPersistedScrollRestore('fresh-navigation-push');
         writeNavEntry('push');
       }
       // Same-step navigation pushes nothing (and the current
@@ -1482,6 +1501,9 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         logScrollDebug(
           `popstate GUARD REWRITE requested=${requested} landed=${guarded} recordedScrollCleared=0`
         );
+        // This landing owes no restore (it starts at the top):
+        // drop any restore record a previous landing persisted.
+        clearPersistedScrollRestore('popstate-guard-rewrite');
         writeNavEntry('replace');
         setGuardNotice({ requested, landed: guarded });
       } else {
@@ -1524,6 +1546,23 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         logScrollDebug(
           `pending SET step=${guarded} y=${pendingScrollRef.current.y} (recordedForIndex=${navScrollFor(navStackRef.current, marker.navIndex) ?? 'none'})`
         );
+        // Write the owed restore through to sessionStorage: the
+        // stale-build watchdog can reload the document mid-landing
+        // (proven by the owner's Nov 6 scrolldebug log — the
+        // restore started, then the page rebooted at scrollY=0),
+        // and the in-memory ref dies with the document. The next
+        // document's restore effect re-offers it on boot; the
+        // watchdog also refuses to reload while it exists. See
+        // app/lib/pendingScrollRestore.ts.
+        persistPendingScrollRestore({
+          step: guarded,
+          y: pendingScrollRef.current.y,
+          navIndex: marker.navIndex,
+          ts: Date.now(),
+        });
+        logScrollDebug(
+          `restore record PERSISTED step=${guarded} y=${pendingScrollRef.current.y} navIndex=${marker.navIndex}`
+        );
         setStepState(guarded);
       }
       syncNavUi();
@@ -1546,6 +1585,15 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   // it. Fresh navigations never set the pending ref, so they
   // keep setStep's scroll-to-top.
   //
+  // The pending restore is ALSO persisted to sessionStorage by
+  // the popstate handler (app/lib/pendingScrollRestore.ts): if
+  // the stale-build watchdog reloads the document mid-landing,
+  // the rebooted app lands on the same step (via ?step=) and
+  // this effect re-offers the persisted restore to the same
+  // loop below. BuildVersionCheck refuses to reload while a
+  // fresh record exists, so the boot path is the backstop, not
+  // the common case.
+  //
   // The restore is a short retry loop, not a single scrollTo:
   // the first version applied one scrollTo on double-rAF and
   // Mark's phone test (Nov 4, 2026) still landed at the top —
@@ -1558,7 +1606,27 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   // grown enough to hold it), gives up after ~2s, and cancels
   // the moment the user touches or wheels — their scroll wins.
   useEffect(() => {
-    const pending = pendingScrollRef.current;
+    let pending = pendingScrollRef.current;
+    let fromPersistedRecord = false;
+    if (!pending) {
+      // BOOT PATH: a pop landing in a PREVIOUS document may have
+      // persisted its owed restore before a watchdog reload wiped
+      // the page (the Nov 6 diagnosis — restore started at +18215,
+      // pagehide at +18428, reboot at the top). The reload lands
+      // the app back on the same step via ?step=, so when the
+      // booted step matches the record's step, re-offer the
+      // restore to this same loop. The record only ever comes
+      // from a pop landing in this tab session and goes stale in
+      // 15s, so a genuinely fresh visit can't trip this.
+      const record = readFreshPendingScrollRestore();
+      if (record && record.step === step) {
+        pending = { step: step, y: record.y };
+        fromPersistedRecord = true;
+        logScrollDebug(
+          `boot restore FOUND step=${record.step} y=${record.y} navIndex=${record.navIndex} ageMs=${Date.now() - record.ts}`
+        );
+      }
+    }
     if (pending && pending.step !== step) {
       logScrollDebug(
         `pending NOT consumed: pendingStep=${pending.step} currentStep=${step} y=${pending.y} (left in ref)`
@@ -1566,7 +1634,15 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     }
     if (!pending || pending.step !== step) return;
     pendingScrollRef.current = null;
+    // Consumed — in this document or re-offered from the persisted
+    // record — the persisted copy has done its job either way.
+    clearPendingScrollRestore();
     logScrollDebug(`pending CONSUMED step=${pending.step} y=${pending.y}`);
+    if (fromPersistedRecord) {
+      logScrollDebug(
+        `boot restore APPLIED step=${pending.step} y=${pending.y} (record cleared)`
+      );
+    }
     const y = pending.y;
     if (y <= 0) {
       logScrollDebug('restore SKIPPED y<=0');

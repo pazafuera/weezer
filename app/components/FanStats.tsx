@@ -27,6 +27,54 @@ import {
   isQualifiedSubmission,
   leansClassicist,
 } from '../lib/fanStatsMethodology';
+import WeezerverseMap, { presencePlaceCount } from './WeezerverseMap';
+import WeezerverseFilterBar, {
+  countryName,
+  stateName,
+} from './WeezerverseFilterBar';
+import {
+  EMPTY_SELECTION,
+  ageBandLabel,
+  computeSliceStats,
+  fetchCommunitySlice,
+  fetchFanPresence,
+  isFilterActive,
+  type FanPresence,
+  type SlicePayload,
+  type SliceSelection,
+  type SliceStats,
+} from '../lib/communitySlice';
+
+// Weezerverse Phase 1 (spec section 3): when a filtered slice is
+// suppressed, each re-cut section keeps its heading and swaps its
+// body for this note. Wording is the spec's drafts — the
+// none_qualified variant names the filtered place.
+const SuppressedBody = ({
+  reason,
+  place,
+}: {
+  reason?: string;
+  place?: string;
+}) => (
+  <div className="rounded-2xl border-2 border-dashed border-[#0C1220]/25 bg-white/70 px-4 py-6 text-center">
+    <p className="text-sm font-semibold leading-relaxed text-[#3D4A63]">
+      {reason === 'none_qualified'
+        ? `Fans from ${place || 'here'} have started ranking, but nobody there has rated enough songs to count yet.`
+        : "Not enough fans here yet. Fewer than 5 fans match this filter, so we don't show numbers for it — check back as the community grows."}
+    </p>
+  </div>
+);
+
+// While a slice fetch is in flight, re-cut sections show this
+// instead of the global numbers — a filtered view never flashes
+// unfiltered data under a filter.
+const SliceLoadingBody = () => (
+  <div className="rounded-2xl border-2 border-dashed border-[#0C1220]/25 bg-white/70 px-4 py-6 text-center">
+    <p className="text-sm font-semibold leading-relaxed text-[#3D4A63]">
+      Counting the fans in this slice…
+    </p>
+  </div>
+);
 
 // Reusable 5-Bar Distribution Component
 const DistributionBars = ({ pBanger, pSlaps, pMid, pSkip, pTrash }: { pBanger: number, pSlaps: number, pMid: number, pSkip: number, pTrash: number }) => (
@@ -127,6 +175,57 @@ export default function FanStats({
 }) {
   const { communityMasterLists = [], communityTriageMaps = [], refreshCommunityData, closeFanStats, communityLoaded } = useWeezer();
   const [expandedTribe, setExpandedTribe] = useState<string | null>(null);
+
+  // --- Weezerverse Phase 1: presence, filter selection, slice -----
+  // GRACEFUL DEGRADATION: presence stays null until the RPC answers.
+  // If get_fan_presence is missing (migration not yet run) or fails,
+  // presence remains null forever and the map + filter bar simply
+  // never render — the page below is byte-for-byte the pre-Phase-1
+  // page. A slice fetch failure AFTER a selection reverts the
+  // selection to All fans and hides the bar the same way.
+  const [presence, setPresence] = useState<FanPresence | null>(null);
+  const [selection, setSelection] = useState<SliceSelection>(EMPTY_SELECTION);
+  const [slicePayload, setSlicePayload] = useState<SlicePayload | null>(null);
+  const [sliceStats, setSliceStats] = useState<SliceStats | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchFanPresence().then((res) => {
+      if (!cancelled && res.status === 'ok') setPresence(res.presence);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isFilterActive(selection)) {
+      setSlicePayload(null);
+      setSliceStats(null);
+      return;
+    }
+    let cancelled = false;
+    fetchCommunitySlice(selection).then((res) => {
+      if (cancelled) return;
+      if (res.status === 'unavailable') {
+        // The slice RPC vanished or failed mid-session: fall back
+        // to the unfiltered page, exactly as if the feature were
+        // not there.
+        setPresence(null);
+        setSelection(EMPTY_SELECTION);
+        setSlicePayload(null);
+        setSliceStats(null);
+        return;
+      }
+      setSlicePayload(res.payload);
+      setSliceStats(
+        res.payload.suppressed ? null : computeSliceStats(res.payload),
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [selection]);
 
   // If context hasn't loaded data yet when user jumps straight to Fan Stats, trigger background fetch
   useEffect(() => {
@@ -457,9 +556,60 @@ export default function FanStats({
     );
   }
 
-  const thinSample = !communityStats.enoughForPercentages;
+  // The one seam the re-cut sections read through: the global
+  // object untouched, or the slice's stats while a filter is on.
+  // SliceStats is field-compatible by construction (see
+  // communitySlice.ts); the cast bridges the page's richer inferred
+  // type. Taste Twins and Old vs. New deliberately keep reading
+  // communityStats directly — they stay global (spec decision 7)
+  // and are labeled as such while a filter is on.
+  const filterActive = isFilterActive(selection);
+  // A payload only counts for the CURRENT selection — its slice
+  // echo must match, so changing a filter reads as "loading" until
+  // the new slice lands, never as the previous slice's numbers.
+  const payloadForSelection =
+    !!slicePayload &&
+    slicePayload.slice.country === selection.country &&
+    slicePayload.slice.band === (selection.band ?? null) &&
+    (slicePayload.slice.state ?? null) ===
+      (selection.country === 'US' ? selection.state : null);
+  const statsSuppressed =
+    filterActive && payloadForSelection && slicePayload.suppressed;
+  const sliceLoading = filterActive && !payloadForSelection;
+  const slicePending = filterActive && (!payloadForSelection || statsSuppressed);
+  const activeStats = (
+    filterActive && payloadForSelection && sliceStats
+      ? sliceStats
+      : communityStats
+  ) as unknown as typeof communityStats;
+  const globalThinSample = !communityStats.enoughForPercentages;
+  const placeParts = [
+    selection.state ? stateName(selection.state) : null,
+    selection.country ? countryName(selection.country) : null,
+    selection.band ? ageBandLabel(selection.band) : null,
+  ].filter((p): p is string => !!p);
+  const placePhrase =
+    selection.state && selection.country === 'US'
+      ? `${stateName(selection.state)}, United States`
+      : placeParts[0] || '';
+  const sliceLineParts = [
+    selection.country ? countryName(selection.country) : null,
+    selection.state ? stateName(selection.state) : null,
+    selection.band ? ageBandLabel(selection.band) : null,
+  ].filter((p): p is string => !!p);
+  // The none_qualified line names a place — only geography counts
+  // as a place; a band-only filter falls back to "here".
+  const suppressedPlace =
+    selection.country || selection.state ? placePhrase : undefined;
+  const suppressedNote = statsSuppressed ? (
+    <SuppressedBody reason={slicePayload?.reason} place={suppressedPlace} />
+  ) : (
+    <SliceLoadingBody />
+  );
+
+  const thinSample = !activeStats.enoughForPercentages;
   const showDivide =
-    communityStats.enoughForPercentages && communityStats.hasDebateData;
+    activeStats.enoughForPercentages && activeStats.hasDebateData;
 
   return (
     <div className="-mx-4 -my-4 bg-[#DCEEF8] pb-32 animate-in fade-in slide-in-from-bottom-4 duration-700 sm:-mx-6 sm:-my-6 lg:-mx-8 lg:-my-8" style={{
@@ -485,7 +635,9 @@ export default function FanStats({
             ships with the seed run and retires with it. */}
         <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 shadow-xs">
           <p className="text-xs sm:text-sm font-semibold text-amber-900 leading-relaxed text-center">
-            Heads up: this page is running on sample data from seeded test fans while the community grows. Real rankings take over as fans join.
+            {filterActive
+              ? 'Filtered views show real fans only — the seeded test fans have no country or birth year on file.'
+              : 'Heads up: this page is running on sample data from seeded test fans while the community grows. Real rankings take over as fans join.'}
           </p>
         </div>
 
@@ -498,6 +650,37 @@ export default function FanStats({
             206 songs. Ranked by the fans who showed up — here&apos;s where participating fans land.
           </p>
         </div>
+
+        {/* WORLD MAP + FILTER BAR — directly under the hero, the
+            map as the page's front door and the filter bar attached
+            beneath it (spec §3 + settled decisions). Rendered ONLY
+            when get_fan_presence answered: while the migration is
+            unrun (or the RPC fails) this whole section is absent
+            and the page is exactly the pre-Phase-1 page. */}
+        {presence && (
+          <div className="bg-white rounded-[18px] border-[3px] border-[#0C1220] shadow-[4px_4px_0_rgba(11,30,63,0.85)] p-4 sm:p-6">
+            <WeezerverseMap presence={presence} />
+            <p className="text-center text-xs font-bold text-[#3D4A63] mt-3">
+              Fans have ranked from {presencePlaceCount(presence)} places
+            </p>
+            <div className="mt-4 border-t-2 border-dashed border-[#0C1220]/15 pt-4">
+              <WeezerverseFilterBar
+                presence={presence}
+                selection={selection}
+                onChange={setSelection}
+              />
+            </div>
+            {filterActive && (
+              <p className="mt-3 text-center text-xs font-black uppercase tracking-wide text-[#0C1220]">
+                {payloadForSelection &&
+                !slicePayload.suppressed &&
+                typeof slicePayload.cohortSize === 'number'
+                  ? `Showing ${slicePayload.cohortSize} fans · ${sliceLineParts.join(' · ')}`
+                  : sliceLineParts.join(' · ')}
+              </p>
+            )}
+          </div>
+        )}
 
         {/* ROW 1: THE DIVIDE & FAN AWARDS */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
@@ -514,15 +697,17 @@ export default function FanStats({
               <p className="text-xs font-semibold text-[#3D4A63] mt-2 max-w-xs mx-auto text-balance">From the fans who've ranked so far.</p>
             </div>
 
-            {showDivide ? (
+            {slicePending ? (
+            <div className="relative z-10">{suppressedNote}</div>
+            ) : showDivide ? (
             <div className="relative z-10 flex items-center justify-center">
               <div className="flex-1 text-center pr-2">
-                <div className="text-5xl lg:text-6xl font-black text-[#0072CE] tracking-tighter">{communityStats.bluePct}%</div>
+                <div className="text-5xl lg:text-6xl font-black text-[#0072CE] tracking-tighter">{activeStats.bluePct}%</div>
                 <h4 className="text-[10px] lg:text-xs font-black uppercase tracking-widest mt-1 text-slate-500">Blue</h4>
               </div>
               <div className="shrink-0 text-slate-300 font-black italic text-2xl px-4">VS</div>
               <div className="flex-1 text-center pl-2">
-                <div className="text-5xl lg:text-6xl font-black text-slate-800 tracking-tighter">{communityStats.pinkPct}%</div>
+                <div className="text-5xl lg:text-6xl font-black text-slate-800 tracking-tighter">{activeStats.pinkPct}%</div>
                 <h4 className="text-[10px] lg:text-xs font-black uppercase tracking-widest mt-1 text-slate-500">Pinkerton</h4>
               </div>
             </div>
@@ -545,7 +730,7 @@ export default function FanStats({
             </>
             )}
           </div>
-          {!showDivide && <PlaceholderNote />}
+          {!slicePending && !showDivide && <PlaceholderNote />}
           </div>
 
           {/* FAN AWARDS (2/3 Width on Desktop) */}
@@ -554,20 +739,23 @@ export default function FanStats({
               <h2 className="text-3xl sm:text-4xl font-black text-white tracking-tight leading-tight">Fan Awards</h2>
             </div>
 
+            {slicePending ? (
+              <div className="relative z-10">{suppressedNote}</div>
+            ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 relative z-10">
               <div className="bg-slate-800/80 p-5 rounded-2xl border border-slate-700/50 flex flex-col justify-between">
                 <div>
                   <span className="text-[10px] font-black uppercase text-amber-400 block mb-1">Most Universally Loved</span>
-                  <h3 className="text-xl lg:text-2xl font-black text-white text-balance leading-tight">{communityStats.mostLoved?.song?.title ?? '—'}</h3>
+                  <h3 className="text-xl lg:text-2xl font-black text-white text-balance leading-tight">{activeStats.mostLoved?.song?.title ?? '—'}</h3>
                 </div>
                 <p className="text-xs font-medium text-slate-400 mt-3 leading-snug">The song fans agree on most — nearly everybody loves it.</p>
               </div>
 
               <div className="bg-slate-800/80 p-5 rounded-2xl border border-slate-700/50">
                 <span className="text-[10px] font-black uppercase text-rose-500 block mb-1">Most Divisive — Top 5</span>
-                {communityStats.divisiveTop.length > 0 ? (
+                {activeStats.divisiveTop.length > 0 ? (
                   <ul className="mt-1">
-                    {communityStats.divisiveTop.map((m, i) => (
+                    {activeStats.divisiveTop.map((m, i) => (
                       <li key={m.id} className={`flex gap-2 py-2.5 ${i > 0 ? 'border-t border-slate-700/50' : ''}`}>
                         <span className="text-sm font-black text-white leading-tight shrink-0">{i + 1}.</span>
                         <div className="min-w-0">
@@ -599,7 +787,7 @@ export default function FanStats({
               <div className="bg-slate-800/80 p-5 rounded-2xl border border-slate-700/50 flex flex-col justify-between">
                 <div>
                   <span className="text-[10px] font-black uppercase text-indigo-400 block mb-1">The Hidden Gem</span>
-                  <h3 className="text-xl lg:text-2xl font-black text-white text-balance leading-tight">{communityStats.hiddenGem?.song?.title ?? '—'}</h3>
+                  <h3 className="text-xl lg:text-2xl font-black text-white text-balance leading-tight">{activeStats.hiddenGem?.song?.title ?? '—'}</h3>
                 </div>
                 <p className="text-xs font-medium text-slate-400 mt-3 leading-snug">Fewer fans rank it, but the ones who do rank it high.</p>
               </div>
@@ -607,15 +795,16 @@ export default function FanStats({
               <div className="bg-slate-800/80 p-5 rounded-2xl border border-slate-700/50 flex flex-col justify-between">
                 <div>
                   <span className="text-[10px] font-black uppercase text-slate-500 block mb-1">Most Disliked</span>
-                  <h3 className="text-xl lg:text-2xl font-black text-white text-balance leading-tight">{communityStats.mostRejected?.song?.title ?? '—'}</h3>
+                  <h3 className="text-xl lg:text-2xl font-black text-white text-balance leading-tight">{activeStats.mostRejected?.song?.title ?? '—'}</h3>
                 </div>
                 <p className="text-xs font-medium text-slate-400 mt-3 leading-snug">
-                  {communityStats.enoughForPercentages && communityStats.mostRejected?.pTrash
-                    ? `${Math.round(communityStats.mostRejected.pTrash * 100)}% of fans put this in Trash.`
+                  {activeStats.enoughForPercentages && activeStats.mostRejected?.pTrash
+                    ? `${Math.round(activeStats.mostRejected.pTrash * 100)}% of fans put this in Trash.`
                     : 'More fans put this in Trash than any other song.'}
                 </p>
               </div>
             </div>
+            )}
           </div>
         </div>
 
@@ -628,12 +817,14 @@ export default function FanStats({
             <div className="text-center sm:text-left mb-6 border-b border-slate-100 pb-4">
               <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 block mb-1">Consensus</span>
               <h2 className={`${displayFont.className} text-3xl sm:text-4xl tracking-wide text-[#0C1220] leading-tight`}>Community Top 10</h2>
-              <p className="text-[11px] font-bold text-[#3D4A63] mt-1.5">Based on {communityStats.totalFans} fan rankings of 10 or more songs</p>
+              <p className="text-[11px] font-bold text-[#3D4A63] mt-1.5">{slicePending ? 'Filtered rankings of 10 or more songs' : `Based on ${activeStats.totalFans} fan rankings of 10 or more songs`}</p>
             </div>
             
             <div className="space-y-4 flex-1">
-              {communityStats.topConsensus.length > 0 ? (
-                communityStats.topConsensus.map((item, idx) => {
+              {slicePending ? (
+                suppressedNote
+              ) : activeStats.topConsensus.length > 0 ? (
+                activeStats.topConsensus.map((item, idx) => {
                  const resolvedId = item.song.albumId || ALBUM_NAME_TO_ID[item.song.album] || "unknown";
                  return (
                   <div key={item.song.id} className="flex items-center gap-4 group">
@@ -667,7 +858,7 @@ export default function FanStats({
               )}
             </div>
           </div>
-          {communityStats.topConsensus.length === 0 && <PlaceholderNote />}
+          {!slicePending && activeStats.topConsensus.length === 0 && <PlaceholderNote />}
           </div>
 
           {/* ALBUM RANKINGS */}
@@ -680,8 +871,10 @@ export default function FanStats({
             </div>
             
             <div className="space-y-3 flex-1">
-              {communityStats.albumLeaderboard.length > 0 ? (
-                communityStats.albumLeaderboard.map((item, idx) => (
+              {slicePending ? (
+                suppressedNote
+              ) : activeStats.albumLeaderboard.length > 0 ? (
+                activeStats.albumLeaderboard.map((item, idx) => (
                 <div key={item.album} className="bg-slate-800 border border-slate-700 p-3 sm:p-4 rounded-xl flex justify-between items-center hover:border-[#0072CE]/50 transition-colors shadow-inner group">
                   <div className="flex items-center gap-4 min-w-0">
                     <span className={`text-lg sm:text-xl font-black w-6 text-center shrink-0 ${idx === 0 ? 'text-amber-400' : 'text-slate-500'}`}>{idx + 1}</span>
@@ -718,24 +911,34 @@ export default function FanStats({
               )}
             </div>
           </div>
-          {communityStats.albumLeaderboard.length === 0 && <PlaceholderNote />}
+          {!slicePending && activeStats.albumLeaderboard.length === 0 && <PlaceholderNote />}
           </div>
         </div>
 
         {/* TIER LIST VISUALIZATION SECTION */}
         <div className="pt-8 sm:pt-10">
+          {slicePending ? (
+            <div className="bg-white rounded-[18px] border-[3px] border-[#0C1220] shadow-[4px_4px_0_rgba(11,30,63,0.85)] p-6 sm:p-8">
+              <div className="text-center sm:text-left mb-6">
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1">Community Consensus</span>
+                <h2 className={`${displayFont.className} text-3xl sm:text-4xl tracking-wide text-[#0C1220] leading-tight`}>Weezerverse Tiers</h2>
+              </div>
+              {suppressedNote}
+            </div>
+          ) : (
           <TierListChart 
             title="Weezerverse Tiers" 
             subtitle="Community Consensus"
-            rankedSongs={communityStats.globalTierListRankings} 
+            rankedSongs={activeStats.globalTierListRankings} 
             
             // WE NOW PASS THE EXACT ID TO FIX THE ARTWORK HERE TOO
-            rankedAlbums={communityStats.albumLeaderboard.map((a, idx) => ({ 
+            rankedAlbums={activeStats.albumLeaderboard.map((a, idx) => ({ 
               id: a.id || ALBUM_NAME_TO_ID[a.album] || 'unknown', 
               album: a.album, 
               rank: idx + 1 
             }))}
           />
+          )}
         </div>
 
       </div>
@@ -754,7 +957,12 @@ export default function FanStats({
               used to leave this section as a header over empty
               space (UAT P-14) — say so, with the page's badge +
               note treatment. */}
-          {communityStats.anatomyCategories.length === 0 && (
+          {slicePending && (
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              {suppressedNote}
+            </div>
+          )}
+          {!slicePending && activeStats.anatomyCategories.length === 0 && (
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
               <PlaceholderBadge />
               {thinSample ? <PlaceholderNote /> : <EmptyBlockNote />}
@@ -766,10 +974,10 @@ export default function FanStats({
               are separated by the system's 3px ink divider, and
               each category's color survives only as a chip beside
               its title. */}
-          {communityStats.anatomyCategories.length > 0 && (
+          {!slicePending && activeStats.anatomyCategories.length > 0 && (
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="bg-white rounded-[18px] border-[3px] border-[#0C1220] shadow-[4px_4px_0_rgba(11,30,63,0.85)]">
-                {communityStats.anatomyCategories.map((category, categoryIdx) => (
+                {activeStats.anatomyCategories.map((category, categoryIdx) => (
                   <div key={category.id} className={`px-4 py-6 sm:px-6 lg:px-8 ${categoryIdx > 0 ? 'border-t-[3px] border-[#0C1220]' : ''}`}>
 
                     {/* CATEGORY HEADER — the title pops on a tape
@@ -841,15 +1049,17 @@ export default function FanStats({
               <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1">How Fans Rank</span>
               <h2 className={`${displayFont.className} text-3xl tracking-wide text-[#0C1220] leading-tight`}>Fan Tribes</h2>
               <p className="text-xs font-semibold text-[#3D4A63] mt-2">Where fans land, based on how they rank songs.</p>
-              {!communityStats.enoughForPercentages && (
+              {!slicePending && !activeStats.enoughForPercentages && (
                 <p className="text-[11px] font-bold text-[#3D4A63] mt-1">
-                  Percentages show once {MIN_DISPLAY_SAMPLE} fans have ranked enough to count — counts for now ({communityStats.totalFans} so far).
+                  Percentages show once {MIN_DISPLAY_SAMPLE} fans have ranked enough to count — counts for now ({activeStats.totalFans} so far).
                 </p>
               )}
             </div>
 
             <div className="space-y-3">
-              {communityStats.tribes.map((tribe, i) => (
+              {slicePending ? (
+                suppressedNote
+              ) : activeStats.tribes.map((tribe, i) => (
                 <div key={i} className="bg-slate-50 p-4 sm:p-5 rounded-xl border border-slate-100 transition-all">
                   
                   {/* ADJUSTED FLEX CONTAINER FOR NO-WRAP TRUNCATION */}
@@ -870,7 +1080,7 @@ export default function FanStats({
                       )}
                     </div>
                     {/* SMALLER PERCENTAGE FONT */}
-                    <span className="text-xl font-black text-[#0072CE] leading-none shrink-0">{communityStats.enoughForPercentages ? `${tribe.pct}%` : `${tribe.count} fans`}</span>
+                    <span className="text-xl font-black text-[#0072CE] leading-none shrink-0">{activeStats.enoughForPercentages ? `${tribe.pct}%` : `${tribe.count} fans`}</span>
                   </div>
                   
                   <div className="grid grid-cols-2 gap-4 border-t border-slate-200 pt-3">
@@ -892,7 +1102,18 @@ export default function FanStats({
           <div className="flex flex-col gap-6 lg:gap-8 h-full">
             
             {/* BETTER THAN THE ALBUM */}
-            {communityStats.loneBangers.length > 0 && (
+            {slicePending && (
+              <div className="bg-slate-50 rounded-[18px] p-6 sm:p-8 shadow-[4px_4px_0_rgba(11,30,63,0.85)] border-[3px] border-[#0C1220]">
+                <div className="text-center sm:text-left mb-5">
+                  <h2 className={`${displayFont.className} text-2xl tracking-wide text-[#0C1220] leading-tight mb-2`}>
+                    Better Than The Album
+                  </h2>
+                  <p className="text-xs font-semibold text-[#3D4A63] text-balance">The highest-rated songs carrying the lowest-rated albums.</p>
+                </div>
+                {suppressedNote}
+              </div>
+            )}
+            {!slicePending && activeStats.loneBangers.length > 0 && (
               <div className="bg-slate-50 rounded-[18px] p-6 sm:p-8 shadow-[4px_4px_0_rgba(11,30,63,0.85)] border-[3px] border-[#0C1220]">
                 <div className="text-center sm:text-left mb-5">
                   <h2 className={`${displayFont.className} text-2xl tracking-wide text-[#0C1220] leading-tight mb-2`}>
@@ -901,8 +1122,8 @@ export default function FanStats({
                   <p className="text-xs font-semibold text-[#3D4A63] text-balance">The highest-rated songs carrying the lowest-rated albums.</p>
                 </div>
 
-                <HorizontalCarousel itemCount={communityStats.loneBangers.length}>
-                  {communityStats.loneBangers.map((item) => (
+                <HorizontalCarousel itemCount={activeStats.loneBangers.length}>
+                  {activeStats.loneBangers.map((item) => (
                     <div key={item.album} className="w-[260px] sm:w-[280px] shrink-0 snap-center bg-white p-5 rounded-2xl border-2 border-slate-300 shadow-md flex flex-col justify-between mx-1">
                       <div className="flex items-start gap-4 mb-5">
                         <AlbumArtwork albumId={item.id} className="w-12 h-12 rounded-xl shadow-sm object-cover border border-slate-100 shrink-0" />
@@ -928,7 +1149,7 @@ export default function FanStats({
                 </HorizontalCarousel>
               </div>
             )}
-            {communityStats.loneBangers.length === 0 && (
+            {!slicePending && activeStats.loneBangers.length === 0 && (
               <div className="bg-slate-50 rounded-[18px] p-6 sm:p-8 shadow-[4px_4px_0_rgba(11,30,63,0.85)] border-[3px] border-[#0C1220]">
                 <div className="text-center sm:text-left mb-5">
                   <h2 className={`${displayFont.className} text-2xl tracking-wide text-[#0C1220] leading-tight mb-2`}>
@@ -975,6 +1196,7 @@ export default function FanStats({
                   <p className="text-xs text-slate-400 mt-2 text-balance">
                     Fans who love the community's #1 song almost always love this one too.
                   </p>
+                  {filterActive && (<p className="text-[11px] font-bold text-amber-400/90 mt-1">All fans — this section stays global while a filter is on.</p>)}
                 </div>
 
                 <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-3">
@@ -1002,6 +1224,7 @@ export default function FanStats({
                   <p className="text-xs text-slate-400 mt-2 text-balance">
                     Fans who love the community's #1 song almost always love this one too.
                   </p>
+                  {filterActive && (<p className="text-[11px] font-bold text-amber-400/90 mt-1">All fans — this section stays global while a filter is on.</p>)}
                 </div>
 
                 <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-3">
@@ -1023,7 +1246,7 @@ export default function FanStats({
                 <div className="mt-5">
                   <PlaceholderBadge />
                 </div>
-                {thinSample ? <PlaceholderNote /> : <EmptyBlockNote />}
+                {globalThinSample ? <PlaceholderNote /> : <EmptyBlockNote />}
               </div>
             )}
 
@@ -1033,6 +1256,7 @@ export default function FanStats({
                 <div className="text-center sm:text-left mb-5">
                   <h2 className={`${displayFont.className} text-2xl tracking-wide text-[#0C1220] leading-tight`}>Old vs. New</h2>
                   <p className="text-xs font-semibold text-[#3D4A63] mt-2 text-balance">The tracks pre-2000 purists and modern defenders disagree on most.</p>
+                  {filterActive && (<p className="text-[11px] font-bold text-[#3D4A63] mt-1">All fans — this section stays global while a filter is on.</p>)}
                 </div>
 
                 <div className="space-y-4">
@@ -1073,6 +1297,7 @@ export default function FanStats({
                 <div className="text-center sm:text-left mb-5">
                   <h2 className={`${displayFont.className} text-2xl tracking-wide text-[#0C1220] leading-tight`}>Old vs. New</h2>
                   <p className="text-xs font-semibold text-[#3D4A63] mt-2 text-balance">The tracks pre-2000 purists and modern defenders disagree on most.</p>
+                  {filterActive && (<p className="text-[11px] font-bold text-[#3D4A63] mt-1">All fans — this section stays global while a filter is on.</p>)}
                 </div>
 
                 <div className="space-y-4">
@@ -1110,7 +1335,7 @@ export default function FanStats({
                 <div className="mt-4">
                   <PlaceholderBadge />
                 </div>
-                {thinSample ? <PlaceholderNote /> : <EmptyBlockNote />}
+                {globalThinSample ? <PlaceholderNote /> : <EmptyBlockNote />}
               </div>
             )}
 

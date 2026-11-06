@@ -1912,7 +1912,7 @@ export default function StepLore() {
       )
     : 100;
   const pickerJourneyCard = (
-    <div className="overflow-hidden rounded-3xl bg-slate-950 text-white shadow-md">
+    <div className="overflow-hidden rounded-[18px] border-[3px] border-[#0C1220] bg-[#0C1220] text-white shadow-[6px_6px_0_#039AD1]">
       <div className="p-5">
         <div className="flex items-end justify-between gap-3">
           <div>
@@ -1926,13 +1926,13 @@ export default function StepLore() {
             </p>
           </div>
         </div>
-        <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-slate-800">
+        <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-white/[0.14]">
           <div
-            className="h-full rounded-full bg-sky-400"
+            className="h-full rounded-full bg-[#FFD23F]"
             style={{ width: `${journeyLegPct}%` }}
           />
         </div>
-        <div className="mt-3 border-t border-slate-800 pt-1.5">
+        <div className="mt-3 border-t border-white/[0.14] pt-1.5">
           {TOTAL_STOPS.map((stop, i) => {
             const status =
               i < journeyStopIndex
@@ -1950,7 +1950,7 @@ export default function StepLore() {
                 {i < TOTAL_STOPS.length - 1 && (
                   <span
                     aria-hidden
-                    className="absolute bottom-[-12px] left-[10px] top-[34px] w-[2px] bg-slate-800"
+                    className="absolute bottom-[-12px] left-[10px] top-[34px] w-[2px] bg-white/10"
                   />
                 )}
                 <span
@@ -1958,12 +1958,12 @@ export default function StepLore() {
                     status === 'reached'
                       ? 'border-[#0072CE] bg-[#0072CE] text-white'
                       : status === 'here'
-                        ? 'border-sky-300 bg-sky-400 text-slate-950'
-                        : 'border-slate-700 bg-slate-900 text-slate-500'
+                        ? 'border-[#FFD23F] bg-[#FFD23F] text-[#0C1220]'
+                        : 'border-[#3D4A63] bg-[#0C1220] text-[#8b98ad]'
                   }`}
                   style={
                     status === 'here'
-                      ? { boxShadow: '0 0 0 4px rgba(56,189,248,.25)' }
+                      ? { boxShadow: '0 0 0 4px rgba(255,210,63,.25)' }
                       : undefined
                   }
                 >
@@ -1979,23 +1979,23 @@ export default function StepLore() {
                       ? 'text-slate-100'
                       : status === 'here'
                         ? 'text-white'
-                        : 'text-slate-400'
+                        : 'text-[#9aa7ba]'
                   }`}
                 >
                   {stop.title}
                 </span>
                 {status === 'here' && (
-                  <span className="shrink-0 rounded-full bg-sky-400 px-2 py-[3px] text-[11px] font-extrabold tracking-[0.05em] text-slate-950">
+                  <span className="shrink-0 rounded-full bg-[#FFD23F] px-2 py-[3px] text-[11px] font-extrabold tracking-[0.05em] text-[#0C1220]">
                     YOU'RE HERE
                   </span>
                 )}
                 {stop.title === 'The Shack' && (
-                  <span className="shrink-0 rounded-full bg-yellow-400/15 px-2 py-[3px] text-[11px] font-extrabold tracking-[0.05em] text-yellow-300">
+                  <span className="shrink-0 rounded-full bg-[#FFD23F]/[0.16] px-2 py-[3px] text-[11px] font-extrabold tracking-[0.05em] text-[#FFD23F]">
                     THE GOAL
                   </span>
                 )}
                 {status === 'next' && journeyNext && (
-                  <span className="ml-auto shrink-0 text-[13px] font-bold text-yellow-300">
+                  <span className="ml-auto shrink-0 text-[13px] font-bold text-[#FFD23F]">
                     {journeyNext.pointsTo.toLocaleString('en-US')} to go
                   </span>
                 )}
@@ -2015,10 +2015,14 @@ export default function StepLore() {
   const pickerRoundsSection = (
     <div>
       <div className="flex items-baseline justify-between gap-3 px-1">
-        <h2 className="text-lg font-extrabold leading-none text-slate-950">
-          The Rounds
+        <h2 className="leading-none">
+          <span
+            className={`${displayFont.className} inline-block -rotate-1 bg-[#FFE066] px-[13px] pb-[3px] pt-[5px] text-[19px] leading-none tracking-[0.03em] text-[#0C1220] shadow-[2px_2px_0_rgba(12,18,32,0.35)]`}
+          >
+            The Rounds
+          </span>
         </h2>
-        <span className="text-[13px] font-bold text-slate-400">
+        <span className="text-[13px] font-bold text-[#3D4A63]">
           {fanhoodGamesPlayed(fanhood)} of 5 played
         </span>
       </div>
@@ -2039,22 +2043,16 @@ export default function StepLore() {
               ref={(el) => {
                 deckCardRefs.current[gameIndex] = el;
               }}
-              className={`flex min-h-[196px] flex-[0_0_84%] snap-center flex-col rounded-[20px] border p-[18px] sm:flex-[0_0_380px] lg:flex-[0_0_420px] ${
-                state === 'played'
-                  ? 'border-green-200 bg-green-50'
-                  : state === 'up-next'
-                    ? 'border-blue-300 bg-blue-50 shadow-[0_6px_18px_rgba(0,114,206,0.16)]'
-                    : 'border-slate-200 bg-slate-50'
-              }`}
+              className="flex min-h-[196px] flex-[0_0_84%] snap-center flex-col rounded-[18px] border-[3px] border-[#0C1220] bg-white p-[18px] shadow-[4px_4px_0_#0C1220] sm:flex-[0_0_380px] lg:flex-[0_0_420px]"
             >
               <div className="flex items-center justify-end gap-2">
                 <span
-                  className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-extrabold tracking-[0.05em] ${
+                  className={`shrink-0 rounded-full border-2 border-[#0C1220] px-2.5 py-1 text-[11px] font-extrabold tracking-[0.05em] ${
                     state === 'played'
                       ? 'bg-green-600 text-white'
                       : state === 'up-next'
                         ? 'bg-[#0072CE] text-white'
-                        : 'bg-slate-200 text-slate-500'
+                        : 'bg-white text-[#3D4A63]'
                   }`}
                 >
                   {state === 'played'
@@ -2068,13 +2066,13 @@ export default function StepLore() {
               </div>
               <h3
                 className={`${displayFont.className} mt-2.5 text-[30px] leading-[1.12] ${
-                  state === 'locked' ? 'text-slate-500' : 'text-slate-950'
+                  state === 'locked' ? 'text-[#5b6b84]' : 'text-[#0C1220]'
                 }`}
               >
                 Round {gameIndex + 1}
               </h3>
               {state === 'played' && result && (
-                <p className="mt-1.5 text-[15px] font-medium leading-relaxed text-slate-500">
+                <p className="mt-1.5 text-[15px] font-medium leading-relaxed text-[#3D4A63]">
                   {result.score.toLocaleString()} points
                 </p>
               )}
@@ -2112,13 +2110,13 @@ export default function StepLore() {
               {state === 'up-next' && (
                 <button
                   onClick={() => openGate(game.id)}
-                  className="mt-3 w-full cursor-pointer rounded-xl bg-[#0072CE] px-5 py-3 text-base font-black text-white shadow-md transition-all hover:bg-blue-700 active:scale-95"
+                  className="mt-3 w-full cursor-pointer rounded-[14px] border-[3px] border-[#0C1220] bg-[#0072CE] px-5 py-3 text-[15px] font-black text-white shadow-[3px_3px_0_#0C1220] transition-all hover:bg-blue-700 active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_#0C1220]"
                 >
                   Play Round {gameIndex + 1}
                 </button>
               )}
               {state === 'locked' && (
-                <p className="text-[15px] font-bold text-slate-400">
+                <p className="text-[15px] font-bold text-[#3D4A63]">
                   Finish Round {gameIndex} to unlock.
                 </p>
               )}
@@ -2134,12 +2132,12 @@ export default function StepLore() {
           <span
             key={game.id}
             className={`h-[7px] rounded-full transition-all ${
-              i === deckIndex ? 'w-5 bg-[#0072CE]' : 'w-[7px] bg-slate-300'
+              i === deckIndex ? 'w-5 bg-[#0C1220]' : 'w-[7px] bg-[#0C1220]/25'
             }`}
           />
         ))}
       </div>
-      <p className="mt-1.5 text-center text-[12.5px] font-bold uppercase tracking-[0.03em] text-slate-400">
+      <p className="mt-1.5 text-center text-[12.5px] font-bold uppercase tracking-[0.03em] text-[#3D4A63]">
         {`Round ${deckIndex + 1} of 5 · Swipe to browse`}
       </p>
     </div>
@@ -2148,13 +2146,15 @@ export default function StepLore() {
   const pickerLeaderboardButton = (
     <button
       onClick={() => setShowBoard(true)}
-      className="flex w-full cursor-pointer items-center gap-3 rounded-3xl border border-slate-200/90 bg-white p-5 text-left shadow-xs transition-all hover:border-slate-300"
+      className="flex w-full cursor-pointer items-center gap-3 rounded-[18px] border-[3px] border-[#0C1220] bg-white p-5 text-left shadow-[4px_4px_0_#0C1220] transition-all"
     >
       <span className="min-w-0 flex-1">
-        <span className="block text-lg font-black tracking-tight text-slate-950">
+        <span
+          className={`block text-[19px] leading-tight text-[#0C1220] ${displayFont.className}`}
+        >
           Leaderboard
         </span>
-        <span className="mt-0.5 block text-[13px] font-medium leading-relaxed text-slate-500 sm:text-[15px]">
+        <span className="mt-0.5 block text-[13px] font-medium leading-relaxed text-[#3D4A63] sm:text-[15px]">
           See how your score stacks up against Weezer fans everywhere.
         </span>
       </span>
@@ -2260,7 +2260,7 @@ export default function StepLore() {
 
         {!unlocked && !showBoard && (
           <div className="mx-auto w-full max-w-2xl px-4 sm:px-6 pb-8">
-          <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs space-y-3">
+          <div className="bg-white border-[3px] border-[#0C1220] rounded-[18px] p-5 shadow-[4px_4px_0_#0C1220] space-y-3">
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-black text-slate-950 tracking-tight">
                 This game is locked
@@ -2298,26 +2298,47 @@ export default function StepLore() {
             leaderboard entry. */}
         {unlocked && !showBoard && phase === 'intro' && (
           <div className="mx-auto w-full max-w-2xl space-y-4 px-4 pb-10 sm:px-6">
-            <div className="px-1 pt-5 text-center sm:pt-7">
-              <h1
-                aria-label="Can You Get Back to the Shack?"
-                className="text-slate-950"
-              >
-                <span className="block text-[15px] font-extrabold uppercase leading-none tracking-[0.28em] text-[#0072CE]">
-                  Can you get
-                </span>
-                <span className="mt-1.5 block whitespace-nowrap text-[min(8.6vw,42px)] font-black uppercase leading-[1.04] tracking-tight">
-                  Back to the Shack?
-                </span>
-              </h1>
-              <p className="mt-3 text-base font-semibold leading-snug text-slate-500">
-                <span className="block">
-                  Five rounds. Thirty-five questions.
-                </span>
-                <span className="block">
-                  One trip through Weezer history.
-                </span>
-              </p>
+            <div className="relative mt-5 overflow-hidden rounded-[18px] border-[3px] border-[#0C1220] bg-[#039AD1] px-[18px] pb-5 pt-4 text-center shadow-[6px_6px_0_#0C1220] sm:mt-7">
+              {/* Halftone dots — the share page's card texture
+                  (white dots, 20px grid), as a CSS overlay. */}
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-0"
+                style={{
+                  backgroundImage:
+                    'radial-gradient(rgba(255,255,255,0.16) 1.6px, transparent 1.7px)',
+                  backgroundSize: '20px 20px',
+                }}
+              />
+              <div className="relative">
+                <h1 aria-label="Can You Get Back to the Shack?">
+                  <span
+                    className={`${displayFont.className} inline-block -rotate-2 bg-[#FFE066] px-4 pb-[5px] pt-[7px] text-[15px] uppercase leading-none tracking-[0.18em] text-[#0C1220] shadow-[2px_2px_0_rgba(12,18,32,0.35)]`}
+                  >
+                    Can you get
+                  </span>
+                  <span
+                    className={`${displayFont.className} mt-3.5 block whitespace-nowrap text-[min(8.6vw,42px)] uppercase leading-[1.04] text-white`}
+                    style={{
+                      WebkitTextStroke: '1.5px #0C1220',
+                      textShadow: '4px 4px 0 #0C1220',
+                    }}
+                  >
+                    Back to the Shack?
+                  </span>
+                </h1>
+                <p
+                  className="mt-3 text-[15px] font-bold leading-snug text-white"
+                  style={{ textShadow: '1px 1px 0 rgba(12,18,32,0.4)' }}
+                >
+                  <span className="block">
+                    Five rounds. Thirty-five questions.
+                  </span>
+                  <span className="block">
+                    One trip through Weezer history.
+                  </span>
+                </p>
+              </div>
             </div>
             {pickerJourneyCard}
             {pickerRoundsSection}

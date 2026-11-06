@@ -564,7 +564,7 @@ function JourneyBar({ total }: { total: number }) {
     <div
       role="img"
       aria-label={`Journey progress: ${total.toLocaleString()} points, at ${stop.title}`}
-      className="mx-1 mb-[46px] mt-[42px]"
+      className="mx-1 mb-[26px] mt-[26px]"
     >
       <div className="relative h-3 rounded-full border-2 border-white/25 bg-[#22386B]">
         <div
@@ -573,12 +573,6 @@ function JourneyBar({ total }: { total: number }) {
         />
         {TOTAL_STOPS.map((s, i) => {
           const done = i <= reachedIdx;
-          const labelPosition =
-            i === 0
-              ? 'left-0 text-left'
-              : i === TOTAL_STOPS.length - 1
-                ? 'right-0 text-right'
-                : 'left-1/2 -translate-x-1/2 text-center';
           return (
             <span
               key={s.title}
@@ -595,15 +589,7 @@ function JourneyBar({ total }: { total: number }) {
                     : `calc(${(i / (TOTAL_STOPS.length - 1)) * 100}% - 8px)`,
                 right: i === TOTAL_STOPS.length - 1 ? '-8px' : undefined,
               }}
-            >
-              <span
-                className={`absolute w-[86px] text-[10.5px] font-extrabold leading-[1.2] ${
-                  i % 2 === 0 ? 'top-4' : 'bottom-4'
-                } ${labelPosition} ${done ? 'text-white' : 'text-[#AFC6EA]'}`}
-              >
-                {s.title}
-              </span>
-            </span>
+            />
           );
         })}
         <span
@@ -611,9 +597,6 @@ function JourneyBar({ total }: { total: number }) {
           className="absolute top-1/2 z-[3] grid h-[34px] w-[34px] -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-[3px] border-[#0C1220] bg-[#FFC72C] shadow-[0_4px_10px_rgba(0,0,0,0.4)]"
           style={{ left: `${pos}%` }}
         >
-          <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-[9.5px] font-black tracking-[0.14em] text-[#FFC72C]">
-            YOU
-          </span>
           <span
             className={`${displayFont.className} text-xs leading-none text-[#0C1220]`}
           >

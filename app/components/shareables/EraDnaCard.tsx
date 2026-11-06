@@ -139,7 +139,17 @@ export const EraDnaCardVisual = forwardRef<
     <div
       ref={ref}
       className="relative h-[1350px] w-[1080px] overflow-hidden text-white"
-      style={{ backgroundColor: POSTER_BLUE }}
+      style={{
+        backgroundColor: POSTER_BLUE,
+        // The share page's halftone dot field (same values as
+        // app/share/page.tsx) — texture behind everything, no
+        // layout impact. (The black-dot HalftoneOverlay over the
+        // album strip below is a separate, older element and is
+        // untouched.)
+        backgroundImage:
+          'radial-gradient(rgba(255,255,255,0.16) 1.6px, transparent 1.7px)',
+        backgroundSize: '20px 20px',
+      }}
     >
       <PosterDomain />
       {total === 0 ? (
@@ -158,23 +168,48 @@ export const EraDnaCardVisual = forwardRef<
             My era DNA:
           </p>
 
+          {/* Both headline lines take the Top 10 headline
+              treatment (3px ink stroke + 5px hard shadow). On the
+              colored era name the stroke is a first use — the
+              audit lives in REPORT.md (cards recomposition, C2);
+              the ink outline carries the letterforms against the
+              field for every era color. */}
           <h2
             className={`absolute inset-x-0 top-[148px] text-center leading-[1.0] ${displayFont.className}`}
           >
-            <span className="block text-[116px] text-white">
+            <span
+              className="block text-[116px] text-white"
+              style={{
+                WebkitTextStroke: '3px #0C1220',
+                textShadow: '5px 5px 0 rgba(12,18,32,0.9)',
+              }}
+            >
               I AM {topPct}%
             </span>
             <span
               className="block text-[110px]"
-              style={{ color: POSTER_ERA_COLORS[top.key] }}
+              style={{
+                color: POSTER_ERA_COLORS[top.key],
+                WebkitTextStroke: '3px #0C1220',
+                textShadow: '5px 5px 0 rgba(12,18,32,0.9)',
+              }}
             >
               {top.name.toUpperCase()}
             </span>
           </h2>
 
-          <p className="absolute inset-x-[64px] top-[424px] text-center text-[42px] leading-snug">
-            {ERA_QUIPS[top.key]}
-          </p>
+          {/* The quip in an inverted ink box (the share page's
+              vibe-box move). The wrapper goes full-width — the
+              longest quip (Red Era) only fits one line at the
+              card's full width once the box's padding is added —
+              and the box rides 12px higher than the old plain
+              text (424 → 412) so its bottom edge clears the bars
+              at 512. Sizes and words unchanged. */}
+          <div className="absolute inset-x-0 top-[412px] text-center">
+            <span className="inline-block whitespace-nowrap rounded-2xl bg-[#0C1220] px-[38px] py-[20px] text-[42px] leading-[1.3] text-white">
+              {ERA_QUIPS[top.key]}
+            </span>
+          </div>
 
           {/* All five eras, her bars: name + pct over a lightened
               track (Nov 5: track white/35 per the card-system mock;

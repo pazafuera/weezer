@@ -68,19 +68,23 @@ export type ShareSong = {
   albumId?: string;
 };
 
-/** Compact album tag for the right edge of a list row, e.g. "Blue".
- *  Resolves the canonical album via the app's name bridge. No year,
- *  no truncation — the tag is short by construction. */
+/** Album tag under a list row's title — the album's full name,
+ *  resolved canonically via the app's name bridge, with only the
+ *  bridge's own trims (a leading "The", a trailing " Album").
+ *  The name is data, not copy: it is never chopped to a fixed
+ *  word count. (It used to take just the first two words, which
+ *  amputated three names mid-phrase — "B-SIDES &" for B-Sides &
+ *  Rarities, "DEATH TO" for Death to False Metal, "EVERYTHING
+ *  WILL" for Everything Will Be Alright in the End — the first
+ *  of those is the preview-7 defect Mark caught on row #3.) The
+ *  row sizes the tag to fit one line instead; see the render. */
 function albumTag(song: ShareSong): string {
   const id = resolveAlbumId(song);
   const canonical = (id && ALBUMS_BY_ID[id]?.name) || song.album;
-  const short = canonical
+  return canonical
     .replace(/^The\s+/i, '')
     .replace(/\s+Album$/i, '')
-    .split(' ')
-    .slice(0, 2)
-    .join(' ');
-  return short.toUpperCase();
+    .toUpperCase();
 }
 
 export const Top10CardVisual = forwardRef<
@@ -160,32 +164,49 @@ export const Top10CardVisual = forwardRef<
           footer's first line; the panel now clears the one-line
           footer block (top ≈1231) by 87px. Audit in REPORT.md. */}
       <div className="absolute left-[96px] right-[96px] top-[500px] z-10 rounded-[20px] border-[3px] border-[#0C1220] bg-white px-[40px] pb-[14px] pt-[24px] shadow-[6px_6px_0_rgba(12,18,32,0.9)]">
-        {top.map((song, i) => (
-          <div
-            key={song.id}
-            className="flex h-[60px] flex-col items-center justify-center"
-          >
-            <div className="flex items-baseline justify-center gap-[14px]">
-              <span
-                className={`text-[30px] leading-none ${displayFont.className}`}
-                style={{ color: '#0072CE' }}
-              >
-                {i + 1}
-              </span>
-              <span className="text-[29px] font-extrabold uppercase leading-none tracking-tight text-slate-900">
-                {song.title}
-              </span>
-              {song.isBSide && (
-                <span className="shrink-0 rounded-full bg-violet-100 px-3 py-1 text-[17px] font-black uppercase tracking-wider text-violet-700">
-                  B-Side
+        {top.map((song, i) => {
+          const tag = albumTag(song);
+          // Size-to-fit, the Tribe name formula's shape: every
+          // real tag stays at the production 19px (the longest —
+          // the full EWBAITE name, 37 chars — measures 503px of
+          // the panel's 808px content width), and a longer
+          // fallback name shrinks linearly instead of wrapping.
+          // The 12px floor binds only past 59 chars. Audit in
+          // REPORT.md (preview-7 fix pass).
+          const tagSize = Math.min(
+            19,
+            Math.max(12, Math.floor(710 / tag.length))
+          );
+          return (
+            <div
+              key={song.id}
+              className="flex h-[60px] flex-col items-center justify-center"
+            >
+              <div className="flex items-baseline justify-center gap-[14px]">
+                <span
+                  className={`text-[30px] leading-none ${displayFont.className}`}
+                  style={{ color: '#0072CE' }}
+                >
+                  {i + 1}
                 </span>
-              )}
+                <span className="text-[29px] font-extrabold uppercase leading-none tracking-tight text-slate-900">
+                  {song.title}
+                </span>
+                {song.isBSide && (
+                  <span className="shrink-0 rounded-full bg-violet-100 px-3 py-1 text-[17px] font-black uppercase tracking-wider text-violet-700">
+                    B-Side
+                  </span>
+                )}
+              </div>
+              <span
+                className="mt-[5px] whitespace-nowrap font-bold uppercase leading-none tracking-[0.14em] text-[#3D4A63]"
+                style={{ fontSize: tagSize }}
+              >
+                {tag}
+              </span>
             </div>
-            <span className="mt-[5px] text-[19px] font-bold uppercase leading-none tracking-[0.14em] text-[#3D4A63]">
-              {albumTag(song)}
-            </span>
-          </div>
-        ))}
+          );
+        })}
         {top.length === 0 && (
           <p
             className={`py-16 text-center text-[34px] text-slate-500 ${handFont.className}`}

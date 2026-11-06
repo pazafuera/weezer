@@ -6,7 +6,6 @@ import {
   BUILD_RELOAD_GUARD_KEY,
 } from './buildVersion';
 import { readFreshPendingScrollRestore } from '../lib/pendingScrollRestore';
-import { logScrollDebug } from '../lib/scrollDebug';
 
 /** The build this bundle was compiled from, stamped at build time
  *  (next.config.js env: VERCEL_GIT_COMMIT_SHA). Empty outside a
@@ -89,9 +88,6 @@ export default function BuildVersionCheck() {
           // record while this fetch is still in flight.
           const pendingRestore = readFreshPendingScrollRestore();
           if (pendingRestore) {
-            logScrollDebug(
-              `watchdog reload SKIPPED fresh pending scroll restore step=${pendingRestore.step} y=${pendingRestore.y} navIndex=${pendingRestore.navIndex}`
-            );
             return;
           }
           try {

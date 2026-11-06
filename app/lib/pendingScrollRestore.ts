@@ -1,7 +1,7 @@
 /**
  * Pending scroll restore, persisted across documents (Nov 6, 2026).
  *
- * The diagnosis (the owner's 31-event scrolldebug log, preview-10):
+ * The diagnosis (the owner's 31-event on-device debug log, preview-10):
  * a Back landing worked perfectly in-page — the popstate handler
  * found the recorded scroll (2704), set the pending restore, and
  * the restore loop started — and ~213ms later the document

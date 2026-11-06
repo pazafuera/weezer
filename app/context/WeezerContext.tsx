@@ -32,6 +32,7 @@ import {
   readFreshPendingScrollRestore,
   clearPendingScrollRestore,
 } from '../lib/pendingScrollRestore';
+import type { PendingScrollRestore } from '../lib/pendingScrollRestore';
 import ScrollDebugOverlay from '../components/ScrollDebugOverlay';
 
 
@@ -1608,6 +1609,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     let pending = pendingScrollRef.current;
     let fromPersistedRecord = false;
+    let bootRecord: PendingScrollRestore | null = null;
     if (!pending) {
       // BOOT PATH: a pop landing in a PREVIOUS document may have
       // persisted its owed restore before a watchdog reload wiped
@@ -1622,6 +1624,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
       if (record && record.step === step) {
         pending = { step: step, y: record.y };
         fromPersistedRecord = true;
+        bootRecord = record;
         logScrollDebug(
           `boot restore FOUND step=${record.step} y=${record.y} navIndex=${record.navIndex} ageMs=${Date.now() - record.ts}`
         );
@@ -1634,18 +1637,44 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     }
     if (!pending || pending.step !== step) return;
     pendingScrollRef.current = null;
-    // Consumed — in this document or re-offered from the persisted
-    // record — the persisted copy has done its job either way.
-    clearPendingScrollRestore();
     logScrollDebug(`pending CONSUMED step=${pending.step} y=${pending.y}`);
-    if (fromPersistedRecord) {
-      logScrollDebug(
-        `boot restore APPLIED step=${pending.step} y=${pending.y} (record cleared)`
-      );
-    }
+    // ROUND 2 (the owner's second retest log): an IN-PAGE
+    // consumption must NOT clear the persisted record. Round 1
+    // cleared it right here — and the watchdog's async check,
+    // its /api/build-id fetch still in flight, reached its
+    // reload decision ~1.1s later, found no record, and
+    // reloaded anyway; after the reload there was also no
+    // record left for the boot restore to find. Both defenses
+    // died to the same early clear. The record now stands for
+    // "the most recent Back landing's target, valid for its
+    // whole 15s freshness window" and clears ONLY on a fresh
+    // push/replace/reset navigation, a guard-rewritten pop
+    // landing, boot-restore application, or staleness. If the
+    // watchdog reloads anyway inside the window, the boot path
+    // retrying this same target is exactly the intent — so the
+    // restore loop's outcome (stuck / deadline / cancelled)
+    // doesn't clear it either.
+    // The BOOT path, by contrast, DOES clear its record — but
+    // only after the restore has been applied (finish() below),
+    // and only if the record still in storage is THIS one: a
+    // newer landing may have replaced it meanwhile, and that
+    // newer record is not this document's to clear.
+    const clearBootRecordIfStillCurrent = () => {
+      if (!bootRecord) return;
+      const current = readFreshPendingScrollRestore();
+      if (current && current.ts === bootRecord.ts) {
+        clearPersistedScrollRestore('boot-restore-applied');
+        logScrollDebug(
+          `boot restore APPLIED step=${bootRecord.step} y=${bootRecord.y} (record cleared)`
+        );
+      }
+    };
     const y = pending.y;
     if (y <= 0) {
       logScrollDebug('restore SKIPPED y<=0');
+      // Honored with nothing to apply — the landing's target IS
+      // the top — so a boot record that brought us here is done.
+      clearBootRecordIfStillCurrent();
       return;
     }
     let raf = 0;
@@ -1661,6 +1690,12 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
       logScrollDebug(
         `restore END outcome=${outcome} target=${y} finalScrollY=${Math.round(window.scrollY)} attempts=${attempts}`
       );
+      // A boot restore clears its persisted record only now —
+      // AFTER the loop has applied it (or the user/deadline
+      // ended it) — never at consumption. In-page restores have
+      // no boot record, so for them this is a no-op and the
+      // record outlives the restore (round 2, above).
+      clearBootRecordIfStillCurrent();
     };
     const cancelOnUserScroll = () => {
       if (!cancelled) finish('cancelled-by-touch-or-wheel');

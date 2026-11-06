@@ -71,12 +71,22 @@ export default function BuildVersionCheck() {
           // exact reload wiping a restore 213ms after it started.
           // A fresh persisted restore record
           // (app/lib/pendingScrollRestore.ts) means a landing is
-          // mid-flight: skip THIS check cycle. The record clears
-          // when the restore consumes it and goes stale in 15s
-          // regardless, so the next mount/foreground check still
-          // catches a genuinely stale build moments later — and
-          // if a later reload does land, the record is what lets
-          // the rebooted app finish the restore.
+          // mid-flight: skip THIS check cycle. The record stands
+          // for the landing's whole 15s freshness window — it is
+          // NOT cleared when the in-page restore consumes it
+          // (round 1 cleared it there, and this very decision —
+          // reached ~1.1s after the pop, once the fetch resolved
+          // — found nothing and reloaded anyway). It clears on
+          // fresh navigation, a guard-rewritten landing,
+          // boot-restore application, or staleness, so the next
+          // mount/foreground check still catches a genuinely
+          // stale build moments later — and if a later reload
+          // does land, the record is what lets the rebooted app
+          // finish the restore.
+          // Read at DECISION time — here, after the fetch has
+          // resolved and immediately before the reload — never
+          // at check start: the popstate handler may write the
+          // record while this fetch is still in flight.
           const pendingRestore = readFreshPendingScrollRestore();
           if (pendingRestore) {
             logScrollDebug(

@@ -29,10 +29,17 @@
  *   so a genuinely fresh visit can never find one: a new tab starts
  *   with empty sessionStorage, and the record is at most
  *   MAX_AGE_MS old when honored.
- * - Cleared when the in-page restore consumes it, when any fresh
- *   push/replace/reset navigation occurs (deliberate taps start at
- *   the top, exactly as before), when a pop landing is
- *   guard-rewritten, and when the boot restore applies it.
+ * - NOT cleared when the in-page restore consumes the pending ref
+ *   (round 2 — the owner's second retest log): round 1 cleared it
+ *   at consumption, ~1.1s before the watchdog's async check
+ *   reached its reload decision; the skip found nothing, the page
+ *   reloaded anyway, and the boot restore then found nothing
+ *   either. The record means "the most recent Back landing's
+ *   target, valid for its whole freshness window" and clears
+ *   ONLY when a fresh push/replace/reset navigation supersedes
+ *   it (deliberate taps start at the top, exactly as before),
+ *   when a pop landing is guard-rewritten, when the boot restore
+ *   applies it, or when it goes stale (self-cleaned on read).
  * - Storage failures (private mode / quota / malformed JSON)
  *   degrade silently to the pre-fix behavior: the record simply
  *   isn't there, and everything proceeds as it did before.
@@ -167,9 +174,11 @@ export function hasFreshPendingScrollRestore(
   return readFreshPendingScrollRestore(now) !== null;
 }
 
-/** Drop any persisted restore. Called when the restore is consumed
- *  (in-page or at boot), when fresh navigation supersedes it, and
- *  when a pop landing is guard-rewritten. Never throws. */
+/** Drop any persisted restore. Called when the boot restore
+ *  applies the record, when fresh navigation supersedes it, and
+ *  when a pop landing is guard-rewritten. Deliberately NOT called
+ *  when the in-page restore consumes the pending ref — see the
+ *  round-2 lifecycle note at the top of this file. Never throws. */
 export function clearPendingScrollRestore(): void {
   storageRemove(PENDING_SCROLL_RESTORE_KEY);
 }

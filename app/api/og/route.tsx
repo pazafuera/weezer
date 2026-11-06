@@ -124,7 +124,8 @@ export async function GET(request: NextRequest) {
             }}
           >
             <div style={{ display: 'flex' }}>
-              RANKED ALL&nbsp;<span style={{ color: TAPE }}>206</span>
+              RANKED ALL
+              <span style={{ color: TAPE, marginLeft: 18 }}>206</span>
             </div>
             <div style={{ display: 'flex' }}>WEEZER SONGS.</div>
           </div>

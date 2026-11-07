@@ -27,6 +27,19 @@
  * failure, every function here resolves quietly and the game
  * behaves exactly as the local-only version. One attempt per
  * trigger — no retries, no loops, nothing user-visible.
+ *
+ * SERIALIZATION (Nov 7, 2026 — the post-freeze hardening,
+ * finding F5 of the regression audit): reconcileRecords is a
+ * whole-record read-modify-write, and its two callers used to
+ * run it unsynchronized — a session reconcile whose account
+ * fetch was still in flight when a run settled could complete
+ * afterwards with its stale reads and overwrite BOTH stores
+ * with a merged record missing the just-finished game. All
+ * reconciles now run on one shared promise chain
+ * (app/lib/promiseChain.ts), and each reads the device record
+ * when it RUNS, not when it was triggered — the second
+ * reconcile through the chain always merges a world that
+ * includes the first one's writes.
  */
 
 import { supabase } from '../../utils/supabase';
@@ -39,6 +52,12 @@ import {
   writeFanhood,
 } from './fanhood';
 import type { FanhoodRecord } from './fanhood';
+import { createPromiseChain } from './promiseChain';
+
+/** The one serialization point for every fanhood reconcile:
+ *  session-establish and post-run alike run through here, so
+ *  two whole-record read-modify-writes can never interleave. */
+const reconcileChain = createPromiseChain();
 
 async function fetchAccountFanhood(
   userId: string
@@ -121,6 +140,11 @@ let reconcileInFlight = false;
 // landed yet" — the fetch itself is unchanged, still one attempt.
 let reconcileSettle: { userId: string; promise: Promise<void> } | null =
   null;
+/** Bumped by forgetAccountFanhoodSync: a session reconcile
+ *  scheduled under an older epoch belongs to a session that
+ *  has ended, and when its turn on the chain comes it does
+ *  nothing — the new session schedules its own. */
+let syncEpoch = 0;
 
 export function reconcileAccountFanhood(userId: string): void {
   if (!userId) return;
@@ -130,15 +154,28 @@ export function reconcileAccountFanhood(userId: string): void {
   if (reconciledUserId === userId || reconcileInFlight) return;
   reconciledUserId = userId;
   reconcileInFlight = true;
-  const promise = (async () => {
+  const epochAtSchedule = syncEpoch;
+  // On the chain (F5): this reconcile's reads happen when it
+  // RUNS — after any earlier reconcile (a post-run push, a
+  // previous session's) has fully settled — never from a
+  // snapshot captured at schedule time.
+  const promise = reconcileChain.enqueue(async () => {
     try {
+      if (epochAtSchedule !== syncEpoch) return;
       await reconcileRecords(userId, readFanhood());
     } catch {
       /* local-only is always a valid state */
     } finally {
-      reconcileInFlight = false;
+      // Clear the in-flight flag only while this reconcile is
+      // still the current one: a forget + a new account's
+      // schedule may have replaced the settle entry while
+      // this task waited on the chain, and the replacement's
+      // flag is not ours to clear.
+      if (reconcileSettle?.promise === promise) {
+        reconcileInFlight = false;
+      }
     }
-  })();
+  });
   reconcileSettle = { userId, promise };
   void promise;
 }
@@ -164,10 +201,18 @@ export function fanhoodReconcileSettled(
 /** Sign-out: forget who was reconciled so a different account
  *  signing in on this device reconciles fresh. The local record
  *  itself is deliberately left alone — it is the device's record,
- *  and surfaces fall back to it (today's guest semantics). */
+ *  and surfaces fall back to it (today's guest semantics).
+ *  The in-flight flag and the epoch are part of the forgetting
+ *  (F5): leaving reconcileInFlight set let a sign-out that
+ *  landed mid-reconcile silently skip the NEXT account's
+ *  session reconcile, and a still-queued reconcile from the
+ *  dead session must not run its writes under the new one —
+ *  the epoch bump is what retires it. */
 export function forgetAccountFanhoodSync(): void {
+  syncEpoch += 1;
   reconciledUserId = null;
   reconcileSettle = null;
+  reconcileInFlight = false;
 }
 
 /* ------------------------------------------------------------------ */
@@ -178,15 +223,29 @@ export function forgetAccountFanhoodSync(): void {
  * After a run settles in the game: bring the account (and, via the
  * merge, this device) up to the settled record. Fire-and-forget;
  * guests and failures are silent no-ops.
+ *
+ * On the same chain as the session reconcile (F5), and the
+ * local candidate is composed when the task RUNS: the device
+ * record as it stands then, unioned with the settled record
+ * this push carries — so a game that landed after the push
+ * was triggered is in the merge, and the settled game itself
+ * can never be read out of existence by an earlier trigger's
+ * stale snapshot. The merge is a per-game union, so composing
+ * the candidate this way can only add, never remove.
  */
 export async function syncFanhoodAfterRun(
   userId: string | null,
   settledRecord: FanhoodRecord
 ): Promise<void> {
   if (!userId) return;
-  try {
-    await reconcileRecords(userId, settledRecord);
-  } catch {
-    /* local-only is always a valid state */
-  }
+  await reconcileChain.enqueue(async () => {
+    try {
+      const localNow =
+        mergeFanhoodRecords(readFanhood(), settledRecord) ??
+        settledRecord;
+      await reconcileRecords(userId, localNow);
+    } catch {
+      /* local-only is always a valid state */
+    }
+  });
 }

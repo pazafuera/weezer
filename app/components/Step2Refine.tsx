@@ -24,7 +24,59 @@ const REFINEMENT_STAGES: { bucket: BucketType; title: string; desc: string; next
   { bucket: 'mid', title: 'Review Your Mid', desc: "These are just okay. Review them to make sure nothing here is actually a hidden gem or total trash. Order doesn't matter in this bucket.", nextBtn: "Next: Review Skips →" },
   { bucket: 'skip', title: 'Review Your Skips', desc: "You usually skip these. Promote or demote if needed. Order doesn't matter in this bucket.", nextBtn: "Next: Review Trash →" },
   { bucket: 'trash', title: 'Review Your Trash', desc: "The bottom of the barrel. Make sure you don't actually like any of these before we finalize. Order doesn't matter in this bucket.", nextBtn: "Generate Final List →" },
-]; 
+];
+
+// STAGE RESUME (Nov 6, 2026): stageIdx is component state, so a
+// full page reload — iOS discarding the backgrounded app while the
+// owner flips between apps — remounted Refine at stage 0 (Bangers)
+// even mid-work on a later stage. The stage now persists in
+// sessionStorage (the same session-scoped lifetime the app already
+// uses for weezer-pending-scroll-restore). Restore rule, applied
+// in the state initializer below:
+// - A deliberate landing stage (initialStageIdx > 0 — Final
+//   Review's Back, the Wrapped edit-intent) always wins; the
+//   persisted value is never read.
+// - A fresh matchup entry (autoStartMatchups armed) never reads
+//   it either — the pre-sort decides the landing — and entering
+//   that way clears it.
+// - Otherwise (a reload/remount mid-work) the persisted stage is
+//   restored.
+// The persisted value is cleared when Refine completes (the last
+// stage's Generate button) and on a fresh matchup entry; ordinary
+// exits (back to triage, keep sorting) leave it in place, so
+// coming back resumes the stage the work was on.
+const REFINE_STAGE_KEY = 'weezer-refine-stage';
+
+function readPersistedRefineStage(): number | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.sessionStorage.getItem(REFINE_STAGE_KEY);
+    if (raw === null) return null;
+    const idx = Number.parseInt(raw, 10);
+    if (!Number.isFinite(idx) || idx < 0 || idx >= REFINEMENT_STAGES.length) return null;
+    return idx;
+  } catch {
+    return null;
+  }
+}
+
+function persistRefineStage(idx: number) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.sessionStorage.setItem(REFINE_STAGE_KEY, String(idx));
+  } catch {
+    /* storage unavailable — resume simply won't survive a reload */
+  }
+}
+
+function clearPersistedRefineStage() {
+  if (typeof window === 'undefined') return;
+  try {
+    window.sessionStorage.removeItem(REFINE_STAGE_KEY);
+  } catch {
+    /* storage unavailable */
+  }
+}
 
 export default function Step2Refine({
   bucketRanks,
@@ -49,20 +101,43 @@ export default function Step2Refine({
   initialStageIdx?: number;
   onStageChange?: (idx: number) => void;
 }) {
-  const [stageIdx, setStageIdx] = useState(initialStageIdx);
+  // Set inside the initializer when the stage came from
+  // sessionStorage, so the prop-sync effect below doesn't stomp
+  // the restore with the mount-time prop (0) on its first run.
+  const restoredStageRef = useRef(false);
+  const [stageIdx, setStageIdx] = useState(() => {
+    if (initialStageIdx > 0) return initialStageIdx;
+    if (autoStartMatchups) return 0;
+    const persisted = readPersistedRefineStage();
+    if (persisted !== null) {
+      restoredStageRef.current = true;
+      return persisted;
+    }
+    return initialStageIdx;
+  });
+  // The prop-sync effect skips exactly its mount run when the
+  // initializer restored a persisted stage; later prop changes
+  // (a deliberate landing while mounted) apply normally.
+  const skipPropSyncRef = useRef(restoredStageRef.current);
 
   // Stage moves go through here so the context copy stays current:
   // a return landing (Final Review's Back) reads it back as
   // initialStageIdx and lands on the stage the user left.
   const goToStage = (idx: number) => {
     setStageIdx(idx);
+    persistRefineStage(idx);
     onStageChange?.(idx);
   };
 
   const [showMatchups, setShowMatchups] = useState(false);
 
   useEffect(() => {
+    if (skipPropSyncRef.current) {
+      skipPropSyncRef.current = false;
+      return;
+    }
     setStageIdx(initialStageIdx);
+    persistRefineStage(initialStageIdx);
   }, [initialStageIdx]);
 
   useEffect(() => {
@@ -72,6 +147,9 @@ export default function Step2Refine({
     // user with 0–1 Bangers still gets matchups. If neither matchup
     // stage qualifies, no auto-start: the stage-0 list, as before.
     if (initialStageIdx === 0 && autoStartMatchups) {
+      // Fresh entry: any resume point from earlier work is stale
+      // (goToStage below re-persists the stage it lands on).
+      clearPersistedRefineStage();
       const firstMatchupStage = REFINEMENT_STAGES.findIndex(
         (stage, idx) => idx <= 1 && (bucketRanks[stage.bucket] || []).length >= 2
       );
@@ -126,6 +204,8 @@ export default function Step2Refine({
       goToStage(stageIdx + 1);
       setShowMatchups(false);
     } else {
+      // Refine is complete: the resume point has done its job.
+      clearPersistedRefineStage();
       handleFinishBucketRanking();
     }
   };

@@ -35,6 +35,7 @@ import WeezerverseFilterBar, {
 import {
   EMPTY_SELECTION,
   ageBandLabel,
+  computeCommunityStats,
   computeSliceStats,
   fetchCommunitySlice,
   fetchFanPresence,
@@ -173,7 +174,7 @@ export default function FanStats({
 }: {
   userMasterList?: Song[];
 }) {
-  const { communityMasterLists = [], communityTriageMaps = [], refreshCommunityData, closeFanStats, communityLoaded, communityError, loadingCommunity } = useWeezer();
+  const { communityMasterLists = [], communityTriageMaps = [], refreshCommunityData, closeFanStats, communityLoaded, communityError, loadingCommunity, communityStatsPayload, communitySource } = useWeezer();
   const [expandedTribe, setExpandedTribe] = useState<string | null>(null);
 
   // --- Weezerverse Phase 1: presence, filter selection, slice -----
@@ -231,12 +232,14 @@ export default function FanStats({
   // refreshCommunityData is a stable, in-flight-deduped callback
   // (context), so this fires once per mount — including the
   // return-after-a-failure mount, which is the quiet retry; the
-  // error block's Try again button covers the explicit one.
+  // error block's Try again button covers the explicit one. An
+  // aggregates payload already held counts as loaded (the rows
+  // stay empty in that mode by design).
   useEffect(() => {
-    if (communityTriageMaps.length === 0 && refreshCommunityData) {
+    if (communityTriageMaps.length === 0 && !communityStatsPayload && refreshCommunityData) {
       refreshCommunityData();
     }
-  }, [communityTriageMaps.length, refreshCommunityData]);
+  }, [communityTriageMaps.length, communityStatsPayload, refreshCommunityData]);
 
   const communityStats = useMemo(() => {
     if (communityTriageMaps.length === 0) return null;
@@ -517,12 +520,40 @@ export default function FanStats({
     };
   }, [communityMasterLists, communityTriageMaps]);
 
+  // The aggregates path (Build 5): when the context's fetch
+  // settled on get_community_stats(), the page's global stats
+  // come from the payload — computed by the slice machinery
+  // (communitySlice.ts: computeCommunityStats), which is
+  // field-compatible with the rows object by construction.
+  // baseStats is the one global object the sections read: the
+  // aggregates object when the aggregates own the display, the
+  // rows object otherwise (including every session before the
+  // owner runs the aggregates migration).
+  const aggregatesStats = useMemo(
+    () =>
+      communitySource === 'aggregates' &&
+      communityStatsPayload &&
+      // An all-zero payload is a genuinely empty community —
+      // the same "No fan data yet" state empty rows produce,
+      // not a page of zeroed sections.
+      !(
+        communityStatsPayload.qualifiedSubmissions === 0 &&
+        communityStatsPayload.songs.length === 0
+      )
+        ? computeCommunityStats(communityStatsPayload)
+        : null,
+    [communitySource, communityStatsPayload]
+  );
+  const baseStats = (aggregatesStats ?? communityStats) as unknown as
+    Exclude<typeof communityStats, null>;
+
   // Show a soft inline loader ONLY while the first fetch hasn't landed
-  // yet (communityStats is null until submission data arrives). Loaded
-  // but thin data — maps arrived, few or zero qualified fans — no longer
-  // blanks the whole page: the blocks below render their normal shells
-  // with placeholder values, a PLACEHOLDER badge, and a disclaimer.
-  if (!communityStats) {
+  // yet (baseStats is null until submission data arrives, from either
+  // source). Loaded but thin data — maps arrived, few or zero qualified
+  // fans — no longer blanks the whole page: the blocks below render
+  // their normal shells with placeholder values, a PLACEHOLDER badge,
+  // and a disclaimer.
+  if (!baseStats) {
     return (
       <div className="-mx-4 -my-4 bg-[#DCEEF8] pb-32 animate-in fade-in duration-500 sm:-mx-6 sm:-my-6 lg:-mx-8 lg:-my-8" style={{
         backgroundImage:
@@ -587,8 +618,11 @@ export default function FanStats({
   // SliceStats is field-compatible by construction (see
   // communitySlice.ts); the cast bridges the page's richer inferred
   // type. Taste Twins and Old vs. New deliberately keep reading
-  // communityStats directly — they stay global (spec decision 7)
-  // and are labeled as such while a filter is on.
+  // the global object (baseStats) directly — they stay global
+  // (spec decision 7) and are labeled as such while a filter is
+  // on. In aggregates mode baseStats IS the aggregates object,
+  // whose tasteTwin/gen fields are null — those sections render
+  // their null states there (the payload holds nothing per-fan).
   const filterActive = isFilterActive(selection);
   // A payload only counts for the CURRENT selection — its slice
   // echo must match, so changing a filter reads as "loading" until
@@ -606,9 +640,9 @@ export default function FanStats({
   const activeStats = (
     filterActive && payloadForSelection && sliceStats
       ? sliceStats
-      : communityStats
-  ) as unknown as typeof communityStats;
-  const globalThinSample = !communityStats.enoughForPercentages;
+      : baseStats
+  ) as unknown as Exclude<typeof communityStats, null>;
+  const globalThinSample = !baseStats.enoughForPercentages;
   const placeParts = [
     selection.state ? stateName(selection.state) : null,
     selection.country ? countryName(selection.country) : null,
@@ -1223,7 +1257,7 @@ export default function FanStats({
             )}
 
             {/* TASTE TWINS */}
-            {communityStats.tasteTwin && (
+            {baseStats.tasteTwin && (
               <div className="bg-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-800">
                 <div className="text-center sm:text-left mb-6">
                   <span className="text-[10px] font-black uppercase tracking-widest text-amber-400 block mb-1">Goes Together</span>
@@ -1236,22 +1270,22 @@ export default function FanStats({
 
                 <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-3">
                   <div className="bg-indigo-500/20 p-4 rounded-xl text-center w-full sm:flex-1 border border-indigo-500/30">
-                    <span className="text-sm font-bold text-white text-balance">{communityStats.tasteTwin.target.title}</span>
+                    <span className="text-sm font-bold text-white text-balance">{baseStats.tasteTwin.target.title}</span>
                   </div>
                   <div className="flex sm:flex-col items-center justify-center shrink-0">
                     <div className="w-4 h-0.5 sm:w-0.5 sm:h-3 bg-amber-400/50" />
                     <div className="text-amber-400 font-black px-3 py-1 border border-amber-400/30 rounded-full bg-amber-400/10 text-[10px] shrink-0 my-1 sm:my-0 sm:mx-1">
-                      {communityStats.tasteTwin.pct}% Match
+                      {baseStats.tasteTwin.pct}% Match
                     </div>
                     <div className="w-4 h-0.5 sm:w-0.5 sm:h-3 bg-amber-400/50" />
                   </div>
                   <div className="bg-blue-500/20 p-4 rounded-xl text-center w-full sm:flex-1 border border-blue-500/30">
-                    <span className="text-sm font-bold text-white text-balance">{communityStats.tasteTwin.twin.title}</span>
+                    <span className="text-sm font-bold text-white text-balance">{baseStats.tasteTwin.twin.title}</span>
                   </div>
                 </div>
               </div>
             )}
-            {!communityStats.tasteTwin && (
+            {!baseStats.tasteTwin && (
               <div className="bg-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-800">
                 <div className="text-center sm:text-left mb-6">
                   <span className="text-[10px] font-black uppercase tracking-widest text-amber-400 block mb-1">Goes Together</span>
@@ -1286,7 +1320,7 @@ export default function FanStats({
             )}
 
             {/* OLD SCHOOL VS NEW SCHOOL (Generational Divide) */}
-            {communityStats.genClassicistSong && communityStats.genModernistSong && (
+            {baseStats.genClassicistSong && baseStats.genModernistSong && (
               <div className="bg-slate-50 border-[3px] border-[#0C1220] rounded-[18px] p-6 sm:p-8 shadow-[4px_4px_0_rgba(11,30,63,0.85)] flex-1">
                 <div className="text-center sm:text-left mb-5">
                   <h2 className={`${displayFont.className} text-2xl tracking-wide text-[#0C1220] leading-tight`}>Old vs. New</h2>
@@ -1297,37 +1331,37 @@ export default function FanStats({
                 <div className="space-y-4">
                   <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
                     <span className="text-[9px] font-black uppercase tracking-widest text-[#0072CE] block mb-1">Old School Choice</span>
-                    <h3 className="text-lg font-black text-slate-900 leading-tight text-balance mb-3">"{communityStats.genClassicistSong.song.title}"</h3>
+                    <h3 className="text-lg font-black text-slate-900 leading-tight text-balance mb-3">"{baseStats.genClassicistSong.song.title}"</h3>
                     <div className="flex items-center gap-3 text-center">
                       <div className="flex-1 bg-slate-50 p-2 rounded-lg border border-slate-100">
                         <span className="text-[9px] font-black uppercase text-slate-400 block mb-0.5">90s Purists</span>
-                        <span className="text-lg font-black text-[#0072CE]">{communityStats.genClassicistSong.cMean.toFixed(1)}</span>
+                        <span className="text-lg font-black text-[#0072CE]">{baseStats.genClassicistSong.cMean.toFixed(1)}</span>
                       </div>
                       <div className="flex-1 bg-slate-50 p-2 rounded-lg border border-slate-100">
                         <span className="text-[9px] font-black uppercase text-slate-400 block mb-0.5">Modernists</span>
-                        <span className="text-lg font-black text-slate-400">{communityStats.genClassicistSong.mMean.toFixed(1)}</span>
+                        <span className="text-lg font-black text-slate-400">{baseStats.genClassicistSong.mMean.toFixed(1)}</span>
                       </div>
                     </div>
                   </div>
 
                   <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
                     <span className="text-[9px] font-black uppercase tracking-widest text-emerald-500 block mb-1">New School Choice</span>
-                    <h3 className="text-lg font-black text-slate-900 leading-tight text-balance mb-3">"{communityStats.genModernistSong.song.title}"</h3>
+                    <h3 className="text-lg font-black text-slate-900 leading-tight text-balance mb-3">"{baseStats.genModernistSong.song.title}"</h3>
                     <div className="flex items-center gap-3 text-center">
                       <div className="flex-1 bg-slate-50 p-2 rounded-lg border border-slate-100">
                         <span className="text-[9px] font-black uppercase text-slate-400 block mb-0.5">Modernists</span>
-                        <span className="text-lg font-black text-emerald-500">{communityStats.genModernistSong.mMean.toFixed(1)}</span>
+                        <span className="text-lg font-black text-emerald-500">{baseStats.genModernistSong.mMean.toFixed(1)}</span>
                       </div>
                       <div className="flex-1 bg-slate-50 p-2 rounded-lg border border-slate-100">
                         <span className="text-[9px] font-black uppercase text-slate-400 block mb-0.5">90s Purists</span>
-                        <span className="text-lg font-black text-slate-400">{communityStats.genModernistSong.cMean.toFixed(1)}</span>
+                        <span className="text-lg font-black text-slate-400">{baseStats.genModernistSong.cMean.toFixed(1)}</span>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
             )}
-            {!(communityStats.genClassicistSong && communityStats.genModernistSong) && (
+            {!(baseStats.genClassicistSong && baseStats.genModernistSong) && (
               <div className="bg-slate-50 border-[3px] border-[#0C1220] rounded-[18px] p-6 sm:p-8 shadow-[4px_4px_0_rgba(11,30,63,0.85)] flex-1">
                 <div className="text-center sm:text-left mb-5">
                   <h2 className={`${displayFont.className} text-2xl tracking-wide text-[#0C1220] leading-tight`}>Old vs. New</h2>

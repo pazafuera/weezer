@@ -27,6 +27,8 @@ import {
   setAnalyticsUserId,
   trackAnalytics,
 } from '../lib/analytics';
+import { parseCommunityStatsPayload } from '../lib/communityAggregates';
+import type { CommunityStatsPayload } from '../lib/communityAggregates';
 import { INITIAL_SAVE_STATE, bootSaveState } from '../lib/saveStatus';
 import type { SaveState } from '../lib/saveStatus';
 import {
@@ -410,6 +412,14 @@ interface WeezerContextType {
    *  with a retry instead of the "genuinely nothing" empty
    *  state a failure used to be indistinguishable from. */
   communityError: boolean;
+  /** The get_community_stats() payload when the aggregates
+   *  door is open (Build 5), else null. Fan Stats prefers it
+   *  over the raw-rows computation whenever communitySource
+   *  says 'aggregates'. */
+  communityStatsPayload: CommunityStatsPayload | null;
+  /** Which source the last settled community fetch used —
+   *  the aggregates RPC or the raw-rows fallback. */
+  communitySource: 'aggregates' | 'rows' | null;
   refreshCommunityData: () => Promise<void>;
 
   // Actions
@@ -858,6 +868,10 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   const [loadingCommunity, setLoadingCommunity] = useState<boolean>(false);
   const [communityLoaded, setCommunityLoaded] = useState<boolean>(false);
   const [communityError, setCommunityError] = useState<boolean>(false);
+  const [communityStatsPayload, setCommunityStatsPayload] =
+    useState<CommunityStatsPayload | null>(null);
+  const [communitySource, setCommunitySource] =
+    useState<'aggregates' | 'rows' | null>(null);
   /** The in-flight community fetch, if any — concurrent
    *  refreshCommunityData calls share it instead of racing
    *  duplicate RPCs (refetch hardening, Nov 7). */
@@ -992,25 +1006,55 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     const run = (async () => {
       setLoadingCommunity(true);
       setCommunityError(false);
+      let settled = false;
       try {
-        const { data, error } = await supabase.rpc('get_community_rankings');
+        // THE AGGREGATES SWITCH (Nov 7, Build 5): try
+        // get_community_stats() first. A valid payload settles
+        // the fetch from the aggregates — Fan Stats renders
+        // from it and the raw rows never ship. ANY failure —
+        // the function missing (the state of the world until
+        // the owner runs the aggregates migration), an RPC
+        // error, a malformed payload — falls through to the
+        // rows path below, unchanged. Ship-safe on both sides
+        // of his paste, by construction.
+        try {
+          const { data, error } = await supabase.rpc('get_community_stats');
+          const payload = !error ? parseCommunityStatsPayload(data) : null;
+          if (payload) {
+            setCommunityStatsPayload(payload);
+            setCommunitySource('aggregates');
+            settled = true;
+          }
+        } catch {
+          // Aggregates unreachable: the rows fallback governs.
+        }
+        if (!settled) {
+          const { data, error } = await supabase.rpc('get_community_rankings');
 
-        if (error) throw error;
-        if (data) {
-          const cleanRankings: Song[][] = [];
-          const cleanTriageMaps: Record<string, TriageValue>[] = [];
+          if (error) throw error;
+          if (data) {
+            const cleanRankings: Song[][] = [];
+            const cleanTriageMaps: Record<string, TriageValue>[] = [];
 
-          data.forEach((row: { master_list: unknown; triage_map: unknown }) => {
-            if (Array.isArray(row.master_list) && row.master_list.length > 0) {
-              cleanRankings.push(row.master_list);
-            }
-            if (row.triage_map && Object.keys(row.triage_map).length > 0) {
-              cleanTriageMaps.push(row.triage_map as Record<string, TriageValue>);
-            }
-          });
+            data.forEach((row: { master_list: unknown; triage_map: unknown }) => {
+              if (Array.isArray(row.master_list) && row.master_list.length > 0) {
+                cleanRankings.push(row.master_list);
+              }
+              if (row.triage_map && Object.keys(row.triage_map).length > 0) {
+                cleanTriageMaps.push(row.triage_map as Record<string, TriageValue>);
+              }
+            });
 
-          setCommunityMasterLists(cleanRankings);
-          setCommunityTriageMaps(cleanTriageMaps);
+            setCommunityMasterLists(cleanRankings);
+            setCommunityTriageMaps(cleanTriageMaps);
+          }
+          // The rows path owns the display now: a stale
+          // aggregates payload from an earlier fetch must not
+          // outrank fresh rows (the next refresh re-tries the
+          // aggregates first and can re-win).
+          setCommunitySource('rows');
+          setCommunityStatsPayload(null);
+          settled = true;
         }
       } catch (err) {
         console.error('Error fetching background community data:', err);
@@ -2354,6 +2398,8 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         loadingCommunity,
         communityLoaded,
         communityError,
+        communityStatsPayload,
+        communitySource,
         refreshCommunityData,
         syncRankingsToDatabase,
         updateAndSyncBucketRanks,

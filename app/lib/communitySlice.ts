@@ -665,3 +665,40 @@ export function computeSliceStats(payload: SlicePayload): SliceStats {
     genModernistSong: null,
   };
 }
+
+/**
+ * The GLOBAL aggregates path (Nov 7, Build 5 — the Fan Stats
+ * switch): compute the page's stats from a get_community_stats()
+ * payload instead of raw per-fan rows. It runs the slice
+ * computation with no filter and no per-fan summaries, because
+ * that is exactly what the payload holds — per-song bucket
+ * counts/sums and co-loved pairs, nothing per-fan.
+ *
+ * What that means section by section (the payload's limits,
+ * stated plainly — the same trade the slice path documents):
+ * - Song-level awards, anatomy, consensus, album leaderboard,
+ *   lone bangers, tier rankings: fully computed, with the
+ *   slice computation's rules (which mirror the rows path's:
+ *   same shrinkage, reach and divisive gates).
+ * - Tribes and the Blue/Pinkerton debate: NOT computable —
+ *   they are per-fan classifications; with no fan summaries
+ *   the counts are zero and hasDebateData is false, so those
+ *   sections render their empty states. (The slice RPC proves
+ *   the extension: add fan summaries to get_community_stats()
+ *   later and this lights up unchanged.)
+ * - Taste Twin and Old-vs-New songs: null, as in slices —
+ *   Fan Stats renders their existing null states.
+ * Seeds are included in the aggregates BY DESIGN (the refresh
+ * reads all of weezer_rankings, exactly like
+ * get_community_rankings does today) — parity, not a bug.
+ */
+export function computeCommunityStats(
+  payload: CommunityStatsPayload
+): SliceStats {
+  return computeSliceStats({
+    ...payload,
+    suppressed: false,
+    slice: { country: null, state: null, band: null },
+    fanSummaries: [],
+  });
+}

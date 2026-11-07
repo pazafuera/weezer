@@ -438,7 +438,7 @@ export default function Step3Master({
           className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm px-5 sm:px-8 py-4 rounded-full shadow-[2px_2px_0_rgba(11,30,63,0.85)] transition active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_rgba(11,30,63,0.85)] cursor-pointer border-[3px] border-[#0C1220] flex items-center gap-2.5 whitespace-nowrap shrink-0"
         >
           <FlyingWIcon className="w-6 h-4 text-slate-950" />
-          <span>Generate Weezer Wrapped →</span>
+          <span>Generate Sweater Thread →</span>
         </button>
       </div>
 

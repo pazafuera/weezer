@@ -256,11 +256,18 @@ export default function AppShell({
       group: 'fanhood',
     },
     {
-      // The standings live inside the lore step but are public —
-      // no unlock gate (watching the board is not playing).
+      // The standings live inside the lore step. The row renders
+      // only once the game is unlocked (owner ruling, Nov 6,
+      // 2026) — the same Blue + Pinkerton condition the Back to
+      // the Shack row above computes, progress-based so a guest
+      // who has done the sorting sees it too. While locked the
+      // row is absent entirely: the Shack row already carries
+      // the unlock message, and a second greyed row under it
+      // was noise. Once unlocked it renders exactly as before.
       label: 'Leaderboard',
       step: 'lore',
       opensLeaderboard: true,
+      hideIf: !isLoreUnlocked(triageMap),
       group: 'fanhood',
     },
   ];

@@ -180,12 +180,37 @@ export function youreAtPhrase(stopName: string): string {
  * The finished-series form of the same sentence: once all five
  * games are in, the road is over and the standing is a result,
  * not a position in progress — "You finished " + the stop's own
- * fragment ("You finished in the La Brea Tar Pits", "You finished
- * back to The Shack"). Same fallback rule as youreAtPhrase.
+ * fragment ("You finished in the La Brea Tar Pits"). One
+ * exception: The Shack's fragment is a motion fragment ("back
+ * to The Shack"), and after "finished" the arrival is a place,
+ * not a trip — "You finished back at The Shack." Same fallback
+ * rule as youreAtPhrase.
  */
 export function finishedAtPhrase(stopName: string): string {
+  if (stopName === 'The Shack') return 'You finished back at The Shack';
   const stop = TOTAL_STOPS.find((s) => s.title === stopName);
   return stop ? `You finished ${stop.phrase}` : `You finished at ${stopName}`;
+}
+
+/**
+ * The game card's first-person arrival fragment for a stop:
+ * "I made it " + the fragment. The at-fragments don't survive
+ * the verb — "I made it in the La Brea Tar Pits" and "I made it
+ * on an Island in the Sun" are wrong — so arrivals carry their
+ * own table. Two at-fragments already read correctly after
+ * "made it" and stay: "across the Sea" and "back to The Shack".
+ */
+const MADE_IT_FRAGMENTS: Record<string, string> = {
+  "Arnold's Diner": "to Arnold's Diner",
+  'Island in the Sun': 'to an Island in the Sun',
+  'Across the Sea': 'across the Sea',
+  'La Brea Tar Pits': 'to the La Brea Tar Pits',
+  'The Garage': 'to The Garage',
+  'The Shack': 'back to The Shack',
+};
+
+export function madeItPhrase(stopName: string): string {
+  return MADE_IT_FRAGMENTS[stopName] ?? `to ${stopName}`;
 }
 
 /** The next stop up the road and the points still needed to

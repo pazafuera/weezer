@@ -13,7 +13,7 @@ import {
 import { displayFont, handFont } from './fonts';
 import { fanhoodDisplay } from '../../lib/fanhood';
 import type { FanhoodRecord } from '../../lib/fanhood';
-import { TOTAL_STOPS } from '../../data/loreGame';
+import { TOTAL_STOPS, madeItPhrase } from '../../data/loreGame';
 
 /** Why this doodle is defined locally instead of imported from
  *  ShareCardShell: on 2026-11-03 the deployed production bundle
@@ -94,18 +94,18 @@ export const FanhoodCardVisual = forwardRef<
     44,
     Math.min(76, Math.floor(1740 / 'CAN YOU GET BACK TO THE SHACK?'.length))
   );
-  // The standing sentence (Nov 5): first person, built from the
-  // stop's own phrase fragment in TOTAL_STOPS — the same fragments
-  // youreAtPhrase speaks in second person elsewhere. At the start
+  // The standing sentence (Nov 5): first person. At the start
   // stop the form is "I'm at Arnold's Diner."; everywhere else,
-  // "I made it {phrase}."
+  // "I made it {arrival}" with the arrival fragment from
+  // madeItPhrase — the stop's at-fragment breaks after "made it"
+  // for the in/on stops ("I made it in the La Brea Tar Pits").
   const stopEntry = stop
     ? TOTAL_STOPS.find((s) => s.title === stop) ?? null
     : null;
   const standingSentence = stopEntry
     ? stopEntry.min === 0
       ? `I'm ${stopEntry.phrase}.`
-      : `I made it ${stopEntry.phrase}.`
+      : `I made it ${madeItPhrase(stopEntry.title)}.`
     : null;
   const currentStopIdx = stopEntry ? TOTAL_STOPS.indexOf(stopEntry) : -1;
 

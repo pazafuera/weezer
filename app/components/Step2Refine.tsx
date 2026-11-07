@@ -481,8 +481,27 @@ export default function Step2Refine({
           later): the indicator's old left alignment and its pl-1
           went with the count — the eyebrow now sits centered over
           the centered headline block below it, on all five stages
-          (this header renders once per stage from the stage data). */}
-      <div className="text-center">
+          (this header renders once per stage from the stage data).
+          SPACING (owner, Nov 7, later still): the eyebrow sits
+          RIGHT above the headline (~3px of visible gap), not
+          floating well above it. The pair renders inside one
+          plain wrapper so it takes a single space-y-6 slot from
+          the root: as separate root children they stacked the
+          root's 24px slot margin plus the headline block's pt-2
+          (8px) between the two lines — ~43px glyph-to-glyph once
+          the line boxes' half-leadings are counted. Inside the
+          wrapper the eyebrow carries -mb-2 and the headline
+          block drops its pt-2, which cancels the headline's top
+          half-leading: 2.75px (eyebrow bottom half-leading) +
+          8px (headline top half-leading) − 8px = ~3px. (A -mt-*
+          on the headline block could not do this job — the
+          root's space-y selector outranks a lone margin utility —
+          and an -mb-* on an un-wrapped eyebrow lost to space-y's
+          margin-bottom: 0 whenever the sorting-incomplete notice
+          renders above it; the wrapper makes the tight gap hold
+          in both states.) */}
+      <div>
+      <div className="text-center -mb-2">
         <span className="text-[11px] font-black uppercase tracking-wider text-slate-400">
           It's Time to Refine
         </span>
@@ -498,9 +517,10 @@ export default function Step2Refine({
           treatment. (The arbitrary-property form is deliberate:
           this project is on Tailwind 3.3, which has no
           text-balance utility.) */}
-      <div className="text-center space-y-2 px-4 mb-8 pt-2">
+      <div className="text-center space-y-2 px-4 mb-8">
         <h1 className={`${displayFont.className} text-[32px] text-[#0C1220] [text-wrap:balance]`}>{currentStage.title}</h1>
         <p className="text-sm font-bold text-[#3D4A63] max-w-sm mx-auto leading-tight">{currentStage.desc}</p>
+      </div>
       </div>
 
       {/* ACTIVE BUCKET DRAG-AND-DROP CONTAINER */}

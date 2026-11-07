@@ -651,9 +651,11 @@ export default function FanStats({
           </p>
         </div>
 
-        {/* WORLD MAP + FILTER BAR — directly under the hero, the
-            map as the page's front door and the filter bar attached
-            beneath it (spec §3 + settled decisions). Rendered ONLY
+        {/* WORLD MAP, THEN THE FILTER BAND — directly under the
+            hero. The map's card stands alone (map + caption, nothing
+            else); the filters live in their own ink band beneath it
+            and say what they do, so nobody reads them as map
+            controls (owner direction, Nov 6, 2026). Rendered ONLY
             when get_fan_presence answered: while the migration is
             unrun (or the RPC fails) this whole section is absent
             and the page is exactly the pre-Phase-1 page. */}
@@ -663,15 +665,22 @@ export default function FanStats({
             <p className="text-center text-xs font-bold text-[#3D4A63] mt-3">
               Fans have ranked from {presencePlaceCount(presence)} places
             </p>
-            <div className="mt-4 border-t-2 border-dashed border-[#0C1220]/15 pt-4">
-              <WeezerverseFilterBar
-                presence={presence}
-                selection={selection}
-                onChange={setSelection}
-              />
-            </div>
+          </div>
+        )}
+
+        {presence && (
+          <div className="bg-[#0C1220] rounded-[18px] shadow-[4px_4px_0_rgba(12,18,32,0.35)] p-4 sm:p-6">
+            <p className="mb-4 text-center text-sm font-semibold leading-relaxed text-[#b9c6dc]">
+              <span className="font-black text-white">Filter the stats below</span>
+              {' — by place or age group. The map above stays the same.'}
+            </p>
+            <WeezerverseFilterBar
+              presence={presence}
+              selection={selection}
+              onChange={setSelection}
+            />
             {filterActive && (
-              <p className="mt-3 text-center text-xs font-black uppercase tracking-wide text-[#0C1220]">
+              <p className="mt-3 text-center text-xs font-black uppercase tracking-wide text-[#FFD23F]">
                 {payloadForSelection &&
                 !slicePayload.suppressed &&
                 typeof slicePayload.cohortSize === 'number'

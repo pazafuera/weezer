@@ -13,6 +13,11 @@ import {
   rankLeaderboard,
   TOTAL_GAMES,
 } from '../lib/leaderboard';
+import {
+  fanhoodDisplay,
+  fanhoodGamesPlayed,
+  useFanhood,
+} from '../lib/fanhood';
 import type { LeaderboardEntry, LeaderboardScope } from '../lib/leaderboard';
 
 /**
@@ -35,6 +40,14 @@ export default function FanhoodLeaderboard({
 }) {
   const router = useRouter();
   const { userId, friendCards, userProfile, navigateTo } = useWeezer();
+  // The viewer's own standing, stated as a labeled line above
+  // the board (Nov 6, 2026 — it replaces the slim header's
+  // unlabeled pill, which stepped aside for this view and
+  // duplicated the viewer's own row anyway). Same derivation
+  // the pill used; "final" once every round is in.
+  const fanhood = useFanhood();
+  const ownDisplay = fanhoodDisplay(fanhood);
+  const ownFinal = fanhoodGamesPlayed(fanhood) >= LORE_GAMES.length;
   const [entries, setEntries] = useState<LeaderboardEntry[] | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
   const [tab, setTab] = useState<'worldwide' | 'friends'>('worldwide');
@@ -112,6 +125,13 @@ export default function FanhoodLeaderboard({
           ← Back to the rounds
         </button>
       </div>
+
+      {ownDisplay && (
+        <p className="whitespace-nowrap text-[11px] font-bold text-[#3D4A63] min-[420px]:text-xs sm:text-[13px]">
+          {ownFinal ? 'Your final standing' : 'Your standing'} —{' '}
+          {ownDisplay.stop} · {ownDisplay.depth.toLocaleString()} points
+        </p>
+      )}
 
       {/* Worldwide / Friends tabs */}
       <div className="flex gap-2">

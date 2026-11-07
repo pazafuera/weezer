@@ -2221,9 +2221,13 @@ export default function StepLore() {
             // card's header band (Nov 3, 2026) — never both. In
             // the result phase the results standing block states
             // the stop and the total itself (Nov 3, 2026 de-dup),
-            // so the chip steps aside there too.
+            // so the chip steps aside there too. On the board
+            // (Nov 6, 2026) the chip steps aside as well: the
+            // leaderboard carries the standing as a labeled line
+            // above the board instead of an unlabeled pill
+            // duplicating the player's own row.
             const chipText =
-              display && phase !== 'ready' && phase !== 'result'
+              display && phase !== 'ready' && phase !== 'result' && !showBoard
                 ? `${display.stop} · ${display.depth.toLocaleString()}`
                 : null;
             return (

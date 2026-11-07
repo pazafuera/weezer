@@ -7,6 +7,7 @@ import { BucketType, Song, FULL_SONG_POOL } from '../data/constants';
 import { sanitizeMasterList, reconcileMasterList, getRankedSongs, sortByBucketBlock } from '@/utils/rankingUtils';
 import { createRankingsSyncQueue } from '../lib/rankingsSync';
 import type { RankingsSyncQueue } from '../lib/rankingsSync';
+import { localSnapshotSupersedesAccount } from '../lib/bootRankings';
 import {
   forgetAccountFanhoodSync,
   reconcileAccountFanhood,
@@ -396,6 +397,7 @@ const getDerivedBucketRanks = (
 type RankingsRow = {
   triage_map?: Record<string, TriageValue> | null;
   master_list?: Song[] | null;
+  updated_at?: string | null;
 } | null;
 
 /**
@@ -426,7 +428,7 @@ export const migrateGuestRankingsToUser = async (
     }
     const { data } = await supabase
       .from('weezer_rankings')
-      .select('triage_map, master_list')
+      .select('triage_map, master_list, updated_at')
       .eq('user_id', newUserId)
       .maybeSingle();
     return data as RankingsRow;
@@ -437,7 +439,8 @@ export const migrateGuestRankingsToUser = async (
   if (!localState) return fetchExisting();
 
   try {
-    const { triageMap, masterList } = JSON.parse(localState);
+    const { triageMap, masterList, userId: localUserId, savedAt } =
+      JSON.parse(localState);
 
     const hasProgress =
       (triageMap && Object.keys(triageMap).length > 0) ||
@@ -466,6 +469,49 @@ export const migrateGuestRankingsToUser = async (
           isRealBucket(value as TriageValue | undefined)
         )) ||
       (existing?.master_list && existing.master_list.length > 0);
+
+    // RECOVERY (Nov 6, 2026): the never-overwrite rule below guards
+    // against FOREIGN local state — guest picks, or a previous
+    // account's leftovers. It must not discard THIS account's own
+    // newest work: every signed-in edit stamps its local snapshot
+    // with the user id and save time, and if that snapshot is newer
+    // than the account row, the row is simply stale — the last
+    // save never landed (the page was discarded inside the sync
+    // queue's flush window; the snapshot on disk is the only copy).
+    // Load from the snapshot and heal the row with it. The stamp
+    // check (app/lib/bootRankings.ts) is what keeps this from
+    // reopening the Oct 16 hole: unstamped, foreign, legacy, or
+    // older snapshots fall through to the rule below untouched.
+    if (
+      accountHasProgress &&
+      localSnapshotSupersedesAccount({
+        localUserId,
+        localSavedAt: savedAt,
+        userId: newUserId,
+        accountUpdatedAt: existing?.updated_at,
+      })
+    ) {
+      const healed: RankingsRow = {
+        triage_map: triageMap || {},
+        master_list: masterList || [],
+      };
+      const { error } = await supabase.from('weezer_rankings').upsert(
+        {
+          user_id: newUserId,
+          triage_map: healed.triage_map,
+          master_list: healed.master_list,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id' }
+      );
+      if (error) {
+        // The heal didn't land; the session still loads the right
+        // state, and the snapshot stays newer than the row, so the
+        // next boot retries the heal instead of losing the work.
+        console.error('Failed to heal rankings from local snapshot:', error);
+      }
+      return healed;
+    }
 
     if (accountHasProgress) return existing;
 
@@ -1161,9 +1207,19 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     map: Record<string, TriageValue>,
     master: Song[]
   ) => {
+    // The snapshot carries its owner and save time (Nov 6, 2026):
+    // boot compares them against the account row to recover work
+    // whose database write never landed — see bootRankings.ts.
+    // Guest snapshots keep a null stamp, which the boot predicate
+    // treats as foreign (never supersedes an account row).
     localStorage.setItem(
       'weezer_ranker_state',
-      JSON.stringify({ triageMap: map, masterList: master })
+      JSON.stringify({
+        triageMap: map,
+        masterList: master,
+        userId: userId ?? null,
+        savedAt: Date.now(),
+      })
     );
     if (!userId) return;
     syncQueueRef.current?.enqueue({ map, master });

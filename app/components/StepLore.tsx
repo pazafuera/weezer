@@ -1897,6 +1897,12 @@ export default function StepLore() {
      title. The old explainer card is gone — the start gate
      carries the rules now. */
   const pickerPlayedAny = fanhoodGamesPlayed(fanhood) > 0;
+  // The finished state: every round in the series has a result,
+  // so no more points exist — the journey card stops talking
+  // like a trip in progress (same derivation the rounds header
+  // counts with: fanhoodGamesPlayed against the series length).
+  const pickerAllPlayed =
+    fanhoodGamesPlayed(fanhood) >= LORE_GAMES.length;
   const journeyTotal = fanhoodTotal(fanhood);
   const journeyStop = stopForTotal(journeyTotal);
   const journeyNext = nextStopForTotal(journeyTotal);
@@ -1921,7 +1927,7 @@ export default function StepLore() {
               {journeyTotal.toLocaleString('en-US')}
             </p>
             <p className="mt-1.5 text-xs font-bold uppercase tracking-[0.08em] text-slate-400">
-              Points so far
+              {pickerAllPlayed ? 'Final score' : 'Points so far'}
             </p>
           </div>
         </div>
@@ -1993,13 +1999,13 @@ export default function StepLore() {
                     THE GOAL
                   </span>
                 )}
-                {status === 'next' && journeyNext && (
+                {status === 'next' && journeyNext && !pickerAllPlayed && (
                   <span className="ml-auto shrink-0 text-[13px] font-bold text-[#FFD23F]">
                     {journeyNext.pointsTo.toLocaleString('en-US')} to go
                   </span>
                 )}
                 <span
-                  className={`${status === 'next' ? '' : 'ml-auto'} shrink-0 text-sm font-bold text-slate-400`}
+                  className={`${status === 'next' && !pickerAllPlayed ? '' : 'ml-auto'} shrink-0 text-sm font-bold text-slate-400`}
                 >
                   {i === 0 ? 'START' : stop.min.toLocaleString('en-US')}
                 </span>

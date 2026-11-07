@@ -21,9 +21,9 @@ const BAND_BG: Record<BucketType, string> = {
 const REFINEMENT_STAGES: { bucket: BucketType; title: string; desc: string; nextBtn: string }[] = [
   { bucket: 'banger', title: 'Rank Your Bangers', desc: "These are the absolute best of the best. Rank them, or demote the ones that don't survive the cut!", nextBtn: "Next: Rank Slaps →" },
   { bucket: 'slaps', title: 'Rank Your Lowkey Slaps', desc: "These are great, but not your absolute favorites. Rank them and make sure they belong here.", nextBtn: "Next: Review Mid →" },
-  { bucket: 'mid', title: 'Review Your Mid', desc: "These are just okay. Review them to make sure nothing here is actually a hidden gem or total trash.", nextBtn: "Next: Review Skips →" },
-  { bucket: 'skip', title: 'Review Your Skips', desc: "You usually skip these. Promote or demote if needed.", nextBtn: "Next: Review Trash →" },
-  { bucket: 'trash', title: 'Review Your Trash', desc: "The bottom of the barrel. Make sure you don't actually like any of these before we finalize.", nextBtn: "Generate Final List →" },
+  { bucket: 'mid', title: 'Review Your Mid', desc: "These are just okay. Review them to make sure nothing here is actually a hidden gem or total trash. Order doesn't matter in this bucket.", nextBtn: "Next: Review Skips →" },
+  { bucket: 'skip', title: 'Review Your Skips', desc: "You usually skip these. Promote or demote if needed. Order doesn't matter in this bucket.", nextBtn: "Next: Review Trash →" },
+  { bucket: 'trash', title: 'Review Your Trash', desc: "The bottom of the barrel. Make sure you don't actually like any of these before we finalize. Order doesn't matter in this bucket.", nextBtn: "Generate Final List →" },
 ]; 
 
 export default function Step2Refine({

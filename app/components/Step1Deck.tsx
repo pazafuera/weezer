@@ -652,10 +652,12 @@ type CardAnimPhase =
 /**
  * The card from the owner's reference mock, with a stacked-deck
  * effect: two backing cards peek out behind the real one, rotated a
- * couple of degrees — pure CSS, no images. The face wears a
- * brand-blue tint (#d9eafa — a color instead of white per the
- * owner, deepened one shade in his polish pass); the two
- * backing layers stay white for contrast. The SONG shell is a FIXED
+ * couple of degrees — pure CSS, no images. The face is white
+ * (owner, Nov 6, 2026: the earlier brand-blue tint #d9eafa
+ * nearly matched the page's #DCEEF8 backdrop, so the card read
+ * as a hole in the page instead of an object on it; white
+ * delineates it). The two backing layers are white too — their
+ * ink outlines carry the stacked read. The SONG shell is a FIXED
  * height — it never grows or shrinks with content — so a song title
  * can never push the preview button off the card. The milestone,
  * completion and end-of-deck states render in the same shell with
@@ -680,7 +682,6 @@ function DeckCardShell({
   swipe,
   adaptive,
   swaying,
-  paper,
 }: {
   children: React.ReactNode;
   /**
@@ -735,13 +736,6 @@ function DeckCardShell({
    * state-toggled and can never leak into normal deck use.
    */
   swaying?: boolean;
-  /**
-   * Milestone state only (Round 2 refresh): the front card's
-   * face goes paper-white instead of the deck's light blue, so
-   * the celebration reads as its own poster moment. Song,
-   * completion and end-of-deck cards keep the blue face.
-   */
-  paper?: boolean;
 }) {
   // The front card's transform/transition are phase-driven: it
   // follows the pointer while dragging, springs back over 200ms on
@@ -803,7 +797,7 @@ function DeckCardShell({
           }}
           className={`relative ${
             adaptive ? 'min-h-[362px]' : 'h-full'
-          } rounded-[28px] bg-[#d9eafa] border-[3px] border-[#0C1220] shadow-[4px_4px_0_rgba(11,30,63,0.85)] select-none`}
+          } rounded-[28px] bg-white border-[3px] border-[#0C1220] shadow-[4px_4px_0_rgba(11,30,63,0.85)] select-none`}
         >
           {/* Directional stamps: all three are CENTERED OVER THE
               ALBUM ART (owner: the old corner stamps rotated
@@ -848,9 +842,7 @@ function DeckCardShell({
         <div
           className={`relative ${
             adaptive ? 'min-h-[362px]' : 'h-full'
-          } rounded-[28px] ${
-            paper ? 'bg-white' : 'bg-[#d9eafa]'
-          } border-[3px] border-[#0C1220] shadow-[4px_4px_0_rgba(11,30,63,0.85)]`}
+          } rounded-[28px] bg-white border-[3px] border-[#0C1220] shadow-[4px_4px_0_rgba(11,30,63,0.85)]`}
         >
           {children}
         </div>
@@ -2503,7 +2495,7 @@ export default function Step1Deck({
              width, so the card grows to fit them in flow instead
              of the stack painting outside the card's bounds;
              stacks that fit render in exactly 362px, as before. */
-          <DeckCardShell adaptive paper>
+          <DeckCardShell adaptive>
             <div className="min-h-[362px] flex flex-col items-center justify-center text-center px-6 py-3 sm:px-8 sm:py-4 space-y-1.5 sm:space-y-2">
               {/* Tape strip naming the section (Round 2) — the
                   section's own title, the same words the Jump
@@ -2784,8 +2776,16 @@ export default function Step1Deck({
                   and styling — only bigger (large = 64px), pinned in
                   the card's last slot. The wrapper carries the
                   tutorial's target attribute — the tour measures
-                  it to ring the button (see the TUTORIAL block). */}
-              <div data-tutorial="preview">
+                  it to ring the button (see the TUTORIAL block).
+                  The wrapper's ink ring is THIS call site's own
+                  delineation (Nov 6, 2026): the shared button's
+                  pale blue-50 fill and blue-200 border nearly
+                  vanish on the card's new white face, so the ring
+                  draws the circle's edge here. The shared
+                  AudioPreviewButton itself is deliberately
+                  untouched — restyling it everywhere is a
+                  separate call. */}
+              <div data-tutorial="preview" className="rounded-full ring-2 ring-[#0C1220]">
                 <AudioPreviewButton title={currentSong.title} large />
               </div>
             </div>

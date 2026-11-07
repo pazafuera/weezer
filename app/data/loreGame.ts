@@ -176,6 +176,18 @@ export function youreAtPhrase(stopName: string): string {
   return stop ? `You're ${stop.phrase}` : `You're at ${stopName}`;
 }
 
+/**
+ * The finished-series form of the same sentence: once all five
+ * games are in, the road is over and the standing is a result,
+ * not a position in progress — "You finished " + the stop's own
+ * fragment ("You finished in the La Brea Tar Pits", "You finished
+ * back to The Shack"). Same fallback rule as youreAtPhrase.
+ */
+export function finishedAtPhrase(stopName: string): string {
+  const stop = TOTAL_STOPS.find((s) => s.title === stopName);
+  return stop ? `You finished ${stop.phrase}` : `You finished at ${stopName}`;
+}
+
 /** The next stop up the road and the points still needed to
  *  reach it — null once the total is back to the Shack. */
 export function nextStopForTotal(

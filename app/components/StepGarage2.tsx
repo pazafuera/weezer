@@ -32,6 +32,7 @@ import {
   TOTAL_STOPS,
   isLoreUnlocked,
   loreGateRemainingAlbums,
+  finishedAtPhrase,
   nextStopForTotal,
   stopForTotal,
   youreAtPhrase,
@@ -725,14 +726,22 @@ function GameCard() {
         {display ? (
           <div>
             <p className="mt-2 text-[16.5px] font-semibold leading-[1.45] text-[#D7E6FA]">
-              {youreAtPhrase(display.stop)} —{' '}
-              {display.depth.toLocaleString()} points.
+              {allPlayed
+                ? finishedAtPhrase(display.stop)
+                : youreAtPhrase(display.stop)}{' '}
+              — {display.depth.toLocaleString()} points.
             </p>
             <JourneyBar total={display.depth} />
-            {next && (
+            {allPlayed ? (
               <p className="mb-[18px] rounded-[10px] border-[1.5px] border-dashed border-white/40 bg-white/10 px-3 py-[9px] text-center text-[14.5px] font-extrabold leading-snug text-white">
-                {next.pointsTo.toLocaleString()} points to {next.title}.
+                All five rounds are in. That&rsquo;s the final score.
               </p>
+            ) : (
+              next && (
+                <p className="mb-[18px] rounded-[10px] border-[1.5px] border-dashed border-white/40 bg-white/10 px-3 py-[9px] text-center text-[14.5px] font-extrabold leading-snug text-white">
+                  {next.pointsTo.toLocaleString()} points to {next.title}.
+                </p>
+              )
             )}
           </div>
         ) : awaitingStanding ? (

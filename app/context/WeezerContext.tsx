@@ -1729,6 +1729,17 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
       ...(newBucketRanks.trash || []),
     ];
     setMasterList(newMaster);
+    // The map this funnel computes and syncs must also be
+    // COMMITTED to state, in the same act as the ranks and the
+    // list. Until Nov 7 it was not: the payload carried the new
+    // map while the context's triageMap kept the moved song's OLD
+    // bucket, so the next edit of the visit — which builds its
+    // map from state — silently restored the previous move's
+    // song in the payload it wrote (the Photograph resurrection:
+    // a Refine demote reverted by the following Refine move, on a
+    // healthy network, with every payload landing). The three
+    // state variables must never disagree again.
+    setTriageMap(activeMap);
     // The one funnel every genuine ranking edit flows through —
     // triage answers, bucket moves, Refine results, reorder
     // drags (and handleMagicFill, which calls this) — so it is

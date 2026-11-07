@@ -455,7 +455,7 @@ export interface LoreQuestion {
   constraint?: _SongConstraint;
   /** Song questions: the example shown when the player misses. */
   exampleSongId?: string;
-  /** One warm line of lore for the miss reveal. DRAFT — Mark's markup. */
+  /** One warm line of lore for the miss reveal. (Draft lines approved as final, Nov 7, 2026.) */
   loreLine: string;
 }
 
@@ -1328,7 +1328,13 @@ export const OPEN_PROMPTS: OpenPrompt[] = [
       { text: 'Dave Sitek', depth: 380, aliases: ['Dave', 'Sitek'] },
       { text: 'Polow da Don', depth: 450, aliases: ['Polow'] },
       { text: 'Suzy Shinn', depth: 520, aliases: ['Suzy', 'Shinn'] },
-      { text: 'Toby Gad', depth: 650, aliases: ['Toby', 'Gad'] },
+      {
+        text: 'Toby Gad',
+        depth: 0,
+        aliases: ['Toby', 'Gad'],
+        trapNote:
+          'A co-writer on "Mexican Fender" — its producer was Butch Walker. (Ruled Nov 7, 2026: the disputed production credit stays out.)',
+      },
       { text: 'Ethan Gruska', depth: 700, aliases: ['Ethan', 'Gruska'] },
       { text: 'Jonny Coffer', depth: 750, aliases: ['Jonny', 'Coffer'] },
       { text: 'Robopop', depth: 780, aliases: ['Daniel Omelio'] },
@@ -1788,8 +1794,14 @@ export const OPEN_PROMPTS: OpenPrompt[] = [
       { text: 'Beverly Hills', depth: 25 },
       { text: 'Island in the Sun', depth: 30 },
       { text: 'Living in L.A.', depth: 68 },
+      // Ruled Nov 7, 2026: the bank's six listed-not-scored
+      // judgment calls SCORE (depths as listed there).
+      { text: 'Back to the Shack', depth: 85 },
       { text: 'In the Garage', depth: 120 },
       { text: 'Surf Wax America', depth: 130 },
+      { text: 'Across the Sea', depth: 146 },
+      { text: 'American Gigolo', depth: 150 },
+      { text: 'Trippin\' Down the Freeway', depth: 280 },
       { text: 'California Kids', depth: 300 },
       { text: 'In the Mall', depth: 310 },
       { text: 'The British Are Coming', depth: 330 },
@@ -1797,8 +1809,10 @@ export const OPEN_PROMPTS: OpenPrompt[] = [
       { text: 'L.A. Girlz', depth: 370 },
       { text: 'III. Return to Ithaka', depth: 400 },
       { text: 'La Mancha Screwjob', depth: 428 },
+      { text: 'Byzantine', depth: 438 },
       { text: 'California Snow', depth: 449 },
       { text: 'Sheraton Commander', depth: 466 },
+      { text: 'The Garden of Eden', depth: 466 },
       { text: 'La Brea Tar Pits', depth: 481 },
       { text: 'Cuomoville', depth: 490 },
       { text: 'The LA Sound', depth: 1154 },
@@ -2745,21 +2759,25 @@ export const OPEN_PROMPTS: OpenPrompt[] = [
     loreLine:
       "Between the big colour albums hides a whole shelf of EPs — Christmas ones, a live one, and four seasons' worth from 2022.",
     answers: [
-      { text: 'Christmas with Weezer', depth: 55 },
       { text: 'SZNZ: Spring', depth: 90 },
       { text: 'SZNZ: Summer', depth: 110 },
-      { text: 'The Lion and the Witch', depth: 130 },
       { text: 'SZNZ: Autumn', depth: 170 },
       { text: 'SZNZ: Winter', depth: 190 },
       { text: 'The Good Life', depth: 420 },
-      { text: 'Winter Weezerland', depth: 480 },
-      { text: 'Six Hits', depth: 650 },
+      // Ruled Nov 7, 2026: EPs COUNT — the six special EPs sit
+      // at the bank's ruled depths (they were scored as ordinary
+      // releases before the ruling; The Christmas CD joins).
+      { text: 'Christmas with Weezer', depth: 800 },
+      { text: 'The Lion and the Witch', depth: 850 },
+      { text: 'Winter Weezerland', depth: 900 },
+      { text: 'Spotify Sessions', depth: 900 },
+      { text: 'Six Hits', depth: 1000 },
+      { text: 'The Christmas CD', depth: 1000, aliases: ['Christmas CD'] },
       {
         text: '…Happy Record Store Day!',
-        depth: 800,
+        depth: 1100,
         aliases: ['Happy Record Store Day'],
       },
-      { text: 'Spotify Sessions', depth: 900 },
       {
         text: 'Death to False Metal',
         depth: 0,
@@ -2980,6 +2998,11 @@ export const OPEN_PROMPTS: OpenPrompt[] = [
         text: 'Melodica',
         depth: 560,
         note: "GSG Media's review of 'A Little Bit of Love' describes a melodica arrangement, and Ramapo News heard the occasional bit of melodica across SZNZ: Spring — review-documented, like the xylophone.",
+      },
+      {
+        text: 'Sitar',
+        depth: 600,
+        note: "Nishat Khan plays it on 'Love Is the Answer' (Raditude). (The instrument itself — a typed 'guitar' never scores here; the prompt excludes it.)",
       },
       { text: 'Xylophone', depth: 800 },
       { text: 'Hurdy-gurdy', depth: 950, aliases: ['Hurdy gurdy'] },

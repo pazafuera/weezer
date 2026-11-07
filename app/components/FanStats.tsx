@@ -636,8 +636,8 @@ export default function FanStats({
         <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 shadow-xs">
           <p className="text-xs sm:text-sm font-semibold text-amber-900 leading-relaxed text-center">
             {filterActive
-              ? 'Filtered views show real fans only — the seeded test fans have no country or birth year on file.'
-              : 'Heads up: this page is running on sample data from seeded test fans while the community grows. Real rankings take over as fans join.'}
+              ? 'Filtered views show real fans only.'
+              : 'Sample data — seeded test fans while the community grows.'}
           </p>
         </div>
 
@@ -647,7 +647,7 @@ export default function FanStats({
             Weezerverse
           </h1>
           <p className="text-base font-semibold text-[#3D4A63] max-w-sm mx-auto leading-relaxed">
-            206 songs. Ranked by the fans who showed up — here&apos;s where participating fans land.
+            Here&apos;s how the fans ranked all 206 songs — and where they&apos;re ranking from.
           </p>
         </div>
 
@@ -671,8 +671,8 @@ export default function FanStats({
         {presence && (
           <div className="bg-[#0C1220] rounded-[18px] shadow-[4px_4px_0_rgba(12,18,32,0.35)] p-4 sm:p-6">
             <p className="mb-4 text-center text-sm font-semibold leading-relaxed text-[#b9c6dc]">
-              <span className="font-black text-white">Filter the stats below</span>
-              {' — by place or age group. The map above stays the same.'}
+              <span className="font-black text-white">Filter the stats</span>
+              {' by place or age.'}
             </p>
             <WeezerverseFilterBar
               presence={presence}

@@ -185,7 +185,15 @@ const COUNTRY_OPTIONS = [
 
 export default function Login() {
   const router = useRouter();
-  const { navigateTo, initialAuthMode, closeLogin, setAccountCreated } = useWeezer();
+  const {
+    navigateTo,
+    initialAuthMode,
+    closeLogin,
+    setAccountCreated,
+    userId,
+    userProfile,
+    handleSignOut,
+  } = useWeezer();
 
   // Auth Credentials State synced with context initialAuthMode
   const [email, setEmail] = useState('');
@@ -265,16 +273,15 @@ export default function Login() {
     }
   };
 
-  // If already logged in, redirect to main application view.
-  // Replace, not push: this bounce is corrective, and Back after
-  // it must never land on the login screen it bounced from.
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        navigateTo('dashboard', undefined, { history: 'replace' });
-      }
-    });
-  }, [navigateTo]);
+  // Already signed in? This component used to check the session
+  // itself on mount and silently bounce to the dashboard when it
+  // found one — a signed-in user who tapped Sign In (the splash
+  // offered it unconditionally; a session could also revive under
+  // a guest paint) landed on the dashboard with no explanation
+  // and no way to stay. That bounce is GONE (Nov 7, 2026): the
+  // render below keys off the context's settled auth state and
+  // shows an honest already-signed-in card instead — the form
+  // only ever renders for a genuinely signed-out visitor.
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -369,6 +376,21 @@ export default function Login() {
     }
   };
 
+  // The already-signed-in card names the account the way the app
+  // knows it: display name first, handle as a suffix when it adds
+  // information (a profile created before display names existed
+  // may carry only a handle; the boot's fallback guarantees at
+  // least one of the two for a signed-in user).
+  const accountName =
+    userProfile?.displayName ||
+    (userProfile?.username ? `@${userProfile.username}` : 'your account');
+  const accountHandleSuffix =
+    userProfile?.username &&
+    userProfile?.displayName &&
+    userProfile.username !== userProfile.displayName
+      ? ` (@${userProfile.username})`
+      : '';
+
   return (
     <div
       className="min-h-screen bg-[#DCEEF8] flex flex-col justify-center items-center p-4 selection:bg-amber-400 selection:text-slate-950 font-sans"
@@ -407,6 +429,49 @@ export default function Login() {
         </div>
 
         <div className="p-6 sm:p-8 space-y-6">
+          {userId ? (
+            /* ALREADY SIGNED IN — the honest landing for a
+                signed-in user who reaches this step (a deep link,
+                the /login route stub, a menu detour). No form,
+                no silent bounce: name the account, offer the two
+                things they could actually mean to do. The card's
+                X (closeLogin) still takes them back where they
+                came from. */
+            <div className="space-y-5 text-center">
+              <div className="space-y-2">
+                <h2 className="text-lg font-black text-[#0C1220]">
+                  You&rsquo;re already signed in
+                </h2>
+                <p className="text-sm font-bold text-[#3D4A63] leading-relaxed">
+                  Signed in as {accountName}
+                  {accountHandleSuffix}. There&rsquo;s nothing to
+                  fill in — head back to your rankings, or sign out
+                  to switch accounts.
+                </p>
+              </div>
+              <div className="space-y-2.5">
+                <button
+                  type="button"
+                  onClick={() =>
+                    navigateTo('dashboard', undefined, {
+                      history: 'replace',
+                    })
+                  }
+                  className="w-full bg-white hover:bg-sky-50 text-[#0C1220] font-black py-3.5 rounded-xl border-[3px] border-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)] transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_rgba(11,30,63,0.85)] cursor-pointer text-sm"
+                >
+                  Continue to Dashboard
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSignOut()}
+                  className="w-full bg-rose-50 hover:bg-rose-100 border-2 border-rose-200 text-rose-600 font-black py-3 rounded-xl transition-colors text-xs cursor-pointer"
+                >
+                  Sign Out
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
           {/* AUTH MODE TOGGLE BUTTONS */}
           <div className="flex bg-white border-2 border-[#0C1220] rounded-xl p-1">
             <button
@@ -657,6 +722,8 @@ export default function Login() {
                 : 'Send Magic Link ✨'}
             </button>
           </form>
+            </>
+          )}
         </div>
 
       </div>

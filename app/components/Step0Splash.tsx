@@ -33,7 +33,7 @@ const ALBUM_PREVIEWS = [
 ];
 
 export default function Step0Splash() {
-  const { navigateTo } = useWeezer();
+  const { navigateTo, userId, loadingUser } = useWeezer();
 
   return (
     <div className="max-w-xl mx-auto text-center py-0 sm:py-4 space-y-4 sm:space-y-5 animate-in fade-in duration-500">
@@ -155,31 +155,68 @@ export default function Step0Splash() {
 
       </div>
 
-      {/* CALL TO ACTION BUTTONS */}
+      {/* CALL TO ACTION BUTTONS — auth-aware (Nov 7, 2026). These
+          buttons used to render unconditionally, and the login
+          step silently bounced anyone who already had a session:
+          a signed-in user cold-opening onto the splash (a ?step=
+          in the persisted webapp URL skips Smart Entry) was
+          offered Create Account / Sign In buttons that could only
+          dump them on the dashboard. Now the block follows the
+          settled auth state: while auth is unsettled the block
+          holds (same shape, nothing tappable); a signed-in user
+          gets ONE honest action — continue to their dashboard,
+          no sign-in offers; a signed-out visitor gets the guest
+          set, unchanged. */}
       <div className="space-y-2.5 max-w-sm mx-auto pt-1">
-        <button
-          onClick={() => navigateTo('login', 'signup')}
-          className={SPLASH_BTN_PRIMARY}
-        >
-          Create Account & Start Ranking
-        </button>
+        {loadingUser ? (
+          <>
+            <button disabled className={`${SPLASH_BTN_PRIMARY} opacity-60 cursor-default`}>
+              Create Account & Start Ranking
+            </button>
 
-        <button
-          onClick={() => navigateTo('orientation')}
-          className={SPLASH_BTN_SECONDARY}
-        >
-          Start Ranking as a Guest
-        </button>
+            <button disabled className={`${SPLASH_BTN_SECONDARY} opacity-60 cursor-default`}>
+              Start Ranking as a Guest
+            </button>
 
-        <p className="text-[11px] font-bold text-[#3D4A63] pt-1">
-          Already have an account?{' '}
+            <p className="text-[11px] font-bold text-[#3D4A63] pt-1">
+              Already have an account?{' '}
+              <span className="text-[#0072CE] font-black">Sign In</span>
+            </p>
+          </>
+        ) : userId ? (
           <button
-            onClick={() => navigateTo('login', 'login')}
-            className="text-[#0072CE] hover:underline cursor-pointer font-black"
+            onClick={() => navigateTo('dashboard')}
+            className={SPLASH_BTN_PRIMARY}
           >
-            Sign In
+            Continue Ranking
           </button>
-        </p>
+        ) : (
+          <>
+            <button
+              onClick={() => navigateTo('login', 'signup')}
+              className={SPLASH_BTN_PRIMARY}
+            >
+              Create Account & Start Ranking
+            </button>
+
+            <button
+              onClick={() => navigateTo('orientation')}
+              className={SPLASH_BTN_SECONDARY}
+            >
+              Start Ranking as a Guest
+            </button>
+
+            <p className="text-[11px] font-bold text-[#3D4A63] pt-1">
+              Already have an account?{' '}
+              <button
+                onClick={() => navigateTo('login', 'login')}
+                className="text-[#0072CE] hover:underline cursor-pointer font-black"
+              >
+                Sign In
+              </button>
+            </p>
+          </>
+        )}
       </div>
 
     </div>

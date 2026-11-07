@@ -67,6 +67,7 @@ export default function AppShell({
     userId,
     userProfile,
     stranded,
+    loadingUser,
     navigateTo,
     handleSignOut,
     pendingRequestsCount = 0,
@@ -727,7 +728,16 @@ export default function AppShell({
                 </>
               )}
 
-              {!userId && stranded && (
+              {/* The two signed-out cards below are auth offers,
+                  so they wait for auth to settle: while the boot
+                  is still running (loadingUser) userId is null for
+                  EVERYONE, and a signed-in user opening the menu
+                  in that window was offered Sign In / Create An
+                  Account — the same wrong-offer trap as the
+                  splash's (Nov 7, 2026). Neither card renders
+                  until the boot lands; the nav under them is
+                  auth-free and stays. */}
+              {!userId && !loadingUser && stranded && (
                 <div className="mx-4 my-3 p-4 bg-white border-2 border-[#0C1220] rounded-2xl space-y-3">
                   <div className="space-y-1">
                     <h4 className="text-xs font-black text-[#0C1220]">
@@ -752,7 +762,7 @@ export default function AppShell({
                 </div>
               )}
 
-              {!userId && !stranded && (
+              {!userId && !loadingUser && !stranded && (
                 <div className="mx-4 my-3 p-4 bg-white border-2 border-[#0C1220] rounded-2xl space-y-3">
                   <div className="space-y-1">
                     <h4 className="text-xs font-black text-[#0C1220]">

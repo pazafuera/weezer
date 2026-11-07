@@ -29,6 +29,7 @@ import {
 } from '../lib/analytics';
 import { parseCommunityStatsPayload } from '../lib/communityAggregates';
 import type { CommunityStatsPayload } from '../lib/communityAggregates';
+import { decideSmartEntry } from '../lib/smartEntry';
 import { INITIAL_SAVE_STATE, bootSaveState } from '../lib/saveStatus';
 import type { SaveState } from '../lib/saveStatus';
 import {
@@ -900,6 +901,15 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   // Smart Entry / guard decisions can't leak half-landed entries
   // into the stack, and a deep link's Back exits as it should.
   const navStackRef = useRef<NavStack<AppStep>>(createNavStack<AppStep>());
+  /** Set by navigateInternal on ANY in-app navigation: the user
+   *  (or an app flow acting for them) has chosen where they are.
+   *  Smart Entry — the boot's dashboard redirect — consults it
+   *  and never stomps a chosen destination, including a tap that
+   *  landed while a boot (the mount boot, or the auth listener's
+   *  per-account boot when a session revives) was still in
+   *  flight. The boot's own landings use setStepState directly
+   *  and never set it. See app/lib/smartEntry.ts. */
+  const userNavigatedRef = useRef(false);
   /** A scroll restoration owed to a popstate landing: the step
    *  being landed on and the scrollY recorded when that entry was
    *  last left. The restore effect below applies it after the
@@ -1413,13 +1423,22 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         setTriageMap(effective.triageMap);
         setMasterList(effective.masterList);
 
-        // Smart Entry: Route to Dashboard if progress exists and no URL step is specified
+        // Smart Entry: route to the dashboard when the landing
+        // has progress, names no step in its URL, and the user
+        // has not already navigated somewhere themselves — the
+        // pure decision lives in app/lib/smartEntry.ts (pinned
+        // in the navigation harness). A boot must never stomp a
+        // destination the user chose, however it got chosen.
         if (typeof window !== 'undefined') {
           const params = new URLSearchParams(window.location.search);
           if (
-            !params.get('step') &&
-            (Object.keys(effective.triageMap).length > 0 ||
-              effective.masterList.length > 0)
+            decideSmartEntry({
+              hasUrlStep: !!params.get('step'),
+              userNavigated: userNavigatedRef.current,
+              hasProgress:
+                Object.keys(effective.triageMap).length > 0 ||
+                effective.masterList.length > 0,
+            })
           ) {
             setStepState('dashboard');
           }
@@ -1456,8 +1475,12 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
             if (typeof window !== 'undefined') {
               const params = new URLSearchParams(window.location.search);
               if (
-                !params.get('step') &&
-                Object.keys(parsed.triageMap || {}).length > 0
+                decideSmartEntry({
+                  hasUrlStep: !!params.get('step'),
+                  userNavigated: userNavigatedRef.current,
+                  hasProgress:
+                    Object.keys(parsed.triageMap || {}).length > 0,
+                })
               ) {
                 setStepState('dashboard');
               }
@@ -1788,6 +1811,13 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     preserveOrigins: boolean = false,
     historyMode?: 'push' | 'replace' | 'reset'
   ) => {
+    // Every in-app navigation is a chosen destination: record it
+    // so a boot still in flight (Smart Entry) can never override
+    // it when it lands. Set before anything else here — even a
+    // navigation the guard rewrites was the user's choice of
+    // direction.
+    userNavigatedRef.current = true;
+
     // Origin bookkeeping for the return-tracked steps. A return
     // navigation (the close* exits) skips it entirely:
     // the exit consumes its own origin in returnFromStep, and landing

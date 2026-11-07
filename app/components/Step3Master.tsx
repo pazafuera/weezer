@@ -323,7 +323,7 @@ export default function Step3Master({
                 onDragEnd={() => setDragState(null)}
                 onDragOver={handleDragOver}
                 onDrop={(e) => { e.stopPropagation(); handleDrop(idx); }}
-                className={`rounded-2xl p-2.5 flex items-center gap-2.5 transition-all duration-150 ${
+                className={`rounded-2xl px-2.5 py-1 flex items-center gap-2.5 transition-all duration-150 ${
                   isMouseDrag
                     ? 'opacity-40 border-2 border-dashed border-slate-300 bg-slate-100 scale-[0.98]'
                     : isTouchDrag
@@ -345,16 +345,31 @@ export default function Step3Master({
                     width; the album span's truncate stays as the
                     safety net, and it remains the row's only
                     span.truncate — the drag ghost recolors it by
-                    that selector. */}
+                    that selector.
+                    COMPACTED (owner, Nov 7, later): the two-line
+                    restructure kept the old three-line breathing
+                    room, so the row box itself shrank — vertical
+                    padding 10px → 4px, drag handle h-8 → h-6, the
+                    rank chip h-7 → h-6 (it sizes to its content;
+                    the column drives the height, and the ghost's
+                    span.w-7 selector still resolves), the title→
+                    meta gap 4px → 2px, the pill's vertical padding
+                    removed. Rendered height by the numbers,
+                    rankable row: borders 4 + padding 8 + line 1
+                    (handle) 24 + gap 2 + meta line 15 = 53px,
+                    down from 77px (4 + 20 + 32 + 4 + 17) — about
+                    a third off. A "-" row: 47px, down from 63px.
+                    The 6px gap BETWEEN rows is the list's
+                    space-y-1.5, not the row's box — untouched. */}
                 {/* ONLY SHOW RANK NUMBERS FOR TOP TWO BUCKETS */}
                 {isRankable ? (
-                  <span className={`w-7 h-7 font-black text-[11px] rounded-lg flex items-center justify-center shrink-0 shadow-2xs transition-colors ${
+                  <span className={`w-7 h-6 font-black text-[11px] rounded-lg flex items-center justify-center shrink-0 shadow-2xs transition-colors ${
                     isTouchDrag ? 'bg-amber-400 text-slate-950 ring-2 ring-amber-300' : 'bg-[#0072CE] text-white'
                   }`}>
                     #{rankNumberById.get(song.id)}
                   </span>
                 ) : (
-                  <span className="w-7 h-7 bg-slate-200 text-[#3D4A63] font-black text-[11px] rounded-lg flex items-center justify-center shrink-0 shadow-2xs">
+                  <span className="w-7 h-6 bg-slate-200 text-[#3D4A63] font-black text-[11px] rounded-lg flex items-center justify-center shrink-0 shadow-2xs">
                     -
                   </span>
                 )}
@@ -374,7 +389,7 @@ export default function Step3Master({
                         onTouchStart={(e) => handleTouchStart(e, song)}
                         onTouchMove={handleTouchMove}
                         onTouchEnd={handleTouchEnd}
-                        className={`w-6 h-8 flex items-center justify-center text-lg cursor-grab active:cursor-grabbing select-none touch-none transition-transform shrink-0 ${
+                        className={`w-6 h-6 flex items-center justify-center text-lg cursor-grab active:cursor-grabbing select-none touch-none transition-transform shrink-0 ${
                           isTouchDrag ? 'text-amber-400 scale-125' : 'text-[#0C1220]'
                         }`}
                       >
@@ -382,8 +397,8 @@ export default function Step3Master({
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center gap-1.5 min-w-0 mt-1 flex-nowrap">
-                    <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-md border ${cfg.badgeBg} !border-[1.5px] !border-[#0C1220] w-fit leading-none flex items-center gap-1 shrink-0`}>
+                  <div className="flex items-center gap-1.5 min-w-0 mt-0.5 flex-nowrap">
+                    <span className={`text-[9px] font-black px-1.5 py-0 rounded-md border ${cfg.badgeBg} !border-[1.5px] !border-[#0C1220] w-fit leading-none flex items-center gap-1 shrink-0`}>
                       <span className="text-[10px]">{cfg.emoji}</span> <span>{cfg.label}</span>
                     </span>
                     {/* The small play control, exactly as Refine's

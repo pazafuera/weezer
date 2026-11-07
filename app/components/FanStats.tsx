@@ -173,7 +173,7 @@ export default function FanStats({
 }: {
   userMasterList?: Song[];
 }) {
-  const { communityMasterLists = [], communityTriageMaps = [], refreshCommunityData, closeFanStats, communityLoaded } = useWeezer();
+  const { communityMasterLists = [], communityTriageMaps = [], refreshCommunityData, closeFanStats, communityLoaded, communityError, loadingCommunity } = useWeezer();
   const [expandedTribe, setExpandedTribe] = useState<string | null>(null);
 
   // --- Weezerverse Phase 1: presence, filter selection, slice -----
@@ -227,7 +227,11 @@ export default function FanStats({
     };
   }, [selection]);
 
-  // If context hasn't loaded data yet when user jumps straight to Fan Stats, trigger background fetch
+  // If context hasn't loaded data yet when user jumps straight to Fan Stats, trigger background fetch.
+  // refreshCommunityData is a stable, in-flight-deduped callback
+  // (context), so this fires once per mount — including the
+  // return-after-a-failure mount, which is the quiet retry; the
+  // error block's Try again button covers the explicit one.
   useEffect(() => {
     if (communityTriageMaps.length === 0 && refreshCommunityData) {
       refreshCommunityData();
@@ -534,7 +538,34 @@ export default function FanStats({
               ← Back
             </button>
           </div>
-          {communityLoaded ? (
+          {loadingCommunity || !communityLoaded ? (
+            /* A fetch is running (or hasn't settled yet): the
+               spinner wins over every settled state, so a return
+               visit mid-refetch never flashes the empty or error
+               state over data on its way (refetch hardening). */
+            <div className="py-20 text-center space-y-3">
+              <div className="w-8 h-8 border-4 border-[#0072CE] border-t-transparent rounded-full animate-spin mx-auto" />
+              <p className="text-sm font-semibold text-[#3D4A63]">Aggregating Fan Data...</p>
+            </div>
+          ) : communityError ? (
+            /* The fetch FAILED: say so, honestly — this state
+               used to be indistinguishable from a genuinely
+               empty community — and offer the retry. */
+            <div className="py-20 text-center space-y-3">
+              <p className={`${displayFont.className} text-[24px] leading-tight tracking-wide text-[#0C1220]`}>Couldn&rsquo;t load fan data</p>
+              <p className="text-sm font-semibold text-[#3D4A63] max-w-sm mx-auto leading-snug">
+                Something went wrong fetching the community
+                rankings. Your own rankings are fine — this is
+                just the fan data.
+              </p>
+              <button
+                onClick={() => refreshCommunityData()}
+                className="bg-[#0072CE] hover:bg-blue-600 text-white text-sm font-black px-5 py-2.5 rounded-full transition-colors cursor-pointer"
+              >
+                Try again
+              </button>
+            </div>
+          ) : (
             /* The fetch settled and there is genuinely nothing:
                say so, instead of spinning "Aggregating…" forever
                (the pre-launch / RPC-failure reality until now). */
@@ -544,11 +575,6 @@ export default function FanStats({
                 Weezerverse fills in as fans finish and share
                 their rankings. Check back once some rankings are in.
               </p>
-            </div>
-          ) : (
-            <div className="py-20 text-center space-y-3">
-              <div className="w-8 h-8 border-4 border-[#0072CE] border-t-transparent rounded-full animate-spin mx-auto" />
-              <p className="text-sm font-semibold text-[#3D4A63]">Aggregating Fan Data...</p>
             </div>
           )}
         </div>

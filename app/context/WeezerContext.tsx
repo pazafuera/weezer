@@ -405,6 +405,11 @@ interface WeezerContextType {
    *  error) — lets consumers tell "still loading" apart from
    *  "loaded, and there is genuinely nothing yet". */
   communityLoaded: boolean;
+  /** True when the latest community fetch FAILED (and no newer
+   *  fetch is running) — lets Fan Stats show an honest error
+   *  with a retry instead of the "genuinely nothing" empty
+   *  state a failure used to be indistinguishable from. */
+  communityError: boolean;
   refreshCommunityData: () => Promise<void>;
 
   // Actions
@@ -852,6 +857,11 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   const [communityTriageMaps, setCommunityTriageMaps] = useState<Record<string, TriageValue>[]>([]);
   const [loadingCommunity, setLoadingCommunity] = useState<boolean>(false);
   const [communityLoaded, setCommunityLoaded] = useState<boolean>(false);
+  const [communityError, setCommunityError] = useState<boolean>(false);
+  /** The in-flight community fetch, if any — concurrent
+   *  refreshCommunityData calls share it instead of racing
+   *  duplicate RPCs (refetch hardening, Nov 7). */
+  const communityFetchRef = useRef<Promise<void> | null>(null);
 
   const setStep = (newStep: AppStep) => {
     setStepState(newStep);
@@ -961,34 +971,59 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   // Pre-launch security: reads the anonymized aggregate via the
   // get_community_rankings() SECURITY DEFINER function instead of
   // selecting other users' rows directly (blocked by RLS).
-  const refreshCommunityData = async () => {
-    setLoadingCommunity(true);
-    try {
-      const { data, error } = await supabase.rpc('get_community_rankings');
+  //
+  // Refetch hardening (Nov 7): three soft spots closed.
+  // - DUPLICATE IN-FLIGHT FETCHES: callers share one in-flight
+  //   promise, and the callback identity is STABLE (useCallback)
+  //   — Fan Stats' mount effect lists this function in its deps,
+  //   and the old per-render identity re-fired the effect (and
+  //   the RPC) on every render while the lists were empty.
+  // - HONEST ERROR STATE: a failure now sets communityError and
+  //   leaves any loaded data untouched, instead of settling
+  //   silently into the same shape as a genuinely empty
+  //   community (Fan Stats showed "No fan data yet" for what
+  //   was actually a dead RPC, with no way to retry).
+  // - STALE-EMPTY FLASH: loadingCommunity is true for the whole
+  //   fetch, and Fan Stats' empty branch checks it FIRST — a
+  //   return visit mid-refetch shows the spinner, never a flash
+  //   of the empty (or error) state over data on its way.
+  const refreshCommunityData = useCallback(async () => {
+    if (communityFetchRef.current) return communityFetchRef.current;
+    const run = (async () => {
+      setLoadingCommunity(true);
+      setCommunityError(false);
+      try {
+        const { data, error } = await supabase.rpc('get_community_rankings');
 
-      if (!error && data) {
-        const cleanRankings: Song[][] = [];
-        const cleanTriageMaps: Record<string, TriageValue>[] = [];
+        if (error) throw error;
+        if (data) {
+          const cleanRankings: Song[][] = [];
+          const cleanTriageMaps: Record<string, TriageValue>[] = [];
 
-        data.forEach((row: { master_list: unknown; triage_map: unknown }) => {
-          if (Array.isArray(row.master_list) && row.master_list.length > 0) {
-            cleanRankings.push(row.master_list);
-          }
-          if (row.triage_map && Object.keys(row.triage_map).length > 0) {
-            cleanTriageMaps.push(row.triage_map as Record<string, TriageValue>);
-          }
-        });
+          data.forEach((row: { master_list: unknown; triage_map: unknown }) => {
+            if (Array.isArray(row.master_list) && row.master_list.length > 0) {
+              cleanRankings.push(row.master_list);
+            }
+            if (row.triage_map && Object.keys(row.triage_map).length > 0) {
+              cleanTriageMaps.push(row.triage_map as Record<string, TriageValue>);
+            }
+          });
 
-        setCommunityMasterLists(cleanRankings);
-        setCommunityTriageMaps(cleanTriageMaps);
+          setCommunityMasterLists(cleanRankings);
+          setCommunityTriageMaps(cleanTriageMaps);
+        }
+      } catch (err) {
+        console.error('Error fetching background community data:', err);
+        setCommunityError(true);
+      } finally {
+        setLoadingCommunity(false);
+        setCommunityLoaded(true);
+        communityFetchRef.current = null;
       }
-    } catch (err) {
-      console.error('Error fetching background community data:', err);
-    } finally {
-      setLoadingCommunity(false);
-      setCommunityLoaded(true);
-    }
-  };
+    })();
+    communityFetchRef.current = run;
+    return run;
+  }, []);
 
   // Parse the ?step= deep link on initial load or refresh. Aliases are
   // canonicalized in the URL immediately (replaceState); the resolved step
@@ -2318,6 +2353,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         communityTriageMaps,
         loadingCommunity,
         communityLoaded,
+        communityError,
         refreshCommunityData,
         syncRankingsToDatabase,
         updateAndSyncBucketRanks,

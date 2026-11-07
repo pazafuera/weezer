@@ -681,8 +681,7 @@ export default function AppShell({
                       You're signed out.
                     </h4>
                     <p className="text-[11px] font-medium text-[#3D4A63] leading-snug">
-                      Your rankings are saved in your account. Sign in
-                      to pick up where you left off.
+                      Sign in to pick up where you left off.
                     </p>
                   </div>
 

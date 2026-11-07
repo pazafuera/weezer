@@ -18,12 +18,26 @@ const BAND_BG: Record<BucketType, string> = {
   trash: 'bg-rose-100',
 };
 
+// The stage band's label (owner, Nov 7): the band drops "Lowkey"
+// — it renders "SLAPS (n)" — so the label and the Help Me Rank
+// button each fit on one line at phone widths. BAND CONTEXT ONLY:
+// BUCKET_CONFIG's 'Lowkey Slaps' label still names the bucket
+// everywhere else (triage, tier names, Thread copy, the promote /
+// demote controls below).
+const BAND_LABEL: Record<BucketType, string> = {
+  banger: 'Banger',
+  slaps: 'Slaps',
+  mid: 'Mid',
+  skip: 'Skip',
+  trash: 'Trash',
+};
+
 const REFINEMENT_STAGES: { bucket: BucketType; title: string; desc: string; nextBtn: string }[] = [
-  { bucket: 'banger', title: 'Rank Your Bangers', desc: "These are the absolute best of the best. Rank them, or demote the ones that don't survive the cut!", nextBtn: "Next: Rank Slaps →" },
-  { bucket: 'slaps', title: 'Rank Your Lowkey Slaps', desc: "These are great, but not your absolute favorites. Rank them and make sure they belong here.", nextBtn: "Next: Review Mid →" },
-  { bucket: 'mid', title: 'Review Your Mid', desc: "These are just okay. Review them to make sure nothing here is actually a hidden gem or total trash. Order doesn't matter in this bucket.", nextBtn: "Next: Review Skips →" },
+  { bucket: 'banger', title: 'Rank Your Bangers', desc: "The absolute best of the best. If you have more than 25 Bangers, you should consider demoting some to Lowkey Slaps.", nextBtn: "Next: Rank Slaps →" },
+  { bucket: 'slaps', title: 'Rank Your Slaps', desc: "These rock, but wouldn't make a 20-track mixtape. Put them in order. Promote or demote songs you think don't belong here.", nextBtn: "Next: Review Mid →" },
+  { bucket: 'mid', title: 'Review Your Mid', desc: "These are good jams but wouldn't make your Spotify playlist. Rank order doesn't matter here, so just be sure each song belongs here.", nextBtn: "Next: Review Skips →" },
   { bucket: 'skip', title: 'Review Your Skips', desc: "You usually skip these. Promote or demote if needed. Order doesn't matter in this bucket.", nextBtn: "Next: Review Trash →" },
-  { bucket: 'trash', title: 'Review Your Trash', desc: "The bottom of the barrel. Make sure you don't actually like any of these before we finalize. Order doesn't matter in this bucket.", nextBtn: "Generate Final List →" },
+  { bucket: 'trash', title: 'Review Your Trash', desc: "These are songs you'd be fine never hearing again. They are cringe or simply don't do it for you. Rank order doesn't matter here. Just make sure they are actually trash before we wrap up.", nextBtn: "Generate Final List →" },
 ];
 
 // STAGE RESUME (Nov 6, 2026): stageIdx is component state, so a
@@ -450,28 +464,31 @@ export default function Step2Refine({
         </div>
       )}
 
-      {/* STAGE INDICATOR (UAT P-10) — stages 1–4 only: where
-          am I in the five-stage flow. P-10 also added a direct
-          "← Dashboard" exit pill beside it; the owner removed
-          that pill app-wide (Oct 19) — the app menu is the way
-          to the dashboard. The indicator stays. */}
-      {stageIdx >= 1 && (
-        <div>
-          <span className="text-[11px] font-black uppercase tracking-wider text-slate-400 pl-1">
-            Stage {stageIdx + 1} of {REFINEMENT_STAGES.length}
-          </span>
-        </div>
-      )}
+      {/* EYEBROW (owner, Nov 7) — every stage carries the same
+          eyebrow, "It's Time to Refine", in the style the old
+          UAT P-10 stage indicator used. The "Stage X of 5" count
+          is gone from the Refine flow entirely: it rendered only
+          on stages 2–5, which read as a leftover artifact next
+          to the eyebrow-less first stage. (P-10's "← Dashboard"
+          pill beside the old indicator was already removed
+          app-wide on Oct 19 — the app menu is the way to the
+          dashboard.) */}
+      <div>
+        <span className="text-[11px] font-black uppercase tracking-wider text-slate-400 pl-1">
+          It's Time to Refine
+        </span>
+      </div>
 
       {/* HEADER — the headline wraps balanced (owner, Nov 5):
-          "Rank Your Lowkey Slaps" used to break as "Rank Your
-          Lowkey / Slaps", stranding a single word on the second
-          line. text-wrap: balance redistributes the break
-          ("Rank Your / Lowkey Slaps"); the other four stage
-          titles fit one line at this size, so no size change was
-          needed. Layout only — the strings are untouched. (The
-          arbitrary-property form is deliberate: this project is
-          on Tailwind 3.3, which has no text-balance utility.) */}
+          the old "Rank Your Lowkey Slaps" broke unbalanced,
+          stranding a single word on the second line. Since
+          Nov 7 the Slaps title is "Rank Your Slaps", which fits
+          one line at this size on a 390px screen (~230px of
+          glyphs vs ~326px available); the other four titles fit
+          one line too. text-wrap: balance stays as the safety
+          treatment. (The arbitrary-property form is deliberate:
+          this project is on Tailwind 3.3, which has no
+          text-balance utility.) */}
       <div className="text-center space-y-2 px-4 mb-8 pt-2">
         <h1 className={`${displayFont.className} text-[32px] text-[#0C1220] [text-wrap:balance]`}>{currentStage.title}</h1>
         <p className="text-sm font-bold text-[#3D4A63] max-w-sm mx-auto leading-tight">{currentStage.desc}</p>
@@ -481,15 +498,21 @@ export default function Step2Refine({
       <div className="bg-white border-[3px] border-[#0C1220] rounded-[18px] p-3 sm:p-5 shadow-[4px_4px_0_rgba(11,30,63,0.85)]" onDragOver={hasSlider ? handleDragOver : undefined} onDrop={hasSlider ? () => handleDrop(bucket, songs.length) : undefined}>
 
         <div className={`flex items-center justify-between ${BAND_BG[bucket]} border-[2.5px] border-[#0C1220] rounded-xl px-2.5 py-2 mb-3`}>
-          <h2 className={`text-sm sm:text-base font-black uppercase tracking-wider ${cfg.color}`}>
-            {cfg.emoji} {cfg.label} <span className="text-[#3D4A63]">({songs.length})</span>
+          {/* One line each (owner, Nov 7): the label and the
+              button never wrap and never shrink — with the band
+              label shortened (BAND_LABEL), the widest pair,
+              "SLAPS (49)" (~103px) + the button (~127px), totals
+              ~230px against ~273px of band content width at a
+              360px viewport. */}
+          <h2 className={`text-sm sm:text-base font-black uppercase tracking-wider whitespace-nowrap shrink-0 ${cfg.color}`}>
+            {cfg.emoji} {BAND_LABEL[bucket]} <span className="text-[#3D4A63]">({songs.length})</span>
           </h2>
 
           {/* HELP ME RANK BUTTON */}
           {hasSlider && songs.length >= 2 && (
             <button
               onClick={() => setShowMatchups(true)}
-              className="text-[11px] font-black text-[#0C1220] bg-white hover:bg-slate-50 border-2 border-[#0C1220] px-3 py-1 rounded-[10px] transition cursor-pointer flex gap-1 items-center"
+              className="text-[11px] font-black text-[#0C1220] bg-white hover:bg-slate-50 border-2 border-[#0C1220] px-3 py-1 rounded-[10px] transition cursor-pointer flex gap-1 items-center whitespace-nowrap shrink-0"
             >
               <span>⚡️</span>
               Help Me Rank

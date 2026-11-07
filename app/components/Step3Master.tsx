@@ -335,17 +335,17 @@ export default function Step3Master({
                 {/* TWO-LINE ROW (owner, Nov 7): line 1 is the rank
                     chip + title, with the drag handle at its right;
                     line 2 is a single flex row — bucket pill, the
-                    small play control, and the album (year) — that
+                    small play control, and the album name — that
                     never wraps. (The row stacked three lines before:
                     title / pill / album.) The meta line fits at
                     360px by width math: the widest case, a Lowkey
                     Slaps pill (~91px) + play button (14px) +
-                    "B-Sides & Rarities (1996)" (~113px) + gaps
-                    (12px) ≈ 230px against ~236px of text-column
-                    width; the album span's truncate stays as the
-                    safety net, and it remains the row's only
-                    span.truncate — the drag ghost recolors it by
-                    that selector.
+                    "B-Sides & Rarities" (~88px since the year was
+                    dropped from this line, Nov 7) + gaps (12px)
+                    ≈ 205px against ~236px of text-column width;
+                    the album span's truncate stays as the safety
+                    net, and it remains the row's only span.truncate
+                    — the drag ghost recolors it by that selector.
                     COMPACTED (owner, Nov 7, later): the two-line
                     restructure kept the old three-line breathing
                     room, so the row box itself shrank — vertical
@@ -411,7 +411,7 @@ export default function Step3Master({
                     >
                       <AudioPreviewButton id={song.id} title={song.title} album={song.album} />
                     </div>
-                    <span className={`text-[10px] font-semibold truncate min-w-0 ${isTouchDrag ? 'text-slate-300' : 'text-[#3D4A63]'}`}>{song.album} ({song.year})</span>
+                    <span className={`text-[10px] font-semibold truncate min-w-0 ${isTouchDrag ? 'text-slate-300' : 'text-[#3D4A63]'}`}>{song.album}</span>
                   </div>
                 </div>
               </div>

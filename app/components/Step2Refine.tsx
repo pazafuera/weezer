@@ -583,7 +583,7 @@ export default function Step2Refine({
                           <AudioPreviewButton id={song.id} title={song.title} album={song.album} />
                         </div>
                         <span className={`text-[10px] font-semibold ${isTouchDrag ? 'text-slate-300' : 'text-[#3D4A63]'}`}>
-                          {song.album} ({song.year})
+                          {song.album}
                         </span>
                       </div>
                     </div>

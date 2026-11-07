@@ -574,7 +574,7 @@ export default function Step1Triage({
                           </div>
                           {section.showAlbumPerRow && (
                             <span className="text-[10px] font-bold text-slate-400 block mt-0.5">
-                              {song.album} ({song.year})
+                              {song.album}
                             </span>
                           )}
                         </div>

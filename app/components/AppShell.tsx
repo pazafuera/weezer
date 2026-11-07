@@ -383,7 +383,7 @@ export default function AppShell({
   // The header matches the guest card's headline in size
   // and weight (text-xs font-black — "Why Bother creating an
   // account?" carries text-xs font-black text-amber-950; here
-  // the ink is slate-900, the drawer's heading color). "The
+  // the ink is white on the band's solid brand blue). "The
   // Ranking Project" holds the sorting flow (How It Works, Sort,
   // Refine, My Rankings); "My Fanhood Unraveled" holds the fan
   // destinations (Dashboard, Sweater Thread, Global Fan Stats,
@@ -397,30 +397,26 @@ export default function AppShell({
 
     return (
       <div key={title} className="mt-6 first:mt-0">
-        {/* The header sits IN a full-width band: a quiet
-            bg-slate-200 strip that bleeds edge to edge through
-            the nav's p-2 (-mx-2 out, px-2 back in, so the header
+        {/* The header sits IN a full-width band: a solid
+            brand-blue strip (Variant D, Nov 6, 2026 — #0072CE,
+            white text) that bleeds edge to edge through the
+            nav's p-2 (-mx-2 out, px-2 back in, so the header
             text keeps its px-3.5 alignment with the rows). The
             band's edge is the section delineation — it replaced
             the separator hairlines that used to precede each
-            header. Spacing: mt-6 on the section wrapper is the
-            air ABOVE the band (the largest gap in the nav; the
-            first section needs none — the panel above it carries
-            its own margin and the nav's p-2 tops it). Inside the
-            band the text gets py-2; below the band, the first
-            row's own py-4 is all that separates the header text
-            from the first row's text — still the tightest gap.
-            Rows inside carry no gap at all (see
-            renderNavButton). */}
-        <div
-          className="-mx-2 bg-[#DCEEF8] px-2"
-          style={{
-            backgroundImage:
-              'radial-gradient(rgba(0,114,206,0.10) 1.2px, transparent 1.3px)',
-            backgroundSize: '22px 22px',
-          }}
-        >
-          <p className="px-3.5 py-2 text-xs font-black uppercase tracking-[0.08em] text-[#0C1220]">
+            header. Solid blue is deliberate: the active row
+            keeps its pale #E0F2FE wash, and band and current
+            page no longer share a color. Spacing: mt-6 on the
+            section wrapper is the air ABOVE the band (the
+            largest gap in the nav; the first section needs
+            none — the panel above it carries its own margin and
+            the nav's p-2 tops it). Inside the band the text
+            gets py-2; below the band, the first row's own py-4
+            is all that separates the header text from the first
+            row's text — still the tightest gap. Rows inside
+            carry no gap at all (see renderNavButton). */}
+        <div className="-mx-2 bg-[#0072CE] px-2">
+          <p className="px-3.5 py-2 text-xs font-black uppercase tracking-[0.08em] text-white">
             {title}
           </p>
         </div>

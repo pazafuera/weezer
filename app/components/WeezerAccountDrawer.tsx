@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/utils/supabase';
 import { useWeezer } from '../context/WeezerContext';
+import { saveIndicatorCopy, formatTimeOfDay } from '../lib/saveStatus';
 import { COUNTRY_OPTIONS, US_STATES } from './WeezerOnboardingModal';
 import Link from 'next/link';
 import { displayFont } from './shareables/fonts';
@@ -77,7 +78,8 @@ export default function WeezerAccountDrawer({
   onLogout,
   onOpenOnboarding,
 }: WeezerAccountDrawerProps) {
-  const { setUserProfile, setTriageMap, handleSignOut } = useWeezer();
+  const { setUserProfile, setTriageMap, handleSignOut, saveState, saveDiagnostics } =
+    useWeezer();
 
   const [copiedLink, setCopiedLink] = useState(false);
 
@@ -715,6 +717,40 @@ export default function WeezerAccountDrawer({
                   <p className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 p-2.5 rounded-xl">
                     Profile updated ✓
                   </p>
+                )}
+              </div>
+
+              {/* SAVING — the same save state the header indicator
+                  shows, plus the recent save record behind it
+                  (durability overhaul, Nov 7). The record is the
+                  diagnostics ring (app/lib/saveDiagnostics.ts):
+                  read-only, newest last, kept so the next save
+                  problem can be diagnosed from a screenshot of
+                  this card instead of guesswork. */}
+              <div className="bg-white p-4 rounded-2xl border-[2.5px] border-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)] space-y-3">
+                <span className="text-[10px] font-black uppercase tracking-widest text-[#3D4A63] block">
+                  Saving
+                </span>
+                <p className="text-xs font-bold text-[#0C1220]">
+                  {saveState.phase === 'saved' && saveState.savedAt
+                    ? `Last saved ${formatTimeOfDay(saveState.savedAt)}`
+                    : (saveIndicatorCopy(saveState) ?? 'Nothing to save yet')}
+                </p>
+                {saveDiagnostics.length > 0 && (
+                  <div className="space-y-1 border-t border-slate-200 pt-2">
+                    <span className="text-[9px] uppercase text-[#3D4A63] block">
+                      Recent save activity
+                    </span>
+                    {saveDiagnostics.map((event, i) => (
+                      <p
+                        key={`${event.t}-${i}`}
+                        className="text-[10px] font-medium text-[#3D4A63] leading-snug"
+                      >
+                        {formatTimeOfDay(Date.parse(event.t))} · {event.kind} —{' '}
+                        {event.detail}
+                      </p>
+                    ))}
+                  </div>
                 )}
               </div>
 

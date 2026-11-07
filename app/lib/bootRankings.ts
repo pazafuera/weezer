@@ -44,6 +44,25 @@
  * protection survives as a property of the matrix: a guest's local
  * progress never overwrites an account at boot — the merge is an
  * explicit sign-in event in the caller, not a boot side effect.
+ *
+ * Nov 7, 2026 (later) — the revision gate: the predicate above
+ * compares two stamps written by DIFFERENT code paths at
+ * different moments (the snapshot's savedAt at edit time; the
+ * row's updated_at at send/heal time), on one device clock that
+ * other devices and server round-trips do not share. In the
+ * field it failed to promote a buffer the session had provably
+ * written, and nothing recorded the inputs, so the failure could
+ * not even be observed. The promotion test is therefore now a
+ * REVISION test whenever both sides carry a revision: the
+ * snapshot stamps a monotonically increasing client revision on
+ * every write, and every database write records the revision it
+ * carried (the weezer_rankings.client_rev column — see the
+ * 20261107 migration; the code feature-detects the column and
+ * this test simply never engages without it). When BOTH sides
+ * carry a revision, the revision alone decides — clocks are not
+ * consulted in either direction. When either side lacks one
+ * (pre-migration rows, legacy snapshots), the timestamp
+ * predicate below remains the fallback, exactly as before.
  */
 export function localSnapshotSupersedesAccount(args: {
   /** User stamp on the local snapshot (null/absent for guests). */
@@ -69,6 +88,37 @@ export function localSnapshotSupersedesAccount(args: {
   return args.localSavedAt > accountMs;
 }
 
+/**
+ * The revision promotion test: this account's own stamped buffer
+ * supersedes the account row when its client revision is strictly
+ * ahead of the revision the row records. Both revisions must be
+ * present — with either missing, the caller falls back to the
+ * timestamp predicate. Clock skew cannot strand a buffer under
+ * this test: revisions are a counter, not a clock.
+ */
+export function snapshotSupersedesByRevision(args: {
+  /** User stamp on the local snapshot (null/absent for guests). */
+  localUserId: string | null | undefined;
+  /** Client revision stamped on the local snapshot. */
+  localRev: number | null | undefined;
+  /** The account booting right now. */
+  userId: string;
+  /** The revision the account row records (client_rev). */
+  accountRev: number | null | undefined;
+}): boolean {
+  if (!args.localUserId || args.localUserId !== args.userId) return false;
+  if (typeof args.localRev !== 'number' || !Number.isFinite(args.localRev)) {
+    return false;
+  }
+  if (
+    typeof args.accountRev !== 'number' ||
+    !Number.isFinite(args.accountRev)
+  ) {
+    return false;
+  }
+  return args.localRev > args.accountRev;
+}
+
 /** What the caller knows about the account row at boot. */
 export interface BootAccountRowInfo {
   /** The row carries at least one real bucket. 'unknown'
@@ -77,6 +127,9 @@ export interface BootAccountRowInfo {
   hasRealProgress: boolean;
   /** The row's updated_at (ISO string) if it carries one. */
   updatedAt: string | null | undefined;
+  /** The client revision the row records (client_rev), when the
+   *  column exists and a revision-aware write has landed. */
+  rev?: number | null;
 }
 
 /** What the caller knows about the local snapshot at boot. */
@@ -87,6 +140,8 @@ export interface BootLocalSnapshotInfo {
   userId: string | null | undefined;
   /** Save time of the snapshot (ms since epoch), if stamped. */
   savedAt: number | null | undefined;
+  /** Client revision stamped on the snapshot, if it carries one. */
+  rev?: number | null;
 }
 
 /** Where a signed-in boot loads its rankings from. */
@@ -120,9 +175,10 @@ export interface BootRankingsResolution {
  * - No usable local state → the row (or nothing).
  * - The snapshot is THIS account's stamped buffer → it loads (and
  *   heals the row) when the account has nothing real yet, or when
- *   the predicate proves it newer than the row; otherwise the row
- *   stands. A stamp-less, older, or equal-time buffer NEVER
- *   competes with the row.
+ *   it is provably newer than the row: by REVISION when both
+ *   sides carry one (the revision alone decides — clocks are not
+ *   consulted), else by the timestamp predicate. A stamp-less,
+ *   older, or equal buffer NEVER competes with the row.
  * - The snapshot is ANOTHER account's stamped buffer → it never
  *   touches this account: the row stands, or nothing loads.
  * - The snapshot is unstamped guest/legacy work → against an
@@ -152,6 +208,24 @@ export function resolveBootRankings(args: {
     // This account's own stamped buffer.
     if (!account || !account.hasRealProgress) {
       return { source: 'local-snapshot', healRow: true };
+    }
+    // Revision first: when both sides carry a revision it is the
+    // whole test — a counter cannot be skewed, and a clock must
+    // not override it in either direction.
+    if (
+      typeof local.rev === 'number' &&
+      Number.isFinite(local.rev) &&
+      typeof account.rev === 'number' &&
+      Number.isFinite(account.rev)
+    ) {
+      return snapshotSupersedesByRevision({
+        localUserId: local.userId,
+        localRev: local.rev,
+        userId,
+        accountRev: account.rev,
+      })
+        ? { source: 'local-snapshot', healRow: true }
+        : accountRow;
     }
     return localSnapshotSupersedesAccount({
       localUserId: local.userId,

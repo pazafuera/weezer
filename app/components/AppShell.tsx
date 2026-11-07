@@ -61,6 +61,7 @@ export default function AppShell({
     step,
     userId,
     userProfile,
+    stranded,
     navigateTo,
     handleSignOut,
     pendingRequestsCount = 0,
@@ -673,7 +674,33 @@ export default function AppShell({
                 </>
               )}
 
-              {!userId && (
+              {!userId && stranded && (
+                <div className="mx-4 my-3 p-4 bg-white border-2 border-[#0C1220] rounded-2xl space-y-3">
+                  <div className="space-y-1">
+                    <h4 className="text-xs font-black text-[#0C1220]">
+                      You're signed out.
+                    </h4>
+                    <p className="text-[11px] font-medium text-[#3D4A63] leading-snug">
+                      Your rankings are saved in your account. Sign in
+                      to pick up where you left off.
+                    </p>
+                  </div>
+
+                  <div className="space-y-1.5 pt-1">
+                    <button
+                      onClick={() => {
+                        closeMenu();
+                        navigateTo('login', 'login');
+                      }}
+                      className="w-full bg-[#0072CE] hover:bg-blue-600 text-white font-black py-2.5 px-4 rounded-xl text-xs transition-all shadow-xs cursor-pointer text-center"
+                    >
+                      Sign In
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {!userId && !stranded && (
                 <div className="mx-4 my-3 p-4 bg-white border-2 border-[#0C1220] rounded-2xl space-y-3">
                   <div className="space-y-1">
                     <h4 className="text-xs font-black text-[#0C1220]">

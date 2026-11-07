@@ -10,6 +10,13 @@ import type { RankingsSyncQueue } from '../lib/rankingsSync';
 import { resolveBootRankings } from '../lib/bootRankings';
 import { refreshMasterListMetadata } from '../lib/catalogMetadata';
 import {
+  readLastUserId,
+  rememberLastUserId,
+  forgetLastUserId,
+  resolveSnapshotStampUserId,
+  detectStrandedState,
+} from '../lib/lastUser';
+import {
   forgetAccountFanhoodSync,
   reconcileAccountFanhood,
 } from '../lib/fanhoodSync';
@@ -293,6 +300,14 @@ interface WeezerContextType {
    *  next edit or flush retries it. */
   syncNotice: boolean;
   dismissSyncNotice: () => void;
+  /** True when this device remembers a signed-in user and holds
+   *  their local progress, but no session is live — the session
+   *  died (token evicted, refresh race) and the app is running on
+   *  the local copy. AppShell renders a signed-out card instead
+   *  of the guest upsell in this state; edits made in it stamp
+   *  the remembered user and are recovered at the next sign-in.
+   *  Clears the moment a session exists again. */
+  stranded: boolean;
   initialAuthMode: AuthModeType;
   navigateTo: (
     targetStep: AppStep,
@@ -393,6 +408,20 @@ const getDerivedBucketRanks = (
     trash: combinedPool.filter((s) => map[s.id] === 'trash'),
   };
 };
+
+/** The shared "does this parsed snapshot hold anything?" test —
+ *  the same progress line the boot migration, the guest load, and
+ *  the stranded check all draw. */
+function snapshotHasProgress(
+  parsed: { triageMap?: unknown; masterList?: unknown } | null | undefined
+): boolean {
+  if (!parsed) return false;
+  const map = parsed.triageMap as Record<string, unknown> | undefined;
+  const list = parsed.masterList as unknown[] | undefined;
+  return (
+    (!!map && Object.keys(map).length > 0) || (!!list && list.length > 0)
+  );
+}
 
 /** The rankings-row shape the boot path passes around. */
 type RankingsRow = {
@@ -606,6 +635,10 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   // writes for the currently signed-in user.
   const [syncNotice, setSyncNotice] = useState(false);
   const dismissSyncNotice = () => setSyncNotice(false);
+  // Stranded state (see the interface note): set by the no-session
+  // boot path and by the auth listener when a session ends without
+  // an explicit sign-out behind it.
+  const [stranded, setStranded] = useState(false);
   const userIdRef = useRef<string | null>(null);
   useEffect(() => {
     userIdRef.current = userId;
@@ -858,6 +891,30 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         setFriendsList([]);
         setFriendCards([]);
         setPendingRequestsCount(0);
+        // A session ending here is not necessarily a sign-out the
+        // user asked for — an expired token lands in the same
+        // event. If the device remembers a user and the local
+        // copy holds their progress, this is a stranded owner:
+        // flag it so the menu shows the signed-out card. An
+        // explicit sign-out clears the last-user record BEFORE
+        // supabase.auth.signOut() is called (handleSignOut), so
+        // by the time a deliberate exit lands here the record is
+        // already gone and this stays false. Rankings state
+        // deliberately stays loaded — the local copy is fully
+        // usable, and its edits now stamp the remembered user.
+        try {
+          const snap = localStorage.getItem('weezer_ranker_state');
+          const parsedSnap = snap ? JSON.parse(snap) : null;
+          setStranded(
+            detectStrandedState({
+              lastUserId: readLastUserId(),
+              snapshotUserId: parsedSnap?.userId,
+              hasProgress: snapshotHasProgress(parsedSnap),
+            })
+          );
+        } catch {
+          setStranded(false);
+        }
       }
     });
 
@@ -969,6 +1026,12 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         const uid = session.user.id;
         setUserId(uid);
 
+        // This device now remembers whose account it holds
+        // (app/lib/lastUser.ts): if the session later dies, the
+        // app can tell a stranded owner apart from a true guest.
+        rememberLastUserId(uid);
+        setStranded(false);
+
         // Fanhood follows the account: reconcile the device
         // record with the account's (fire-and-forget — silently
         // degrades to local-only until the fanhood table is live).
@@ -1067,11 +1130,21 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
           }
         }
       } else {
-        // Guest mode fallback from localStorage
+        // No session: load the local snapshot as a guest would —
+        // which, on a device that remembers a signed-in user, may
+        // actually be a stranded owner whose session died (the
+        // stranded computation after the load). The load itself is
+        // identical either way; only the flag differs.
         const localState = localStorage.getItem('weezer_ranker_state');
+        let parsedSnapshot: {
+          triageMap?: Record<string, TriageValue>;
+          masterList?: Song[];
+          userId?: string | null;
+        } | null = null;
         if (localState) {
           try {
-            const parsed = JSON.parse(localState);
+            parsedSnapshot = JSON.parse(localState);
+            const parsed = parsedSnapshot!;
             const guestTriage: Record<string, TriageValue> = parsed.triageMap || {};
             // Sanitize saved master list against the triage map: drop unranked
             // leftovers from older saves; every ranked song keeps its position.
@@ -1098,6 +1171,13 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
             console.error('Error parsing local state:', e);
           }
         }
+        setStranded(
+          detectStrandedState({
+            lastUserId: readLastUserId(),
+            snapshotUserId: parsedSnapshot?.userId,
+            hasProgress: snapshotHasProgress(parsedSnapshot),
+          })
+        );
       }
     } catch (err) {
       console.error('Error loading rankings:', err);
@@ -1219,14 +1299,20 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     // The snapshot carries its owner and save time (Nov 6, 2026):
     // boot compares them against the account row to recover work
     // whose database write never landed — see bootRankings.ts.
-    // Guest snapshots keep a null stamp, which the boot predicate
-    // treats as foreign (never supersedes an account row).
+    // The stamp is the live session's user — or, when there is no
+    // session, the device's remembered user (Nov 7, 2026): a
+    // stranded owner's edits ARE that account's work, and stamping
+    // them so is what lets the next signed-in boot recover them
+    // as its unsent-edits buffer instead of discarding them as
+    // guest work. A true guest (no session, no remembered user)
+    // stamps null, exactly as before.
+    if (userId) rememberLastUserId(userId);
     localStorage.setItem(
       'weezer_ranker_state',
       JSON.stringify({
         triageMap: map,
         masterList: master,
-        userId: userId ?? null,
+        userId: resolveSnapshotStampUserId(userId, readLastUserId()),
         savedAt: Date.now(),
       })
     );
@@ -1831,6 +1917,15 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const handleSignOut = async () => {
+    // The last-user record goes FIRST: the auth listener treats a
+    // session ending with the record still present (and local
+    // progress on disk) as a stranded owner, and an explicit
+    // sign-out must land as a clean true guest. It is the ONLY
+    // place the record is cleared — a session merely dying never
+    // clears it. (Delete-account, when its backend ships, ends in
+    // this same sign-out.)
+    forgetLastUserId();
+    setStranded(false);
     await supabase.auth.signOut();
     setUserId(null);
     setUserProfile(null);
@@ -1861,6 +1956,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         dismissGuardNotice,
         syncNotice,
         dismissSyncNotice,
+        stranded,
         initialAuthMode,
         navigateTo,
         canGoBack,

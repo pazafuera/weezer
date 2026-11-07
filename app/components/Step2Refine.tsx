@@ -472,9 +472,13 @@ export default function Step2Refine({
           to the eyebrow-less first stage. (P-10's "← Dashboard"
           pill beside the old indicator was already removed
           app-wide on Oct 19 — the app menu is the way to the
-          dashboard.) */}
-      <div>
-        <span className="text-[11px] font-black uppercase tracking-wider text-slate-400 pl-1">
+          dashboard.) CENTERED above the headline (owner, Nov 7,
+          later): the indicator's old left alignment and its pl-1
+          went with the count — the eyebrow now sits centered over
+          the centered headline block below it, on all five stages
+          (this header renders once per stage from the stage data). */}
+      <div className="text-center">
+        <span className="text-[11px] font-black uppercase tracking-wider text-slate-400">
           It's Time to Refine
         </span>
       </div>

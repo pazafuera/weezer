@@ -30,6 +30,14 @@ import {
 import { parseCommunityStatsPayload } from '../lib/communityAggregates';
 import type { CommunityStatsPayload } from '../lib/communityAggregates';
 import { decideSmartEntry } from '../lib/smartEntry';
+import {
+  createBootGate,
+  requestBoot,
+  settleBoot,
+  shouldBootForAccount,
+  isBootedAccount,
+} from '../lib/bootGate';
+import type { BootGateState } from '../lib/bootGate';
 import { INITIAL_SAVE_STATE, bootSaveState } from '../lib/saveStatus';
 import type { SaveState } from '../lib/saveStatus';
 import {
@@ -792,8 +800,20 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   // second-init hazard (a late init overwriting mid-session
   // state) is deleted, not guarded — while a sign-in transition
   // to an account that has not booted IS a boot and runs the
-  // load exactly once. Cleared when a session ends.
+  // load exactly once. Cleared when a session ends. ONLY a
+  // boot may set it, at its commit point — the listener asks
+  // and calls, never marks (see app/lib/bootGate.ts for the
+  // guest-landing regression the pre-set marker caused).
   const bootedRankingsUserRef = useRef<string | null>(null);
+
+  // The boot's serialization gate (app/lib/bootGate.ts,
+  // pinned in the navigation harness): one boot in flight at
+  // most, and a request that arrives during one is owed
+  // exactly one re-run on settle — so a sign-in landing
+  // mid-boot, or the listener's INITIAL_SESSION racing the
+  // mount call, resolves deterministically against the
+  // then-current session instead of racing the load.
+  const bootGateRef = useRef<BootGateState>(createBootGate());
 
   // The save-diagnostics ring, mirrored in state so the account
   // drawer can render it; noteSaveDiagnostic is the ONLY way the
@@ -1167,12 +1187,28 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         // counters — a hazard class the overhaul had to guard
         // rather than remove. Now: a sign-in transition to an
         // account whose rankings have not booted is a boot and
-        // runs the load exactly once (the ref is set BEFORE the
-        // call, so an INITIAL_SESSION racing the mount boot
-        // cannot double it); every event for the account
-        // already booted is ignored for rankings purposes.
-        if (bootedRankingsUserRef.current !== session.user.id) {
-          bootedRankingsUserRef.current = session.user.id;
+        // runs the load exactly once; every event for the
+        // account already booted is ignored for rankings
+        // purposes. The listener does NOT mark the account
+        // booted itself — the marker belongs to the boot,
+        // which sets it at its own commit point after its
+        // duplicate guard passes. When the listener pre-set
+        // it, the boot it triggered always found the marker
+        // already in place and skipped itself: setUserId
+        // never ran, the row never loaded, and a
+        // password-form sign-in landed as a guest every time
+        // (the mount path survived only when its own
+        // getSession continuation won the ordering race
+        // against INITIAL_SESSION). The INITIAL_SESSION race
+        // needs no marker trick anymore: the boot serializes
+        // itself (see initUserAndLoadRankings), so the racing
+        // call queues into one no-op re-run.
+        if (
+          shouldBootForAccount(
+            bootedRankingsUserRef.current,
+            session.user.id
+          )
+        ) {
           initUserAndLoadRankings();
         }
       } else {
@@ -1308,6 +1344,22 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   }, [userId]);
 
   async function initUserAndLoadRankings() {
+    // Boot serialization (app/lib/bootGate.ts, pinned in the
+    // navigation harness): at most one boot runs at a time.
+    // This body runs synchronously until its first await, so
+    // the gate flips before any racing caller can interleave.
+    // A call that arrives mid-boot — a sign-in landing while
+    // the mount boot is still loading, the listener's
+    // INITIAL_SESSION — is queued, not dropped and never run
+    // concurrently; the finally below performs exactly one
+    // re-run, which reads the then-current session and does
+    // the right thing (boot the account that actually signed
+    // in, or no-op against the marker the first boot set).
+    const bootRequest = requestBoot(bootGateRef.current);
+    bootGateRef.current = bootRequest.state;
+    if (bootRequest.action === 'queue') {
+      return;
+    }
     setLoadingUser(true);
     try {
       const {
@@ -1318,12 +1370,15 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         const uid = session.user.id;
         // One boot per account (see bootedRankingsUserRef): a
         // duplicate invocation for the account already booted —
-        // the mount call racing the listener's INITIAL_SESSION,
-        // a token refresh the listener let through before this
-        // guard existed — must not reload rankings over live
-        // state. The boot already done (or in flight) owns the
-        // load; this invocation just releases the loading flag.
-        if (bootedRankingsUserRef.current === uid) {
+        // the settle re-run after a racing call queued, a
+        // listener event for the account this boot just
+        // loaded — must not reload rankings over live state.
+        // The marker is set ONLY at the commit point below,
+        // by a boot that passed this very guard, so reaching
+        // the early return means an account boot genuinely
+        // completed (or the queued re-run confirming it);
+        // this invocation just releases the loading flag.
+        if (isBootedAccount(bootedRankingsUserRef.current, uid)) {
           setLoadingUser(false);
           return;
         }
@@ -1506,6 +1561,17 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
       // once-rule absorbs the duplicate invocations the boot
       // guard turns away above.
       trackAnalytics('session_start', { oncePerSession: true });
+      // Release the gate — and if a call queued while this
+      // boot ran, honor it with exactly one re-run (which
+      // re-enters through the gate above like any caller).
+      // The re-run's own setLoadingUser(true) lands in the
+      // same tick as the false above, so the loading flag
+      // never visibly drops between the two boots.
+      const bootSettle = settleBoot(bootGateRef.current);
+      bootGateRef.current = bootSettle.state;
+      if (bootSettle.action === 'rerun') {
+        void initUserAndLoadRankings();
+      }
     }
   }
 

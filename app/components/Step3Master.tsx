@@ -421,10 +421,11 @@ export default function Step3Master({
         )}
       </div>
 
-      {/* FLOATING ACTION BAR — the Wrapped CTA plus Back (owner,
-          Oct 18: the top-left back link moved down here). Back runs
-          the same onBack the top link used — page.tsx wires it to
-          closeMaster, the origin-aware return. */}
+      {/* FLOATING ACTION BAR — the Sweater Thread CTA plus Back
+          (owner, Oct 18: the top-left back link moved down here).
+          Back runs the same onBack the top link used — page.tsx
+          wires it to closeMaster, which since Nov 7 always lands
+          in Refine, never back at Final Review's entry origin. */}
       <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-auto flex items-center gap-2 max-w-[calc(100vw-1rem)]">
         <button
           onClick={() => { triggerHaptic(15); onBack(); }}

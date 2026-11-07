@@ -585,10 +585,13 @@ export const migrateGuestRankingsToUser = async (
  * Steps whose exit control means "take me back where I came from"
  * rather than a fixed destination: 'login' (its card's X),
  * 'orientation' (How It Works' "← Back"), 'fan_stats' (Fan Stats'
- * "← Back"), 'master' (Final Review's "← Back"), and 'rank_buckets'
- * (Refine's stage-0 "← Back"). navigateTo records an origin for
- * these on entry; the close* functions consume it, each falling back
- * to the destination its control hardcoded before origin tracking
+ * "← Back"), and 'rank_buckets' (Refine's stage-0 "← Back").
+ * 'master' is tracked too — its origin is still recorded on entry —
+ * but since Nov 7 its exit is the exception: Final Review's "← Back"
+ * always goes to Refine (see closeMaster), never to the origin.
+ * navigateTo records an origin for these on entry; the close*
+ * functions consume it, each falling back to the destination its
+ * control hardcoded before origin tracking
  * (splash / splash / wrapped / rank_buckets / triage). See
  * returnStepRef in the provider.
  */
@@ -630,8 +633,10 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   // detour under the rule below). Hopping between tracked steps — orientation's "Create an
   // Account First" into login — leaves the other step's origin intact,
   // so when the login X lands back on orientation, orientation's Back
-  // still remembers where orientation itself was entered from. A ref,
-  // not state: nothing renders from it.
+  // still remembers where orientation itself was entered from.
+  // (master's origin is the one exception — recorded like the others,
+  // but closeMaster clears it unread since Nov 7: Final Review's Back
+  // always goes to Refine.) A ref, not state: nothing renders from it.
   const returnStepRef = useRef<Partial<Record<AppStep, AppStep>>>({});
   const [refineStageIdx, setRefineStageIdx] = useState(0);
   const [autoStartMatchups, setAutoStartMatchups] = useState(false);
@@ -1924,8 +1929,23 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     returnFromStep('fan_stats', 'wrapped');
   };
 
-  /** Final Review's "← Back": leave My Rankings, go back where you came from. */
+  /** Final Review's "← Back": leave My Rankings for Refine — ALWAYS
+      (owner, Nov 7). This exit is deliberately NOT origin-aware: the
+      button walks the user back through the refinement process, so
+      wherever Final Review was entered from (Refine's own finish,
+      the Thread's edit-intent, the menu, the dashboard), Back lands
+      in Refine. Clearing the recorded origin first is the mechanism:
+      with nothing recorded, returnFromStep takes its fallback —
+      rank_buckets — through the standard return machinery (the
+      stage-preserving, matchup-free isReturn landing, with the
+      real history.back() fast path when Refine is the previous
+      stack entry). The landing stage is the context's refine-stage
+      copy (refineStageIdx), which page.tsx hands Step2Refine as its
+      initial stage — the stage the user left Refine from. Refine's
+      own recorded origin is untouched, so its stage-0 Back behaves
+      exactly as before. */
   const closeMaster = () => {
+    delete returnStepRef.current['master'];
     returnFromStep('master', 'rank_buckets');
   };
 

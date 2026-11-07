@@ -18,6 +18,10 @@ import type { SaveDiagnosticEvent } from '../lib/saveDiagnostics';
 import { INITIAL_SAVE_STATE } from '../lib/saveStatus';
 import type { SaveState } from '../lib/saveStatus';
 import {
+  shouldArmBufferProtection,
+  decideSnapshotWrite,
+} from '../lib/bufferGuard';
+import {
   readLastUserId,
   rememberLastUserId,
   forgetLastUserId,
@@ -396,7 +400,11 @@ interface WeezerContextType {
   refreshCommunityData: () => Promise<void>;
 
   // Actions
-  syncRankingsToDatabase: (map: Record<string, TriageValue>, master: Song[]) => Promise<void>;
+  syncRankingsToDatabase: (
+    map: Record<string, TriageValue>,
+    master: Song[],
+    opts?: { genuineEdit?: boolean }
+  ) => Promise<void>;
   updateAndSyncBucketRanks: (
     newBucketRanks: Record<BucketType, Song[]>,
     updatedMap?: Record<string, TriageValue>
@@ -506,6 +514,9 @@ export interface BootMigrationResult {
   localUserId: string | null | undefined;
   localSavedAt: number | null | undefined;
   localRev: number | null;
+  /** The local snapshot held real rankings progress (the guard
+   *  arms only for a buffer worth protecting). */
+  localHasProgress: boolean;
   /** The revision of the state the caller is loading: the
    *  buffer's when the buffer won, the row's otherwise. The
    *  provider adopts it so the next edit's revision continues
@@ -572,6 +583,7 @@ export const migrateGuestRankingsToUser = async (
       localUserId: undefined,
       localSavedAt: undefined,
       localRev: null,
+      localHasProgress: false,
       stateRev: finiteRev(row?.client_rev),
     };
   };
@@ -642,6 +654,7 @@ export const migrateGuestRankingsToUser = async (
       localUserId,
       localSavedAt: savedAt,
       localRev,
+      localHasProgress: !!hasProgress,
       stateRev:
         resolution.source === 'local-snapshot' ? localRev : accountRev,
     };
@@ -824,6 +837,14 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   // the queue's confirmed-write signals and on boot outcomes —
   // an edit moves it to 'saving', never to 'saved'.
   const [saveState, setSaveState] = useState<SaveState>(INITIAL_SAVE_STATE);
+
+  // Buffer protection (durability overhaul, Nov 7): armed at a
+  // boot that loaded the account row while an own, unpromoted,
+  // progress-holding buffer waited in localStorage. While armed,
+  // syncRankingsToDatabase refuses NON-edit writes — the loaded
+  // state may not re-stamp the snapshot over the buffer before
+  // the owner's first genuine edit (app/lib/bufferGuard.ts).
+  const protectedBufferRef = useRef<{ rev: number | null } | null>(null);
   // Stranded state (see the interface note): set by the no-session
   // boot path and by the auth listener when a session ends without
   // an explicit sign-out behind it.
@@ -1288,6 +1309,29 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         } else {
           setSaveState(INITIAL_SAVE_STATE);
         }
+        // Buffer protection arms exactly when the row won over a
+        // qualifying buffer: from here until the first genuine
+        // edit, no state-maintenance write may re-stamp the
+        // snapshot from the loaded row (the invariant in
+        // app/lib/bufferGuard.ts). The arming itself is recorded
+        // — a boot that arms and a boot that promotes are the two
+        // outcomes every future incident report starts from.
+        if (
+          shouldArmBufferProtection({
+            source: boot.source,
+            localUserId: boot.localUserId,
+            userId: uid,
+            localHasProgress: boot.localHasProgress,
+          })
+        ) {
+          protectedBufferRef.current = { rev: boot.localRev };
+          noteSaveDiagnostic(
+            'buffer-protected',
+            `the row loaded with an unpromoted buffer waiting (bufRev=${
+              boot.localRev ?? '—'
+            }) — non-edit writes are held`
+          );
+        }
 
         // Fetch User Profile
         const { data: profileData } = await profilePromise;
@@ -1576,22 +1620,61 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
 
   /** Advance the device revision counter for a new write: past
    *  every revision this device already knows — the session's
-   *  adopted revision and the on-disk snapshot's — so the counter
-   *  never re-uses a value, whatever order boots and edits came
-   *  in. (While a buffer is protected, its revision joins the
-   *  max — see the guard in syncRankingsToDatabase.) */
-  const nextRankingsRevision = (): number => {
+   *  adopted revision, the on-disk snapshot's, and (when a
+   *  genuine edit supersedes a protected buffer) the buffer's —
+   *  so the counter never re-uses a value, whatever order boots
+   *  and edits came in. */
+  const nextRankingsRevision = (supersededRev?: number | null): number => {
     const next =
-      Math.max(rankingsRevRef.current ?? -1, readDiskSnapshotRev() ?? -1) +
-      1;
+      Math.max(
+        rankingsRevRef.current ?? -1,
+        readDiskSnapshotRev() ?? -1,
+        supersededRev ?? -1
+      ) + 1;
     rankingsRevRef.current = next;
     return next;
   };
 
   const syncRankingsToDatabase = async (
     map: Record<string, TriageValue>,
-    master: Song[]
+    master: Song[],
+    opts?: { genuineEdit?: boolean }
   ) => {
+    // Buffer protection (durability overhaul, Nov 7): while a
+    // qualifying buffer is protected, a write that is NOT a
+    // genuine user edit does NOTHING here — no snapshot re-stamp,
+    // no queue enqueue, no revision advance — so the buffer
+    // stays byte-identical and promotable until a genuine edit
+    // supersedes it. The state setters at the call sites still
+    // run (the session shows the loaded state); only this
+    // durable write is held. A genuine edit writes through,
+    // clears the protection, and takes a revision PAST the
+    // buffer's, so the supersede is itself revision-ordered.
+    // `genuineEdit` DEFAULTS TO FALSE — a call site must opt in,
+    // which is what makes the invariant structural rather than
+    // a convention.
+    let supersededBufferRev: number | null = null;
+    const protectedBuffer = protectedBufferRef.current;
+    if (protectedBuffer) {
+      if (
+        decideSnapshotWrite({
+          protectionArmed: true,
+          genuineEdit: opts?.genuineEdit === true,
+        }) === 'skip'
+      ) {
+        noteSaveDiagnostic(
+          'buffer-write-skipped',
+          'a non-edit write was held so the unpromoted buffer stays promotable'
+        );
+        return;
+      }
+      supersededBufferRev = protectedBuffer.rev;
+      protectedBufferRef.current = null;
+      noteSaveDiagnostic(
+        'buffer-superseded',
+        'the first genuine edit superseded the protected buffer'
+      );
+    }
     // The snapshot carries its owner and save time (Nov 6, 2026):
     // boot compares them against the account row to recover work
     // whose database write never landed — see bootRankings.ts.
@@ -1608,7 +1691,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     // a revision comparison whenever both sides carry one, and
     // device clocks can no longer strand a buffer.
     if (userId) rememberLastUserId(userId);
-    const rev = nextRankingsRevision();
+    const rev = nextRankingsRevision(supersededBufferRev);
     localStorage.setItem(
       'weezer_ranker_state',
       JSON.stringify({
@@ -1646,7 +1729,12 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
       ...(newBucketRanks.trash || []),
     ];
     setMasterList(newMaster);
-    syncRankingsToDatabase(activeMap, newMaster);
+    // The one funnel every genuine ranking edit flows through —
+    // triage answers, bucket moves, Refine results, reorder
+    // drags (and handleMagicFill, which calls this) — so it is
+    // the funnel that opts into the buffer guard's genuine-edit
+    // path (durability overhaul, Nov 7).
+    syncRankingsToDatabase(activeMap, newMaster, { genuineEdit: true });
   };
 
   const setSongBucket = (id: string, bucket: TriageValue) => {
@@ -1654,7 +1742,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     const reconciled = reconcileMasterList(masterList, map);
     setTriageMap(map);
     setMasterList(reconciled);
-    syncRankingsToDatabase(map, reconciled);
+    syncRankingsToDatabase(map, reconciled, { genuineEdit: true });
   };
 
   // Final Review entry normalization (belt and braces): reconcile
@@ -1663,6 +1751,12 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   // use — guarantees the master step only ever receives a
   // bucket-block-ordered list. No-op, and no sync, when the list is
   // already normalized.
+  // DELIBERATELY not a genuine edit for the buffer guard: this is
+  // a state-maintenance write of loaded state — the exact class
+  // the guard holds while a buffer is protected (durability
+  // overhaul, Nov 7). Its syncRankingsToDatabase call therefore
+  // passes no opts and is held in that window; outside it, the
+  // call behaves exactly as before.
   const normalizeMasterList = () => {
     const normalized = sortByBucketBlock(masterList, triageMap);
     const changed =
@@ -1698,7 +1792,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     list[index] = list[targetIdx];
     list[targetIdx] = temp;
     setMasterList(list);
-    syncRankingsToDatabase(triageMap, list);
+    syncRankingsToDatabase(triageMap, list, { genuineEdit: true });
   };
 
   const navigateInternal = (
@@ -2267,6 +2361,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     // lineage; the next account (or guest) starts from whatever
     // its own boot adopts.
     rankingsRevRef.current = null;
+    protectedBufferRef.current = null;
     setSaveState(INITIAL_SAVE_STATE);
     // History reset (see navigateInternal): Back after sign-out
     // must never resurrect a signed-in page.

@@ -1333,6 +1333,10 @@ function ProfileSetupBanner() {
         currentUserId={userId}
         onSuccess={(newProfile) => {
           setUserProfile(newProfile);
+          // A state push of the loaded rankings, not a rankings
+          // edit — deliberately no genuineEdit opt-in, so the
+          // buffer guard holds it while an unpromoted buffer is
+          // protected (durability overhaul, Nov 7).
           syncRankingsToDatabase(triageMap, masterList);
         }}
       />

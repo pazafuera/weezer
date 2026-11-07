@@ -23,6 +23,8 @@ import SiteStats from './components/SiteStats';
 export default function WeezerRankerPage() {
   const {
     loadingUser,
+    bootError,
+    retryBoot,
     step,
     triageMap,
     
@@ -96,6 +98,36 @@ export default function WeezerRankerPage() {
             <div className="h-28 rounded-[2rem] bg-slate-200/60" />
           </div>
           <div className="h-28 rounded-[2rem] bg-slate-200/50" />
+        </div>
+      ) : bootError ? (
+        /* Boot load failure (Nov 7 hardening, audit F2/F3):
+           a rankings/profile fetch errored or timed out, so
+           nothing was loaded and nothing was adopted. The
+           honest landing is this card — never an empty sort
+           presented as the account's truth, and never the
+           skeleton forever. The saved rankings are untouched
+           in the account; Try again runs the boot for real
+           (the failed boot set no marker to no-op against). */
+        <div className="mx-auto max-w-md pt-6">
+          <div className="space-y-4 rounded-[2rem] border-[3px] border-[#0C1220] bg-white p-6 text-center shadow-[4px_4px_0_#0C1220]">
+            <div className="space-y-2">
+              <h2 className="text-lg font-black text-[#0C1220]">
+                Couldn&rsquo;t load your rankings
+              </h2>
+              <p className="text-sm font-medium leading-relaxed text-[#3D4A63]">
+                {userId
+                  ? 'Your saved rankings are safe in your account — they just didn’t load this time. Check your connection, then try again.'
+                  : 'Something interrupted the load before it could finish. Check your connection, then try again.'}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={retryBoot}
+              className="w-full cursor-pointer rounded-xl bg-[#0072CE] py-3 text-sm font-black text-white transition-all hover:bg-blue-600"
+            >
+              Try again
+            </button>
+          </div>
         </div>
       ) : (
         <>

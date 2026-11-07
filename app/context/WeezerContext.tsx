@@ -38,6 +38,14 @@ import {
   isBootedAccount,
 } from '../lib/bootGate';
 import type { BootGateState } from '../lib/bootGate';
+import {
+  BOOT_LOAD_TIMEOUT_MS,
+  classifyBootFetch,
+  settleWithTimeout,
+  isBootStale,
+  editsBlockedForAccount,
+} from '../lib/bootLoad';
+import type { TimedSettle } from '../lib/bootLoad';
 import { INITIAL_SAVE_STATE, bootSaveState } from '../lib/saveStatus';
 import type { SaveState } from '../lib/saveStatus';
 import {
@@ -388,6 +396,14 @@ interface WeezerContextType {
 
   // Auth & User State
   loadingUser: boolean;
+  /** The last boot's load failed (fetch error or timeout):
+   *  the app shows the load-failure card instead of any
+   *  step — no empty sort is ever presented as truth. */
+  bootError: boolean;
+  /** Re-run the boot after a load failure. The failed boot
+   *  never set the account's booted marker, so the retry
+   *  runs the load for real. */
+  retryBoot: () => void;
   userId: string | null;
   userProfile: UserProfile | null;
   setUserProfile: (profile: UserProfile | null) => void;
@@ -492,18 +508,28 @@ type RankingsRow = {
 
 /** What a signed-in boot resolved — the diagnostics and
  *  save-state wiring in the provider read from this, so the
- *  boot's outcome is recorded exactly once. */
-interface SignedInBoot {
-  /** The fetched row as a state — the confirmed state. (The
-   *  empty state when the account has no row.) */
-  confirmed: RankingsStateData;
-  /** The held device buffer as the pending state, or null. */
-  pending: RankingsStateData | null;
-  /** What became of the device copy at this boot. */
-  buffer: BootBufferOutcome;
-  /** The device copy's own save time, when it carries one. */
-  bufferSavedAt: number | null;
-}
+ *  boot's outcome is recorded exactly once. A FAILED load is
+ *  its own outcome (Nov 7 hardening, audit F2): the fetch
+ *  errored or timed out, so NOTHING was adopted — no
+ *  confirmed state, no buffer bookkeeping, no marker — and
+ *  the caller lands the honest load-failure state instead
+ *  of presenting an empty account that isn't true. */
+type SignedInBoot =
+  | {
+      loadFailed: true;
+    }
+  | {
+      loadFailed: false;
+      /** The fetched row as a state — the confirmed state. (The
+       *  empty state when the account has no row.) */
+      confirmed: RankingsStateData;
+      /** The held device buffer as the pending state, or null. */
+      pending: RankingsStateData | null;
+      /** What became of the device copy at this boot. */
+      buffer: BootBufferOutcome;
+      /** The device copy's own save time, when it carries one. */
+      bufferSavedAt: number | null;
+    };
 
 /**
  * The signed-in boot (Nov 7, 2026 — the database-authority
@@ -542,7 +568,10 @@ interface SignedInBoot {
  */
 const resolveSignedInBoot = async (
   newUserId: string,
-  rankingsRowPromise?: PromiseLike<{ data: RankingsRow }>
+  rankingsRowPromise?: PromiseLike<{
+    data: RankingsRow;
+    error?: unknown;
+  }>
 ): Promise<SignedInBoot> => {
   const validSongIds = new Set(FULL_SONG_POOL.map((s) => s.id));
 
@@ -574,16 +603,30 @@ const resolveSignedInBoot = async (
     return { triageMap, masterList };
   };
 
+  // THE F2 LINE (audit, Nov 7): the fetch result's error is
+  // read, always. An errored (or timed-out — the caller
+  // converts a timeout into an error result) fetch means the
+  // load FAILED: return before the snapshot is even read, so
+  // a failed boot adopts nothing, restamps nothing, and
+  // merges nothing. Only a clean result may speak about the
+  // account: data is the row; no data and no error is a
+  // genuinely row-less account.
   let row: RankingsRow = null;
   if (rankingsRowPromise) {
-    const { data } = await rankingsRowPromise;
+    const { data, error } = await rankingsRowPromise;
+    if (classifyBootFetch({ data, error }) === 'failed') {
+      return { loadFailed: true };
+    }
     row = data;
   } else {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('weezer_rankings')
       .select('triage_map, master_list')
       .eq('user_id', newUserId)
       .maybeSingle();
+    if (classifyBootFetch({ data, error }) === 'failed') {
+      return { loadFailed: true };
+    }
     row = data as RankingsRow;
   }
   const rowState = row ? buildState(row.triage_map, row.master_list) : null;
@@ -685,6 +728,7 @@ const resolveSignedInBoot = async (
   }
 
   return {
+    loadFailed: false,
     confirmed: resolution.confirmed,
     pending: resolution.pending,
     buffer: resolution.buffer,
@@ -815,6 +859,26 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   // then-current session instead of racing the load.
   const bootGateRef = useRef<BootGateState>(createBootGate());
 
+  // The boot generation (Nov 7 hardening, audit F4): bumped
+  // when a session ends — handleSignOut, and the listener's
+  // session-less branch when a live session dies — so a boot
+  // still fetching for the dead session can tell, immediately
+  // before its commit block, that its load belongs to a
+  // session that no longer exists and must be discarded
+  // whole (isBootStale, app/lib/bootLoad.ts). A boot in a
+  // session-less world (the guest load) never has its
+  // generation moved under it: neither bumper fires without
+  // a live session to end.
+  const bootGenerationRef = useRef(0);
+
+  // The account whose latest boot load FAILED (audit F2):
+  // its rankings never loaded, so the session holds no
+  // confirmed state for it and commitEdit must not build a
+  // save (or stamp the device buffer) on nothing. Set by the
+  // failed boot, cleared by a successful load for the
+  // account, by sign-out, and by a retry.
+  const bootFailedUserRef = useRef<string | null>(null);
+
   // The save-diagnostics ring, mirrored in state so the account
   // drawer can render it; noteSaveDiagnostic is the ONLY way the
   // provider records (storage first, then the mirror refresh).
@@ -831,6 +895,14 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   // the queue's confirmed-write signals and on boot outcomes —
   // an edit moves it to 'saving', never to 'saved'.
   const [saveState, setSaveState] = useState<SaveState>(INITIAL_SAVE_STATE);
+
+  // The boot load-failure state (Nov 7 hardening, audit
+  // F2/F3): the last boot could not load (a fetch errored or
+  // timed out), so the app shows the honest failure card with
+  // a Try again instead of an empty account that isn't true
+  // or a skeleton that never settles. Set by the failed
+  // boot; cleared when a boot starts and when one succeeds.
+  const [bootError, setBootError] = useState(false);
 
   // Stranded state (see the interface note): set by the no-session
   // boot path and by the auth listener when a session ends without
@@ -1212,9 +1284,31 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
           initUserAndLoadRankings();
         }
       } else {
+        // A session ended. If one was actually live, move the
+        // boot generation FIRST (audit F4): a boot still
+        // fetching for it must find its generation stale at
+        // its commit block and discard the load, not commit
+        // the dead account's data into the guest session.
+        // The liveness test matters: a session-less event in
+        // a session-less world (the mount's INITIAL_SESSION
+        // beside a guest boot) must NOT move the generation —
+        // the guest load has no session to lose, and
+        // discarding it would strand a true guest.
+        if (
+          userIdRef.current !== null ||
+          bootedRankingsUserRef.current !== null
+        ) {
+          bootGenerationRef.current += 1;
+        }
         bootedRankingsUserRef.current = null;
+        // The failure state belonged to the dead session's
+        // load; the stranded/guest state that follows works
+        // from the device copy, which is usable as-is.
+        bootFailedUserRef.current = null;
+        setBootError(false);
         forgetAccountFanhoodSync();
         setUserId(null);
+        userIdRef.current = null;
         setUserProfile(null);
         setFriendsList([]);
         setFriendCards([]);
@@ -1360,11 +1454,70 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     if (bootRequest.action === 'queue') {
       return;
     }
+    // The boot generation this load belongs to (audit F4):
+    // captured synchronously at entry; checked once,
+    // immediately before the commit block. A sign-out or a
+    // live session's death during the fetches moves it, and
+    // this load is then discarded whole.
+    const bootGeneration = bootGenerationRef.current;
     setLoadingUser(true);
+    // A running boot has not failed: the failure card belongs
+    // to a SETTLED failed boot, and a retry (or the listener's
+    // automatic re-boot on the next session event) starts by
+    // clearing it. The failed-account record goes with it —
+    // this boot's own outcome re-records it if it fails too.
+    setBootError(false);
+    bootFailedUserRef.current = null;
+    // Set at the commit point below: the catch may only
+    // surface the failure state for a boot that never
+    // committed — a load that landed must not be masked by
+    // a late throw in the landing's tail.
+    let bootCommitted = false;
+    // The account this boot is loading, once known (past the
+    // booted guard): the catch uses it to scope the failure
+    // state to the account whose load actually failed — a
+    // throw from the guest branch or before the user is
+    // known keeps the old log-only posture (self-review,
+    // Nov 7: an unconditional card there would have been a
+    // retry dead-end for guests with broken storage).
+    let bootUid: string | null = null;
     try {
+      // Every await in this boot's load phase is on the boot
+      // clock (audit F3, app/lib/bootLoad.ts): a stalled
+      // promise — the iOS class the save queue's timeout was
+      // built for — must route to the failure state and let
+      // the finally settle the gate, never wedge the loading
+      // skeleton forever.
+      const sessionSettle = await settleWithTimeout(
+        supabase.auth.getSession(),
+        BOOT_LOAD_TIMEOUT_MS
+      );
+      if (sessionSettle.status !== 'value') {
+        // The session read itself failed or hung: nothing is
+        // known, nothing is adopted (F2/F3). The failure state
+        // is the honest landing ONLY when nothing has loaded
+        // yet — if an earlier boot in this page session
+        // already committed an account, this invocation was a
+        // duplicate (a gate re-run), the loaded state on
+        // screen is good, and masking it behind the failure
+        // card would be its own lie. (Self-review, Nov 7: the
+        // unguarded version failed exactly that way — a
+        // re-run whose getSession hung would have carded a
+        // healthy loaded app after 15s.) The marker was never
+        // touched either way, so a genuine retry still runs
+        // the load for real.
+        if (bootedRankingsUserRef.current === null) {
+          noteSaveDiagnostic(
+            'boot',
+            `session read ${sessionSettle.status} — nothing loaded; retry available`
+          );
+          setBootError(true);
+        }
+        return;
+      }
       const {
         data: { session },
-      } = await supabase.auth.getSession();
+      } = sessionSettle.value;
 
       if (session?.user) {
         const uid = session.user.id;
@@ -1382,8 +1535,19 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
           setLoadingUser(false);
           return;
         }
-        bootedRankingsUserRef.current = uid;
+        // The marker is deliberately NOT set here (audit F2):
+        // it is set at the commit block below, by a boot whose
+        // load SUCCEEDED. Setting it at load start — as this
+        // line used to — meant a failed or hung load stranded
+        // the account as "booted" for the whole session and
+        // nothing ever retried it. (The guard above stays
+        // sound without the early set: the gate serializes
+        // boots, so no second boot for this account can be
+        // mid-load concurrently — a queued re-run meets the
+        // marker the commit left behind.)
+        bootUid = uid;
         setUserId(uid);
+        userIdRef.current = uid;
         setAnalyticsUserId(uid);
 
         // This device now remembers whose account it holds
@@ -1402,16 +1566,51 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         // parallel. The boot resolution folds into the rankings
         // fetch (its guest-merge check reads this very row) —
         // weezer_rankings is read once per boot.
-        const profilePromise = supabase
-          .from('profiles')
-          .select('username, display_name, birth_year, country_code, state_code')
-          .eq('id', uid)
-          .maybeSingle();
-        const rankingsPromise = supabase
-          .from('weezer_rankings')
-          .select('triage_map, master_list')
-          .eq('user_id', uid)
-          .maybeSingle();
+        //
+        // Both are wrapped the moment they fire (audit F3):
+        // settleWithTimeout converts each into a { data, error }
+        // result on the boot clock — a hang or a rejection
+        // becomes an ERROR result, which the F2 classification
+        // (classifyBootFetch, inside resolveSignedInBoot for
+        // the row, below for the profile) reads as a failed
+        // load, never as an empty account.
+        const asFetchResult = (
+          settle: Promise<
+            TimedSettle<{ data: unknown; error: unknown }>
+          >
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ): Promise<{ data: any; error: unknown }> =>
+          settle.then((r) =>
+            r.status === 'value'
+              ? { data: r.value.data, error: r.value.error ?? null }
+              : {
+                  data: null,
+                  error:
+                    r.status === 'timeout'
+                      ? new Error('boot load timed out')
+                      : r.error,
+                }
+          );
+        const profilePromise = asFetchResult(
+          settleWithTimeout(
+            supabase
+              .from('profiles')
+              .select('username, display_name, birth_year, country_code, state_code')
+              .eq('id', uid)
+              .maybeSingle(),
+            BOOT_LOAD_TIMEOUT_MS
+          )
+        );
+        const rankingsPromise = asFetchResult(
+          settleWithTimeout(
+            supabase
+              .from('weezer_rankings')
+              .select('triage_map, master_list')
+              .eq('user_id', uid)
+              .maybeSingle(),
+            BOOT_LOAD_TIMEOUT_MS
+          )
+        );
 
         // The signed-in boot (resolveSignedInBoot): fetch the
         // row — it is the confirmed state, the only authority —
@@ -1423,6 +1622,57 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         // survives the simplification; its vocabulary slimmed
         // with the machinery it described).
         const boot = await resolveSignedInBoot(uid, rankingsPromise);
+        const { data: profileData, error: profileError } =
+          await profilePromise;
+
+        // THE FAILURE LINE (audit F2): either load failed —
+        // the row fetch errored/timed out (resolveSignedInBoot
+        // says so) or the profile fetch did (classified here).
+        // Adopt NOTHING: no confirmed state, no marker, no
+        // state commit — the account's real row is untouched
+        // and unbuilt-on, and the session lands on the honest
+        // failure state with a Try again. The failed-account
+        // record blocks this account's edits until a load
+        // succeeds (commitEdit consults it): there is no
+        // confirmed state to build a save on.
+        if (
+          boot.loadFailed ||
+          classifyBootFetch({
+            data: profileData,
+            error: profileError,
+          }) === 'failed'
+        ) {
+          bootFailedUserRef.current = uid;
+          noteSaveDiagnostic(
+            'boot',
+            'load FAILED — nothing adopted; rankings not loaded, retry available'
+          );
+          setBootError(true);
+          return;
+        }
+
+        // THE STALENESS LINE (audit F4): the session this load
+        // belongs to ended while it was in flight (sign-out,
+        // or the session died and the listener moved the
+        // generation). Discard the load whole — committing it
+        // would resurrect the dead account's rankings and
+        // profile as the guest session's unstamped work.
+        if (isBootStale(bootGeneration, bootGenerationRef.current)) {
+          noteSaveDiagnostic(
+            'boot',
+            'load discarded — the session changed while it loaded'
+          );
+          return;
+        }
+
+        // THE COMMIT POINT. The booted marker is set here and
+        // only here: by a boot whose load succeeded, in the
+        // generation it was captured in, immediately before
+        // the state it loaded is applied. From this line the
+        // account genuinely HAS booted — which is what the
+        // marker has always claimed to mean.
+        bootedRankingsUserRef.current = uid;
+        bootCommitted = true;
         confirmedStateRef.current = boot.confirmed;
         noteSaveDiagnostic('boot', `row loaded · buffer=${boot.buffer}`);
         if (boot.pending) {
@@ -1445,9 +1695,9 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
           })
         );
 
-        // Fetch User Profile
-        const { data: profileData } = await profilePromise;
-
+        // The profile (fetched in parallel above; its result
+        // was classified at the failure line — a clean
+        // no-row result still lands on the email fallback).
         if (profileData) {
           const locationStr =
             profileData.country_code === 'US' && profileData.state_code
@@ -1544,6 +1794,10 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
             console.error('Error parsing local state:', e);
           }
         }
+        // The guest load has landed (or there was nothing to
+        // land): from here the branch is bookkeeping only,
+        // and the catch must not mask it as a failed load.
+        bootCommitted = true;
         setStranded(
           detectStrandedState({
             lastUserId: readLastUserId(),
@@ -1554,6 +1808,27 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch (err) {
       console.error('Error loading rankings:', err);
+      // An unexpected throw mid-load is a failed load (audit
+      // F2's honesty rule) — scoped to the account whose load
+      // actually failed (bootUid set, not yet booted, never
+      // committed): land on the failure state with its Try
+      // again rather than leaving an unexplained empty app
+      // behind a settled skeleton. Throws anywhere else (the
+      // guest branch — whose card would be a retry dead-end
+      // if storage itself is broken — or a landed boot's
+      // tail) keep the old log-only posture.
+      if (
+        !bootCommitted &&
+        bootUid !== null &&
+        !isBootedAccount(bootedRankingsUserRef.current, bootUid)
+      ) {
+        bootFailedUserRef.current = bootUid;
+        noteSaveDiagnostic(
+          'boot',
+          'load threw — nothing adopted; retry available'
+        );
+        setBootError(true);
+      }
     } finally {
       setLoadingUser(false);
       // The visit's funnel anchor (analytics): fired when the
@@ -1575,6 +1850,21 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     }
   }
 
+  /** The load-failure card's Try again (audit F2/F3): clear
+   *  the failure state and run the boot again. The failed
+   *  boot never set the account's marker, so this is a real
+   *  load, not a no-op against a stranded marker — and if the
+   *  connection is still bad, the boot fails honestly again
+   *  into the same card. Also reachable implicitly: the auth
+   *  listener re-boots on the next session event for the
+   *  unbooted account, so a connection that recovers on its
+   *  own can heal the session without the tap. */
+  const retryBoot = () => {
+    setBootError(false);
+    bootFailedUserRef.current = null;
+    void initUserAndLoadRankings();
+  };
+
   // Database sync goes through a serialized queue (app/lib/
   // rankingsSync.ts — see its header for the Oct 22 post-mortem).
   // The old code fired debounced whole-row upserts with no
@@ -1587,6 +1877,17 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   // still writes immediately on every change (the guest store, and
   // unchanged); the queue only governs the Supabase write.
   type RankingsSyncPayload = {
+    /** The account this payload BELONGS to (audit F1):
+     *  stamped by commitEdit at enqueue time from the live
+     *  session, and the ONLY identity a send may use. A
+     *  payload outlives its session whenever it is retained
+     *  (backoff, give-up) across a sign-out — reading the
+     *  ambient identity at send time, as this code used to,
+     *  would write the old account's rankings into the new
+     *  account's row. Guests never enqueue, so a queued
+     *  payload's stamp is the account's id; null is the
+     *  defensive shape (never sendable — see isCurrent). */
+    userId: string | null;
     map: Record<string, TriageValue>;
     master: Song[];
   };
@@ -1598,7 +1899,12 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     payload: RankingsSyncPayload,
     opts: { keepalive: boolean }
   ): Promise<boolean> => {
-    const uid = userIdRef.current;
+    // The payload's own stamp (F1) — never the ambient ref.
+    // (RLS is the last belt behind this: a row whose user_id
+    // differs from the caller's token is rejected server-side.
+    // The stamp + the queue's currency check are what keep the
+    // attempt from ever being made under a wrong identity.)
+    const uid = payload.userId;
     if (!uid) return false;
     const row = {
       user_id: uid,
@@ -1659,7 +1965,38 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   if (syncQueueRef.current === null) {
     syncQueueRef.current = createRankingsSyncQueue<RankingsSyncPayload>({
       send: (payload, opts) => sendRankingsRef.current(payload, opts),
-      onGiveUp: () => {
+      // Account currency (audit F1): a retained payload is the
+      // live session's to send only while its stamp names the
+      // live account. userIdRef is maintained synchronously at
+      // every identity change (boot, session end, sign-out) —
+      // not just by its render effect — so this read is never
+      // a render behind at a decision point.
+      isCurrent: (payload) =>
+        payload.userId !== null && payload.userId === userIdRef.current,
+      onDiscard: (payload) => {
+        // A foreign payload left the queue unsent — exactly
+        // the F1 save, working as designed. It leaves a trace
+        // in the record; nothing user-facing fires, because
+        // the payload's owner is not this session's user.
+        noteSaveDiagnostic(
+          'boot',
+          `discarded a retained save that belonged to another account (${payload.userId ?? 'guest'}) — never sent`
+        );
+      },
+      onGiveUp: (payload) => {
+        // Session-blind callbacks were the other half of F1:
+        // a give-up for a payload that is no longer this
+        // session's must not announce a failure to the wrong
+        // user. (The queue's currency check normally discards
+        // such a payload before it can give up at all; this
+        // guard covers a session that ends mid-backoff after
+        // the last currency check.)
+        if (
+          payload.userId === null ||
+          payload.userId !== userIdRef.current
+        ) {
+          return;
+        }
         setSyncNotice(true);
         // The indicator's failed phase (durability overhaul):
         // the payload is retained on the device and the app
@@ -1672,6 +2009,20 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         );
       },
       onSuccess: (payload) => {
+        // The F1 guard, success side: the write itself went to
+        // the payload's OWN account (the stamp saw to that, and
+        // the queue's epoch rule already suppresses successes
+        // from before a clear()) — but if the session has
+        // moved on since, this success certifies NOTHING here:
+        // it must not advance this session's confirmed state,
+        // clear this session's device buffer, or announce
+        // 'saved' to a user it doesn't belong to.
+        if (
+          payload.userId === null ||
+          payload.userId !== userIdRef.current
+        ) {
+          return;
+        }
         setSyncNotice(false);
         // The confirmed state advances to exactly the payload
         // this success confirms — the queue carries it now
@@ -1754,25 +2105,49 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
    *    database write and moves the save state to 'saving'.
    *    Only the queue's confirmed write (its onSuccess, above)
    *    may advance the confirmed state and say 'saved'.
+   *
+   * The one refusal (Nov 7 hardening, audit F2): while the
+   * account's boot load stands failed, steps 2–3 do not run —
+   * there is no confirmed state to build on, and neither the
+   * device buffer nor the queue may be fed from nothing. See
+   * the loadBlocked gate inside.
    */
   const commitEdit = (nextState: RankingsStateData) => {
     setTriageMap(nextState.triageMap);
     setMasterList(nextState.masterList);
     if (userId) rememberLastUserId(userId);
-    try {
-      localStorage.setItem(
-        'weezer_ranker_state',
-        JSON.stringify({
-          triageMap: nextState.triageMap,
-          masterList: nextState.masterList,
-          userId: resolveSnapshotStampUserId(userId, readLastUserId()),
-          savedAt: Date.now(),
-        })
-      );
-    } catch {
-      // A device copy that cannot be written (quota, privacy
-      // mode) degrades the buffer, never the edit: the queue
-      // below still carries the state to the row.
+    // The F2 edit block (audit): while this account's boot
+    // load stands failed, the session holds NO confirmed
+    // state for it — an edit built here would be built on
+    // nothing, and letting it save is how a failed load used
+    // to become a wiped row. A blocked edit still lands in
+    // the session's state (the caller's act stands), but it
+    // neither overwrites the device buffer — which may hold
+    // the account's real unsent work from before the failed
+    // boot — nor enqueues. No editing surface is reachable
+    // while the failure card is up, so in practice this gate
+    // speaks only to programmatic callers; it exists so the
+    // invariant does not depend on that reachability.
+    const loadBlocked = editsBlockedForAccount(
+      userId,
+      bootFailedUserRef.current
+    );
+    if (!loadBlocked) {
+      try {
+        localStorage.setItem(
+          'weezer_ranker_state',
+          JSON.stringify({
+            triageMap: nextState.triageMap,
+            masterList: nextState.masterList,
+            userId: resolveSnapshotStampUserId(userId, readLastUserId()),
+            savedAt: Date.now(),
+          })
+        );
+      } catch {
+        // A device copy that cannot be written (quota, privacy
+        // mode) degrades the buffer, never the edit: the queue
+        // below still carries the state to the row.
+      }
     }
     if (!userId) {
       // No account to save to (guest, or stranded): the work is
@@ -1780,8 +2155,16 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
       setSaveState({ phase: 'local-only', savedAt: Date.now() });
       return;
     }
+    if (loadBlocked) {
+      setSaveState({ phase: 'local-only', savedAt: Date.now() });
+      return;
+    }
     setSaveState({ phase: 'saving', savedAt: null });
     syncQueueRef.current?.enqueue({
+      // The F1 stamp: the account this state belongs to, read
+      // from the live session NOW — the send will use this
+      // and only this, however long the payload is retained.
+      userId,
       map: nextState.triageMap,
       master: nextState.masterList,
     });
@@ -2428,8 +2811,22 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     // this same sign-out.)
     forgetLastUserId();
     setStranded(false);
+    // The session is ending NOW, before the signOut await:
+    // move the boot generation so a boot still fetching for
+    // this account discards its load at its commit block
+    // instead of resurrecting it as guest work (audit F4),
+    // and drop the sync queue's retained work — every queued
+    // payload belongs to the departing account, and none of
+    // it may be sent, or certified, under whoever signs in
+    // next (audit F1; the queue's currency check is the
+    // second belt for ends this function doesn't drive).
+    bootGenerationRef.current += 1;
+    syncQueueRef.current?.clear();
     await supabase.auth.signOut();
     setUserId(null);
+    userIdRef.current = null;
+    bootFailedUserRef.current = null;
+    setBootError(false);
     setAnalyticsUserId(null);
     setUserProfile(null);
     setTriageMap({});
@@ -2478,6 +2875,8 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         closeMaster,
         closeRefine,
         loadingUser,
+        bootError,
+        retryBoot,
         userId,
         userProfile,
         setUserProfile,

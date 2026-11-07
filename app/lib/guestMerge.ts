@@ -29,11 +29,13 @@
  * reconcileMasterList seats any categorized song neither list
  * carried), the same normalization every other load path uses.
  *
- * The caller (migrateGuestRankingsToUser) invokes this only for
- * the boot resolver's 'merged' source: unstamped local work
- * against an account with real rankings. The merged state loads
- * into the session and persists through the normal save path on
- * the next edit — the merge itself performs no write.
+ * The caller (the context's signed-in boot) invokes this only
+ * for unstamped local work against an account with real
+ * rankings. Under the database-authority model (Nov 7
+ * simplification) the merged state is HELD as the session's
+ * pending state — it loads into the session and persists
+ * through the normal save path on the next edit; the merge
+ * itself performs no write, and boot never writes.
  */
 import type { BucketType, Song } from '../data/constants';
 import {

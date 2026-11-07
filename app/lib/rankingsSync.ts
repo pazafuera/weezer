@@ -43,10 +43,12 @@
  *   attempt now races `sendTimeoutMs` (default 15s): a hang
  *   becomes an ordinary failure — backoff, retry, and on
  *   exhaustion the give-up notice — and a timed-out attempt that
- *   settles late is ignored. The local stamped snapshot, written
+ *   settles late is ignored. The device copy, written
  *   synchronously by the caller on every edit, remains the
- *   buffer of record throughout: whatever the queue does, the
- *   next boot heals the row from it.
+ *   unsent-changes buffer throughout: whatever the queue does,
+ *   an unconfirmed state survives on the device and is held —
+ *   visibly, never auto-written — at the next boot (the
+ *   database-authority model, app/lib/bootState.ts).
  *
  * Transport-agnostic and timer-injectable so the scheduling logic
  * is exercised directly by the harness in
@@ -86,8 +88,16 @@ export interface RankingsSyncQueueOptions<T> {
    * payload is retained — a later enqueue/flush retries it.
    */
   onGiveUp?: (payload: T) => void;
-  /** Called after any successful write. */
-  onSuccess?: () => void;
+  /**
+   * Called after any successful write, WITH the payload that
+   * was just confirmed — the database-authority model (Nov 7
+   * simplification) tracks the confirmed state from exactly
+   * this signal: on a payload's success, that payload becomes
+   * the session's confirmed state, and when the queue then has
+   * nothing pending, the on-device unsent-changes buffer (which
+   * holds that same state) has done its job and is cleared.
+   */
+  onSuccess?: (payload: T) => void;
   setTimeoutFn?: (fn: () => void, ms: number) => unknown;
   clearTimeoutFn?: (handle: unknown) => void;
 }
@@ -219,7 +229,7 @@ export function createRankingsSyncQueue<T>(
       if (ok) {
         attempts = 0;
         failed = false;
-        options.onSuccess?.();
+        options.onSuccess?.(payload);
         continue; // loop re-checks: an edit during the send re-dirtied us
       }
       dirty = true;

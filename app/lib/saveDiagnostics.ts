@@ -12,12 +12,15 @@
  * record existed anywhere of the inputs the decision ran on.
  *
  * This ring is that trace. A small localStorage list (last 20
- * events) of the save system's decision points: each boot's
- * source + the revision/timestamp inputs it compared, each
- * buffer promotion, each heal outcome, each queue give-up, each
- * buffer-protection event. The account drawer renders it
- * read-only next to the last-saved line, so the next incident is
- * diagnosed from a screenshot instead of a reconstruction.
+ * events) of the save system's decision points. The vocabulary
+ * slimmed with the database-authority simplification (Nov 7,
+ * later): boot no longer compares stamps, promotes buffers, or
+ * heals rows, so those event kinds are gone — what remains is
+ * each boot's outcome (the row loaded; what became of the
+ * device buffer), each held buffer, and each queue give-up.
+ * The account drawer renders it read-only next to the
+ * last-saved line, so the next incident is diagnosed from a
+ * screenshot instead of a reconstruction.
  *
  * Recording must never break saving: every storage touch is
  * guarded and degrades silently. The pure append lives apart
@@ -32,9 +35,10 @@ export interface SaveDiagnosticEvent {
   /** ISO timestamp of the event. */
   t: string;
   /**
-   * The decision point: 'boot' | 'promote' | 'heal' |
-   * 'give-up' | 'buffer-protected' | 'buffer-write-skipped' |
-   * 'buffer-superseded' | 'stranded'.
+   * The decision point: 'boot' | 'buffer-held' | 'give-up'.
+   * (The simplification's whole vocabulary — the overhaul-era
+   * 'promote' / 'heal' / 'buffer-*' kinds described machinery
+   * that no longer exists.)
    */
   kind: string;
   /** One compact human line — inputs and outcome, screenshot-sized. */

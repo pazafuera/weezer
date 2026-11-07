@@ -23,10 +23,10 @@
  *                  confirmed.
  * - 'saved'      — the latest edit is CONFIRMED in the database.
  *                  `savedAt` carries the confirmation time. Only
- *                  a confirmed write sets this phase: the queue's
- *                  success, or a boot whose heal write actually
- *                  landed (a real save, timestamped like any
- *                  other). A plain row load never does.
+ *                  the queue's confirmed write sets this phase —
+ *                  never an edit, and never a boot (the
+ *                  database-authority boot performs no writes at
+ *                  all; see bootSaveState below).
  * - 'failed'     — the write exhausted its retries. The payload
  *                  is retained on the device and the app keeps
  *                  trying; this phase pairs with the SyncNotice.
@@ -50,8 +50,6 @@
  * Pure and dependency-free so the rankings harness can pin the
  * exact strings (scenario (m)).
  */
-
-import type { BootRankingsSource } from './bootRankings';
 
 export type SavePhase =
   | 'idle'
@@ -95,26 +93,26 @@ export function isSaveIndicatorStep(step: string): boolean {
 }
 
 /**
- * The save state a signed-in boot STARTS from, decided from the
- * boot resolver's outcome. A plain row load (or a merge, or
- * nothing to load) saved nothing, so the state starts IDLE —
- * the pre-overhaul code announced "All changes saved" at every
- * boot, which read as a claim about work the owner hadn't done.
- * The one boot that may start 'saved' is a buffer heal that
- * actually WROTE and was confirmed (healOk): that is a real
- * save, and it carries its time like any other. A failed heal
- * starts 'local-only': the work is on this device, unsaved to
- * the account, and the strip must say so rather than hide it.
+ * The save state a signed-in boot STARTS from. Boot writes
+ * nothing (the database-authority model: the row is fetched,
+ * period), so no boot may start 'saved' — a plain row load
+ * saved nothing, and the state starts IDLE. (The pre-overhaul
+ * code announced "All changes saved" at every boot, which read
+ * as a claim about work the owner hadn't done.) The one boot
+ * with something to say is a boot HOLDING an unsent-changes
+ * buffer (app/lib/bootState.ts): that work sits on this device
+ * only, unconfirmed, and the state starts 'local-only' saying
+ * exactly that — it folds into the row through the user's next
+ * edit, or stays visibly waiting.
  */
-export function bootSaveState(
-  boot: { source: BootRankingsSource; healOk?: boolean | null },
-  nowMs: number
-): SaveState {
-  if (boot.source === 'local-snapshot' && boot.healOk === true) {
-    return { phase: 'saved', savedAt: nowMs };
-  }
-  if (boot.source === 'local-snapshot' && boot.healOk === false) {
-    return { phase: 'local-only', savedAt: null };
+export function bootSaveState(args: {
+  /** The boot held a device buffer as the pending state. */
+  hasPendingBuffer: boolean;
+  /** The held buffer's own save time, when it carries one. */
+  bufferSavedAt?: number | null;
+}): SaveState {
+  if (args.hasPendingBuffer) {
+    return { phase: 'local-only', savedAt: args.bufferSavedAt ?? null };
   }
   return INITIAL_SAVE_STATE;
 }

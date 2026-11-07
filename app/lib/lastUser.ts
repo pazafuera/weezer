@@ -26,9 +26,9 @@
  *   guest. AppShell renders a signed-out card for them.
  * - Defusing (resolveSnapshotStampUserId): while stranded, edits
  *   stamp the remembered user on their snapshot, so the next
- *   signed-in boot recovers them as that account's own
- *   unsent-edits buffer (app/lib/bootRankings.ts) instead of
- *   discarding them as guest work.
+ *   signed-in boot holds them as that account's own pending
+ *   buffer (app/lib/bootState.ts) instead of mistaking them
+ *   for guest work.
  *
  * Storage failures (private mode, quota, a browser without
  * localStorage) degrade silently to the pre-fix behavior: no

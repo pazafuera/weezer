@@ -1,14 +1,21 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useRef, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback, useMemo, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/utils/supabase';
 import { BucketType, Song, FULL_SONG_POOL } from '../data/constants';
 import { sanitizeMasterList, reconcileMasterList, getRankedSongs, sortByBucketBlock } from '@/utils/rankingUtils';
 import { createRankingsSyncQueue } from '../lib/rankingsSync';
 import type { RankingsSyncQueue } from '../lib/rankingsSync';
-import { resolveBootRankings } from '../lib/bootRankings';
-import type { BootRankingsSource } from '../lib/bootRankings';
+import {
+  resolveBootState,
+  rankingsStateHasProgress,
+  EMPTY_RANKINGS_STATE,
+} from '../lib/bootState';
+import type {
+  RankingsStateData,
+  BootBufferOutcome,
+} from '../lib/bootState';
 import { refreshMasterListMetadata } from '../lib/catalogMetadata';
 import {
   recordSaveDiagnostic,
@@ -17,10 +24,6 @@ import {
 import type { SaveDiagnosticEvent } from '../lib/saveDiagnostics';
 import { INITIAL_SAVE_STATE, bootSaveState } from '../lib/saveStatus';
 import type { SaveState } from '../lib/saveStatus';
-import {
-  shouldArmBufferProtection,
-  decideSnapshotWrite,
-} from '../lib/bufferGuard';
 import {
   readLastUserId,
   rememberLastUserId,
@@ -402,8 +405,7 @@ interface WeezerContextType {
   // Actions
   syncRankingsToDatabase: (
     map: Record<string, TriageValue>,
-    master: Song[],
-    opts?: { genuineEdit?: boolean }
+    master: Song[]
   ) => Promise<void>;
   updateAndSyncBucketRanks: (
     newBucketRanks: Record<BucketType, Song[]>,
@@ -451,288 +453,212 @@ function snapshotHasProgress(
   );
 }
 
-/** The rankings-row shape the boot path passes around. */
+/** The rankings-row shape the boot path reads. */
 type RankingsRow = {
   triage_map?: Record<string, TriageValue> | null;
   master_list?: Song[] | null;
-  updated_at?: string | null;
-  /** The client revision the row records (durability overhaul,
-   *  Nov 7): present only once the 20261107 migration has run AND
-   *  a revision-aware write has landed; absent/null otherwise. */
-  client_rev?: number | null;
 } | null;
 
-/**
- * Whether weezer_rankings carries the client_rev column yet
- * (migration 20261107_rankings_client_rev). Detected once per
- * page load: a select('*') row carries the key when the column
- * exists; otherwise a one-column probe settles it. Until the
- * owner runs the migration this stays false, every write omits
- * client_rev (an upsert naming a missing column would FAIL —
- * that is what makes the fallback graceful rather than a
- * footgun), and boot recovery uses the timestamp predicate
- * exactly as before.
- */
-let revColumnAvailable: boolean | null = null;
-
-const finiteRev = (value: unknown): number | null =>
-  typeof value === 'number' && Number.isFinite(value) ? value : null;
-
-const detectRevColumn = async (row: RankingsRow): Promise<boolean> => {
-  if (revColumnAvailable !== null) return revColumnAvailable;
-  if (row && typeof row === 'object' && 'client_rev' in row) {
-    revColumnAvailable = true;
-    return true;
-  }
-  const { error } = await supabase
-    .from('weezer_rankings')
-    .select('client_rev')
-    .limit(1);
-  revColumnAvailable = !error;
-  return revColumnAvailable;
-};
-
-/** What a signed-in boot decided and did — the diagnostics,
- *  buffer-protection, and save-state wiring in the provider all
- *  read from this, so the decision is recorded exactly once,
- *  with the inputs it ran on. */
-export interface BootMigrationResult {
-  /** The row the caller should load (the fetched row, the
-   *  buffer's verbatim row, or the merged row, per the source). */
-  row: RankingsRow;
-  source: BootRankingsSource;
-  healRow: boolean;
-  /** The heal upsert's outcome; null when no heal was attempted. */
-  healOk: boolean | null;
-  /** The fetched account row held real rankings progress. */
-  accountHasProgress: boolean;
-  /** The fetched row's updated_at, as the resolver saw it. */
-  accountUpdatedAt: string | null | undefined;
-  /** The fetched row's recorded revision, if any. */
-  accountRev: number | null;
-  /** The local snapshot's stamps, as the resolver saw them. */
-  localUserId: string | null | undefined;
-  localSavedAt: number | null | undefined;
-  localRev: number | null;
-  /** The local snapshot held real rankings progress (the guard
-   *  arms only for a buffer worth protecting). */
-  localHasProgress: boolean;
-  /** The revision of the state the caller is loading: the
-   *  buffer's when the buffer won, the row's otherwise. The
-   *  provider adopts it so the next edit's revision continues
-   *  the counter instead of restarting it. */
-  stateRev: number | null;
+/** What a signed-in boot resolved — the diagnostics and
+ *  save-state wiring in the provider read from this, so the
+ *  boot's outcome is recorded exactly once. */
+interface SignedInBoot {
+  /** The fetched row as a state — the confirmed state. (The
+   *  empty state when the account has no row.) */
+  confirmed: RankingsStateData;
+  /** The held device buffer as the pending state, or null. */
+  pending: RankingsStateData | null;
+  /** What became of the device copy at this boot. */
+  buffer: BootBufferOutcome;
+  /** The device copy's own save time, when it carries one. */
+  bufferSavedAt: number | null;
 }
 
 /**
- * Resolves where a signed-in boot loads its rankings from, and
- * returns the row the caller should load.
+ * The signed-in boot (Nov 7, 2026 — the database-authority
+ * simplification; design in REPORT.md and app/lib/bootState.ts).
  *
- * The decision itself lives in resolveBootRankings
- * (app/lib/bootRankings.ts) — the database-led precedence: the
- * account row is the authority; the local snapshot participates
- * only as this account's stamped unsent-edits buffer (loaded when
- * provably newer, healing the row) or as unstamped guest work
- * (migrating into an account with nothing real to protect, or
- * merging per song into one that has some). This function is the
- * I/O around that decision: fetch the row, read the snapshot,
- * perform the heal write the resolution calls for.
+ * Fetch the row. That is the confirmed state — the database is
+ * the only authority, and boot performs NO writes: no promotion,
+ * no heal, no revision or clock comparison (the resolver, the
+ * heal upsert, the client_rev path, and the buffer guard that
+ * the overhaul built around boot are all deleted; the seams
+ * they guarded are gone because the operations are gone).
  *
- * Boot de-duplication (Nov 4, 2026): the "does the account already
- * have rankings?" read and the caller's main rankings fetch are
- * the SAME row, so the caller fires its fetch up front and passes
- * the promise in — weezer_rankings is read once per boot, not
- * twice. When this function writes, it returns the row it just
- * wrote (the upsert payload, verbatim) instead of making the
- * caller re-read it; when the write fails, it returns the fetched
- * row — exactly what the caller's own fetch would have produced
- * before this fold. Without a passed promise it reads the row
- * itself, as before.
+ * The device copy (localStorage `weezer_ranker_state`) is read
+ * for its two remaining jobs: unstamped guest work arriving at
+ * a sign-in merges per song into the row (guestMerge — the one
+ * reconciliation that runs once, at a boundary the user chose,
+ * and fills gaps instead of overwriting), and ANY qualifying
+ * local state — this account's own unsent-changes buffer, or
+ * the guest merge's result — is HELD as the pending state when
+ * it differs from the row: the session's effective state is the
+ * pending state (the user's unsent work is what they see), the
+ * save state announces it as device-only, and it reaches the
+ * row only inside the user's next edit. A candidate identical
+ * to the row is discarded (the write had in fact landed; the
+ * document died before clearing its buffer). Another account's
+ * stamped buffer is ignored — and its file left untouched.
+ *
+ * Device-copy bookkeeping (local writes only, never row
+ * writes): a held buffer is (re)stamped with this account's id
+ * so later boots recognize whose pending work it is; an
+ * identical candidate's file is removed.
+ *
+ * Boot de-duplication (Nov 4, 2026) survives: the caller fires
+ * its rankings fetch up front and passes the promise in, so
+ * weezer_rankings is read once per boot.
  */
-export const migrateGuestRankingsToUser = async (
+const resolveSignedInBoot = async (
   newUserId: string,
   rankingsRowPromise?: PromiseLike<{ data: RankingsRow }>
-): Promise<BootMigrationResult> => {
-  const fetchExisting = async (): Promise<RankingsRow> => {
-    if (rankingsRowPromise) {
-      const { data } = await rankingsRowPromise;
-      return data;
+): Promise<SignedInBoot> => {
+  const validSongIds = new Set(FULL_SONG_POOL.map((s) => s.id));
+
+  /** One stored (map, list) pair -> one clean state: ids the
+   *  catalog doesn't know are dropped, the list is sanitized
+   *  against the map (unranked leftovers out, block order
+   *  stable), and the catalog-owned fields (title, album, year)
+   *  are refreshed from the catalog — saved entries embed
+   *  copies that go stale when the catalog corrects a title
+   *  ('Summer Elaine and Dr. Pepper'). Applied to every state
+   *  the boot adopts, from whichever source. */
+  const buildState = (
+    rawMap: Record<string, TriageValue> | null | undefined,
+    rawList: Song[] | null | undefined
+  ): RankingsStateData => {
+    const triageMap: Record<string, TriageValue> = {};
+    if (rawMap) {
+      Object.keys(rawMap).forEach((id) => {
+        if (validSongIds.has(id)) triageMap[id] = rawMap[id];
+      });
     }
+    const masterList = refreshMasterListMetadata(
+      sanitizeMasterList(
+        (rawList || []).filter((s: Song) => validSongIds.has(s.id)),
+        triageMap
+      ),
+      FULL_SONG_POOL
+    );
+    return { triageMap, masterList };
+  };
+
+  let row: RankingsRow = null;
+  if (rankingsRowPromise) {
+    const { data } = await rankingsRowPromise;
+    row = data;
+  } else {
     const { data } = await supabase
       .from('weezer_rankings')
-      .select('triage_map, master_list, updated_at')
+      .select('triage_map, master_list')
       .eq('user_id', newUserId)
       .maybeSingle();
-    return data as RankingsRow;
-  };
-
-  // The no-local-state result: the row stands (or nothing does),
-  // exactly what the resolver would decide with nothing local to
-  // weigh — reported in the resolver's own vocabulary so the
-  // caller's diagnostics stay truthful.
-  const rowOnlyResult = async (): Promise<BootMigrationResult> => {
-    const row = await fetchExisting();
-    return {
-      row,
-      source: row ? 'account-row' : 'none',
-      healRow: false,
-      healOk: null,
-      accountHasProgress: false,
-      accountUpdatedAt: row?.updated_at,
-      accountRev: finiteRev(row?.client_rev),
-      localUserId: undefined,
-      localSavedAt: undefined,
-      localRev: null,
-      localHasProgress: false,
-      stateRev: finiteRev(row?.client_rev),
-    };
-  };
-
-  if (typeof window === 'undefined') return rowOnlyResult();
-  const localState = localStorage.getItem('weezer_ranker_state');
-  if (!localState) return rowOnlyResult();
-
-  try {
-    const {
-      triageMap,
-      masterList,
-      userId: localUserId,
-      savedAt,
-      rev: localRevRaw,
-    } = JSON.parse(localState);
-    const localRev = finiteRev(localRevRaw);
-
-    const hasProgress =
-      (triageMap && Object.keys(triageMap).length > 0) ||
-      (masterList && masterList.length > 0);
-
-    const existing = await fetchExisting();
-
-    // Only REAL buckets count as existing rankings here: an account
-    // whose triage_map holds nothing but 'unknown' ("Don't Know It")
-    // marks has no ratings to protect, so guest picks may still
-    // migrate in. (Bit us Oct 16, 2026: temp test picks replaced a
-    // real account's rankings at login — the resolver's matrix is
-    // what keeps that hole closed now.)
-    const accountTriageMap = existing?.triage_map as
-      | Record<string, unknown>
-      | undefined;
-    const accountHasProgress =
-      (accountTriageMap &&
-        Object.values(accountTriageMap).some((value) =>
-          isRealBucket(value as TriageValue | undefined)
-        )) ||
-      (existing?.master_list && existing.master_list.length > 0);
-
-    const accountRev = finiteRev(existing?.client_rev);
-
-    const resolution = resolveBootRankings({
-      userId: newUserId,
-      account: existing
-        ? {
-            hasRealProgress: !!accountHasProgress,
-            updatedAt: existing.updated_at,
-            rev: accountRev,
-          }
-        : null,
-      local: {
-        hasProgress: !!hasProgress,
-        userId: localUserId,
-        savedAt,
-        rev: localRev,
-      },
-    });
-
-    const result: BootMigrationResult = {
-      row: existing,
-      source: resolution.source,
-      healRow: resolution.healRow,
-      healOk: null,
-      accountHasProgress: !!accountHasProgress,
-      accountUpdatedAt: existing?.updated_at,
-      accountRev,
-      localUserId,
-      localSavedAt: savedAt,
-      localRev,
-      localHasProgress: !!hasProgress,
-      stateRev:
-        resolution.source === 'local-snapshot' ? localRev : accountRev,
-    };
-
-    switch (resolution.source) {
-      case 'local-snapshot': {
-        const snapshotRow: RankingsRow = {
-          triage_map: triageMap || {},
-          master_list: masterList || [],
-        };
-        result.row = snapshotRow;
-        if (resolution.healRow) {
-          // The heal records the revision it carries when the
-          // column exists — that recorded revision is what makes
-          // the NEXT boot's promotion a counter comparison
-          // instead of a clock comparison.
-          const hasRevColumn = await detectRevColumn(existing);
-          const { error } = await supabase.from('weezer_rankings').upsert(
-            {
-              user_id: newUserId,
-              triage_map: snapshotRow.triage_map,
-              master_list: snapshotRow.master_list,
-              updated_at: new Date().toISOString(),
-              ...(hasRevColumn && localRev !== null
-                ? { client_rev: localRev }
-                : {}),
-            },
-            { onConflict: 'user_id' }
-          );
-          if (error) {
-            console.error('Failed to write boot-resolved rankings:', error);
-            result.healOk = false;
-            // The two historical failure behaviors the resolver
-            // folds together: a buffer heal (the account HAS real
-            // rankings) still loads the snapshot — the session gets
-            // the right state and the snapshot stays newer than
-            // the row, so the next boot retries the heal. A first
-            // migration (nothing real to protect) hands back the
-            // fetched row, exactly as the pre-resolver code did.
-            result.row = accountHasProgress ? snapshotRow : existing;
-            return result;
-          }
-          result.healOk = true;
-        }
-        return result;
-      }
-      case 'merged': {
-        // Sign-in merge (Part 3 of the database-led pass): the
-        // guest work on this device fills the account's gaps per
-        // song instead of being silently discarded — the account
-        // wins wherever it has spoken (app/lib/guestMerge.ts).
-        // NO write here: the merged state loads into the session
-        // and persists through the normal save path on the next
-        // edit, like any other state. (Re-running the merge at a
-        // later boot is idempotent: once the fills are saved they
-        // are account values, and the merge returns them as-is.)
-        const merged = mergeGuestRankingsIntoAccount({
-          accountTriageMap: (existing?.triage_map ||
-            {}) as Record<string, TriageValue>,
-          accountMasterList: existing?.master_list || [],
-          guestTriageMap: (triageMap || {}) as Record<string, TriageValue>,
-          guestMasterList: masterList || [],
-        });
-        result.row = {
-          triage_map: merged.triageMap as Record<string, TriageValue>,
-          master_list: merged.masterList,
-        };
-        return result;
-      }
-      case 'account-row':
-      case 'none':
-      default:
-        return result;
-    }
-  } catch (err) {
-    console.error('Failed to migrate guest rankings:', err);
-    return rowOnlyResult();
+    row = data as RankingsRow;
   }
+  const rowState = row ? buildState(row.triage_map, row.master_list) : null;
+
+  // The device copy, parsed defensively — a corrupt snapshot
+  // must never take the boot down with it.
+  let snapshot: (RankingsStateData & { userId?: string | null }) | null =
+    null;
+  let snapshotSavedAt: number | null = null;
+  try {
+    const raw =
+      typeof window !== 'undefined'
+        ? localStorage.getItem('weezer_ranker_state')
+        : null;
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      snapshotSavedAt =
+        typeof parsed?.savedAt === 'number' &&
+        Number.isFinite(parsed.savedAt)
+          ? parsed.savedAt
+          : null;
+      if (parsed && (parsed.triageMap || parsed.masterList)) {
+        snapshot = {
+          ...buildState(parsed.triageMap || {}, parsed.masterList || []),
+          userId: parsed.userId ?? null,
+        };
+      }
+    }
+  } catch {
+    snapshot = null;
+  }
+
+  // Unstamped local work is guest work arriving at a sign-in:
+  // against an account with real rankings it merges per song
+  // (the account wins wherever it has spoken); against an
+  // account with nothing real to protect, the work itself is
+  // the candidate. (Only REAL buckets count as existing
+  // rankings here — an account holding nothing but 'unknown'
+  // marks has no ratings to protect. Oct 16, 2026: temp test
+  // picks replaced a real account's rankings at login; the
+  // merge's account-wins rule is what keeps that hole closed.)
+  let guestCandidate: RankingsStateData | null = null;
+  if (snapshot && !snapshot.userId && rankingsStateHasProgress(snapshot)) {
+    const accountHasRealProgress =
+      !!rowState &&
+      (Object.values(rowState.triageMap).some((value) =>
+        isRealBucket(value)
+      ) ||
+        rowState.masterList.length > 0);
+    if (accountHasRealProgress && rowState) {
+      const merged = mergeGuestRankingsIntoAccount({
+        accountTriageMap: rowState.triageMap,
+        accountMasterList: rowState.masterList,
+        guestTriageMap: snapshot.triageMap,
+        guestMasterList: snapshot.masterList,
+      });
+      guestCandidate = {
+        triageMap: merged.triageMap as Record<string, TriageValue>,
+        masterList: refreshMasterListMetadata(
+          merged.masterList,
+          FULL_SONG_POOL
+        ),
+      };
+    } else {
+      guestCandidate = snapshot;
+    }
+  }
+
+  const resolution = resolveBootState({
+    userId: newUserId,
+    row: rowState,
+    snapshot,
+    guestCandidate,
+  });
+
+  // Device-copy bookkeeping (see the header): a held buffer is
+  // (re)stamped as this account's pending work; an identical
+  // candidate is confirmed-by-content and its file removed; a
+  // foreign buffer's file is left exactly as found.
+  try {
+    if (
+      resolution.pending &&
+      (resolution.buffer === 'held' || resolution.buffer === 'guest-held')
+    ) {
+      localStorage.setItem(
+        'weezer_ranker_state',
+        JSON.stringify({
+          triageMap: resolution.pending.triageMap,
+          masterList: resolution.pending.masterList,
+          userId: newUserId,
+          savedAt: snapshotSavedAt ?? Date.now(),
+        })
+      );
+    } else if (resolution.buffer === 'identical') {
+      localStorage.removeItem('weezer_ranker_state');
+    }
+  } catch {
+    // Bookkeeping must never break the boot it describes.
+  }
+
+  return {
+    confirmed: resolution.confirmed,
+    pending: resolution.pending,
+    buffer: resolution.buffer,
+    bufferSavedAt: snapshotSavedAt,
+  };
 };
 
 /**
@@ -813,13 +739,27 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   const [syncNotice, setSyncNotice] = useState(false);
   const dismissSyncNotice = () => setSyncNotice(false);
 
-  // Durability overhaul (Nov 7, 2026): the client revision of
-  // the rankings state this session holds — adopted from the
-  // winning boot source (the row's recorded revision, or the
-  // buffer's stamp when the buffer won), advanced by every write
-  // through syncRankingsToDatabase, and carried in every queue
-  // payload so each database write records the revision it holds.
-  const rankingsRevRef = useRef<number | null>(null);
+  // The last CONFIRMED rankings state (database-authority
+  // model, Nov 7 simplification): set at boot from the fetched
+  // row, then advanced ONLY by the sync queue's confirmed-write
+  // signal (its onSuccess now carries the payload it confirmed).
+  // The rendered state is the EFFECTIVE state — this confirmed
+  // state with any unconfirmed work applied — held in the
+  // triageMap/masterList state below; this ref is the record of
+  // where the database provably stands.
+  const confirmedStateRef = useRef<RankingsStateData>(
+    EMPTY_RANKINGS_STATE
+  );
+
+  // The account whose rankings this provider has booted (or is
+  // booting). The auth listener's whole discipline hangs off
+  // it: a session event for THIS account (token refresh, user
+  // update, a duplicate SIGNED_IN) never reloads rankings — the
+  // second-init hazard (a late init overwriting mid-session
+  // state) is deleted, not guarded — while a sign-in transition
+  // to an account that has not booted IS a boot and runs the
+  // load exactly once. Cleared when a session ends.
+  const bootedRankingsUserRef = useRef<string | null>(null);
 
   // The save-diagnostics ring, mirrored in state so the account
   // drawer can render it; noteSaveDiagnostic is the ONLY way the
@@ -838,13 +778,6 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   // an edit moves it to 'saving', never to 'saved'.
   const [saveState, setSaveState] = useState<SaveState>(INITIAL_SAVE_STATE);
 
-  // Buffer protection (durability overhaul, Nov 7): armed at a
-  // boot that loaded the account row while an own, unpromoted,
-  // progress-holding buffer waited in localStorage. While armed,
-  // syncRankingsToDatabase refuses NON-edit writes — the loaded
-  // state may not re-stamp the snapshot over the buffer before
-  // the owner's first genuine edit (app/lib/bufferGuard.ts).
-  const protectedBufferRef = useRef<{ rev: number | null } | null>(null);
   // Stranded state (see the interface note): set by the no-session
   // boot path and by the auth listener when a session ends without
   // an explicit sign-out behind it.
@@ -862,16 +795,22 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   } | null>(null);
   const deepLinkConsumedRef = useRef(false);
 
-  // Rankings State
+  // Rankings State — the ONE state object of the
+  // database-authority model: (triageMap, masterList) is the
+  // session's effective rankings state, committed whole by
+  // commitEdit and by the boot load, never half at a time.
+  // bucketRanks is NOT a state variable anymore (the
+  // simplification's core deletion): it is derived at render
+  // from the same pair, so it can never disagree with them —
+  // the seam the Photograph resurrection lived in (three state
+  // variables, two funnels updating them asymmetrically) no
+  // longer exists.
   const [triageMap, setTriageMap] = useState<Record<string, TriageValue>>({});
-  const [bucketRanks, setBucketRanks] = useState<Record<BucketType, Song[]>>({
-    banger: [],
-    slaps: [],
-    mid: [],
-    skip: [],
-    trash: [],
-  });
   const [masterList, setMasterList] = useState<Song[]>([]);
+  const bucketRanks = useMemo(
+    () => getDerivedBucketRanks(triageMap, masterList),
+    [triageMap, masterList]
+  );
 
   // Cached Community Data State (Fix B)
   const [communityMasterLists, setCommunityMasterLists] = useState<Song[][]>([]);
@@ -1093,8 +1032,25 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
-        initUserAndLoadRankings();
+        // Session events update auth state only — they no
+        // longer reload rankings (database-authority
+        // simplification, Nov 7). The listener used to re-run
+        // the full boot load on EVERY event, token refreshes
+        // included: a late init landing mid-session overwrote
+        // live state with stored state and reset the session's
+        // counters — a hazard class the overhaul had to guard
+        // rather than remove. Now: a sign-in transition to an
+        // account whose rankings have not booted is a boot and
+        // runs the load exactly once (the ref is set BEFORE the
+        // call, so an INITIAL_SESSION racing the mount boot
+        // cannot double it); every event for the account
+        // already booted is ignored for rankings purposes.
+        if (bootedRankingsUserRef.current !== session.user.id) {
+          bootedRankingsUserRef.current = session.user.id;
+          initUserAndLoadRankings();
+        }
       } else {
+        bootedRankingsUserRef.current = null;
         forgetAccountFanhoodSync();
         setUserId(null);
         setUserProfile(null);
@@ -1234,6 +1190,18 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
 
       if (session?.user) {
         const uid = session.user.id;
+        // One boot per account (see bootedRankingsUserRef): a
+        // duplicate invocation for the account already booted —
+        // the mount call racing the listener's INITIAL_SESSION,
+        // a token refresh the listener let through before this
+        // guard existed — must not reload rankings over live
+        // state. The boot already done (or in flight) owns the
+        // load; this invocation just releases the loading flag.
+        if (bootedRankingsUserRef.current === uid) {
+          setLoadingUser(false);
+          return;
+        }
+        bootedRankingsUserRef.current = uid;
         setUserId(uid);
 
         // This device now remembers whose account it holds
@@ -1249,10 +1217,9 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
 
         // Boot fetches (Nov 4, 2026): the profile read and the
         // rankings read are independent, so both fire NOW, in
-        // parallel, instead of serially around the migration.
-        // The guest migration folds into the rankings fetch (its
-        // account-progress check reads this very row) and returns
-        // the row to load from.
+        // parallel. The boot resolution folds into the rankings
+        // fetch (its guest-merge check reads this very row) —
+        // weezer_rankings is read once per boot.
         const profilePromise = supabase
           .from('profiles')
           .select('username, display_name, birth_year, country_code, state_code')
@@ -1260,78 +1227,41 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
           .maybeSingle();
         const rankingsPromise = supabase
           .from('weezer_rankings')
-          .select('*')
+          .select('triage_map, master_list')
           .eq('user_id', uid)
           .maybeSingle();
 
-        // Migrate guest rankings from localStorage to Supabase.
-        // The result carries the boot's whole decision — source,
-        // both revisions, both clock stamps — and the first thing
-        // done with it is recording it in the save diagnostics:
+        // The signed-in boot (resolveSignedInBoot): fetch the
+        // row — it is the confirmed state, the only authority —
+        // and hold any qualifying device copy as the pending
+        // state. Boot writes NOTHING. The first thing done with
+        // the outcome is recording it in the save diagnostics:
         // a boot that loses work from here on leaves a trace of
-        // the inputs it decided on (durability overhaul, Nov 7).
-        const boot = await migrateGuestRankingsToUser(uid, rankingsPromise);
-        const rankData = boot.row;
-        rankingsRevRef.current = boot.stateRev;
-        noteSaveDiagnostic(
-          'boot',
-          `source=${boot.source} bufRev=${boot.localRev ?? '—'} rowRev=${
-            boot.accountRev ?? '—'
-          } savedAt=${boot.localSavedAt ?? '—'} rowUpdated=${
-            boot.accountUpdatedAt ?? '—'
-          }`
-        );
-        if (boot.source === 'local-snapshot' && boot.accountHasProgress) {
+        // what it found (durability overhaul, Nov 7 — the ring
+        // survives the simplification; its vocabulary slimmed
+        // with the machinery it described).
+        const boot = await resolveSignedInBoot(uid, rankingsPromise);
+        confirmedStateRef.current = boot.confirmed;
+        noteSaveDiagnostic('boot', `row loaded · buffer=${boot.buffer}`);
+        if (boot.pending) {
           noteSaveDiagnostic(
-            'promote',
-            `buffer promoted over the account row (bufRev=${
-              boot.localRev ?? '—'
-            } rowRev=${boot.accountRev ?? '—'})`
-          );
-        }
-        if (boot.healRow && boot.healOk === false) {
-          noteSaveDiagnostic(
-            'heal',
-            'heal write failed — the buffer stays promotable and the next boot retries'
+            'buffer-held',
+            'unsent changes are waiting on this device — they join the next edit; the row stays the authority until a save confirms them'
           );
         }
         // The boot's save state (bootSaveState in
-        // app/lib/saveStatus.ts): a healed buffer is a CONFIRMED
-        // write, so it starts 'saved' with its time; a failed
-        // heal starts 'local-only'. Everything else — a plain
-        // row load above all — starts IDLE: nothing was saved
-        // this session, and announcing "All changes saved" at
-        // boot only confused the owner about work he hadn't
-        // done (his ruling, Nov 7, after the overhaul shipped).
+        // app/lib/saveStatus.ts): a plain row load starts IDLE —
+        // nothing was saved this session, and announcing "All
+        // changes saved" at boot only confused the owner about
+        // work he hadn't done (his ruling, Nov 7). A boot
+        // holding a buffer starts 'local-only': the work is on
+        // this device, unconfirmed, and the strip says so.
         setSaveState(
-          bootSaveState(
-            { source: boot.source, healOk: boot.healOk },
-            Date.now()
-          )
-        );
-        // Buffer protection arms exactly when the row won over a
-        // qualifying buffer: from here until the first genuine
-        // edit, no state-maintenance write may re-stamp the
-        // snapshot from the loaded row (the invariant in
-        // app/lib/bufferGuard.ts). The arming itself is recorded
-        // — a boot that arms and a boot that promotes are the two
-        // outcomes every future incident report starts from.
-        if (
-          shouldArmBufferProtection({
-            source: boot.source,
-            localUserId: boot.localUserId,
-            userId: uid,
-            localHasProgress: boot.localHasProgress,
+          bootSaveState({
+            hasPendingBuffer: boot.pending !== null,
+            bufferSavedAt: boot.bufferSavedAt,
           })
-        ) {
-          protectedBufferRef.current = { rev: boot.localRev };
-          noteSaveDiagnostic(
-            'buffer-protected',
-            `the row loaded with an unpromoted buffer waiting (bufRev=${
-              boot.localRev ?? '—'
-            }) — non-edit writes are held`
-          );
-        }
+        );
 
         // Fetch User Profile
         const { data: profileData } = await profilePromise;
@@ -1357,52 +1287,24 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
           });
         }
 
-        // Rankings for the logged in user: rankData is the row
-        // the migration returned above — the boot's single
-        // rankings read, or the row the migration just wrote.
-        const validSongIds = new Set(FULL_SONG_POOL.map((s) => s.id));
+        // Commit the boot's effective state: the held pending
+        // state when one exists (the user's unsent work is what
+        // they see), otherwise the confirmed row state. Both
+        // halves commit in the same act — the single state
+        // object is the only shape this provider holds.
+        const effective = boot.pending ?? boot.confirmed;
+        setTriageMap(effective.triageMap);
+        setMasterList(effective.masterList);
 
-        if (rankData) {
-          let loadedTriage: Record<string, TriageValue> = {};
-          let loadedMaster: Song[] = [];
-
-          const savedTriageMap = rankData.triage_map;
-          if (savedTriageMap) {
-            Object.keys(savedTriageMap).forEach((id) => {
-              if (validSongIds.has(id)) loadedTriage[id] = savedTriageMap[id];
-            });
-            setTriageMap(loadedTriage);
-          }
-          if (rankData.master_list && Array.isArray(rankData.master_list)) {
-            // Sanitize saved master list against the triage map: drop unranked
-            // leftovers from older saves; every ranked song keeps its position.
-            // Then refresh the catalog-owned fields (title, album, year)
-            // from the catalog: saved entries embed copies that go stale
-            // when the catalog corrects a title ('Summer Elaine and
-            // Dr. Pepper'), and screens render from the saved copies.
-            // This runs on whichever source won the boot resolution —
-            // the account row or the recovered local snapshot — after
-            // the migration decided precedence, so it cannot disturb
-            // it. No write happens here: the healed list persists on
-            // the next save through the normal sync path.
-            loadedMaster = refreshMasterListMetadata(
-              sanitizeMasterList(rankData.master_list.filter((s: Song) => validSongIds.has(s.id)), loadedTriage),
-              FULL_SONG_POOL
-            );
-            setMasterList(loadedMaster);
-          }
-
-          setBucketRanks(getDerivedBucketRanks(loadedTriage, loadedMaster));
-
-          // Smart Entry: Route to Dashboard if progress exists and no URL step is specified
-          if (typeof window !== 'undefined') {
-            const params = new URLSearchParams(window.location.search);
-            if (
-              !params.get('step') &&
-              (Object.keys(loadedTriage).length > 0 || loadedMaster.length > 0)
-            ) {
-              setStepState('dashboard');
-            }
+        // Smart Entry: Route to Dashboard if progress exists and no URL step is specified
+        if (typeof window !== 'undefined') {
+          const params = new URLSearchParams(window.location.search);
+          if (
+            !params.get('step') &&
+            (Object.keys(effective.triageMap).length > 0 ||
+              effective.masterList.length > 0)
+          ) {
+            setStepState('dashboard');
           }
         }
       } else {
@@ -1417,16 +1319,11 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
           triageMap?: Record<string, TriageValue>;
           masterList?: Song[];
           userId?: string | null;
-          rev?: number | null;
         } | null = null;
         if (localState) {
           try {
             parsedSnapshot = JSON.parse(localState);
             const parsed = parsedSnapshot!;
-            // The session adopts the local state's revision: if
-            // a sign-in follows, the first edit continues the
-            // counter from the work already on this device.
-            rankingsRevRef.current = finiteRev(parsed.rev);
             const guestTriage: Record<string, TriageValue> = parsed.triageMap || {};
             // Sanitize saved master list against the triage map: drop unranked
             // leftovers from older saves; every ranked song keeps its position.
@@ -1438,7 +1335,6 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
             );
             setTriageMap(guestTriage);
             setMasterList(guestMaster);
-            setBucketRanks(getDerivedBucketRanks(guestTriage, guestMaster));
 
             if (typeof window !== 'undefined') {
               const params = new URLSearchParams(window.location.search);
@@ -1482,10 +1378,6 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   type RankingsSyncPayload = {
     map: Record<string, TriageValue>;
     master: Song[];
-    /** The client revision this payload's state carries — every
-     *  confirmed write records it in the row (client_rev), which
-     *  is what makes the next boot's promotion a counter test. */
-    rev: number | null;
   };
 
   // One transport attempt. Resolves true ONLY on a confirmed write:
@@ -1502,12 +1394,6 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
       triage_map: payload.map,
       master_list: payload.master,
       updated_at: new Date().toISOString(),
-      // Record the revision this write carries — only when the
-      // column exists (pre-migration the key must be omitted
-      // entirely: an upsert naming a missing column fails).
-      ...(revColumnAvailable === true && payload.rev !== null
-        ? { client_rev: payload.rev }
-        : {}),
     };
     if (opts.keepalive) {
       // The page is going away (hide/pagehide): write through a
@@ -1574,14 +1460,33 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
           'the save queue exhausted its retries — changes are retained on this device'
         );
       },
-      onSuccess: () => {
+      onSuccess: (payload) => {
         setSyncNotice(false);
-        // A successful send confirms only ITS payload: the state
-        // is 'saved' when nothing newer is still waiting. This
-        // is the one place 'saved' is ever set mid-session — a
-        // confirmed database write, with its time.
+        // The confirmed state advances to exactly the payload
+        // this success confirms — the queue carries it now
+        // (app/lib/rankingsSync.ts). A successful send confirms
+        // only ITS payload: the state is 'saved' when nothing
+        // newer is still waiting. This is the one place 'saved'
+        // is ever set mid-session — a confirmed database write,
+        // with its time.
+        confirmedStateRef.current = {
+          triageMap: payload.map,
+          masterList: payload.master,
+        };
         const queue = syncQueueRef.current;
         if (queue && !queue.hasPending()) {
+          // The newest state is confirmed in the row, so the
+          // on-device unsent-changes buffer has done its job:
+          // presence means unconfirmed, and this state is
+          // confirmed — clear it. (Guests never enqueue, so the
+          // guest store is never cleared by this path.)
+          try {
+            localStorage.removeItem('weezer_ranker_state');
+          } catch {
+            // A failed clear only means a later boot holds an
+            // identical buffer and discards it (bootState's
+            // content-equality rule) — never a wrong state.
+          }
           setSaveState({ phase: 'saved', savedAt: Date.now() });
         } else {
           setSaveState({ phase: 'saving', savedAt: null });
@@ -1607,119 +1512,88 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
-  /** The revision stamped on the on-disk snapshot, if it has one. */
-  const readDiskSnapshotRev = (): number | null => {
-    try {
-      const raw = localStorage.getItem('weezer_ranker_state');
-      if (!raw) return null;
-      return finiteRev(JSON.parse(raw)?.rev);
-    } catch {
-      return null;
-    }
-  };
-
-  /** Advance the device revision counter for a new write: past
-   *  every revision this device already knows — the session's
-   *  adopted revision, the on-disk snapshot's, and (when a
-   *  genuine edit supersedes a protected buffer) the buffer's —
-   *  so the counter never re-uses a value, whatever order boots
-   *  and edits came in. */
-  const nextRankingsRevision = (supersededRev?: number | null): number => {
-    const next =
-      Math.max(
-        rankingsRevRef.current ?? -1,
-        readDiskSnapshotRev() ?? -1,
-        supersededRev ?? -1
-      ) + 1;
-    rankingsRevRef.current = next;
-    return next;
-  };
-
-  const syncRankingsToDatabase = async (
-    map: Record<string, TriageValue>,
-    master: Song[],
-    opts?: { genuineEdit?: boolean }
-  ) => {
-    // Buffer protection (durability overhaul, Nov 7): while a
-    // qualifying buffer is protected, a write that is NOT a
-    // genuine user edit does NOTHING here — no snapshot re-stamp,
-    // no queue enqueue, no revision advance — so the buffer
-    // stays byte-identical and promotable until a genuine edit
-    // supersedes it. The state setters at the call sites still
-    // run (the session shows the loaded state); only this
-    // durable write is held. A genuine edit writes through,
-    // clears the protection, and takes a revision PAST the
-    // buffer's, so the supersede is itself revision-ordered.
-    // `genuineEdit` DEFAULTS TO FALSE — a call site must opt in,
-    // which is what makes the invariant structural rather than
-    // a convention.
-    let supersededBufferRev: number | null = null;
-    const protectedBuffer = protectedBufferRef.current;
-    if (protectedBuffer) {
-      if (
-        decideSnapshotWrite({
-          protectionArmed: true,
-          genuineEdit: opts?.genuineEdit === true,
-        }) === 'skip'
-      ) {
-        noteSaveDiagnostic(
-          'buffer-write-skipped',
-          'a non-edit write was held so the unpromoted buffer stays promotable'
-        );
-        return;
-      }
-      supersededBufferRev = protectedBuffer.rev;
-      protectedBufferRef.current = null;
-      noteSaveDiagnostic(
-        'buffer-superseded',
-        'the first genuine edit superseded the protected buffer'
-      );
-    }
-    // The snapshot carries its owner and save time (Nov 6, 2026):
-    // boot compares them against the account row to recover work
-    // whose database write never landed — see bootRankings.ts.
-    // The stamp is the live session's user — or, when there is no
-    // session, the device's remembered user (Nov 7, 2026): a
-    // stranded owner's edits ARE that account's work, and stamping
-    // them so is what lets the next signed-in boot recover them
-    // as its unsent-edits buffer instead of discarding them as
-    // guest work. A true guest (no session, no remembered user)
-    // stamps null, exactly as before.
-    // The snapshot also carries a REVISION (durability overhaul,
-    // Nov 7): a counter advanced on every write, recorded in the
-    // row by every confirmed database write — boot promotion is
-    // a revision comparison whenever both sides carry one, and
-    // device clocks can no longer strand a buffer.
+  /**
+   * THE edit path (database-authority model, Nov 7
+   * simplification). Every rankings edit — triage answers,
+   * Refine moves and drags, matchup results, Final Review
+   * reorders and normalization, magic fill — is one atomic
+   * commit of the single state object: both halves replace
+   * together, so the map/master disagreement class (the
+   * Photograph resurrection: the Refine funnel synced a map it
+   * never committed, and the next edit built on the stale half)
+   * is unrepresentable — there is no second variable to leave
+   * behind.
+   *
+   * A commit does three things, in order:
+   * 1. Replaces the session's effective state (the render
+   *    derives bucketRanks from it — optimistic as ever; only
+   *    the word "saved" waits for confirmation).
+   * 2. Writes the device copy synchronously. For a guest it IS
+   *    the store (no account exists). For a signed-in user it
+   *    is the unsent-changes buffer: it holds exactly the
+   *    newest unconfirmed state, and the queue's confirmed
+   *    write clears it — presence means unconfirmed, by
+   *    construction. The stamp is the live session's user, or
+   *    the device's remembered user when the session died (a
+   *    stranded owner's edits ARE that account's work — the
+   *    stamp is what lets the next sign-in boot hold them as
+   *    that account's pending buffer instead of mistaking them
+   *    for guest work). A true guest stamps null.
+   * 3. For a signed-in user, enqueues the state for the
+   *    database write and moves the save state to 'saving'.
+   *    Only the queue's confirmed write (its onSuccess, above)
+   *    may advance the confirmed state and say 'saved'.
+   */
+  const commitEdit = (nextState: RankingsStateData) => {
+    setTriageMap(nextState.triageMap);
+    setMasterList(nextState.masterList);
     if (userId) rememberLastUserId(userId);
-    const rev = nextRankingsRevision(supersededBufferRev);
-    localStorage.setItem(
-      'weezer_ranker_state',
-      JSON.stringify({
-        triageMap: map,
-        masterList: master,
-        userId: resolveSnapshotStampUserId(userId, readLastUserId()),
-        savedAt: Date.now(),
-        rev,
-      })
-    );
+    try {
+      localStorage.setItem(
+        'weezer_ranker_state',
+        JSON.stringify({
+          triageMap: nextState.triageMap,
+          masterList: nextState.masterList,
+          userId: resolveSnapshotStampUserId(userId, readLastUserId()),
+          savedAt: Date.now(),
+        })
+      );
+    } catch {
+      // A device copy that cannot be written (quota, privacy
+      // mode) degrades the buffer, never the edit: the queue
+      // below still carries the state to the row.
+    }
     if (!userId) {
-      // No account to save to (guest, or stranded): the write is
+      // No account to save to (guest, or stranded): the work is
       // on this device only, and the indicator says exactly that.
       setSaveState({ phase: 'local-only', savedAt: Date.now() });
       return;
     }
-    // The edit is durable on the device and queued — 'saving',
-    // not 'saved'. Only the queue's confirmed write (its
-    // onSuccess with nothing pending) may say 'saved'.
     setSaveState({ phase: 'saving', savedAt: null });
-    syncQueueRef.current?.enqueue({ map, master, rev });
+    syncQueueRef.current?.enqueue({
+      map: nextState.triageMap,
+      master: nextState.masterList,
+    });
+  };
+
+  /** The long-standing public shape: push a (map, master) pair
+   *  as the session's state. Now simply a commitEdit of that
+   *  pair — the onboarding pushes in StepDashboard/StepGarage2
+   *  call it with the context's current pair right after
+   *  sign-up, which writes the session's state (including any
+   *  boot-held pending work) to the new account's row through
+   *  the ordinary confirmed path. */
+  const syncRankingsToDatabase = async (
+    map: Record<string, TriageValue>,
+    master: Song[]
+  ) => {
+    commitEdit({ triageMap: map, masterList: master });
   };
 
   const updateAndSyncBucketRanks = (
     newBucketRanks: Record<BucketType, Song[]>,
     updatedMap?: Record<string, TriageValue>
   ) => {
-    setBucketRanks(newBucketRanks);
     const activeMap = updatedMap || triageMap;
     const newMaster = [
       ...(newBucketRanks.banger || []),
@@ -1728,54 +1602,34 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
       ...(newBucketRanks.skip || []),
       ...(newBucketRanks.trash || []),
     ];
-    setMasterList(newMaster);
-    // The map this funnel computes and syncs must also be
-    // COMMITTED to state, in the same act as the ranks and the
-    // list. Until Nov 7 it was not: the payload carried the new
-    // map while the context's triageMap kept the moved song's OLD
-    // bucket, so the next edit of the visit — which builds its
-    // map from state — silently restored the previous move's
-    // song in the payload it wrote (the Photograph resurrection:
-    // a Refine demote reverted by the following Refine move, on a
-    // healthy network, with every payload landing). The three
-    // state variables must never disagree again.
-    setTriageMap(activeMap);
-    // The one funnel every genuine ranking edit flows through —
-    // triage answers, bucket moves, Refine results, reorder
-    // drags (and handleMagicFill, which calls this) — so it is
-    // the funnel that opts into the buffer guard's genuine-edit
-    // path (durability overhaul, Nov 7).
-    syncRankingsToDatabase(activeMap, newMaster, { genuineEdit: true });
+    commitEdit({ triageMap: activeMap, masterList: newMaster });
   };
 
   const setSongBucket = (id: string, bucket: TriageValue) => {
     const map = { ...triageMap, [id]: bucket };
     const reconciled = reconcileMasterList(masterList, map);
-    setTriageMap(map);
-    setMasterList(reconciled);
-    syncRankingsToDatabase(map, reconciled, { genuineEdit: true });
+    commitEdit({ triageMap: map, masterList: reconciled });
   };
 
   // Final Review entry normalization (belt and braces): reconcile
   // heals triage writes as they happen and sanitize heals saves at
   // load, but this pass — the same sortByBucketBlock both of them
   // use — guarantees the master step only ever receives a
-  // bucket-block-ordered list. No-op, and no sync, when the list is
-  // already normalized.
-  // DELIBERATELY not a genuine edit for the buffer guard: this is
-  // a state-maintenance write of loaded state — the exact class
-  // the guard holds while a buffer is protected (durability
-  // overhaul, Nov 7). Its syncRankingsToDatabase call therefore
-  // passes no opts and is held in that window; outside it, the
-  // call behaves exactly as before.
+  // bucket-block-ordered list. No-op, and no commit, when the list
+  // is already normalized. (Under the overhaul this pass was the
+  // one NON-edit writer, held by the buffer guard while a buffer
+  // waited; in the database-authority model there is no second
+  // write channel to guard — normalization builds on the session's
+  // effective state like any edit, and a boot-held buffer folds in
+  // through it exactly as the design specifies for the next
+  // commitEdit.)
   const normalizeMasterList = () => {
     const normalized = sortByBucketBlock(masterList, triageMap);
     const changed =
       normalized.length !== masterList.length ||
       normalized.some((song, i) => song.id !== masterList[i].id);
     if (!changed) return;
-    setMasterList(normalized);
-    syncRankingsToDatabase(triageMap, normalized);
+    commitEdit({ triageMap, masterList: normalized });
   };
 
   const handleMagicFill = () => {
@@ -1788,10 +1642,10 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
       else if (rand < 0.9) newMap[song.id] = 'skip';
       else newMap[song.id] = 'trash';
     });
-    
+
     const derived = getDerivedBucketRanks(newMap, masterList);
     updateAndSyncBucketRanks(derived, newMap);
-    
+
     alert('Magic Fill Complete! 206 songs bucketed.');
   };
 
@@ -1802,8 +1656,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     const temp = list[index];
     list[index] = list[targetIdx];
     list[targetIdx] = temp;
-    setMasterList(list);
-    syncRankingsToDatabase(triageMap, list, { genuineEdit: true });
+    commitEdit({ triageMap, masterList: list });
   };
 
   const navigateInternal = (
@@ -1843,7 +1696,8 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     }
 
     const guardedStep = resolveGuardedStep(targetStep, triageMap, masterList); if (guardedStep === 'rank_buckets') {
-      setBucketRanks(getDerivedBucketRanks(triageMap, masterList));
+      // (bucketRanks needs no refresh here anymore: it is
+      // derived from (triageMap, masterList) at render.)
       // Fresh entries start at stage 0; RETURN landings (Final
       // Review's Back) keep the stage the user left — Step2Refine
       // writes its stage back here as it moves, so a return lands
@@ -2056,13 +1910,11 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         recordReturnOrigins(guarded, stepRef.current);
       }
 
-      // Refine landings refresh the derived bucket lists (as any
-      // landing does), but a pop NEVER resets the stage or the
-      // matchup flag: Step2Refine writes its stage back as it
-      // moves, so Back/Forward returns to the work in progress.
-      if (guarded === 'rank_buckets') {
-        setBucketRanks(getDerivedBucketRanks(tm, ml));
-      }
+      // Refine landings need no bucket-list refresh (bucketRanks
+      // is render-derived now), and a pop NEVER resets the stage
+      // or the matchup flag: Step2Refine writes its stage back
+      // as it moves, so Back/Forward returns to the work in
+      // progress.
 
       if (guarded !== requested) {
         // Guard-rewritten landing: a place the user didn't ask
@@ -2366,13 +2218,12 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     setFriendsList([]);
     setFriendCards([]);
     setPendingRequestsCount(0);
-    setBucketRanks({ banger: [], slaps: [], mid: [], skip: [], trash: [] });
     localStorage.removeItem('weezer_ranker_state');
-    // The revision counter belongs to the signed-in state's
-    // lineage; the next account (or guest) starts from whatever
-    // its own boot adopts.
-    rankingsRevRef.current = null;
-    protectedBufferRef.current = null;
+    // The boot bookkeeping belongs to the signed-in session
+    // that just ended; the next account (or guest) boots its
+    // own confirmed state from its own row.
+    bootedRankingsUserRef.current = null;
+    confirmedStateRef.current = EMPTY_RANKINGS_STATE;
     setSaveState(INITIAL_SAVE_STATE);
     // History reset (see navigateInternal): Back after sign-out
     // must never resurrect a signed-in page.

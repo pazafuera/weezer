@@ -14,6 +14,7 @@ import {
   FULL_SONG_POOL,
   ALBUMS_BY_ID,
   ALBUM_NAME_TO_ID,
+  getAlbumThemeByName,
 } from '../data/constants';
 import { FlyingWIcon, AlbumArtwork, SHARE_BUTTON_CLASS } from './SharedUI';
 import { encodeShareData } from '@/utils/shareHelper';
@@ -567,7 +568,14 @@ export default function Step4Wrapped({
           name: albumMeta ? albumMeta.name : s.album,
           total: 0,
           count: 0,
-          color: s.albumColor || 'bg-slate-500',
+          // The album's palette color BY NAME (constants.ts
+          // ALBUM_COLORS) — never the first song's stored color:
+          // for B-Sides & Rarities that made the aggregate's
+          // color depend on song order; by name it is the
+          // collection's olive, as the palette specifies.
+          color: getAlbumThemeByName(
+            albumMeta ? albumMeta.name : s.album
+          ).bg,
           scores: [],
         };
       }
@@ -1921,10 +1929,9 @@ export default function Step4Wrapped({
 
                     <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
                       <div
-                        className={`h-full rounded-full ${
-                          album.color || 'bg-slate-500'
-                        }`}
+                        className="h-full rounded-full"
                         style={{
+                          backgroundColor: album.color || '#64748B',
                           width: `${(album.score / 5) * 100}%`,
                         }}
                       />

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { BucketType, BUCKET_CONFIG, FULL_SONG_POOL, SINGLE_SONG_IDS, Song } from '../data/constants';
+import { BucketType, BUCKET_CONFIG, FULL_SONG_POOL, SINGLE_SONG_IDS, Song, getAlbumThemeByName } from '../data/constants';
 import {
   countBucketedSongs,
   countCategorizedSongs,
@@ -529,6 +529,14 @@ export default function Step1Triage({
             ? section.songs.filter((s) => !triageMap[s.id])
             : section.songs;
           const firstSong = section.songs[0];
+          // The banner wears the section ALBUM's palette theme
+          // (constants.ts ALBUM_COLORS) with the theme's own text
+          // color — the old code forced white text on every album
+          // color, a ~1.9:1 failure on the light ones. A section
+          // with an explicit bannerClass keeps its designed look.
+          const bannerTheme = section.bannerClass
+            ? null
+            : getAlbumThemeByName(firstSong.album);
 
           if (visibleSongs.length === 0 && hideSorted) return null;
 
@@ -539,7 +547,14 @@ export default function Step1Triage({
               className="bg-white border border-slate-300 rounded-3xl overflow-hidden shadow-xs scroll-mt-36"
             >
               {/* SECTION BANNER */}
-              <div className={`${section.bannerClass ?? firstSong.albumColor} p-4 text-white text-center border-b border-slate-300`}>
+              <div
+                className={`${section.bannerClass ?? ''} p-4 text-center border-b border-slate-300 ${section.bannerClass ? 'text-white' : ''}`}
+                style={
+                  bannerTheme
+                    ? { backgroundColor: bannerTheme.bg, color: bannerTheme.text }
+                    : undefined
+                }
+              >
                 <span className="text-[10px] font-black uppercase tracking-widest opacity-80 block">
                   {section.eyebrow ??
                     (firstSong.isBSide ? 'Special Collection' : `Album (${firstSong.year})`)}

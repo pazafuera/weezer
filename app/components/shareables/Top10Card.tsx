@@ -61,8 +61,6 @@ export type ShareSong = {
   id: string;
   title: string;
   album: string;
-  /** Tailwind bg class from the song data, e.g. 'bg-[#0072CE]'. */
-  albumColor: string;
   year: number;
   isBSide?: boolean;
   albumId?: string;

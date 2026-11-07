@@ -13,9 +13,11 @@
  * refresh copies exactly those fields — title, album, year — from
  * the catalog entry with the same id onto each saved entry, and
  * touches nothing else: entry order is preserved, and every
- * non-catalog field on the saved entry (albumColor, isBSide, and
- * anything a save carries beyond the catalog's fields) passes
- * through untouched. Entries whose id the catalog doesn't know
+ * non-catalog field on the saved entry (isBSide, the legacy
+ * albumColor older saves still carry — inert since the palette
+ * single-sourcing, Nov 7 — and anything else a save carries
+ * beyond the catalog's fields) passes through untouched.
+ * Entries whose id the catalog doesn't know
  * pass through unchanged, and entries already current are returned
  * by reference, so a fully current list comes back element-for-
  * element identical.

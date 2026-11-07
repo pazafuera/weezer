@@ -2,7 +2,7 @@
 
 import React, { useRef, useState, useMemo } from 'react';
 import { toPng } from 'html-to-image';
-import { ALBUM_NAME_TO_ID, BucketType } from '../data/constants';
+import { ALBUM_NAME_TO_ID, BucketType, getAlbumTheme, getAlbumThemeByName } from '../data/constants';
 import { cardFromExportFilename, trackAnalytics } from '../lib/analytics';
 import { AlbumArtwork, SHARE_BUTTON_CLASS } from './SharedUI';
 import { displayFont, handFont } from './shareables/fonts';
@@ -44,32 +44,6 @@ interface TierListChartProps {
   fixedView?: 'songs' | 'albums';
 }
 
-// OFFICIAL WEEZER ALBUM COLOR IDENTITIES
-const ALBUM_COLORS: Record<string, { bg: string; text: string }> = {
-  'The Blue Album': { bg: 'bg-[#0072CE]', text: 'text-white' },
-  'Pinkerton': { bg: 'bg-[#1a1a1a]', text: 'text-pink-300' },
-  'Green Album': { bg: 'bg-emerald-500', text: 'text-emerald-950' },
-  'Maladroit': { bg: 'bg-amber-900', text: 'text-amber-100' },
-  'Make Believe': { bg: 'bg-zinc-800', text: 'text-zinc-100' },
-  'Red Album': { bg: 'bg-red-600', text: 'text-white' },
-  'Raditude': { bg: 'bg-yellow-400', text: 'text-yellow-950' },
-  'Hurley': { bg: 'bg-[#5c3a21]', text: 'text-orange-100' },
-  'Death to False Metal': { bg: 'bg-[#005fA3]', text: 'text-amber-300' },
-  'EWBAITE': { bg: 'bg-amber-600', text: 'text-amber-50' },
-  'Everything Will Be Alright in the End': { bg: 'bg-amber-600', text: 'text-amber-50' },
-  'White Album': { bg: 'bg-slate-100', text: 'text-slate-600' },
-  'Pacific Daydream': { bg: 'bg-fuchsia-500', text: 'text-white' },
-  'Teal Album': { bg: 'bg-teal-400', text: 'text-teal-950' },
-  'Black Album': { bg: 'bg-black', text: 'text-slate-300' },
-  'OK Human': { bg: 'bg-sky-300', text: 'text-sky-950' },
-  'Van Weezer': { bg: 'bg-purple-600', text: 'text-purple-100' },
-  'SZNZ: Spring': { bg: 'bg-lime-400', text: 'text-lime-950' },
-  'SZNZ: Summer': { bg: 'bg-amber-400', text: 'text-amber-950' },
-  'SZNZ: Autumn': { bg: 'bg-orange-600', text: 'text-white' },
-  'SZNZ: Winter': { bg: 'bg-cyan-200', text: 'text-cyan-950' },
-};
-
-const DEFAULT_COLOR = { bg: 'bg-slate-800', text: 'text-slate-100' };
 
 // 206 Songs Distribution Cutoffs — five tiers (S/A/B/C/F) since
 // Oct 2026: the D tier was dropped (the user's call) so the rows line
@@ -528,7 +502,7 @@ export default function TierListChart({
               ) : (
                 tier.items.map((item) => {
                   const resolvedId = viewMode === 'albums' ? item.id : (ALBUM_NAME_TO_ID[item.album] || 'unknown');
-                  const theme = ALBUM_COLORS[item.album] || DEFAULT_COLOR;
+                  const theme = viewMode === 'albums' ? getAlbumThemeByName(item.album) : getAlbumTheme(item);
 
                   // ALBUMS VIEW (Uses actual Album Artwork)
                   if (viewMode === 'albums') {
@@ -556,9 +530,10 @@ export default function TierListChart({
                     <div
                       key={item.id}
                       data-tier-export-tile="true"
-                      className={`w-20 h-20 sm:w-24 sm:h-24 shrink-0 flex items-center justify-center p-1 text-center select-none ${theme.bg} ${theme.text} ${
+                      className={`w-20 h-20 sm:w-24 sm:h-24 shrink-0 flex items-center justify-center p-1 text-center select-none border border-slate-700 ${
                         isExportMode ? '' : 'hover:scale-[1.02] transition-transform cursor-default'
                       }`}
+                      style={{ backgroundColor: theme.bg, color: theme.text }}
                       title={`#${item.rank} ${item.name} (${item.album})`}
                     >
                       <span className="text-[10px] sm:text-[11px] font-black tracking-tight leading-tight line-clamp-4 text-balance uppercase">

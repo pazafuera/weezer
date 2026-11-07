@@ -411,10 +411,10 @@ export default function Step1Triage({
               style={{ width: `${progressPercent}%` }}
             />
             <div
-              className="absolute top-1/2 -translate-y-1/2 transition-all duration-300 z-30 text-[#0072CE] w-8 h-5 ml-[-16px]"
+              className="absolute top-1/2 -translate-y-1/2 transition-all duration-300 z-30 ml-[-17px] grid h-[34px] w-[34px] place-items-center rounded-full border-2 border-[#0C1220] bg-[#FFC72C]"
               style={{ left: `${Math.min(98, Math.max(2, progressPercent))}%` }}
             >
-              <FlyingWIcon className="w-full h-full drop-shadow-sm" />
+              <FlyingWIcon className="h-auto w-[24px] text-[#0072CE]" />
             </div>
           </div>
 

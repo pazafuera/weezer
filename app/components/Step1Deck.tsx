@@ -2439,13 +2439,14 @@ export default function Step1Deck({
         </div>
         {/* The Flying W rides the fill's edge — the same treatment
             as the list view's bar (Step1Triage): a sky fill
-            (bg-[#7DD3FC]) so the #0072CE W reads against both the
-            fill and the track (owner: on the old solid-#0072CE
-            fill the W drowned in its own color). Round 2: the
-            track itself is now paper-white with an ink frame
-            (approved mock) — fill and W colors unchanged. A w-8
-            h-5 marker centered on the fill edge, its left %
-            clamped to 2–98 so it never hangs off either end. */}
+            (bg-[#7DD3FC]) under it, on a paper-white track with an
+            ink frame (Round 2, approved mock). The marker itself
+            is the dashboard journey bar's badge (owner, Nov 6): a
+            34px gold disc with an ink ring and the real Flying W
+            in brand blue — the bare blue W read faint against the
+            fill and the track. Centered on the fill edge (the
+            −17px margin is half the disc), its left % clamped to
+            2–98 so it never hangs off either end. */}
         <div className="relative w-full h-3.5 my-2 z-0">
           <div className="absolute inset-0 bg-white rounded-full border-[2.5px] border-[#0C1220] z-10" />
           <div
@@ -2453,12 +2454,12 @@ export default function Step1Deck({
             style={{ width: `${progressPercent}%` }}
           />
           <div
-            className="absolute top-1/2 -translate-y-1/2 transition-all duration-300 z-30 text-[#0072CE] w-8 h-5 ml-[-16px] pointer-events-none"
+            className="absolute top-1/2 -translate-y-1/2 transition-all duration-300 z-30 ml-[-17px] pointer-events-none grid h-[34px] w-[34px] place-items-center rounded-full border-2 border-[#0C1220] bg-[#FFC72C]"
             style={{
               left: `${Math.min(98, Math.max(2, progressPercent))}%`,
             }}
           >
-            <FlyingWIcon className="w-full h-full drop-shadow-sm" />
+            <FlyingWIcon className="h-auto w-[24px] text-[#0072CE]" />
           </div>
         </div>
       </div>

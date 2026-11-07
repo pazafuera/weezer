@@ -44,6 +44,7 @@ import {
   useFanhood,
 } from '../lib/fanhood';
 import { fanhoodReconcileSettled } from '../lib/fanhoodSync';
+import { FlyingWIcon } from './SharedUI';
 import { ERAS } from './shareables/EraDnaCard';
 import { displayFont } from './shareables/fonts';
 import WeezerOnboardingModal from './WeezerOnboardingModal';
@@ -598,11 +599,7 @@ function JourneyBar({ total }: { total: number }) {
           className="absolute top-1/2 z-[3] grid h-[34px] w-[34px] -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-[3px] border-[#0C1220] bg-[#FFC72C] shadow-[0_4px_10px_rgba(0,0,0,0.4)]"
           style={{ left: `${pos}%` }}
         >
-          <span
-            className={`${displayFont.className} text-xs leading-none text-[#0C1220]`}
-          >
-            =W=
-          </span>
+          <FlyingWIcon className="h-auto w-[24px] text-[#0072CE]" />
         </span>
       </div>
     </div>

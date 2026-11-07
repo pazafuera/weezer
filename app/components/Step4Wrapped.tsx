@@ -27,6 +27,7 @@ import {
 } from '../lib/archetypes';
 import { isLoreUnlocked, youreAtPhrase } from '../data/loreGame';
 import { fanhoodDisplay, useFanhood } from '../lib/fanhood';
+import { trackAnalytics } from '../lib/analytics';
 
 // Bucket scores for the Fan Club Tiers album derivation below
 // (mirrors StepShareables).
@@ -2028,6 +2029,8 @@ function SmartShareModule({ stats, top10, userProfile }: any) {
   };
 
   const handleShareClick = async () => {
+    // Analytics: the Thread's share tap (card type 'thread').
+    trackAnalytics('share_initiated', { card: 'thread' });
     setIsSharing(true);
 
     try {

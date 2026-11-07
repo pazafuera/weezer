@@ -1,4 +1,5 @@
 import { toPng } from 'html-to-image';
+import { cardFromExportFilename, trackAnalytics } from '../../lib/analytics';
 
 export type ExportMode = 'auto' | 'save' | 'share';
 
@@ -32,6 +33,13 @@ export async function exportNodeAsPng(
   mode: ExportMode = 'auto',
 ): Promise<void> {
   if (!node) return;
+  // Analytics: every card export on the site funnels through
+  // here, so this is the one honest "share initiated" point —
+  // fired at the tap, before the render (an initiated share is
+  // the funnel event; render success is the card code's own
+  // business). Unrecognized filenames are not counted cards.
+  const card = cardFromExportFilename(filename);
+  if (card) trackAnalytics('share_initiated', { card });
   await new Promise((r) => setTimeout(r, 150));
   try {
     await toPng(node, { quality: 0.1, pixelRatio: 1 });

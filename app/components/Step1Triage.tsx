@@ -10,6 +10,7 @@ import {
   useWeezer,
 } from '../context/WeezerContext';
 import { isQualifiedSubmission } from '../lib/fanStatsMethodology';
+import { trackAnalytics } from '../lib/analytics';
 import { FlyingWIcon, AudioPreviewButton, HelpButton } from './SharedUI';
 import Step1Deck from './Step1Deck';
 
@@ -311,6 +312,11 @@ export default function Step1Triage({
         top: row.getBoundingClientRect().top,
         y: window.scrollY,
       };
+    }
+    // Analytics: the session's first real bucket is the
+    // funnel's "start" (a don't-know tap is not a bucketing).
+    if (value !== 'unknown') {
+      trackAnalytics('sort_started', { oncePerSession: true });
     }
     handleSetBucket(id, value);
   };

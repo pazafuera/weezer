@@ -47,6 +47,7 @@ import {
 } from '../lib/fanhood';
 import { displayFont } from './shareables/fonts';
 import { syncFanhoodAfterRun } from '../lib/fanhoodSync';
+import { trackAnalytics } from '../lib/analytics';
 import FanhoodLeaderboard from './FanhoodLeaderboard';
 import type {
   FanhoodDeepest,
@@ -1510,6 +1511,7 @@ export default function StepLore() {
     }));
     const before = readFanhood();
     setAlreadyRecorded(!!before?.games[activeGameId]);
+    trackAnalytics('game_completed');
     const { record } = recordGameResult(activeGameId, {
       score: total,
       deepest: runDeepest,
@@ -1526,6 +1528,7 @@ export default function StepLore() {
   }, [phase]);
 
   const startGame = (gameId: LoreGameId) => {
+    trackAnalytics('game_started');
     setActiveGameId(gameId);
     setAlreadyRecorded(false);
     setResultStanding(null);

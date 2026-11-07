@@ -3,6 +3,7 @@
 import React, { useRef, useState, useMemo } from 'react';
 import { toPng } from 'html-to-image';
 import { ALBUM_NAME_TO_ID, BucketType } from '../data/constants';
+import { cardFromExportFilename, trackAnalytics } from '../lib/analytics';
 import { AlbumArtwork, SHARE_BUTTON_CLASS } from './SharedUI';
 import { displayFont, handFont } from './shareables/fonts';
 import { POSTER_BLUE } from './shareables/ShareCardShell';
@@ -424,6 +425,11 @@ export default function TierListChart({
         });
         
         const baseFilename = `${username ? `${username}-` : ''}weezer-${viewMode}-tiers.png`;
+        // Analytics: the tier chart exports through its own
+        // funnel (not exportNodeAsPng) — same share-initiated
+        // event, card resolved from the composed filename.
+        const tierCard = cardFromExportFilename(baseFilename);
+        if (tierCard) trackAnalytics('share_initiated', { card: tierCard });
 
         // Slice the one rendered chart into the ordered 4:5 set.
         // A chart short enough for a single slice keeps the original

@@ -22,6 +22,11 @@ import {
   readSaveDiagnostics,
 } from '../lib/saveDiagnostics';
 import type { SaveDiagnosticEvent } from '../lib/saveDiagnostics';
+import {
+  configureAnalytics,
+  setAnalyticsUserId,
+  trackAnalytics,
+} from '../lib/analytics';
 import { INITIAL_SAVE_STATE, bootSaveState } from '../lib/saveStatus';
 import type { SaveState } from '../lib/saveStatus';
 import {
@@ -686,6 +691,17 @@ const RETURN_TRACKED_STEPS: readonly AppStep[] = [
 export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
 
+  // Launch analytics (app/lib/analytics.ts): configure the
+  // singleton's send once, here at provider scope — the insert
+  // translates Supabase's { error } result into a rejection so
+  // the tracker's disable-on-first-failure rule can see it
+  // (until the owner runs the app_events migration, that first
+  // failure is exactly what happens, silently, by design).
+  configureAnalytics(async (row) => {
+    const { error } = await supabase.from('app_events').insert(row);
+    if (error) throw error;
+  });
+
   // Auth State
   const [loadingUser, setLoadingUser] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
@@ -811,6 +827,25 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     () => getDerivedBucketRanks(triageMap, masterList),
     [triageMap, masterList]
   );
+
+  // Sort completion (analytics): fire when the session's triage
+  // CROSSES to all 206 bucketed. Only crossings observed after
+  // the boot settles count — the first settled observation is
+  // the baseline, so a boot that LOADS a finished sort never
+  // fires it (completions are acts, not states), and the
+  // tracker's once-rule keeps a dip-and-return from refiring.
+  const triageCountRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (loadingUser) return;
+    const count = Object.values(triageMap).filter(
+      (v) => v !== 'unknown'
+    ).length;
+    const prev = triageCountRef.current;
+    triageCountRef.current = count;
+    if (prev !== null && prev < FULL_SONG_POOL.length && count >= FULL_SONG_POOL.length) {
+      trackAnalytics('sort_completed', { oncePerSession: true });
+    }
+  }, [triageMap, loadingUser]);
 
   // Cached Community Data State (Fix B)
   const [communityMasterLists, setCommunityMasterLists] = useState<Song[][]>([]);
@@ -1203,6 +1238,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         }
         bootedRankingsUserRef.current = uid;
         setUserId(uid);
+        setAnalyticsUserId(uid);
 
         // This device now remembers whose account it holds
         // (app/lib/lastUser.ts): if the session later dies, the
@@ -1361,6 +1397,11 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
       console.error('Error loading rankings:', err);
     } finally {
       setLoadingUser(false);
+      // The visit's funnel anchor (analytics): fired when the
+      // boot settles, once per session — the tracker's
+      // once-rule absorbs the duplicate invocations the boot
+      // guard turns away above.
+      trackAnalytics('session_start', { oncePerSession: true });
     }
   }
 
@@ -2212,6 +2253,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     setStranded(false);
     await supabase.auth.signOut();
     setUserId(null);
+    setAnalyticsUserId(null);
     setUserProfile(null);
     setTriageMap({});
     setMasterList([]);

@@ -15,7 +15,7 @@ import {
   readSaveDiagnostics,
 } from '../lib/saveDiagnostics';
 import type { SaveDiagnosticEvent } from '../lib/saveDiagnostics';
-import { INITIAL_SAVE_STATE } from '../lib/saveStatus';
+import { INITIAL_SAVE_STATE, bootSaveState } from '../lib/saveStatus';
 import type { SaveState } from '../lib/saveStatus';
 import {
   shouldArmBufferProtection,
@@ -1295,20 +1295,20 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
             'heal write failed — the buffer stays promotable and the next boot retries'
           );
         }
-        // The boot's save state, stated as plainly as the
-        // indicator will show it: a healed buffer is a CONFIRMED
-        // write (timestamped); a row load is saved by definition
-        // (what loads IS the database state, no time to claim);
-        // a failed heal leaves the state on this device only.
-        if (boot.source === 'local-snapshot' && boot.healOk === true) {
-          setSaveState({ phase: 'saved', savedAt: Date.now() });
-        } else if (boot.source === 'local-snapshot' && boot.healOk === false) {
-          setSaveState({ phase: 'local-only', savedAt: null });
-        } else if (boot.source === 'account-row' || boot.source === 'merged') {
-          setSaveState({ phase: 'saved', savedAt: null });
-        } else {
-          setSaveState(INITIAL_SAVE_STATE);
-        }
+        // The boot's save state (bootSaveState in
+        // app/lib/saveStatus.ts): a healed buffer is a CONFIRMED
+        // write, so it starts 'saved' with its time; a failed
+        // heal starts 'local-only'. Everything else — a plain
+        // row load above all — starts IDLE: nothing was saved
+        // this session, and announcing "All changes saved" at
+        // boot only confused the owner about work he hadn't
+        // done (his ruling, Nov 7, after the overhaul shipped).
+        setSaveState(
+          bootSaveState(
+            { source: boot.source, healOk: boot.healOk },
+            Date.now()
+          )
+        );
         // Buffer protection arms exactly when the row won over a
         // qualifying buffer: from here until the first genuine
         // edit, no state-maintenance write may re-stamp the

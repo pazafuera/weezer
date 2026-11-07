@@ -3,7 +3,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useWeezer, AppStep, getProgressState, countCategorizedSongs } from '../context/WeezerContext';
-import { saveIndicatorCopy } from '../lib/saveStatus';
+import {
+  saveNoticeCopy,
+  isSaveIndicatorStep,
+  SAVE_NOTICE_MS,
+} from '../lib/saveStatus';
 import { FULL_SONG_POOL } from '../data/constants';
 import { isLoreUnlocked } from '../data/loreGame';
 import { FlyingWIcon } from './SharedUI';
@@ -73,13 +77,32 @@ export default function AppShell({
     saveState,
   } = useWeezer();
 
-  // The save indicator's line (durability overhaul, Nov 7): the
-  // copy comes from app/lib/saveStatus.ts and is null until there
-  // is a save state worth stating. It is driven ONLY by the sync
-  // queue's confirmed writes — 'saved' here means the database
-  // holds the latest edit, and the failed/local-only phases are
-  // tinted so they read as warnings at a glance.
-  const saveIndicatorText = saveIndicatorCopy(saveState);
+  // The save indicator's line (durability overhaul, Nov 7; the
+  // owner's scope + transience rulings later that day): the copy
+  // comes from app/lib/saveStatus.ts and renders ONLY on the
+  // ranking-editing steps (triage, refine, final review) — a
+  // save notice is only relevant where ranking edits happen.
+  // The state itself stays global in the context, so arriving
+  // on an editing step mid-save still shows the truth. On the
+  // strip the success notice is transient: 'saved' shows for
+  // SAVE_NOTICE_MS from its confirmation time and then clears;
+  // the warning phases persist while their condition lasts.
+  // The timer below only re-derives the copy when the window
+  // ends — it is keyed to the saveState object itself, so any
+  // newer state (a fresh 'Saving…', a warning, a newer 'saved')
+  // cancels it in cleanup before it can fire; nothing stale can
+  // stomp a newer state.
+  const [saveNoticeNow, setSaveNoticeNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (saveState.phase !== 'saved' || saveState.savedAt === null) return;
+    const remaining = saveState.savedAt + SAVE_NOTICE_MS - Date.now();
+    if (remaining <= 0) return;
+    const t = setTimeout(() => setSaveNoticeNow(Date.now()), remaining);
+    return () => clearTimeout(t);
+  }, [saveState]);
+  const saveIndicatorText = isSaveIndicatorStep(step)
+    ? saveNoticeCopy(saveState, saveNoticeNow)
+    : null;
   const saveIndicatorClass =
     saveState.phase === 'failed'
       ? 'bg-rose-600 text-white'
@@ -546,11 +569,12 @@ export default function AppShell({
           </div>
         </div>
         {/* SAVE INDICATOR (durability overhaul, Nov 7): a slim
-            second row INSIDE the sticky header, so it is visible
-            from every screen the app chrome frames — sort,
-            refine, final review — without floating over content
-            or moving anything. Renders only when there is a save
-            state to state. */}
+            second row INSIDE the sticky header. Renders only on
+            the ranking-editing steps (triage, refine, final
+            review) and only while there is a save state worth
+            stating — the success notice clears itself a few
+            seconds after the confirmed write; warnings stay
+            until the condition clears. */}
         {saveIndicatorText && (
           <div
             className={`px-4 py-1 text-center text-[11px] font-bold tracking-wide ${saveIndicatorClass}`}

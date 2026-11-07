@@ -7,7 +7,7 @@ import { BucketType, Song, FULL_SONG_POOL } from '../data/constants';
 import { sanitizeMasterList, reconcileMasterList, getRankedSongs, sortByBucketBlock } from '@/utils/rankingUtils';
 import { createRankingsSyncQueue } from '../lib/rankingsSync';
 import type { RankingsSyncQueue } from '../lib/rankingsSync';
-import { localSnapshotSupersedesAccount } from '../lib/bootRankings';
+import { resolveBootRankings } from '../lib/bootRankings';
 import { refreshMasterListMetadata } from '../lib/catalogMetadata';
 import {
   forgetAccountFanhoodSync,
@@ -402,21 +402,29 @@ type RankingsRow = {
 } | null;
 
 /**
- * Copies guest rankings stored in localStorage to Supabase for the
- * authenticated user, and returns the rankings row the caller
- * should load from.
+ * Resolves where a signed-in boot loads its rankings from, and
+ * returns the row the caller should load.
  *
- * Boot de-duplication (Nov 4, 2026): the migration's "does the
- * account already have rankings?" read and the caller's main
- * rankings fetch are the SAME row, so the caller fires its fetch
- * up front and passes the promise in — weezer_rankings is read
- * once per boot, not twice. When the migration writes, it returns
- * the row it just wrote (the upsert payload, verbatim) instead of
- * making the caller re-read it; when the write fails, it returns
- * the fetched row — exactly what the caller's own post-migration
- * fetch would have produced before this fold. Without a passed
- * promise it reads the row itself, as before. The
- * never-overwrite semantics are unchanged.
+ * The decision itself lives in resolveBootRankings
+ * (app/lib/bootRankings.ts) — the database-led precedence: the
+ * account row is the authority; the local snapshot participates
+ * only as this account's stamped unsent-edits buffer (loaded when
+ * provably newer, healing the row) or as unstamped guest work
+ * (migrating into an account with nothing real to protect, or
+ * merging per song into one that has some). This function is the
+ * I/O around that decision: fetch the row, read the snapshot,
+ * perform the heal write the resolution calls for.
+ *
+ * Boot de-duplication (Nov 4, 2026): the "does the account already
+ * have rankings?" read and the caller's main rankings fetch are
+ * the SAME row, so the caller fires its fetch up front and passes
+ * the promise in — weezer_rankings is read once per boot, not
+ * twice. When this function writes, it returns the row it just
+ * wrote (the upsert payload, verbatim) instead of making the
+ * caller re-read it; when the write fails, it returns the fetched
+ * row — exactly what the caller's own fetch would have produced
+ * before this fold. Without a passed promise it reads the row
+ * itself, as before.
  */
 export const migrateGuestRankingsToUser = async (
   newUserId: string,
@@ -447,20 +455,14 @@ export const migrateGuestRankingsToUser = async (
       (triageMap && Object.keys(triageMap).length > 0) ||
       (masterList && masterList.length > 0);
 
-    if (!hasProgress) return fetchExisting();
-
     const existing = await fetchExisting();
 
-    // NEVER overwrite rankings the account already has. Guest picks
-    // only migrate into an account that has none yet — otherwise,
-    // logging in from a browser holding leftover guest picks would
-    // erase the account's real saved rankings. (Bit us Oct 16, 2026:
-    // temp test picks replaced a real account's rankings at login.)
-    //
     // Only REAL buckets count as existing rankings here: an account
     // whose triage_map holds nothing but 'unknown' ("Don't Know It")
     // marks has no ratings to protect, so guest picks may still
-    // migrate in.
+    // migrate in. (Bit us Oct 16, 2026: temp test picks replaced a
+    // real account's rankings at login — the resolver's matrix is
+    // what keeps that hole closed now.)
     const accountTriageMap = existing?.triage_map as
       | Record<string, unknown>
       | undefined;
@@ -471,72 +473,61 @@ export const migrateGuestRankingsToUser = async (
         )) ||
       (existing?.master_list && existing.master_list.length > 0);
 
-    // RECOVERY (Nov 6, 2026): the never-overwrite rule below guards
-    // against FOREIGN local state — guest picks, or a previous
-    // account's leftovers. It must not discard THIS account's own
-    // newest work: every signed-in edit stamps its local snapshot
-    // with the user id and save time, and if that snapshot is newer
-    // than the account row, the row is simply stale — the last
-    // save never landed (the page was discarded inside the sync
-    // queue's flush window; the snapshot on disk is the only copy).
-    // Load from the snapshot and heal the row with it. The stamp
-    // check (app/lib/bootRankings.ts) is what keeps this from
-    // reopening the Oct 16 hole: unstamped, foreign, legacy, or
-    // older snapshots fall through to the rule below untouched.
-    if (
-      accountHasProgress &&
-      localSnapshotSupersedesAccount({
-        localUserId,
-        localSavedAt: savedAt,
-        userId: newUserId,
-        accountUpdatedAt: existing?.updated_at,
-      })
-    ) {
-      const healed: RankingsRow = {
-        triage_map: triageMap || {},
-        master_list: masterList || [],
-      };
-      const { error } = await supabase.from('weezer_rankings').upsert(
-        {
-          user_id: newUserId,
-          triage_map: healed.triage_map,
-          master_list: healed.master_list,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'user_id' }
-      );
-      if (error) {
-        // The heal didn't land; the session still loads the right
-        // state, and the snapshot stays newer than the row, so the
-        // next boot retries the heal instead of losing the work.
-        console.error('Failed to heal rankings from local snapshot:', error);
-      }
-      return healed;
-    }
-
-    if (accountHasProgress) return existing;
-
-    const { error } = await supabase.from('weezer_rankings').upsert(
-      {
-        user_id: newUserId,
-        triage_map: triageMap || {},
-        master_list: masterList || [],
-        updated_at: new Date().toISOString(),
+    const resolution = resolveBootRankings({
+      userId: newUserId,
+      account: existing
+        ? {
+            hasRealProgress: !!accountHasProgress,
+            updatedAt: existing.updated_at,
+          }
+        : null,
+      local: {
+        hasProgress: !!hasProgress,
+        userId: localUserId,
+        savedAt,
       },
-      { onConflict: 'user_id' }
-    );
-    if (error) {
-      // The write didn't land (the old code never read this error
-      // and the caller's fetch simply re-read the unchanged row):
-      // hand back the fetched row so the session loads exactly
-      // what it would have loaded before the fold.
-      console.error('Failed to migrate guest rankings:', error);
-      return existing;
+    });
+
+    switch (resolution.source) {
+      case 'local-snapshot': {
+        const snapshotRow: RankingsRow = {
+          triage_map: triageMap || {},
+          master_list: masterList || [],
+        };
+        if (resolution.healRow) {
+          const { error } = await supabase.from('weezer_rankings').upsert(
+            {
+              user_id: newUserId,
+              triage_map: snapshotRow.triage_map,
+              master_list: snapshotRow.master_list,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: 'user_id' }
+          );
+          if (error) {
+            console.error('Failed to write boot-resolved rankings:', error);
+            // The two historical failure behaviors the resolver
+            // folds together: a buffer heal (the account HAS real
+            // rankings) still loads the snapshot — the session gets
+            // the right state and the snapshot stays newer than
+            // the row, so the next boot retries the heal. A first
+            // migration (nothing real to protect) hands back the
+            // fetched row, exactly as the pre-resolver code did.
+            return accountHasProgress ? snapshotRow : existing;
+          }
+        }
+        return snapshotRow;
+      }
+      case 'merged':
+        // Guest work merges into the account per song (Part 3 of
+        // the database-led pass). Until that lands, the account
+        // row stands — today's behavior.
+        return existing;
+      case 'account-row':
+      case 'none':
+      default:
+        return existing;
     }
-    return {
-      triage_map: triageMap || {},
-      master_list: masterList || [],
-    };
   } catch (err) {
     console.error('Failed to migrate guest rankings:', err);
     return fetchExisting();

@@ -18,6 +18,7 @@ import FanStats from './components/FanStats';
 import WeezerFriends from './components/WeezerFriends';
 import Login from './components/Login';
 import StepLore from './components/StepLore';
+import SiteStats from './components/SiteStats';
 
 export default function WeezerRankerPage() {
   const {
@@ -196,6 +197,13 @@ export default function WeezerRankerPage() {
       {step === 'friends' && <WeezerFriends />}
 
       {step === 'lore' && <StepLore />}
+
+      {/* The owner's stats page (Nov 7): renders only for his
+          account — SiteStats bounces anyone else to the
+          dashboard — and its data comes from an RPC that
+          answers only to him server-side. Deliberately no menu
+          entry; the account drawer holds the only door. */}
+      {step === 'owner_stats' && <SiteStats />}
         </>
       )}
       </AppShell>

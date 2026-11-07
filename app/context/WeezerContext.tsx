@@ -79,7 +79,8 @@ export type AppStep =
   | 'friends'
   | 'login'
   | 'shareables'
-  | 'lore';
+  | 'lore'
+  | 'owner_stats';
 export type AuthModeType = 'signup' | 'login' | 'magic';
 
 /**
@@ -111,6 +112,7 @@ const KNOWN_APP_STEPS: readonly AppStep[] = [
   'login',
   'shareables',
   'lore',
+  'owner_stats',
 ];
 
 /**

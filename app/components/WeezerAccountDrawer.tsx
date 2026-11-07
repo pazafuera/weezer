@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/utils/supabase';
 import { useWeezer } from '../context/WeezerContext';
 import { saveIndicatorCopy, formatTimeOfDay } from '../lib/saveStatus';
+import { isOwnerUser } from '../lib/owner';
 import { COUNTRY_OPTIONS, US_STATES } from './WeezerOnboardingModal';
 import Link from 'next/link';
 import { displayFont } from './shareables/fonts';
@@ -90,8 +91,14 @@ export default function WeezerAccountDrawer({
   onLogout,
   onOpenOnboarding,
 }: WeezerAccountDrawerProps) {
-  const { setUserProfile, setTriageMap, handleSignOut, saveState, saveDiagnostics } =
-    useWeezer();
+  const {
+    setUserProfile,
+    setTriageMap,
+    handleSignOut,
+    saveState,
+    saveDiagnostics,
+    navigateTo,
+  } = useWeezer();
 
   const [copiedLink, setCopiedLink] = useState(false);
 
@@ -770,6 +777,29 @@ export default function WeezerAccountDrawer({
                   </div>
                 )}
               </div>
+
+              {/* SITE STATS — owner only (Nov 7). This row is
+                  the only door to the stats page, and it renders
+                  only for the owner's own account (app/lib/owner.ts);
+                  the page bounces anyone else who reaches it, and
+                  the numbers themselves sit behind a server-side
+                  owner check. Not a menu item, by design. */}
+              {isOwnerUser(userId) && (
+                <button
+                  onClick={() => {
+                    onClose();
+                    navigateTo('owner_stats');
+                  }}
+                  className="w-full bg-white p-4 rounded-2xl border-[2.5px] border-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)] flex items-center justify-between cursor-pointer text-left"
+                >
+                  <span className="text-[10px] font-black uppercase tracking-widest text-[#3D4A63]">
+                    Site stats
+                  </span>
+                  <span className="text-xs font-black text-[#0072CE]">
+                    View →
+                  </span>
+                </button>
+              )}
 
               {/* PASSWORD RESET */}
               <div className="bg-white p-4 rounded-2xl border-[2.5px] border-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)] space-y-3">

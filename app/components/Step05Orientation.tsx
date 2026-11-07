@@ -149,7 +149,7 @@ export default function Step05Orientation() {
             setAccountCreated(false);
             navigateTo('triage');
           }}
-          className="w-full bg-white hover:bg-sky-50 text-slate-950 font-black text-base sm:text-lg py-4 rounded-[14px] border-[2.5px] border-[#0C1220] shadow-[3px_3px_0_#0C1220] transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_#0C1220] cursor-pointer flex items-center justify-center"
+          className="w-full bg-[#FFC72C] text-slate-950 font-black text-base sm:text-lg py-4 rounded-[14px] border-[2.5px] border-[#0C1220] shadow-[3px_3px_0_#0C1220] transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_#0C1220] cursor-pointer flex items-center justify-center"
         >
           Start Sorting
         </button>

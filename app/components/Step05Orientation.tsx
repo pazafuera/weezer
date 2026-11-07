@@ -154,19 +154,12 @@ export default function Step05Orientation() {
           Start Sorting
         </button>
 
-        {/* Only for signed-out arrivals: this rendered for
-            everyone, including signed-in users — and on the
-            account-created banner screen itself, where it sent
-            the brand-new user back to a login card that
-            instantly bounced them to the dashboard. */}
-        {!userId && (
-          <button
-            onClick={() => navigateTo('login', 'signup')}
-            className="w-full bg-transparent hover:bg-white/60 text-[#0C1220] font-bold py-3 px-6 rounded-[14px] border-[2.5px] border-[#0C1220] shadow-[3px_3px_0_#0C1220] transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_#0C1220] cursor-pointer text-xs text-center"
-          >
-            Create an Account First
-          </button>
-        )}
+        {/* The signed-out "Create an Account First" secondary
+            button was REMOVED (owner ruling, Nov 7, 2026):
+            Start Sorting stands alone in this bar. Sign-up is
+            still reachable from the account menu, and the
+            post-sign-up return/banner flow is untouched — it
+            never depended on this button. */}
       </div>
     </div>
   );

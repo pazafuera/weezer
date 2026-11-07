@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { Song } from '../data/constants';
-import { AlbumArtwork, AudioPreviewButton } from './SharedUI';
+import { AlbumArtwork, AudioPreviewButton, SortingIncompleteNotice } from './SharedUI';
+import type { TriageValue } from '../context/WeezerContext';
 import { displayFont } from './shareables/fonts';
 import { resolveAlbumId } from './shareables/ShareCardShell';
 
@@ -11,11 +12,20 @@ const K_FACTOR = 32;
 export default function Step1_5Matchups({
   songs,
   bucketTitle,
-  onComplete
+  onComplete,
+  triageMap,
+  onKeepSorting
 }: {
   songs: Song[];
   bucketTitle: string;
   onComplete: (sortedSongs: Song[]) => void;
+  /** When provided, the sorting-incomplete notice renders INSIDE
+   *  the takeover (owner ruling, Nov 7, 2026 — it previously only
+   *  bracketed the takeover on the stage list). The notice
+   *  self-gates at a full 206 and is non-dismissible, exactly as
+   *  on the Refine stage lists and Final Review. */
+  triageMap?: Record<string, TriageValue>;
+  onKeepSorting?: () => void;
 }) {
   const [round, setRound] = useState(1);
   const [elos, setElos] = useState<Record<string, number>>({});
@@ -99,6 +109,11 @@ export default function Step1_5Matchups({
 
   return (
     <div className="flex flex-col h-[80vh] py-6 px-4 max-w-lg mx-auto animate-in fade-in duration-500">
+      {triageMap && onKeepSorting && (
+        <div className="shrink-0 mb-4">
+          <SortingIncompleteNotice triageMap={triageMap} onKeepSorting={onKeepSorting} />
+        </div>
+      )}
       <div className="text-center mb-6 mt-3 shrink-0">
         <span className="text-[10px] font-black uppercase tracking-widest text-[#3D4A63]">
           Matchup {round} of {totalRounds}

@@ -402,6 +402,8 @@ export default function Step2Refine({
           onUpdateRanks({ ...bucketRanks, [bucket]: sorted });
           setShowMatchups(false);
         }}
+        triageMap={triageMap}
+        onKeepSorting={onKeepSorting}
       />
     );
   }
@@ -412,11 +414,11 @@ export default function Step2Refine({
       {/* SORTING-INCOMPLETE NOTICE — tops every refine stage when
           triage isn't finished (renders nothing at 206). The
           matchups interstitial above replaces this whole view
-          while it runs, and it is the one refine surface without
-          the notice: a fixed-height (80vh) takeover with no room
-          for a banner inside it (owner, Nov 3). The notice
-          brackets it — it is here on the stage list before the
-          matchups start and waiting here when they end. */}
+          while it runs; since the owner's Nov 7, 2026 ruling the
+          notice renders INSIDE the takeover too (Step1_5Matchups
+          receives triageMap/onKeepSorting and shows it at the top
+          of its column), closing the gap the Nov 3 bracketing
+          compromise left. */}
       <SortingIncompleteNotice triageMap={triageMap} onKeepSorting={onKeepSorting} />
 
       {/* CUSTOM CONFIRMATION MODAL OVERLAY */}

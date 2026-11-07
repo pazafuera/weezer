@@ -2787,7 +2787,7 @@ export default function Step1Deck({
                   untouched — restyling it everywhere is a
                   separate call. */}
               <div data-tutorial="preview" className="rounded-full ring-2 ring-[#0C1220]">
-                <AudioPreviewButton title={currentSong.title} large />
+                <AudioPreviewButton id={currentSong.id} title={currentSong.title} album={currentSong.album} large />
               </div>
             </div>
           </DeckCardShell>

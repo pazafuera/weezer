@@ -132,7 +132,7 @@ export default function Step1_5Matchups({
           </p>
           
           <div onClick={(e) => e.stopPropagation()}>
-            <AudioPreviewButton title={currentPair[0].title} />
+            <AudioPreviewButton id={currentPair[0].id} title={currentPair[0].title} album={currentPair[0].album} />
           </div>
         </div>
 
@@ -167,7 +167,7 @@ export default function Step1_5Matchups({
           </p>
           
           <div onClick={(e) => e.stopPropagation()}>
-            <AudioPreviewButton title={currentPair[1].title} />
+            <AudioPreviewButton id={currentPair[1].id} title={currentPair[1].title} album={currentPair[1].album} />
           </div>
         </div>
       </div>

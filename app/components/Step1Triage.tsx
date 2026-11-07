@@ -558,7 +558,7 @@ export default function Step1Triage({
                     >
                       {/* LEFT SIDE: PREVIEW BUTTON & TITLE */}
                       <div className="flex items-center gap-3 flex-1 min-w-0 py-0.5">
-                        <AudioPreviewButton title={song.title} />
+                        <AudioPreviewButton id={song.id} title={song.title} album={song.album} />
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
                             <h3 className={`text-lg sm:text-xl lg:text-2xl font-black tracking-tight leading-tight break-words ${

@@ -366,7 +366,7 @@ export default function Step3Master({
                         data-preview-btn="true"
                         className="shrink-0 flex items-center justify-center w-3.5 h-3.5 [&_button]:!w-3.5 [&_button]:!h-3.5 [&_button]:!p-0 [&_button]:!min-w-0 [&_button]:!min-h-0 [&_button]:!bg-transparent [&_button]:!border-none [&_svg]:!w-2.5 [&_svg]:!h-2.5"
                       >
-                        <AudioPreviewButton title={song.title} />
+                        <AudioPreviewButton id={song.id} title={song.title} album={song.album} />
                       </div>
                       <span className={`text-[10px] font-semibold truncate ${isTouchDrag ? 'text-slate-300' : 'text-[#3D4A63]'}`}>{song.album} ({song.year})</span>
                     </div>

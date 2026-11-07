@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useRef, useEffect } from 'react';
 import { ALBUMS_BY_ID, FULL_SONG_POOL } from '../data/constants';
+import { PREVIEW_MAP } from '../data/previewMap';
 import { countCategorizedSongs } from '../context/WeezerContext';
 import type { AppStep, TriageValue } from '../context/WeezerContext';
 
@@ -217,12 +218,96 @@ export function AlbumArtwork({ albumId, className = "" }: { albumId: string; cla
   );
 }
 
-export function AudioPreviewButton({ title, compact = false, large = false }: { title: string; compact?: boolean; large?: boolean }) {
+// FALLBACK PREVIEW PICK — only for songs with no PREVIEW_MAP entry.
+// Mirrors the resolver's rules (preview_map_resolver.py): a live search
+// result is admitted only when its artist is Weezer, its base title
+// matches, and version qualifiers (demo / hindi / teaser / live / …)
+// are penalized. Anything less is how the button used to end up
+// playing tribute acts and alternate mixes.
+function normPreviewText(s: string): string {
+  return (s || '')
+    .toLowerCase()
+    .replace(/[\u2013\u2014]/g, '-')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function previewBaseTitle(s: string): string {
+  let t = s || '';
+  let prev = '';
+  while (prev !== t) {
+    prev = t;
+    t = t.replace(/\s*[\(\[][^\(\)\[\]]*[\)\]]\s*$/, '').trim();
+  }
+  t = t.replace(/\s+(feat\.?|ft\.)\s+.*$/i, '').trim();
+  return normPreviewText(t);
+}
+
+const PREVIEW_QUALIFIER_PENALTIES: Array<[string, number]> = [
+  ['pre production', 100],
+  ['demo', 100],
+  ['hindi', 100],
+  ['teaser', 100],
+  ['instrumental', 100],
+  ['karaoke', 100],
+  ['radio remix', 80],
+  ['acoustic', 60],
+  ['live', 120],
+  ['remix', 40],
+  ['mix', 30],
+  ['single version', 5],
+  ['bonus track', 5],
+  ['rarities version', 5],
+];
+
+function previewQualifierPenalty(rawTitle: string): number {
+  const n = ` ${normPreviewText(rawTitle)} `;
+  let pen = 0;
+  const hit = new Set<string>();
+  for (const [token, p] of PREVIEW_QUALIFIER_PENALTIES) {
+    if (n.includes(` ${token} `)) {
+      if (token === 'mix' && hit.has('remix')) continue;
+      if (token === 'remix' && hit.has('radio remix')) continue;
+      pen += p;
+      hit.add(token);
+    }
+  }
+  return pen;
+}
+
+function pickFallbackPreview(results: any[], title: string, album?: string): string | null {
+  const songBase = previewBaseTitle(title);
+  let bestUrl: string | null = null;
+  let bestScore = Infinity;
+  for (const r of results || []) {
+    if (!r || !r.previewUrl) continue;
+    if (normPreviewText(r.artistName) !== 'weezer') continue;
+    const trackBase = previewBaseTitle(r.trackName);
+    let tier: number;
+    if (trackBase === songBase) tier = 0;
+    else if (
+      trackBase.startsWith(songBase) || trackBase.endsWith(songBase) ||
+      songBase.startsWith(trackBase) || songBase.endsWith(trackBase)
+    ) tier = 8;
+    else continue;
+    let coll = 14;
+    if (album && normPreviewText(r.collectionName).includes(normPreviewText(album))) coll = 2;
+    const score = tier * 1000 + previewQualifierPenalty(r.trackName) * 10 + coll;
+    if (score < bestScore) {
+      bestScore = score;
+      bestUrl = r.previewUrl;
+    }
+  }
+  return bestUrl;
+}
+
+export function AudioPreviewButton({ id, title, album, compact = false, large = false }: { id: string; title: string; album?: string; compact?: boolean; large?: boolean }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Clear cached audio when title changes (prevents playing previous song in Gauntlet)
+  // Clear cached audio when the song changes (prevents playing previous song in Gauntlet)
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.pause();
@@ -230,7 +315,7 @@ export function AudioPreviewButton({ title, compact = false, large = false }: { 
     }
     setIsPlaying(false);
     setIsLoading(false);
-  }, [title]);
+  }, [id]);
 
   // Listen for global kill switch
   useEffect(() => {
@@ -271,11 +356,19 @@ export function AudioPreviewButton({ title, compact = false, large = false }: { 
       setIsLoading(true);
       
       if (!audioRef.current) {
-        const res = await fetch(`https://itunes.apple.com/search?term=Weezer+${encodeURIComponent(title)}&entity=song&limit=1`);
-        const data = await res.json();
-        
-        if (data.results && data.results.length > 0 && data.results[0].previewUrl) {
-          audioRef.current = new Audio(data.results[0].previewUrl);
+        // Verified map first — no live search for mapped songs. The
+        // old limit=1 first-result fetch played tribute acts and
+        // alternate mixes whenever search ranking felt like it.
+        let previewUrl: string | null = PREVIEW_MAP[id]?.previewUrl ?? null;
+
+        if (!previewUrl) {
+          const res = await fetch(`https://itunes.apple.com/search?term=Weezer+${encodeURIComponent(title)}&entity=song&limit=25`);
+          const data = await res.json();
+          previewUrl = pickFallbackPreview(data.results || [], title, album);
+        }
+
+        if (previewUrl) {
+          audioRef.current = new Audio(previewUrl);
           audioRef.current.onended = () => setIsPlaying(false);
         } else {
           console.warn("No audio preview found for this song.");

@@ -8,6 +8,7 @@ import { sanitizeMasterList, reconcileMasterList, getRankedSongs, sortByBucketBl
 import { createRankingsSyncQueue } from '../lib/rankingsSync';
 import type { RankingsSyncQueue } from '../lib/rankingsSync';
 import { localSnapshotSupersedesAccount } from '../lib/bootRankings';
+import { refreshMasterListMetadata } from '../lib/catalogMetadata';
 import {
   forgetAccountFanhoodSync,
   reconcileAccountFanhood,
@@ -1045,7 +1046,19 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
           if (rankData.master_list && Array.isArray(rankData.master_list)) {
             // Sanitize saved master list against the triage map: drop unranked
             // leftovers from older saves; every ranked song keeps its position.
-            loadedMaster = sanitizeMasterList(rankData.master_list.filter((s: Song) => validSongIds.has(s.id)), loadedTriage);
+            // Then refresh the catalog-owned fields (title, album, year)
+            // from the catalog: saved entries embed copies that go stale
+            // when the catalog corrects a title ('Summer Elaine and
+            // Dr. Pepper'), and screens render from the saved copies.
+            // This runs on whichever source won the boot resolution —
+            // the account row or the recovered local snapshot — after
+            // the migration decided precedence, so it cannot disturb
+            // it. No write happens here: the healed list persists on
+            // the next save through the normal sync path.
+            loadedMaster = refreshMasterListMetadata(
+              sanitizeMasterList(rankData.master_list.filter((s: Song) => validSongIds.has(s.id)), loadedTriage),
+              FULL_SONG_POOL
+            );
             setMasterList(loadedMaster);
           }
 
@@ -1071,7 +1084,12 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
             const guestTriage: Record<string, TriageValue> = parsed.triageMap || {};
             // Sanitize saved master list against the triage map: drop unranked
             // leftovers from older saves; every ranked song keeps its position.
-            const guestMaster = sanitizeMasterList(parsed.masterList || [], guestTriage);
+            // Same catalog-metadata refresh as the signed-in load —
+            // guest lists carry the same stale embedded copies.
+            const guestMaster = refreshMasterListMetadata(
+              sanitizeMasterList(parsed.masterList || [], guestTriage),
+              FULL_SONG_POOL
+            );
             setTriageMap(guestTriage);
             setMasterList(guestMaster);
             setBucketRanks(getDerivedBucketRanks(guestTriage, guestMaster));

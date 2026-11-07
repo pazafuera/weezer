@@ -131,15 +131,17 @@ export default function Step0Splash() {
           <div className="w-10 h-10 bg-[#8FE3B0] text-emerald-700 rounded-xl border-2 border-[#0C1220] shadow-[2px_2px_0_#0C1220] flex items-center justify-center shrink-0">
             <svg
               className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
+              fill="currentColor"
               viewBox="0 0 24 24"
             >
+              {/* Solid globe (owner, Nov 6): the outline globe's
+                  continents collapsed into a squiggle at 20px, so
+                  the glyph is now a filled earth — meridian and
+                  parallels cut out as negative space (evenodd). */}
               <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 002 2h1.5a2.5 2.5 0 002.5-2.5V7a2 2 0 00-2-2h-2c-.53 0-1.04-.21-1.414-.586l-.828-.828A2 2 0 0010.828 3H9a2 2 0 00-2 2v1.935z"
+                fillRule="evenodd"
+                clipRule="evenodd"
+                d="M12 2a10 10 0 1 1 0 20 10 10 0 1 1 0-20Zm0 0a4.6 10 0 1 1 0 20 4.6 10 0 1 1 0-20Zm0 0a3.3 10 0 1 1 0 20 3.3 10 0 1 1 0-20ZM3.62 6.55L20.38 6.55A10 10 0 0 1 21.1 7.85L2.9 7.85A10 10 0 0 1 3.62 6.55Zm-0.72 9.6L21.1 16.15A10 10 0 0 1 20.38 17.45L3.62 17.45A10 10 0 0 1 2.9 16.15Z"
               />
             </svg>
           </div>

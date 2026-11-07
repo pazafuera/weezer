@@ -1418,7 +1418,7 @@ export const WEEZER_CANON: Song[] = [
   },
   {
     id: 'sz_au5',
-    title: 'Should I Stay or Should I Go',
+    title: 'Should She Stay or Should She Go',
     album: 'SZNZ: Autumn',
     albumColor: 'bg-[#D35400]',
     year: 2022,

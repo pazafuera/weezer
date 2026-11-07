@@ -2166,13 +2166,13 @@ export const OPEN_PROMPTS: OpenPrompt[] = [
       { text: 'What Happens After You?', depth: 454 },
       { text: "What's the Good of Being Good", depth: 478 },
       {
-        // The bank carries the corrected title; the ranking
-        // catalog still spells it the other way (flagged in
-        // REPORT.md). catalogTitle keeps the catalog song
-        // resolved for covers and duplicate tracking.
+        // The bank's corrected title. The ranking catalog spelled
+        // it the Clash way ("Should I Stay or Should I Go") until
+        // Nov 6, 2026 and bridged here via catalogTitle; the
+        // catalog now carries this title too, so the row resolves
+        // to sz_au5 directly.
         text: 'Should She Stay or Should She Go',
         depth: 478,
-        catalogTitle: 'Should I Stay or Should I Go',
       },
       // † beyond the 206, with no depths printed anywhere in the
       // bank — editorial assignments, flagged in REPORT.md.
@@ -2523,7 +2523,7 @@ export const OPEN_PROMPTS: OpenPrompt[] = [
       { text: 'What Happens After You?', depth: 454 },
       { text: 'She Needs Me', depth: 458 },
       { text: 'Everything Happens for a Reason', depth: 459 },
-      { text: 'Should She Stay or Should She Go', depth: 478, catalogTitle: 'Should I Stay or Should I Go' },
+      { text: 'Should She Stay or Should She Go', depth: 478 },
       { text: "What's the Good of Being Good", depth: 478 },
       { text: 'I Just Threw Out the Love of My Dreams', depth: 635 },
       { text: 'You Gave Your Love to Me Softly', depth: 650 },

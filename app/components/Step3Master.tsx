@@ -360,7 +360,17 @@ export default function Step3Master({
                     down from 77px (4 + 20 + 32 + 4 + 17) — about
                     a third off. A "-" row: 47px, down from 63px.
                     The 6px gap BETWEEN rows is the list's
-                    space-y-1.5, not the row's box — untouched. */}
+                    space-y-1.5, not the row's box — untouched.
+                    PILL HEIGHT RESTORED (owner, Nov 7, same day):
+                    at py-0 the pill read as a cramped sliver
+                    around its emoji + label, so the pill's own
+                    py-0.5 came back and ONLY the pill grew —
+                    pill 13px → 17px (borders 3 + padding 4 +
+                    content 10), meta line 15px → 17px, rankable
+                    row 53px → 55px, "-" row 47px → 49px — still
+                    far under the old 77px / 63px. The row's
+                    padding, the chip, the handle, and the
+                    title→meta gap all stay compacted. */}
                 {/* ONLY SHOW RANK NUMBERS FOR TOP TWO BUCKETS */}
                 {isRankable ? (
                   <span className={`w-7 h-6 font-black text-[11px] rounded-lg flex items-center justify-center shrink-0 shadow-2xs transition-colors ${
@@ -398,7 +408,7 @@ export default function Step3Master({
                     )}
                   </div>
                   <div className="flex items-center gap-1.5 min-w-0 mt-0.5 flex-nowrap">
-                    <span className={`text-[9px] font-black px-1.5 py-0 rounded-md border ${cfg.badgeBg} !border-[1.5px] !border-[#0C1220] w-fit leading-none flex items-center gap-1 shrink-0`}>
+                    <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-md border ${cfg.badgeBg} !border-[1.5px] !border-[#0C1220] w-fit leading-none flex items-center gap-1 shrink-0`}>
                       <span className="text-[10px]">{cfg.emoji}</span> <span>{cfg.label}</span>
                     </span>
                     {/* The small play control, exactly as Refine's

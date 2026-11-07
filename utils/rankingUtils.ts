@@ -1,4 +1,7 @@
-import { BucketType, FULL_SONG_POOL, Song } from '@/app/data/constants';
+// Relative on purpose (not the '@/…' alias): the rankings harness
+// compiles this file standalone with plain tsc, which cannot
+// resolve alias specifiers at runtime. Same module either way.
+import { BucketType, FULL_SONG_POOL, Song } from '../app/data/constants';
 
 /**
  * Ranking helpers.

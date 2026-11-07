@@ -16,6 +16,7 @@ import {
   resolveSnapshotStampUserId,
   detectStrandedState,
 } from '../lib/lastUser';
+import { mergeGuestRankingsIntoAccount } from '../lib/guestMerge';
 import {
   forgetAccountFanhoodSync,
   reconcileAccountFanhood,
@@ -547,11 +548,28 @@ export const migrateGuestRankingsToUser = async (
         }
         return snapshotRow;
       }
-      case 'merged':
-        // Guest work merges into the account per song (Part 3 of
-        // the database-led pass). Until that lands, the account
-        // row stands — today's behavior.
-        return existing;
+      case 'merged': {
+        // Sign-in merge (Part 3 of the database-led pass): the
+        // guest work on this device fills the account's gaps per
+        // song instead of being silently discarded — the account
+        // wins wherever it has spoken (app/lib/guestMerge.ts).
+        // NO write here: the merged state loads into the session
+        // and persists through the normal save path on the next
+        // edit, like any other state. (Re-running the merge at a
+        // later boot is idempotent: once the fills are saved they
+        // are account values, and the merge returns them as-is.)
+        const merged = mergeGuestRankingsIntoAccount({
+          accountTriageMap: (existing?.triage_map ||
+            {}) as Record<string, TriageValue>,
+          accountMasterList: existing?.master_list || [],
+          guestTriageMap: (triageMap || {}) as Record<string, TriageValue>,
+          guestMasterList: masterList || [],
+        });
+        return {
+          triage_map: merged.triageMap as Record<string, TriageValue>,
+          master_list: merged.masterList,
+        };
+      }
       case 'account-row':
       case 'none':
       default:

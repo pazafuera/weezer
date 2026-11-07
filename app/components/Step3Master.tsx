@@ -323,7 +323,7 @@ export default function Step3Master({
                 onDragEnd={() => setDragState(null)}
                 onDragOver={handleDragOver}
                 onDrop={(e) => { e.stopPropagation(); handleDrop(idx); }}
-                className={`rounded-2xl p-2.5 flex items-center justify-between gap-3 transition-all duration-150 ${
+                className={`rounded-2xl p-2.5 flex items-center gap-2.5 transition-all duration-150 ${
                   isMouseDrag
                     ? 'opacity-40 border-2 border-dashed border-slate-300 bg-slate-100 scale-[0.98]'
                     : isTouchDrag
@@ -332,63 +332,72 @@ export default function Step3Master({
                 }`}
               >
 
-                <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                  {/* ONLY SHOW RANK NUMBERS FOR TOP TWO BUCKETS */}
-                  {isRankable ? (
-                    <span className={`w-7 h-7 font-black text-[11px] rounded-lg flex items-center justify-center shrink-0 shadow-2xs transition-colors ${
-                      isTouchDrag ? 'bg-amber-400 text-slate-950 ring-2 ring-amber-300' : 'bg-[#0072CE] text-white'
-                    }`}>
-                      #{rankNumberById.get(song.id)}
-                    </span>
-                  ) : (
-                    <span className="w-7 h-7 bg-slate-200 text-[#3D4A63] font-black text-[11px] rounded-lg flex items-center justify-center shrink-0 shadow-2xs">
-                      -
-                    </span>
-                  )}
+                {/* TWO-LINE ROW (owner, Nov 7): line 1 is the rank
+                    chip + title, with the drag handle at its right;
+                    line 2 is a single flex row — bucket pill, the
+                    small play control, and the album (year) — that
+                    never wraps. (The row stacked three lines before:
+                    title / pill / album.) The meta line fits at
+                    360px by width math: the widest case, a Lowkey
+                    Slaps pill (~91px) + play button (14px) +
+                    "B-Sides & Rarities (1996)" (~113px) + gaps
+                    (12px) ≈ 230px against ~236px of text-column
+                    width; the album span's truncate stays as the
+                    safety net, and it remains the row's only
+                    span.truncate — the drag ghost recolors it by
+                    that selector. */}
+                {/* ONLY SHOW RANK NUMBERS FOR TOP TWO BUCKETS */}
+                {isRankable ? (
+                  <span className={`w-7 h-7 font-black text-[11px] rounded-lg flex items-center justify-center shrink-0 shadow-2xs transition-colors ${
+                    isTouchDrag ? 'bg-amber-400 text-slate-950 ring-2 ring-amber-300' : 'bg-[#0072CE] text-white'
+                  }`}>
+                    #{rankNumberById.get(song.id)}
+                  </span>
+                ) : (
+                  <span className="w-7 h-7 bg-slate-200 text-[#3D4A63] font-black text-[11px] rounded-lg flex items-center justify-center shrink-0 shadow-2xs">
+                    -
+                  </span>
+                )}
 
-                  <div className="min-w-0 text-left flex-1">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-0.5">
-                      {/* Titles never truncate (owner, Nov 5): with
-                          the arrows gone the title block has the
-                          width — long titles wrap to a second
-                          line instead of ellipsizing. */}
-                      <h3 className={`text-sm font-bold leading-tight min-w-0 ${isTouchDrag ? 'text-white font-extrabold' : 'text-[#0C1220]'}`}>{song.title}</h3>
-                      <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-md border ${cfg.badgeBg} !border-[1.5px] !border-[#0C1220] w-fit leading-none flex items-center gap-1`}>
-                        <span className="text-[10px]">{cfg.emoji}</span> <span>{cfg.label}</span>
+                <div className="min-w-0 text-left flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    {/* Titles never truncate (owner, Nov 5): long
+                        titles wrap to a second line instead of
+                        ellipsizing. A wrapped title grows line 1
+                        only; the meta line below stays one line. */}
+                    <h3 className={`text-sm font-bold leading-tight min-w-0 ${isTouchDrag ? 'text-white font-extrabold' : 'text-[#0C1220]'}`}>{song.title}</h3>
+                    {/* DRAG HANDLE — rankable rows only, mirroring
+                        the arrows' eligibility: the "-" chip rows
+                        never had a reorder control and still don't. */}
+                    {isRankable && (
+                      <span
+                        onTouchStart={(e) => handleTouchStart(e, song)}
+                        onTouchMove={handleTouchMove}
+                        onTouchEnd={handleTouchEnd}
+                        className={`w-6 h-8 flex items-center justify-center text-lg cursor-grab active:cursor-grabbing select-none touch-none transition-transform shrink-0 ${
+                          isTouchDrag ? 'text-amber-400 scale-125' : 'text-[#0C1220]'
+                        }`}
+                      >
+                        ☰
                       </span>
-                    </div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5 min-w-0 mt-1 flex-nowrap">
+                    <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-md border ${cfg.badgeBg} !border-[1.5px] !border-[#0C1220] w-fit leading-none flex items-center gap-1 shrink-0`}>
+                      <span className="text-[10px]">{cfg.emoji}</span> <span>{cfg.label}</span>
+                    </span>
                     {/* The small play control, exactly as Refine's
                         rows render it (owner, Nov 5) — it replaces
                         the large standalone button that used to sit
                         on the row's right side. */}
-                    <div className="flex items-center gap-1.5 min-w-0 mt-0.5">
-                      <div
-                        data-preview-btn="true"
-                        className="shrink-0 flex items-center justify-center w-3.5 h-3.5 [&_button]:!w-3.5 [&_button]:!h-3.5 [&_button]:!p-0 [&_button]:!min-w-0 [&_button]:!min-h-0 [&_button]:!bg-transparent [&_button]:!border-none [&_svg]:!w-2.5 [&_svg]:!h-2.5"
-                      >
-                        <AudioPreviewButton id={song.id} title={song.title} album={song.album} />
-                      </div>
-                      <span className={`text-[10px] font-semibold truncate ${isTouchDrag ? 'text-slate-300' : 'text-[#3D4A63]'}`}>{song.album} ({song.year})</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* DRAG HANDLE — rankable rows only, mirroring the
-                    arrows' eligibility: the "-" chip rows never
-                    had a reorder control and still don't. */}
-                <div className="flex items-center shrink-0">
-                  {isRankable && (
-                    <span
-                      onTouchStart={(e) => handleTouchStart(e, song)}
-                      onTouchMove={handleTouchMove}
-                      onTouchEnd={handleTouchEnd}
-                      className={`w-6 h-8 flex items-center justify-center text-lg cursor-grab active:cursor-grabbing select-none touch-none transition-transform ${
-                        isTouchDrag ? 'text-amber-400 scale-125' : 'text-[#0C1220]'
-                      }`}
+                    <div
+                      data-preview-btn="true"
+                      className="shrink-0 flex items-center justify-center w-3.5 h-3.5 [&_button]:!w-3.5 [&_button]:!h-3.5 [&_button]:!p-0 [&_button]:!min-w-0 [&_button]:!min-h-0 [&_button]:!bg-transparent [&_button]:!border-none [&_svg]:!w-2.5 [&_svg]:!h-2.5"
                     >
-                      ☰
-                    </span>
-                  )}
+                      <AudioPreviewButton id={song.id} title={song.title} album={song.album} />
+                    </div>
+                    <span className={`text-[10px] font-semibold truncate min-w-0 ${isTouchDrag ? 'text-slate-300' : 'text-[#3D4A63]'}`}>{song.album} ({song.year})</span>
+                  </div>
                 </div>
               </div>
             );

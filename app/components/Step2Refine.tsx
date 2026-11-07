@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { BucketType, Song, BUCKET_CONFIG, BUCKET_TRANSITIONS } from '../data/constants';
 import type { TriageValue } from '../context/WeezerContext';
 import { FlyingWIcon, AudioPreviewButton, SortingIncompleteNotice } from './SharedUI';
-import { getRankedSongs } from '@/utils/rankingUtils';
+import { getRankedSongs, seatMovedSongInBucket } from '@/utils/rankingUtils';
 import Step1_5Matchups from './Step1_5Matchups';
 import { displayFont } from './shareables/fonts';
 
@@ -374,7 +374,12 @@ export default function Step2Refine({
 
     const { song, targetBucket } = pendingMove;
     const sourceList = bucketRanks[bucket].filter(s => s.id !== song.id);
-    const targetList = [...bucketRanks[targetBucket], song];
+    // SEATING (owner, Nov 7): a demotion lands at the TOP of the
+    // bucket it drops into; a promotion lands at the BOTTOM of the
+    // bucket it rises into. The rule lives in seatMovedSongInBucket
+    // (rankingUtils) — the old unconditional append here put songs
+    // demoted out of Bangers at the bottom of Slaps.
+    const targetList = seatMovedSongInBucket(bucketRanks[targetBucket], song, bucket, targetBucket);
     const nextTriage = { ...triageMap, [song.id]: targetBucket };
 
     onUpdateRanks({ ...bucketRanks, [bucket]: sourceList, [targetBucket]: targetList }, nextTriage);

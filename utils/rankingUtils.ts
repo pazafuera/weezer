@@ -125,6 +125,43 @@ export const sortByBucketBlock = (
 };
 
 /**
+ * Seat a song that Refine's confirmMoveSong moves between buckets:
+ * the directional seating rule (owner, Nov 7). A DEMOTION lands at
+ * the TOP of the bucket it drops into — the song just missed the
+ * higher cut, so it leads the lower bucket. A PROMOTION lands at
+ * the BOTTOM of the bucket it rises into — it just made the cut,
+ * so it starts at the foot of the higher bucket. Direction is read
+ * off BUCKET_ORDER rank only, never the stage the user is standing
+ * on, so multi-step moves (Banger → Mid directly) follow the rule
+ * too, even though the UI's promote/demote buttons step one bucket
+ * at a time.
+ *
+ * Sequence consequence, pinned by the rankings harness: every
+ * demotion enters at the top at the moment of its move, so a
+ * second demotion sits ABOVE the first (the most recent demotion
+ * leads the bucket); promotions queue at the bottom in move order.
+ *
+ * This is the same rule reconcileMasterList produces through
+ * sortByBucketBlock for triage writes — a demoted song's old seat
+ * sat in front of its new block, a promoted song's behind it.
+ * Refine cannot ride that path (it edits per-bucket lists
+ * directly), so the rule is stated once here and confirmMoveSong
+ * seats through it. A song already present in the target list is
+ * de-duplicated before seating.
+ */
+export const seatMovedSongInBucket = (
+  targetList: Song[],
+  song: Song,
+  sourceBucket: BucketType,
+  targetBucket: BucketType
+): Song[] => {
+  const rest = targetList.filter((s) => s.id !== song.id);
+  const demoted =
+    BUCKET_ORDER.indexOf(targetBucket) > BUCKET_ORDER.indexOf(sourceBucket);
+  return demoted ? [song, ...rest] : [...rest, song];
+};
+
+/**
  * Reconcile a master list with the triage map after a triage assignment.
  * Keeps every song already in the master list that still has a triage entry,
  * in its existing order and de-duplicated; then appends every bucketed song
@@ -135,8 +172,11 @@ export const sortByBucketBlock = (
  * just changed is re-seated into its new bucket's block instead of
  * keeping its old seat under a new bucket pill (the Final Review
  * mis-slot). A song moved to an EARLIER bucket lands at the end of that
- * block — its old seat sat behind the whole block — matching the
- * append-to-target semantics of Refine's confirmMoveSong.
+ * block — its old seat sat behind the whole block — and a song moved
+ * to a LATER bucket lands at the start of its block, its old seat in
+ * front of it: the same directional seating rule seatMovedSongInBucket
+ * (above) states for Refine's per-bucket moves — promotions bottom
+ * the higher bucket, demotions top the lower one.
  */
 export const reconcileMasterList = (
   masterList: Song[],

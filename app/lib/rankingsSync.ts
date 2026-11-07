@@ -31,6 +31,22 @@
  *   `{ keepalive: true }` the flag is passed through to the send so
  *   the transport can use a keepalive request that survives an iOS
  *   page discard.
+ * - EVERY ATTEMPT IS ON A CLOCK (Nov 7, 2026 — the mid-session
+ *   save freeze): a send whose promise never settles (an
+ *   iOS-stalled fetch on a connection the OS silently dropped;
+ *   the keepalive send stuck awaiting its session read) used to
+ *   wedge this single-flight queue permanently — the drain
+ *   awaited the attempt forever, later edits only updated the
+ *   retained payload, and no retry, give-up, or SyncNotice ever
+ *   fired. The database froze at the last good write while the
+ *   owner kept editing, signed in, with no error anywhere. Each
+ *   attempt now races `sendTimeoutMs` (default 15s): a hang
+ *   becomes an ordinary failure — backoff, retry, and on
+ *   exhaustion the give-up notice — and a timed-out attempt that
+ *   settles late is ignored. The local stamped snapshot, written
+ *   synchronously by the caller on every edit, remains the
+ *   buffer of record throughout: whatever the queue does, the
+ *   next boot heals the row from it.
  *
  * Transport-agnostic and timer-injectable so the scheduling logic
  * is exercised directly by the harness in
@@ -45,11 +61,22 @@ export interface RankingsSyncQueueOptions<T> {
   /**
    * Attempt one write. Resolve `true` on success, `false` on ANY
    * failure (HTTP error object, thrown network error, ...). The
-   * caller owns the transport; this queue owns the schedule.
+   * caller owns the transport; this queue owns the schedule. A
+   * send may also never settle at all — the queue times every
+   * attempt out itself (see `sendTimeoutMs`).
    */
   send: (payload: T, opts: RankingsSyncSendOptions) => Promise<boolean>;
   /** Pause after the last change before sending. Default 1000ms. */
   debounceMs?: number;
+  /**
+   * How long one send attempt may run before the queue counts it
+   * as failed and moves on (retry / give-up). Exists because a
+   * stalled transport promise can pend forever; without a bound,
+   * one hang wedges the single-flight drain for the whole
+   * session. Default 15000ms — far above any healthy whole-row
+   * upsert, short enough to unwedge a session promptly.
+   */
+  sendTimeoutMs?: number;
   /** Retries after a failed attempt before giving up. Default 3. */
   maxRetries?: number;
   /** Backoff between attempts (ms); the last value repeats. */
@@ -86,6 +113,7 @@ export function createRankingsSyncQueue<T>(
   options: RankingsSyncQueueOptions<T>
 ): RankingsSyncQueue<T> {
   const debounceMs = options.debounceMs ?? 1000;
+  const sendTimeoutMs = options.sendTimeoutMs ?? 15000;
   const maxRetries = options.maxRetries ?? 3;
   const retryDelaysMs = options.retryDelaysMs ?? [600, 1800, 4500];
   const setT: (fn: () => void, ms: number) => unknown =
@@ -135,6 +163,48 @@ export function createRankingsSyncQueue<T>(
       }, ms);
     });
 
+  /**
+   * One send attempt, raced against the send timeout. The
+   * transport promise may never settle (the Nov 7 freeze: an
+   * iOS-stalled fetch neither resolves nor rejects); without the
+   * race, that single await wedges the drain for the rest of the
+   * session. A timed-out attempt resolves `false` — an ordinary
+   * failure — and if the underlying send settles later its result
+   * is dropped: the attempt is already accounted, and a late
+   * settle must not clear state a retry has since owned, nor
+   * resurrect work after the queue moved on. The timeout runs on
+   * the injected timers under its OWN handle — never the shared
+   * debounce/backoff `timer`, which wake() clears whenever a
+   * newer edit arrives; an edit during a hung send must not
+   * disarm the timeout.
+   */
+  const attemptSend = (
+    payload: T,
+    keepalive: boolean
+  ): Promise<boolean> =>
+    new Promise<boolean>((resolve) => {
+      let settled = false;
+      let timeoutHandle: unknown = null;
+      const finish = (ok: boolean) => {
+        if (settled) return;
+        settled = true;
+        if (timeoutHandle !== null) clearT(timeoutHandle);
+        resolve(ok);
+      };
+      timeoutHandle = setT(() => finish(false), sendTimeoutMs);
+      let result: Promise<boolean>;
+      try {
+        result = options.send(payload, { keepalive });
+      } catch {
+        finish(false);
+        return;
+      }
+      Promise.resolve(result).then(
+        (ok) => finish(ok),
+        () => finish(false)
+      );
+    });
+
   const drain = async (): Promise<void> => {
     let attempts = 0;
     while (dirty && latest !== null) {
@@ -145,12 +215,7 @@ export function createRankingsSyncQueue<T>(
       // the payload is only ever dropped by a confirmed success (or
       // by being superseded by a newer payload that then succeeds).
       dirty = false;
-      let ok = false;
-      try {
-        ok = await options.send(payload, { keepalive });
-      } catch {
-        ok = false;
-      }
+      const ok = await attemptSend(payload, keepalive);
       if (ok) {
         attempts = 0;
         failed = false;

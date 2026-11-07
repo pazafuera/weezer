@@ -21,7 +21,6 @@ import { ShareablesGallery } from './shareables';
 import { displayFont } from './shareables/fonts';
 import { ERAS } from './shareables/EraDnaCard';
 import {
-  ARCHETYPE_MODEL_VERSION,
   ARCHETYPE_VIBES,
   normalizeUserVector,
   scoreArchetypes,
@@ -1168,9 +1167,6 @@ export default function Step4Wrapped({
               <h3 className={`${displayFont.className} text-2xl sm:text-3xl leading-tight tracking-wide text-[#0C1220] truncate`}>
                 Fandom Archetype
               </h3>
-              <p className="text-[11px] font-bold text-[#3D4A63] mt-0.5">
-                For fun — archetype model v{ARCHETYPE_MODEL_VERSION}
-              </p>
             </div>
 
             {/* Desktop Carousel Arrows */}

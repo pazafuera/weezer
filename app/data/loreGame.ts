@@ -146,14 +146,20 @@ export interface JourneyStop {
  * its stop from here. Thresholds (Oct 28, 2026): the retired
  * total ladder's 2,500 / 6,000 / 12,500 / 21,000 cuts, with the
  * old top band split at 17,000 so the Garage gets its own floor.
+ * Recalibrated (Nov 6, 2026 — owner): that ladder was priced
+ * past a strong fan's reach (the owner's own finished run,
+ * 13,225, landed only at La Brea), so the cuts drop to
+ * 1,500 / 4,000 / 8,000 / 12,000 / 16,000 — the Shack stays the
+ * deepest run, but it is a target now, not a rumor. Scores are
+ * untouched; standings re-derive from the totals as recorded.
  */
 export const TOTAL_STOPS: JourneyStop[] = [
   { min: 0, title: "Arnold's Diner", phrase: "at Arnold's Diner" },
-  { min: 2500, title: 'Island in the Sun', phrase: 'on an Island in the Sun' },
-  { min: 6000, title: 'Across the Sea', phrase: 'across the Sea' },
-  { min: 12500, title: 'La Brea Tar Pits', phrase: 'in the La Brea Tar Pits' },
-  { min: 17000, title: 'The Garage', phrase: 'in The Garage' },
-  { min: 21000, title: 'The Shack', phrase: 'back to The Shack' },
+  { min: 1500, title: 'Island in the Sun', phrase: 'on an Island in the Sun' },
+  { min: 4000, title: 'Across the Sea', phrase: 'across the Sea' },
+  { min: 8000, title: 'La Brea Tar Pits', phrase: 'in the La Brea Tar Pits' },
+  { min: 12000, title: 'The Garage', phrase: 'in The Garage' },
+  { min: 16000, title: 'The Shack', phrase: 'back to The Shack' },
 ];
 
 /** The stop a five-game total has reached. */

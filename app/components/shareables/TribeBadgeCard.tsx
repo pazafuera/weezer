@@ -1,7 +1,7 @@
 'use client';
 
 import { forwardRef, Fragment } from 'react';
-import { albumCoverSrc, resolveAlbumId } from './ShareCardShell';
+import { albumCoverSrc } from './ShareCardShell';
 import {
   FactsBurst,
   FlyingW,
@@ -14,6 +14,7 @@ import {
 } from './ShareCardShell';
 import { displayFont, handFont } from './fonts';
 import type { Bucket, ShareSong } from './Top10Card';
+import { dominantTribeAlbumId } from '../../lib/tribeFrame';
 
 export type Tribe = {
   /** Canonical tribe key, e.g. '90s Purist' — keys TRIBE_INK. */
@@ -180,30 +181,13 @@ function renderFact(fact: string, ink: string) {
   });
 }
 
-function dominantAlbumId(songs: ShareSong[]): string | undefined {
-  const counts = new Map<string, number>();
-  for (const s of songs) {
-    const id = resolveAlbumId(s);
-    if (id) counts.set(id, (counts.get(id) ?? 0) + 1);
-  }
-  let best: string | undefined;
-  let bestCount = 0;
-  for (const [id, c] of counts) {
-    if (c > bestCount) {
-      best = id;
-      bestCount = c;
-    }
-  }
-  return best ?? (songs[0] ? resolveAlbumId(songs[0]) : undefined);
-}
-
 export const TribeBadgeCardVisual = forwardRef<
   HTMLDivElement,
   { songs: ShareSong[]; triageMap: Record<string, Bucket>; subtitle?: string }
 >(function TribeBadgeCardVisual({ songs, triageMap }, ref) {
   const tribe = computeTribe(songs, triageMap);
   const ink = (tribe && TRIBE_INK[tribe.name]) || '#141414';
-  const domAlbumId = dominantAlbumId(songs);
+  const domAlbumId = dominantTribeAlbumId(songs, triageMap);
   // Locked Purist flourish: the year is highlighted amber.
   const diagnosisParts = tribe ? tribe.diagnosis.split('1997') : [];
 

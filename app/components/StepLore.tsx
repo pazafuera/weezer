@@ -11,6 +11,7 @@ import {
   answerCoverFor,
   bandForTotal,
   buildGameRun,
+  finishedAtPhrase,
   isLoreUnlocked,
   loreGateRemainingAlbums,
   loreGameById,
@@ -1622,6 +1623,28 @@ export default function StepLore() {
   const resultNextThreshold = resultNext
     ? TOTAL_STOPS.find((s) => s.title === resultNext.title)?.min
     : undefined;
+  // The finished state on this screen: this round may have been
+  // the last of the five, in which case no "next stop" exists to
+  // chase. The fanhood state swaps to the post-round record at
+  // the commit point above; until that state lands, the
+  // after-count is synthesized the way resultAfterTotal
+  // synthesizes the after-total — the pre-round count plus this
+  // round when the record doesn't hold it yet. (Once the swap
+  // lands, the record holds the game and the plus-one is zero,
+  // so the count is the same on both renders.)
+  const resultGamesAfter =
+    fanhoodGamesPlayed(fanhood) +
+    (activeGameId && !fanhood?.games[activeGameId] ? 1 : 0);
+  const resultAllPlayed = resultGamesAfter >= LORE_GAMES.length;
+  // The strip's standing sentence: a round that carried the
+  // player into a new stop announces the arrival; otherwise the
+  // standing is restated — in the finished form once the series
+  // is complete, the present form while the road is still open.
+  const resultStandingLine = resultCrossed
+    ? `You made it ${resultStop.phrase}.`
+    : resultAllPlayed
+      ? `${finishedAtPhrase(resultStop.title)}.`
+      : `${youreAtPhrase(resultStop.title)}.`;
 
   const itemPrompt = item ? item.prompt.prompt : '';
 
@@ -2591,9 +2614,7 @@ export default function StepLore() {
               <p
                 className={`${displayFont.className} text-xl leading-snug`}
               >
-                {resultCrossed
-                  ? `You made it ${resultStop.phrase}.`
-                  : `${youreAtPhrase(resultStop.title)}.`}
+                {resultStandingLine}
               </p>
               {/* The total line renders only when it adds
                   information: after Round 1 the total EQUALS the
@@ -2604,10 +2625,16 @@ export default function StepLore() {
                   {resultAfterTotal.toLocaleString()} total points.
                 </p>
               )}
-              {resultNext && (
+              {resultAllPlayed ? (
                 <p className="text-xs font-bold text-white/60">
-                  {`Next stop for your standing: ${resultNext.title} — ${resultNextThreshold?.toLocaleString()} total, ${resultNext.pointsTo.toLocaleString()} to go.`}
+                  All five rounds are in. That&rsquo;s the final score.
                 </p>
+              ) : (
+                resultNext && (
+                  <p className="text-xs font-bold text-white/60">
+                    {`Next stop for your standing: ${resultNext.title} — ${resultNextThreshold?.toLocaleString()} total, ${resultNext.pointsTo.toLocaleString()} to go.`}
+                  </p>
+                )
               )}
             </div>
 

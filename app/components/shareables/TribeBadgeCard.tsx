@@ -235,7 +235,7 @@ export const TribeBadgeCardVisual = forwardRef<
           {/* Punch-up composition (tribe-punch-mock, built from
               scratch and approved Nov 5 — it supersedes Option B):
               intro pill 88 / badge panel 190 (952×500, guitar
-              framed inside at scale 1.30, name STACKED at 152px
+              framed whole inside it, name STACKED at 152px
               across its body) / diagnosis in the inverted ink fact
               box at 716 / facts box + album frame as one bottom
               row at 886 / standard footer. The music-notes doodle
@@ -252,22 +252,31 @@ export const TribeBadgeCardVisual = forwardRef<
             </span>
           </div>
 
-          {/* Badge panel: the guitar scaled to 1.30 and framed in
-              a white plaque, its neck bleeding out of the frame's
-              right edge (the clip cuts it at the panel's inner
-              edge); the tribe name is stamped across the body,
+          {/* Badge panel: the guitar framed whole in a white
+              plaque; the tribe name is stamped across the body,
               stacked one word per line at a flat 152px — one size
               serves all six tribes (binding word COMPLETIST
               measures 855px against the panel's 904px inner
               width; a one-line name caps at ~104px, which is why
               it stacks). The svg element re-seats by the panel's
               offset (-64 / -190) so the silhouette's card
-              coordinates match the mock's exactly. */}
+              coordinates match the mock's exactly.
+              Guitar fit (owner, Nov 6 — the earlier 1.30 framing
+              bled the neck/headstock out of the plaque's right
+              edge and read as cut off; the bleed is vetoed): the
+              silhouette's measured bbox is 727.0×358.9 local
+              units (x 12.6–739.6, y 13.6–372.4); scale 1.2325
+              fits it across the plaque's inner width and the
+              translate centres the bbox on the plaque's centre
+              (540, 440), landing it at x 91.9–988.0 / y
+              218.9–661.2 in card units — ~28 units of margin
+              inside every plaque edge, diagonal placement and
+              position behind the type unchanged. */}
           <div className="absolute left-[64px] top-[190px] h-[500px] w-[952px] rounded-2xl border-[3px] border-[#0C1220] bg-white shadow-[6px_6px_0_rgba(12,18,32,0.9)]">
             <div className="absolute inset-0 overflow-hidden rounded-[13px]">
               <GuitarSilhouette
                 className="absolute left-[-64px] top-[-190px] h-[1350px] w-[1080px]"
-                transform="translate(174 190) scale(1.30)"
+                transform="translate(76.4 202.1) scale(1.2325)"
                 fill="#0C1220"
                 style={{ opacity: 0.95 }}
               />

@@ -15,6 +15,8 @@ import {
   readSaveDiagnostics,
 } from '../lib/saveDiagnostics';
 import type { SaveDiagnosticEvent } from '../lib/saveDiagnostics';
+import { INITIAL_SAVE_STATE } from '../lib/saveStatus';
+import type { SaveState } from '../lib/saveStatus';
 import {
   readLastUserId,
   rememberLastUserId,
@@ -307,6 +309,17 @@ interface WeezerContextType {
    *  next edit or flush retries it. */
   syncNotice: boolean;
   dismissSyncNotice: () => void;
+  /** The honest save state (durability overhaul, Nov 7): driven
+   *  ONLY by the sync queue's confirmed writes — 'saved' means
+   *  the database holds the latest edit, never merely that the
+   *  edit happened on screen. AppShell's header renders the
+   *  indicator copy (app/lib/saveStatus.ts); the account drawer
+   *  shows the same state beside the save diagnostics. */
+  saveState: SaveState;
+  /** The save-diagnostics ring (app/lib/saveDiagnostics.ts):
+   *  the recent boot/save decision points, newest last — the
+   *  record the next save incident is diagnosed from. */
+  saveDiagnostics: SaveDiagnosticEvent[];
   /** True when this device remembers a signed-in user and holds
    *  their local progress, but no session is live — the session
    *  died (token evicted, refresh race) and the app is running on
@@ -805,6 +818,12 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     recordSaveDiagnostic(kind, detail);
     setSaveDiagnostics(readSaveDiagnostics());
   };
+
+  // The visible save state (app/lib/saveStatus.ts holds the
+  // phase vocabulary and the indicator copy). It moves ONLY on
+  // the queue's confirmed-write signals and on boot outcomes —
+  // an edit moves it to 'saving', never to 'saved'.
+  const [saveState, setSaveState] = useState<SaveState>(INITIAL_SAVE_STATE);
   // Stranded state (see the interface note): set by the no-session
   // boot path and by the auth listener when a session ends without
   // an explicit sign-out behind it.
@@ -1255,6 +1274,20 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
             'heal write failed — the buffer stays promotable and the next boot retries'
           );
         }
+        // The boot's save state, stated as plainly as the
+        // indicator will show it: a healed buffer is a CONFIRMED
+        // write (timestamped); a row load is saved by definition
+        // (what loads IS the database state, no time to claim);
+        // a failed heal leaves the state on this device only.
+        if (boot.source === 'local-snapshot' && boot.healOk === true) {
+          setSaveState({ phase: 'saved', savedAt: Date.now() });
+        } else if (boot.source === 'local-snapshot' && boot.healOk === false) {
+          setSaveState({ phase: 'local-only', savedAt: null });
+        } else if (boot.source === 'account-row' || boot.source === 'merged') {
+          setSaveState({ phase: 'saved', savedAt: null });
+        } else {
+          setSaveState(INITIAL_SAVE_STATE);
+        }
 
         // Fetch User Profile
         const { data: profileData } = await profilePromise;
@@ -1334,6 +1367,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         // actually be a stranded owner whose session died (the
         // stranded computation after the load). The load itself is
         // identical either way; only the flag differs.
+        setSaveState(INITIAL_SAVE_STATE);
         const localState = localStorage.getItem('weezer_ranker_state');
         let parsedSnapshot: {
           triageMap?: Record<string, TriageValue>;
@@ -1484,8 +1518,31 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   if (syncQueueRef.current === null) {
     syncQueueRef.current = createRankingsSyncQueue<RankingsSyncPayload>({
       send: (payload, opts) => sendRankingsRef.current(payload, opts),
-      onGiveUp: () => setSyncNotice(true),
-      onSuccess: () => setSyncNotice(false),
+      onGiveUp: () => {
+        setSyncNotice(true);
+        // The indicator's failed phase (durability overhaul):
+        // the payload is retained on the device and the app
+        // keeps trying — and now the give-up is also IN THE
+        // RECORD, not just on a dismissible banner.
+        setSaveState({ phase: 'failed', savedAt: null });
+        noteSaveDiagnostic(
+          'give-up',
+          'the save queue exhausted its retries — changes are retained on this device'
+        );
+      },
+      onSuccess: () => {
+        setSyncNotice(false);
+        // A successful send confirms only ITS payload: the state
+        // is 'saved' when nothing newer is still waiting. This
+        // is the one place 'saved' is ever set mid-session — a
+        // confirmed database write, with its time.
+        const queue = syncQueueRef.current;
+        if (queue && !queue.hasPending()) {
+          setSaveState({ phase: 'saved', savedAt: Date.now() });
+        } else {
+          setSaveState({ phase: 'saving', savedAt: null });
+        }
+      },
     });
   }
 
@@ -1562,7 +1619,16 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         rev,
       })
     );
-    if (!userId) return;
+    if (!userId) {
+      // No account to save to (guest, or stranded): the write is
+      // on this device only, and the indicator says exactly that.
+      setSaveState({ phase: 'local-only', savedAt: Date.now() });
+      return;
+    }
+    // The edit is durable on the device and queued — 'saving',
+    // not 'saved'. Only the queue's confirmed write (its
+    // onSuccess with nothing pending) may say 'saved'.
+    setSaveState({ phase: 'saving', savedAt: null });
     syncQueueRef.current?.enqueue({ map, master, rev });
   };
 
@@ -2201,6 +2267,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     // lineage; the next account (or guest) starts from whatever
     // its own boot adopts.
     rankingsRevRef.current = null;
+    setSaveState(INITIAL_SAVE_STATE);
     // History reset (see navigateInternal): Back after sign-out
     // must never resurrect a signed-in page.
     navigateTo('splash', undefined, { history: 'reset' });
@@ -2221,6 +2288,8 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         dismissGuardNotice,
         syncNotice,
         dismissSyncNotice,
+        saveState,
+        saveDiagnostics,
         stranded,
         initialAuthMode,
         navigateTo,

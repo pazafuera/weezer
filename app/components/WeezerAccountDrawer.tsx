@@ -38,6 +38,18 @@ interface ProfileRow {
 /** Exact phrase the user must type to confirm account deletion. */
 const DELETE_CONFIRM_PHRASE = 'DELETE MY ACCOUNT';
 
+/**
+ * Whether the delete-account Edge Function is DEPLOYED and
+ * verified. The function source is complete
+ * (supabase/functions/delete-account/) and the handler below is
+ * fully wired to it — but the button stays disabled while this
+ * is false, so the shipped app can never call a backend that
+ * isn't there. Flip to true ONLY after the deploy + throwaway-
+ * account test in that folder's README pass. (Build 6, Nov 7:
+ * prepared, deliberately not deployed.)
+ */
+const DELETE_ACCOUNT_BACKEND_LIVE = false;
+
 /** Validation bounds mirror the onboarding form. */
 const USERNAME_MIN = 3;
 const USERNAME_MAX = 30;
@@ -371,30 +383,35 @@ export default function WeezerAccountDrawer({
   };
 
   /**
-   * FUTURE: runs only after the secure deletion backend confirms the
-   * account was deleted (see DELETE_BACKEND_TODO below). Success path:
-   * clear local ranking state, sign out, and return to the splash screen.
+   * Runs the delete-account Edge Function (supabase/functions/
+   * delete-account) and, only on its confirmed success, tears
+   * the session down: clear local ranking state, sign out, and
+   * return to the splash screen. The function's own error
+   * message is shown verbatim on failure — it is written for
+   * the user ("Could not delete your rankings. Try again.").
    *
-   * The backend does not exist yet — the final delete button is disabled
-   * and this handler is unreachable until it is built and deployed.
+   * Reachable only when DELETE_ACCOUNT_BACKEND_LIVE is true —
+   * the button stays disabled until the function is deployed
+   * and verified, so this never fires against a missing backend.
    */
   const handleDeleteAccount = async () => {
-    if (!userId) return;
+    if (!userId || !DELETE_ACCOUNT_BACKEND_LIVE) return;
     setDeleteError(null);
     setDeleting(true);
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      const response = await fetch('/api/account/delete', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session?.access_token ?? ''}`,
-        },
-      });
-      if (!response.ok) {
-        throw new Error('Account deletion failed. Please try again later.');
+      const { error } = await supabase.functions.invoke('delete-account');
+      if (error) {
+        let message = 'Account deletion failed. Please try again later.';
+        try {
+          const body = await (
+            error as { context?: Response }
+          ).context?.json();
+          if (body && typeof body.error === 'string') message = body.error;
+        } catch {
+          // The function's message wasn't readable — the plain
+          // fallback above stands.
+        }
+        throw new Error(message);
       }
       // Backend confirmed deletion: clear local ranking state, sign out,
       // and return to splash.
@@ -794,7 +811,8 @@ export default function WeezerAccountDrawer({
                   </h3>
                   <p className="text-xs font-medium text-slate-600 leading-relaxed mt-1">
                     Permanently deletes your profile, song rankings,
-                    friendships, and sign-in. This cannot be undone.
+                    friendships, game record, and sign-in. This cannot
+                    be undone.
                   </p>
                 </div>
                 <div>
@@ -819,45 +837,47 @@ export default function WeezerAccountDrawer({
                   />
                 </div>
                 {/*
-                  DELETE_BACKEND_TODO — SECURE DELETION BACKEND NOT YET IMPLEMENTED.
-                  The final delete button below is intentionally disabled. Do NOT
-                  enable it or fake a successful deletion until the backend exists
-                  and is deployed. Never put the Supabase service_role key in
-                  browser code or a NEXT_PUBLIC_* variable.
-
-                  Exact backend steps still required:
-                  1. Create an authenticated server route, e.g.
-                     app/api/account/delete/route.ts (Next.js Route Handler), or a
-                     Supabase Edge Function (e.g. supabase/functions/delete-account).
-                  2. Authenticate the caller server-side: read the Bearer JWT from the
-                     Authorization header and resolve it with supabase.auth.getUser().
-                     Never trust a client-supplied user id.
-                  3. Using the service_role client ONLY on the server, delete the
-                     user's data in dependency order:
-                       - public.friendships rows where the user is user_id OR friend_id
-                       - public.weezer_rankings rows for the user
-                       - public.profiles row for the user
-                       - any other user-owned rows (e.g. fan-stats contributions)
-                  4. Delete the auth user itself via supabase.auth.admin.deleteUser(userId).
-                  5. Return 200 only after every delete succeeds. The client's
-                     handleDeleteAccount success path then clears local ranking state,
-                     signs out, and returns to the splash screen.
+                  DELETE BACKEND — BUILT, NOT YET LIVE. The backend
+                  exists: supabase/functions/delete-account (verifies
+                  the caller's JWT, deletes friendships / rankings /
+                  fanhood / profile with the service-role key on the
+                  server, then deletes the auth user). It is NOT
+                  deployed, and DELETE_ACCOUNT_BACKEND_LIVE above
+                  stays false — keeping this button disabled — until
+                  it is deployed and verified with a throwaway
+                  account (exact steps in that folder's README).
+                  Never put the Supabase service_role key in browser
+                  code or a NEXT_PUBLIC_* variable.
                 */}
                 <button
                   type="button"
                   onClick={handleDeleteAccount}
-                  disabled
-                  aria-disabled="true"
-                  title="Account deletion is not available yet — the secure backend is still being built."
-                  className="w-full bg-rose-600 text-white font-black py-3 rounded-xl text-xs opacity-40 cursor-not-allowed"
+                  disabled={
+                    !DELETE_ACCOUNT_BACKEND_LIVE || !deleteReady || deleting
+                  }
+                  aria-disabled={
+                    !DELETE_ACCOUNT_BACKEND_LIVE || !deleteReady || deleting
+                  }
+                  title={
+                    DELETE_ACCOUNT_BACKEND_LIVE
+                      ? undefined
+                      : 'Account deletion is not available yet — the secure service is built and waiting on its final deploy check.'
+                  }
+                  className={
+                    DELETE_ACCOUNT_BACKEND_LIVE && deleteReady && !deleting
+                      ? 'w-full bg-rose-600 hover:bg-rose-500 text-white font-black py-3 rounded-xl text-xs transition-colors cursor-pointer'
+                      : 'w-full bg-rose-600 text-white font-black py-3 rounded-xl text-xs opacity-40 cursor-not-allowed'
+                  }
                 >
                   {deleting ? 'Deleting…' : 'Delete my account'}
                 </button>
-                <p className="text-[11px] font-bold text-rose-500 leading-relaxed">
-                  {deleteReady
-                    ? 'Confirmation phrase accepted — deletion stays disabled until the secure backend is built.'
-                    : 'Account deletion is unavailable until the secure deletion service is built. Your data stays untouched until then.'}
-                </p>
+                {!DELETE_ACCOUNT_BACKEND_LIVE && (
+                  <p className="text-[11px] font-bold text-rose-500 leading-relaxed">
+                    Account deletion isn&rsquo;t live yet — the secure
+                    service is built and waiting on its final deploy
+                    check. Your data stays untouched until then.
+                  </p>
+                )}
                 {deleteError && (
                   <p className="text-xs font-bold text-rose-600 bg-rose-50 border border-rose-200 p-2.5 rounded-xl">
                     {deleteError}

@@ -1,16 +1,25 @@
 // PREP ONLY — NOT DEPLOYED. Do not deploy without Mark's approval.
 //
 // delete-account: permanently deletes the CALLER's account and data.
-// The Account drawer's delete button stays disabled until this function
-// is deployed and verified (see README.md in this folder).
+// The Account drawer's delete button stays disabled (behind
+// DELETE_ACCOUNT_BACKEND_LIVE in WeezerAccountDrawer.tsx) until this
+// function is deployed and verified with a throwaway account (see
+// README.md in this folder for the exact deploy/test steps).
 //
 // Flow:
 //   1. Verify the caller's JWT (the function requires a signed-in user).
 //   2. With the service-role key (server-only secret), delete the user's
-//      friendships (both directions), rankings row, and profile row.
+//      friendships (both directions), rankings row, fanhood record,
+//      and profile row.
 //   3. Delete the auth user itself via the Admin API.
 // Any failure mid-way returns an error and is logged server-side; the
 // client keeps the account intact and tells the user to try again.
+//
+// User-owned tables, audited Nov 7, 2026 (Build 6): friendships,
+// weezer_rankings, fanhood, profiles — all deleted below. app_events
+// (the analytics table) needs no step: its user_id is ON DELETE SET
+// NULL, so the auth-user delete anonymizes those rows itself. The
+// community aggregate tables hold no per-user rows.
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
@@ -66,6 +75,10 @@ Deno.serve(async (req) => {
   steps.push([
     'rankings',
     await admin.from('weezer_rankings').delete().eq('user_id', userId),
+  ]);
+  steps.push([
+    'game record',
+    await admin.from('fanhood').delete().eq('user_id', userId),
   ]);
   steps.push([
     'profile',

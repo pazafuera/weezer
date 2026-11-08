@@ -10,6 +10,7 @@ import {
 } from '../lib/saveStatus';
 import { FULL_SONG_POOL } from '../data/constants';
 import { isLoreUnlocked } from '../data/loreGame';
+import { useFanhood, fanhoodGamesPlayed } from '../lib/fanhood';
 import { FlyingWIcon } from './SharedUI';
 import WeezerAccountDrawer from './WeezerAccountDrawer';
 import BucketGuide from './BucketGuide';
@@ -332,6 +333,11 @@ export default function AppShell({
 
   const activeFriendsCount = Array.isArray(friendsList) ? friendsList.length : 0;
 
+  // The Shack row's Play! prompt retires once this device has a
+  // finished game on record (see the pill in renderNavButton).
+  const fanhood = useFanhood();
+  const hasPlayedShack = fanhoodGamesPlayed(fanhood) > 0;
+
   // One nav row. Rows share one uniform height (py-4 = 48px at
   // the text-xs line height) and touch — no gap between rows.
   // Inactive rows are inset rounded shapes; the current step is
@@ -420,6 +426,23 @@ export default function AppShell({
                   {pendingRequestsCount}
                 </span>
               )}
+            </span>
+          )}
+
+        {/* Back to the Shack carries a Play! prompt (owner,
+            Nov 7): an amber pill in the Fan Friends pending-pill
+            style, shown only while the game is unlocked and this
+            device has no finished game yet — once they've played,
+            the prompt has done its job. The Leaderboard row
+            shares step 'lore' and is excluded via
+            opensLeaderboard; locked rows carry the unlock hint
+            in this slot instead. */}
+        {item.step === 'lore' &&
+          !item.opensLeaderboard &&
+          !isDisabled &&
+          !hasPlayedShack && (
+            <span className="bg-amber-400 text-slate-950 font-black text-[10px] px-2 py-0.5 rounded-full">
+              Play!
             </span>
           )}
       </button>

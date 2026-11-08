@@ -174,7 +174,7 @@ export default function FanStats({
 }: {
   userMasterList?: Song[];
 }) {
-  const { communityMasterLists = [], communityTriageMaps = [], refreshCommunityData, closeFanStats, communityLoaded, communityError, loadingCommunity, communityStatsPayload, communitySource } = useWeezer();
+  const { communityMasterLists = [], communityTriageMaps = [], refreshCommunityData, closeFanStats, communityLoaded, communityError, loadingCommunity, communityStatsPayload, communitySource, navigateTo } = useWeezer();
   const [expandedTribe, setExpandedTribe] = useState<string | null>(null);
 
   // --- Weezerverse Phase 1: presence, filter selection, slice -----
@@ -687,18 +687,37 @@ export default function FanStats({
           </button>
         </div>
 
-        {/* SAMPLE-DATA BANNER — a standing disclosure for the
-            seeded-test-fan era (synthetic-fans plan §E.6): code-gated
-            (it renders for exactly as long as this release is the
-            state of the page), slim, and NOT dismissible — the same
-            amber disclosure register as SortingIncompleteNotice. It
-            ships with the seed run and retires with it. */}
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 shadow-xs">
-          <p className="text-xs sm:text-sm font-semibold text-amber-900 leading-relaxed text-center">
-            {filterActive
-              ? 'Filtered views show real fans only.'
-              : 'Sample data — seeded test fans while the community grows.'}
+        {/* TOP BANNER — an invitation, not a disclaimer (owner
+            reframe, Nov 8, 2026): the project is young and the
+            stats below are still gathering fans, so the top of the
+            page says exactly that, in bold, and asks the reader to
+            do the two things that grow the numbers — rank and
+            share. It renders the same in filtered and unfiltered
+            views. The seeded-test-fan fact itself now lives only
+            in the methodology section below, where the fine print
+            belongs. */}
+        <div className="bg-white border-[3px] border-[#0C1220] rounded-[18px] shadow-[4px_4px_0_rgba(11,30,63,0.85)] px-5 py-4 text-center">
+          <p className="text-base sm:text-lg font-black text-[#0C1220] leading-snug">
+            This project just started, and the numbers are still growing.
           </p>
+          <p className="text-sm font-semibold text-[#3D4A63] leading-relaxed mt-1">
+            The numbers get truer with every ranking. Add yours, then
+            share it — that&apos;s how this grows.
+          </p>
+          <div className="flex items-center justify-center gap-2 mt-3">
+            <button
+              onClick={() => navigateTo('triage')}
+              className="bg-[#FFC72C] hover:bg-[#FFD34D] text-[#0C1220] font-black text-xs px-4 py-2 rounded-full cursor-pointer transition-colors"
+            >
+              Rank your songs
+            </button>
+            <button
+              onClick={() => navigateTo('shareables')}
+              className="bg-white hover:bg-slate-100 text-[#0C1220] border-2 border-[#0C1220] font-black text-xs px-4 py-2 rounded-full cursor-pointer transition-colors"
+            >
+              Share your cards
+            </button>
+          </div>
         </div>
 
         {/* HERO */}

@@ -96,7 +96,6 @@ export default function WeezerAccountDrawer({
     setTriageMap,
     handleSignOut,
     saveState,
-    saveDiagnostics,
     navigateTo,
   } = useWeezer();
 
@@ -745,12 +744,12 @@ export default function WeezerAccountDrawer({
               </div>
 
               {/* SAVING — the same save state the header indicator
-                  shows, plus the recent save record behind it
-                  (durability overhaul, Nov 7). The record is the
-                  diagnostics ring (app/lib/saveDiagnostics.ts):
-                  read-only, newest last, kept so the next save
-                  problem can be diagnosed from a screenshot of
-                  this card instead of guesswork. */}
+                  shows (durability overhaul, Nov 7). The recent-save
+                  activity list that used to render under it was
+                  removed Nov 7 evening (owner call): raw diagnostics
+                  telemetry has no place in a user's drawer. The ring
+                  itself (app/lib/saveDiagnostics.ts) still records
+                  in the background; it just isn't displayed here. */}
               <div className="bg-white p-4 rounded-2xl border-[2.5px] border-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)] space-y-3">
                 <span className="text-[10px] font-black uppercase tracking-widest text-[#3D4A63] block">
                   Saving
@@ -760,22 +759,6 @@ export default function WeezerAccountDrawer({
                     ? `Last saved ${formatTimeOfDay(saveState.savedAt)}`
                     : (saveIndicatorCopy(saveState) ?? 'Nothing to save yet')}
                 </p>
-                {saveDiagnostics.length > 0 && (
-                  <div className="space-y-1 border-t border-slate-200 pt-2">
-                    <span className="text-[9px] uppercase text-[#3D4A63] block">
-                      Recent save activity
-                    </span>
-                    {saveDiagnostics.map((event, i) => (
-                      <p
-                        key={`${event.t}-${i}`}
-                        className="text-[10px] font-medium text-[#3D4A63] leading-snug"
-                      >
-                        {formatTimeOfDay(Date.parse(event.t))} · {event.kind} —{' '}
-                        {event.detail}
-                      </p>
-                    ))}
-                  </div>
-                )}
               </div>
 
               {/* SITE STATS — owner only (Nov 7). This row is

@@ -20,9 +20,12 @@
  * - sort_started    — the first song bucketed in a session
  *                     (§7's "Starts", previously invisible).
  * - sort_completed  — the session's triage reached all 206
- *                     songs bucketed (crossing observed in the
- *                     context; a boot that LOADS a finished sort
- *                     does not fire it — completions are acts,
+ *                     songs bucketed (the crossing is detected
+ *                     inside the context's edit funnel,
+ *                     commitEdit; boot loads commit through the
+ *                     raw setters and never pass through it,
+ *                     so a boot that LOADS a finished sort
+ *                     cannot fire it — completions are acts,
  *                     not states).
  * - share_initiated — a share/download was tapped, with which
  *                     card (§7's "Shares", previously invisible).
@@ -131,6 +134,25 @@ export function cardFromExportFilename(filename: string): ShareCardType | null {
     default:
       return null;
   }
+}
+
+/**
+ * The sort-completion crossing, as a pure decision: an edit
+ * took the bucketed count from below the full pool to the
+ * full pool. Only the edit funnel consults it (WeezerContext's
+ * commitEdit) — boot loads never reach it, so a loaded
+ * finished sort is never mistaken for a finish, and an edit
+ * that leaves the count where it was (a Refine re-bucket at
+ * 206) never fires. A dip-and-return WITHIN a session is held
+ * off by the tracker's once-per-session rule; the crossing
+ * itself is deliberately stateless.
+ */
+export function crossedToComplete(
+  prevCount: number,
+  nextCount: number,
+  total: number
+): boolean {
+  return prevCount < total && nextCount >= total;
 }
 
 export type AnalyticsSend = (row: AnalyticsRow) => Promise<unknown>;

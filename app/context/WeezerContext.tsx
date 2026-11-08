@@ -24,6 +24,7 @@ import {
 import type { SaveDiagnosticEvent } from '../lib/saveDiagnostics';
 import {
   configureAnalytics,
+  crossedToComplete,
   setAnalyticsUserId,
   trackAnalytics,
 } from '../lib/analytics';
@@ -938,24 +939,14 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     [triageMap, masterList]
   );
 
-  // Sort completion (analytics): fire when the session's triage
-  // CROSSES to all 206 bucketed. Only crossings observed after
-  // the boot settles count — the first settled observation is
-  // the baseline, so a boot that LOADS a finished sort never
-  // fires it (completions are acts, not states), and the
-  // tracker's once-rule keeps a dip-and-return from refiring.
-  const triageCountRef = useRef<number | null>(null);
-  useEffect(() => {
-    if (loadingUser) return;
-    const count = Object.values(triageMap).filter(
-      (v) => v !== 'unknown'
-    ).length;
-    const prev = triageCountRef.current;
-    triageCountRef.current = count;
-    if (prev !== null && prev < FULL_SONG_POOL.length && count >= FULL_SONG_POOL.length) {
-      trackAnalytics('sort_completed', { oncePerSession: true });
-    }
-  }, [triageMap, loadingUser]);
+  // Sort completion (analytics) is detected inside commitEdit
+  // below — the edits-only funnel — never by observing state:
+  // boot loads commit through the raw setters (the adopts in
+  // initUserAndLoadRankings), so a loaded finished sort cannot
+  // be mistaken for the act of finishing one. (The original
+  // effect detector did exactly that whenever a saved 206
+  // landed a beat after its first observation — every sign-in
+  // and account switch read as a phantom completion.)
 
   // Cached Community Data State (Fix B)
   const [communityMasterLists, setCommunityMasterLists] = useState<Song[][]>([]);
@@ -2086,6 +2077,11 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
    * is unrepresentable — there is no second variable to leave
    * behind.
    *
+   * Before those, a commit is observed for the one analytics
+   * crossing only an edit can perform: the bucketed count
+   * reaching the full pool (sort_completed — see the check at
+   * the top of the function; loads never pass through here).
+   *
    * A commit does three things, in order:
    * 1. Replaces the session's effective state (the render
    *    derives bucketRanks from it — optimistic as ever; only
@@ -2113,6 +2109,24 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
    * the loadBlocked gate inside.
    */
   const commitEdit = (nextState: RankingsStateData) => {
+    // Sort completion (analytics): an edit that carries the
+    // bucketed count across the full pool IS a completion, and
+    // this funnel is where completions are acts — every edit
+    // (deck, list, Refine, Final Review) lands here, and boot
+    // loads never do (they commit through the raw setters in
+    // initUserAndLoadRankings). The closure's triageMap is the
+    // state this edit was built from; nextState is its result.
+    // The tracker's once-rule keeps a dip-and-return within
+    // the session from refiring.
+    if (
+      crossedToComplete(
+        countBucketedSongs(triageMap),
+        countBucketedSongs(nextState.triageMap),
+        FULL_SONG_POOL.length
+      )
+    ) {
+      trackAnalytics('sort_completed', { oncePerSession: true });
+    }
     setTriageMap(nextState.triageMap);
     setMasterList(nextState.masterList);
     if (userId) rememberLastUserId(userId);

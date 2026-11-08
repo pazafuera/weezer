@@ -40,18 +40,41 @@
  * when it RUNS, not when it was triggered — the second
  * reconcile through the chain always merges a world that
  * includes the first one's writes.
+ *
+ * OWNERSHIP (Nov 7, 2026 — the owner-stamp fix): the merge
+ * above is per-account, but the device record it merges used
+ * to be anybody's: an account signing in on a device absorbed
+ * whatever record the device held into its own row. The
+ * device record now carries an owner (app/lib/fanhoodOwner.ts
+ * — a stamp key plus per-account parking slots), and every
+ * reconcile first runs the ownership shuffle INSIDE its chain
+ * task: a foreign record is parked under its owner's slot
+ * (copy verified before the seat changes), the reconciling
+ * account's own parked record is restored if it has one, and
+ * the stamp moves to the reconciling account. The merge then
+ * runs exactly as before, against a device record that is
+ * this account's — or a guest/legacy one it is claiming.
  */
 
 import { supabase } from '../../utils/supabase';
 import {
+  FANHOOD_STORAGE_KEY,
+  clearFanhood,
   fanhoodRecordFromRow,
   fanhoodRowFromRecord,
   mergeFanhoodRecords,
+  parseFanhoodValue,
   readFanhood,
   serializeFanhood,
   writeFanhood,
 } from './fanhood';
 import type { FanhoodRecord } from './fanhood';
+import {
+  FANHOOD_OWNER_STAMP_KEY,
+  fanhoodSlotKey,
+  planFanhoodReconcile,
+} from './fanhoodOwner';
+import type { FanhoodOwnershipStep } from './fanhoodOwner';
 import { createPromiseChain } from './promiseChain';
 
 /** The one serialization point for every fanhood reconcile:
@@ -129,6 +152,142 @@ async function reconcileRecords(
 }
 
 /* ------------------------------------------------------------------ */
+/* Ownership shuffle (Nov 7, 2026 — app/lib/fanhoodOwner.ts)         */
+/* ------------------------------------------------------------------ */
+
+/** The stamp: the user id the active device record belongs
+ *  to, or null when it is a guest/legacy record. */
+function readOwnerStamp(): string | null {
+  try {
+    const raw = window.localStorage.getItem(FANHOOD_OWNER_STAMP_KEY);
+    return raw ? raw : null;
+  } catch {
+    return null;
+  }
+}
+
+/** An account's parked record, parse-checked: a slot whose
+ *  contents don't parse is no slot at all. */
+function readParkedSlot(userId: string): FanhoodRecord | null {
+  try {
+    return parseFanhoodValue(
+      window.localStorage.getItem(fanhoodSlotKey(userId))
+    );
+  } catch {
+    return null;
+  }
+}
+
+/** setItem + read-back equality: a copy is only believed once
+ *  it reads back byte-identical. */
+function writeVerified(key: string, value: string): boolean {
+  try {
+    window.localStorage.setItem(key, value);
+    return window.localStorage.getItem(key) === value;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * One shuffle step. Returns false when the step could not be
+ * verified — the caller aborts the shuffle there and the
+ * reconcile falls back to the plain merge against whatever
+ * stands, so a storage failure degrades to the pre-fix
+ * behavior and never loses a record: the active seat is only
+ * ever replaced after the copy leaving it (or entering it)
+ * has been verified in its new home.
+ */
+function runOwnershipStep(
+  step: FanhoodOwnershipStep,
+  userId: string,
+  stamp: string | null
+): boolean {
+  switch (step) {
+    case 'park-active': {
+      if (!stamp) return false;
+      const active = readFanhood();
+      // The facts said a record stood here; if it has since
+      // vanished there is nothing to park and the seat steps
+      // still apply.
+      if (!active) return true;
+      return writeVerified(
+        fanhoodSlotKey(stamp),
+        serializeFanhood(active)
+      );
+    }
+    case 'restore-slot': {
+      const parked = readParkedSlot(userId);
+      if (!parked) return false;
+      writeFanhood(parked);
+      let landed = false;
+      try {
+        landed =
+          window.localStorage.getItem(FANHOOD_STORAGE_KEY) ===
+          serializeFanhood(parked);
+      } catch {
+        landed = false;
+      }
+      if (!landed) return false;
+      try {
+        window.localStorage.removeItem(fanhoodSlotKey(userId));
+      } catch {
+        /* a stale slot copy is benign — the merge unions by
+           game, so a later restore of it changes nothing */
+      }
+      return true;
+    }
+    case 'clear-active': {
+      clearFanhood();
+      try {
+        return window.localStorage.getItem(FANHOOD_STORAGE_KEY) === null;
+      } catch {
+        return false;
+      }
+    }
+    case 'claim-stamp':
+      return writeVerified(FANHOOD_OWNER_STAMP_KEY, userId);
+    case 'merge':
+      return true;
+  }
+}
+
+/**
+ * Brings the device record's ownership in line with the
+ * reconciling account, per planFanhoodReconcile. Runs ONLY
+ * inside a chain task, immediately before the merge reads the
+ * device record — parking outside the task would race the
+ * very read-modify-writes the chain exists to serialize.
+ * Never throws: unreadable facts or a failed step degrade to
+ * the plain merge, today's behavior.
+ */
+function resolveDeviceRecordOwnership(userId: string): void {
+  let stamp: string | null;
+  let steps: FanhoodOwnershipStep[];
+  try {
+    stamp = readOwnerStamp();
+    steps = planFanhoodReconcile({
+      stamp,
+      accountId: userId,
+      hasParkedSlot: readParkedSlot(userId) !== null,
+      hasActiveRecord: readFanhood() !== null,
+    }).steps;
+  } catch {
+    return;
+  }
+  for (const step of steps) {
+    if (step === 'merge') return;
+    let ok = false;
+    try {
+      ok = runOwnershipStep(step, userId, stamp);
+    } catch {
+      ok = false;
+    }
+    if (!ok) return;
+  }
+}
+
+/* ------------------------------------------------------------------ */
 /* Session-establish reconcile (once per user per page session)      */
 /* ------------------------------------------------------------------ */
 
@@ -162,6 +321,11 @@ export function reconcileAccountFanhood(userId: string): void {
   const promise = reconcileChain.enqueue(async () => {
     try {
       if (epochAtSchedule !== syncEpoch) return;
+      // The ownership shuffle runs here — inside the task,
+      // after the epoch check (a dead session's queued task
+      // must not shuffle storage under its successor) and
+      // before the merge reads the device record.
+      resolveDeviceRecordOwnership(userId);
       await reconcileRecords(userId, readFanhood());
     } catch {
       /* local-only is always a valid state */
@@ -201,7 +365,10 @@ export function fanhoodReconcileSettled(
 /** Sign-out: forget who was reconciled so a different account
  *  signing in on this device reconciles fresh. The local record
  *  itself is deliberately left alone — it is the device's record,
- *  and surfaces fall back to it (today's guest semantics).
+ *  and surfaces fall back to it (today's guest semantics). The
+ *  ownership stamp is left alone too: the record stays the
+ *  signed-out account's, visibly, and the next account's
+ *  reconcile parks it rather than absorbing it.
  *  The in-flight flag and the epoch are part of the forgetting
  *  (F5): leaving reconcileInFlight set let a sign-out that
  *  landed mid-reconcile silently skip the NEXT account's
@@ -240,6 +407,12 @@ export async function syncFanhoodAfterRun(
   if (!userId) return;
   await reconcileChain.enqueue(async () => {
     try {
+      // Same discipline as the session reconcile: ownership
+      // first (a no-op once this session's reconcile has run
+      // and stamped the record), so the record composed below
+      // is this account's even if this push somehow reaches
+      // the chain ahead of that reconcile.
+      resolveDeviceRecordOwnership(userId);
       const localNow =
         mergeFanhoodRecords(readFanhood(), settledRecord) ??
         settledRecord;

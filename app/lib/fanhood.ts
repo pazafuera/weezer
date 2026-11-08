@@ -342,6 +342,24 @@ export function writeFanhood(record: FanhoodRecord): void {
 }
 
 /**
+ * Removes the device record outright — the active seat left
+ * empty. Used only by the ownership shuffle in fanhoodSync
+ * (app/lib/fanhoodOwner.ts): another account's record was
+ * parked away and this account has none of its own parked, so
+ * the seat starts from its account row instead. Notifies like
+ * a write, so mounted surfaces stop showing the old record.
+ */
+export function clearFanhood(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.removeItem(FANHOOD_STORAGE_KEY);
+  } catch {
+    /* storage unavailable — nothing to clear into */
+  }
+  notifyFanhoodChanged();
+}
+
+/**
  * The pure core of recording a finished game. One-and-done: if the
  * game already has a result, the record comes back unchanged and
  * `recorded` is false — a game result never changes once recorded.

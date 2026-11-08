@@ -7,6 +7,7 @@ import {
   countCategorizedSongs,
   TriageValue,
 } from '../context/WeezerContext';
+import { trackAnalytics } from '../lib/analytics';
 import { albumCoverSrc, resolveAlbumId } from './shareables/ShareCardShell';
 import { FlyingWIcon, AudioPreviewButton, HelpButton } from './SharedUI';
 import { displayFont } from './shareables/fonts';
@@ -1276,6 +1277,16 @@ export default function Step1Deck({
     pendingSortRef.current = null;
     const song = currentSong;
     const idx = effectivePosition;
+    // Analytics: the session's first real bucket is the
+    // funnel's "start" (a don't-know act is not a bucketing).
+    // The deck is the default sorting surface, so this is the
+    // call that fires in production; it mirrors the list
+    // view's handleRowTap in Step1Triage. (Swipe navigation
+    // never reaches act() — it writes nothing, by ruling; the
+    // tutorial's rehearsal never reaches it either.)
+    if (value !== 'unknown') {
+      trackAnalytics('sort_started', { oncePerSession: true });
+    }
     handleSetBucket(song.id, value);
 
     // The prospective map — the context update hasn't rendered

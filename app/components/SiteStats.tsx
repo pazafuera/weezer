@@ -51,6 +51,56 @@ type LoadState =
   | { kind: 'error' }
   | { kind: 'ready'; payload: EventStatsPayload };
 
+/** The Weezerverse pool readout (owner, Nov 9, 2026): the
+ *  community aggregates behind get_community_stats() — the same
+ *  numbers the Weezerverse page renders from, refreshed hourly
+ *  by pg_cron. The pool still contains the 160 seeded test fans
+ *  from the Oct 2026 Phase 2 seed (they're labeled as sample
+ *  data on the page itself), so the real-fan line is the pool
+ *  minus the seed. If the seed is ever removed, this constant
+ *  and the line's wording change together. */
+const SEEDED_TEST_FANS = 160;
+
+type PoolState =
+  | { kind: 'loading' }
+  | { kind: 'error' }
+  | { kind: 'ready'; pooled: number; refreshedAt: string };
+
+function parsePoolPayload(data: unknown): PoolState | null {
+  if (!data || typeof data !== 'object') return null;
+  const d = data as Record<string, unknown>;
+  if (
+    typeof d.qualifiedSubmissions !== 'number' ||
+    typeof d.refreshedAt !== 'string'
+  ) {
+    return null;
+  }
+  return {
+    kind: 'ready',
+    pooled: d.qualifiedSubmissions,
+    refreshedAt: d.refreshedAt,
+  };
+}
+
+/** The aggregates' refreshedAt arrives as a Postgres timestamp
+ *  ("2026-11-07 19:46:09.623576+00"); normalize it into the ISO
+ *  shape every browser's Date parses, then render it in the
+ *  owner's timezone. */
+function formatRefreshedAt(raw: string): string {
+  const iso = raw
+    .replace(' ', 'T')
+    .replace(/([+-]\d{2})$/, '$1:00');
+  const when = new Date(iso);
+  if (Number.isNaN(when.getTime())) return raw;
+  return when.toLocaleString('en-US', {
+    timeZone: 'America/Los_Angeles',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
 const CARD_CLASS =
   'bg-white p-4 rounded-2xl border-[2.5px] border-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)]';
 
@@ -68,6 +118,8 @@ export default function SiteStats() {
   const isOwner = isOwnerUser(userId);
   const [state, setState] = useState<LoadState>({ kind: 'loading' });
   const [attempt, setAttempt] = useState(0);
+  const [pool, setPool] = useState<PoolState>({ kind: 'loading' });
+  const [poolAttempt, setPoolAttempt] = useState(0);
 
   // navigateTo is a fresh function on every context render, so
   // it must never sit in an effect's dependency array (the
@@ -115,6 +167,27 @@ export default function SiteStats() {
       cancelled = true;
     };
   }, [isOwner, attempt]);
+
+  // The pool readout is independent of the event stats: its own
+  // fetch, its own states, so one failing never hides the other.
+  useEffect(() => {
+    if (!isOwner) return;
+    let cancelled = false;
+    setPool({ kind: 'loading' });
+    (async () => {
+      const { data, error } = await supabase.rpc('get_community_stats');
+      if (cancelled) return;
+      if (error) {
+        setPool({ kind: 'error' });
+        return;
+      }
+      const parsed = parsePoolPayload(data);
+      setPool(parsed ?? { kind: 'error' });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOwner, poolAttempt]);
 
   if (!isOwner) return null;
 
@@ -274,6 +347,55 @@ export default function SiteStats() {
           </p>
         </>
       )}
+
+      <div className={CARD_CLASS}>
+        <span className="text-[10px] font-black uppercase tracking-widest text-[#3D4A63] block">
+          Weezerverse pool
+        </span>
+        {pool.kind === 'loading' && (
+          <p className="pt-2 text-sm font-semibold text-[#3D4A63]">
+            Counting the pool…
+          </p>
+        )}
+        {pool.kind === 'error' && (
+          <div className="space-y-3 pt-2">
+            <p className="text-sm font-bold text-[#0C1220]">
+              Couldn&apos;t load the pool count.
+            </p>
+            <button
+              onClick={() => setPoolAttempt((n) => n + 1)}
+              className="bg-[#0C1220] hover:bg-slate-700 border-[2.5px] border-[#0C1220] text-white font-black py-2.5 px-4 rounded-xl transition-colors text-xs cursor-pointer"
+            >
+              Try again
+            </button>
+          </div>
+        )}
+        {pool.kind === 'ready' && (
+          <div className="pt-1">
+            <div className="flex items-baseline justify-between gap-3 border-b border-slate-100 py-2">
+              <span className="text-sm font-bold text-[#0C1220]">
+                Fans ranked (real)
+              </span>
+              <span className="text-sm font-black text-[#0C1220]">
+                {Math.max(0, pool.pooled - SEEDED_TEST_FANS)}
+              </span>
+            </div>
+            <div className="flex items-baseline justify-between gap-3 border-b border-slate-100 py-2">
+              <span className="text-sm font-bold text-[#0C1220]">
+                Pooled rankings
+              </span>
+              <span className="text-sm font-black text-[#0C1220]">
+                {pool.pooled}
+              </span>
+            </div>
+            <p className="pt-2 text-[11px] font-medium leading-relaxed text-[#3D4A63]">
+              The pool includes the {SEEDED_TEST_FANS} seeded test
+              fans. Refreshed {formatRefreshedAt(pool.refreshedAt)}{' '}
+              — it updates hourly.
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

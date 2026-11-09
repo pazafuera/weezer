@@ -489,12 +489,14 @@ export default function TierListChart({
   };
 
   const renderTierGrid = (isExportMode: boolean) => {
-    /* The gallery (fixedView) export renders the poster board from
-     * the Nov 8, 2026 remake: white plaque, ink frame and dividers,
-     * big album covers. The slicer's data attributes and the label
-     * cell's pastel background are unchanged — it measures both.
-     * Every other surface keeps the dark panel. */
-    const poster = isExportMode && !!fixedView;
+    /* The gallery (fixedView) chart renders the poster board from
+     * the Nov 8, 2026 remake — on screen AND in the export, one
+     * design (the owner: "the preview should look exactly like the
+     * download"): white plaque, ink frame and dividers, big album
+     * covers. The slicer's data attributes and the label cell's
+     * pastel background are unchanged — it measures both. Every
+     * other surface keeps the dark panel. */
+    const poster = !!fixedView;
     return (
     <div data-tier-export-grid="true" className={poster
       ? 'bg-white border-[3px] border-[#0C1220] flex flex-col w-full rounded-2xl overflow-hidden shadow-[6px_6px_0_rgba(12,18,32,0.85)]'
@@ -504,7 +506,7 @@ export default function TierListChart({
           key={tier.label}
           data-tier-export-section="true"
           className={poster
-            ? `grid grid-cols-[6rem_1fr] w-full ${tierIndex > 0 ? 'border-t-[3px] border-[#0C1220]' : ''}`
+            ? `grid ${isExportMode ? 'grid-cols-[6rem_1fr]' : 'grid-cols-[4rem_minmax(0,1fr)] sm:grid-cols-[6rem_minmax(0,1fr)]'} w-full ${tierIndex > 0 ? 'border-t-[3px] border-[#0C1220]' : ''}`
             : `grid ${isExportMode ? 'grid-cols-[6rem_1fr]' : 'grid-cols-[4rem_minmax(0,1fr)] sm:grid-cols-[6rem_minmax(0,1fr)]'} bg-black gap-0.5 sm:gap-1 min-h-[80px] w-full`}
         >
           {/* TIER BADGE — the carousel slicer measures this cell
@@ -523,7 +525,9 @@ export default function TierListChart({
               className={`w-full h-full ${
                 isExportMode
                   ? `flex flex-wrap content-start ${poster ? 'gap-2 p-2' : 'gap-1 p-1'}`
-                  : 'flex overflow-x-auto flex-nowrap gap-0.5 sm:gap-1 p-0.5 sm:p-1 overscroll-x-contain custom-tier-scrollbar'
+                  : poster && viewMode === 'albums'
+                    ? 'flex flex-wrap content-start gap-1.5 p-1.5'
+                    : 'flex overflow-x-auto flex-nowrap gap-0.5 sm:gap-1 p-0.5 sm:p-1 overscroll-x-contain custom-tier-scrollbar'
               }`}
             >
               {tier.items.length === 0 ? (
@@ -541,7 +545,7 @@ export default function TierListChart({
                       <div
                         key={item.id}
                         data-tier-export-tile="true"
-                        className={`${poster ? 'w-36 h-36' : 'w-20 h-20 sm:w-24 sm:h-24'} shrink-0 p-1 flex items-center justify-center ${
+                        className={`${poster ? (isExportMode ? 'w-32 h-32' : 'w-24 h-24 sm:w-28 sm:h-28') : 'w-20 h-20 sm:w-24 sm:h-24'} shrink-0 p-1 flex items-center justify-center ${
                           isExportMode ? '' : 'hover:scale-[1.02] transition-transform cursor-default'
                         }`}
                         title={`#${item.rank} ${item.name}`}
@@ -561,7 +565,7 @@ export default function TierListChart({
                     <div
                       key={item.id}
                       data-tier-export-tile="true"
-                      className={`w-20 h-20 sm:w-24 sm:h-24 shrink-0 flex items-center justify-center p-1 text-center select-none border border-slate-700 ${
+                      className={`w-20 h-20 sm:w-24 sm:h-24 shrink-0 flex items-center justify-center p-1 text-center select-none ${poster ? 'border-2 border-[#0C1220]' : 'border border-slate-700'} ${
                         isExportMode ? '' : 'hover:scale-[1.02] transition-transform cursor-default'
                       }`}
                       style={{ backgroundColor: theme.bg, color: theme.text }}
@@ -603,6 +607,88 @@ export default function TierListChart({
       : rankedSongs.length >= 206
         ? 'all 206 songs, ranked'
         : `${rankedSongs.length} songs, ranked`;
+
+  /* The poster header and footer, shared by the on-screen gallery
+   * card and the hidden export copy (one source of truth — the
+   * owner, Nov 8, 2026: "the preview should look exactly like the
+   * download"). The hands layer lives here, in the VISIBLE render
+   * too, so the image is loaded long before any export asks
+   * html-to-image to inline it — an export-only <img> can be
+   * skipped by that pipeline (the first preview's hands vanished
+   * from the download while every cover, also on screen, rendered).
+   * The export sizes are tuned so the whole ALBUMS chart fits one
+   * 4:5 carousel slice (2048x2560 at pixelRatio 2). */
+  const renderPosterHeader = (size: 'export' | 'visible') => {
+    const ex = size === 'export';
+    return (
+      <div
+        {...(ex ? { 'data-tier-export-header': 'true' } : {})}
+        className={`relative text-center ${ex ? 'mb-5 pb-2' : 'mb-4'}`}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/doodles/flying-w-hands.png"
+          alt=""
+          aria-hidden="true"
+          className={`pointer-events-none absolute left-1/2 max-w-none -translate-x-1/2 opacity-[0.38] ${ex ? 'top-[-28px] w-[920px]' : 'top-[-14px] w-[600px]'}`}
+        />
+        <div className="relative">
+          <p
+            className={`font-bold leading-none text-white ${handFont.className} ${ex ? 'text-[34px]' : 'text-[22px]'}`}
+            style={{ textShadow: POSTER_SUBHEAD_SHADOW }}
+          >
+            rankingweezer.com
+          </p>
+          <h2
+            className={`whitespace-nowrap leading-none text-white ${displayFont.className} ${ex ? 'mt-3 text-[68px]' : 'mt-2 text-[30px] sm:text-[40px]'}`}
+            style={{ textShadow: POSTER_HEADLINE_SHADOW }}
+          >
+            {posterHeadline}
+          </h2>
+          <p
+            className={`font-bold leading-none text-white ${handFont.className} ${ex ? 'mt-2 text-[40px]' : 'mt-1.5 text-[23px] sm:text-[25px]'}`}
+            style={{ textShadow: POSTER_SUBHEAD_SHADOW }}
+          >
+            {posterSubhead}
+          </p>
+          {username && (
+            <div
+              className={`inline-block -rotate-1 rounded-xl border-[#0C1220] bg-[#FFC72C] shadow-[4px_4px_0_rgba(12,18,32,0.85)] ${ex ? 'mt-4 border-[3px] px-6 py-2' : 'mt-3 border-2 px-4 py-1'}`}
+            >
+              <span
+                className={`tracking-wide text-[#0C1220] ${displayFont.className} ${ex ? 'text-[24px]' : 'text-[15px]'}`}
+              >
+                TIER LIST BY @{username.toUpperCase()}
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const renderPosterFooter = (size: 'export' | 'visible') => {
+    const ex = size === 'export';
+    return (
+      <div
+        {...(ex ? { 'data-tier-export-footer': 'true' } : {})}
+        className={`flex items-center ${ex ? 'gap-4 pt-7' : 'gap-3 pt-4'}`}
+      >
+        <FlyingW
+          className={
+            ex
+              ? 'h-[30px] w-[55px] shrink-0 text-white'
+              : 'h-[18px] w-[33px] shrink-0 text-white'
+          }
+        />
+        <span
+          className={`font-black uppercase text-white ${ex ? 'whitespace-nowrap text-[22px] tracking-[0.12em]' : 'text-[11px] leading-snug tracking-[0.1em]'}`}
+        >
+          All My Favorite Songs · The Weezer Song Ranking Project
+        </span>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-4 w-full overflow-hidden">
@@ -654,18 +740,31 @@ export default function TierListChart({
       </div>
       )}
 
-      {/* WEB UI VISIBLE CHART */}
-      <div className="bg-slate-900 rounded-2xl p-3 sm:p-5 shadow-xl border border-slate-800 space-y-4 w-full overflow-hidden">
-        {/* HEADER */}
-        <div className="text-center mb-2">
-          <h2 className={`text-2xl sm:text-3xl text-white tracking-wide ${displayFont.className}`}>
-            {title}
-          </h2>
+      {/* WEB UI VISIBLE CHART — the gallery card IS the poster card
+          (same header, board and footer as the export below); every
+          other surface keeps the dark panel. */}
+      {fixedView ? (
+        <div
+          className="relative w-full overflow-hidden rounded-[18px] p-4 sm:p-5"
+          style={{ backgroundColor: POSTER_BLUE }}
+        >
+          {renderPosterHeader('visible')}
+          {renderTierGrid(false)}
+          {renderPosterFooter('visible')}
         </div>
+      ) : (
+        <div className="bg-slate-900 rounded-2xl p-3 sm:p-5 shadow-xl border border-slate-800 space-y-4 w-full overflow-hidden">
+          {/* HEADER */}
+          <div className="text-center mb-2">
+            <h2 className={`text-2xl sm:text-3xl text-white tracking-wide ${displayFont.className}`}>
+              {title}
+            </h2>
+          </div>
 
-        {/* Renders horizontal scroll version safely! */}
-        {renderTierGrid(false)}
-      </div>
+          {/* Renders horizontal scroll version safely! */}
+          {renderTierGrid(false)}
+        </div>
+      )}
 
       {/* HIDDEN EXPORT CHART (Pre-rendered explicitly for Image Capture).
           Same 1024px frame and mechanics as always; the field is now
@@ -676,62 +775,15 @@ export default function TierListChart({
 
           {fixedView ? (
           <>
-          {/* POSTER HEADER (gallery cards, Nov 8, 2026 remake): the
-              flying-W hands as a faint back layer behind the type,
-              the card's ONE url above the headline, the gold
-              attribution strip. The slicer reads the header zone
-              from the grid's top, so the layer may bleed behind
-              the board — the board is opaque and covers it. */}
-          <div data-tier-export-header="true" className="relative mb-6 pb-2 text-center">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/doodles/flying-w-hands.png"
-              alt=""
-              aria-hidden="true"
-              className="pointer-events-none absolute left-1/2 top-[-28px] w-[920px] max-w-none -translate-x-1/2 opacity-[0.38]"
-            />
-            <div className="relative">
-              <p
-                className={`text-[34px] font-bold leading-none text-white ${handFont.className}`}
-                style={{ textShadow: POSTER_SUBHEAD_SHADOW }}
-              >
-                rankingweezer.com
-              </p>
-              <h2
-                className={`mt-3 whitespace-nowrap text-[76px] leading-none text-white ${displayFont.className}`}
-                style={{ textShadow: POSTER_HEADLINE_SHADOW }}
-              >
-                {posterHeadline}
-              </h2>
-              <p
-                className={`mt-2 text-[44px] font-bold leading-none text-white ${handFont.className}`}
-                style={{ textShadow: POSTER_SUBHEAD_SHADOW }}
-              >
-                {posterSubhead}
-              </p>
-              {username && (
-                <div className="mt-5 inline-block -rotate-1 rounded-xl border-[3px] border-[#0C1220] bg-[#FFC72C] px-6 py-2 shadow-[4px_4px_0_rgba(12,18,32,0.85)]">
-                  <span className={`text-[26px] tracking-wide text-[#0C1220] ${displayFont.className}`}>
-                    TIER LIST BY @{username.toUpperCase()}
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
+          {/* POSTER HEADER + FOOTER (gallery cards, Nov 8, 2026
+              remake) — the shared renderers above, so the export is
+              the on-screen card, byte for byte in structure. */}
+          {renderPosterHeader('export')}
 
           {/* Renders full wrap desktop version */}
           {renderTierGrid(true)}
 
-          {/* POSTER FOOTER — the standard card footer (Flying W +
-              project line). The url is NOT repeated here; it lives
-              above the headline, once. The slicer keeps this block
-              in the final slice via its data attribute. */}
-          <div data-tier-export-footer="true" className="flex items-center gap-4 pt-7">
-            <FlyingW className="h-[30px] w-[55px] shrink-0 text-white" />
-            <span className="whitespace-nowrap text-[22px] font-black uppercase tracking-[0.12em] text-white">
-              All My Favorite Songs · The Weezer Song Ranking Project
-            </span>
-          </div>
+          {renderPosterFooter('export')}
           </>
           ) : (
           <>

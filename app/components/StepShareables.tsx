@@ -134,10 +134,10 @@ export default function StepShareables() {
         const adjusted =
           (a.count / (a.count + SHRINKAGE_K)) * rawMean +
           (SHRINKAGE_K / (a.count + SHRINKAGE_K)) * priorMean;
-        return { id: a.id, album: a.name, rank: 0, score: adjusted };
+        return { id: a.id, album: a.name, rank: 0, score: adjusted, rawMean };
       })
       .sort((x, y) => y.score - x.score)
-      .map((a, idx) => ({ id: a.id, album: a.album, rank: idx + 1 }));
+      .map((a, idx) => ({ id: a.id, album: a.album, rank: idx + 1, score: a.rawMean }));
   }, [triageMap]);
 
   const displayName = useMemo(() => {

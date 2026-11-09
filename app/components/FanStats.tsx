@@ -1020,10 +1020,11 @@ export default function FanStats({
             rankedSongs={activeStats.globalTierListRankings} 
             
             // WE NOW PASS THE EXACT ID TO FIX THE ARTWORK HERE TOO
-            rankedAlbums={activeStats.albumLeaderboard.map((a, idx) => ({ 
-              id: a.id || ALBUM_NAME_TO_ID[a.album] || 'unknown', 
-              album: a.album, 
-              rank: idx + 1 
+            rankedAlbums={activeStats.albumLeaderboard.map((a, idx) => ({
+              id: a.id || ALBUM_NAME_TO_ID[a.album] || 'unknown',
+              album: a.album,
+              rank: idx + 1,
+              score: a.rawMean
             }))}
           />
           )}

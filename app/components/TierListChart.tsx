@@ -4,9 +4,10 @@ import React, { useRef, useState, useMemo } from 'react';
 import { toPng } from 'html-to-image';
 import { ALBUM_NAME_TO_ID, BucketType, getAlbumTheme, getAlbumThemeByName } from '../data/constants';
 import { cardFromExportFilename, trackAnalytics } from '../lib/analytics';
+import { albumTierLabel } from '../lib/albumTiers';
 import { AlbumArtwork, SHARE_BUTTON_CLASS } from './SharedUI';
 import { displayFont, handFont } from './shareables/fonts';
-import { POSTER_BLUE } from './shareables/ShareCardShell';
+import { FlyingW, POSTER_BLUE } from './shareables/ShareCardShell';
 import {
   planTierCarouselSlices,
   planTierCarouselStamps,
@@ -28,6 +29,10 @@ export interface RankedAlbum {
   id: string;
   album: string;
   rank: number;
+  /** Raw bucket-points mean of the album's songs (1–5 scale).
+   *  Drives F-tier membership (see lib/albumTiers); optional so
+   *  builders without scores keep the rank-only fallback. */
+  score?: number;
 }
 
 interface TierListChartProps {
@@ -56,7 +61,10 @@ const SONG_TIERS = [
   { label: 'F', color: 'bg-[#BF7FFF]', text: 'text-purple-950', max: 206 },
 ];
 
-// Album Ranking Cutoffs (same five-row shape: C ≤13, F takes the rest)
+// Album tiers (same five rows). Membership is NOT read off these
+// maxes anymore (Nov 8, 2026): S/A/B are rank bands and F is
+// score-driven — see lib/albumTiers (albumTierLabel). The maxes stay
+// as the S/A/B band documentation; C's and F's are unused sentinels.
 const ALBUM_TIERS = [
   { label: 'S', color: 'bg-[#FF7F7F]', text: 'text-red-950', max: 2 },
   { label: 'A', color: 'bg-[#FFBF7F]', text: 'text-orange-950', max: 5 },
@@ -64,6 +72,14 @@ const ALBUM_TIERS = [
   { label: 'C', color: 'bg-[#7FFF7F]', text: 'text-green-950', max: 13 },
   { label: 'F', color: 'bg-[#BF7FFF]', text: 'text-purple-950', max: 99 },
 ];
+
+/* Poster-export headline shadows: html-to-image drops
+ * -webkit-text-stroke, so the ink outline is a text-shadow ring
+ * (the same treatment as the five poster cards, Nov 8, 2026). */
+const POSTER_HEADLINE_SHADOW =
+  '3px 0 0 #0C1220, -3px 0 0 #0C1220, 0 3px 0 #0C1220, 0 -3px 0 #0C1220, 2px 2px 0 #0C1220, 2px -2px 0 #0C1220, -2px 2px 0 #0C1220, -2px -2px 0 #0C1220, 5px 5px 0 rgba(12,18,32,0.9)';
+const POSTER_SUBHEAD_SHADOW =
+  '2px 0 0 #0C1220, -2px 0 0 #0C1220, 0 2px 0 #0C1220, 0 -2px 0 #0C1220, 1.5px 1.5px 0 #0C1220, 1.5px -1.5px 0 #0C1220, -1.5px 1.5px 0 #0C1220, -1.5px -1.5px 0 #0C1220, 4px 4px 0 rgba(12,18,32,0.9)';
 
 // Bucket -> tier mapping: every explicitly bucketed song appears in its
 // bucket's tier, even when the ranking is partial and the fixed rank cutoffs
@@ -366,7 +382,11 @@ export default function TierListChart({
           .map((s) => ({ id: s.id, name: s.title, album: s.album, rank: s.rank }));
       } else {
         items = rankedAlbums
-          .filter((a) => a.rank > prevMax && a.rank <= tier.max)
+          .filter(
+            (a) =>
+              albumTierLabel(a.rank, a.score, rankedAlbums.length) ===
+              tier.label,
+          )
           .map((a) => ({ id: a.id, name: a.album, album: a.album, rank: a.rank }));
       }
       return { ...tier, items };
@@ -468,36 +488,47 @@ export default function TierListChart({
     }, 150);
   };
 
-  const renderTierGrid = (isExportMode: boolean) => (
-    <div data-tier-export-grid="true" className={`bg-black p-0.5 sm:p-1 flex flex-col gap-0.5 sm:gap-1 w-full rounded-xl overflow-hidden ${isExportMode ? '' : 'border border-slate-800'}`}>
-      {processedTiers.map((tier) => (
+  const renderTierGrid = (isExportMode: boolean) => {
+    /* The gallery (fixedView) export renders the poster board from
+     * the Nov 8, 2026 remake: white plaque, ink frame and dividers,
+     * big album covers. The slicer's data attributes and the label
+     * cell's pastel background are unchanged — it measures both.
+     * Every other surface keeps the dark panel. */
+    const poster = isExportMode && !!fixedView;
+    return (
+    <div data-tier-export-grid="true" className={poster
+      ? 'bg-white border-[3px] border-[#0C1220] flex flex-col w-full rounded-2xl overflow-hidden shadow-[6px_6px_0_rgba(12,18,32,0.85)]'
+      : `bg-black p-0.5 sm:p-1 flex flex-col gap-0.5 sm:gap-1 w-full rounded-xl overflow-hidden ${isExportMode ? '' : 'border border-slate-800'}`}>
+      {processedTiers.map((tier, tierIndex) => (
         <div
           key={tier.label}
           data-tier-export-section="true"
-          className={`grid ${isExportMode ? 'grid-cols-[6rem_1fr]' : 'grid-cols-[4rem_minmax(0,1fr)] sm:grid-cols-[6rem_minmax(0,1fr)]'} bg-black gap-0.5 sm:gap-1 min-h-[80px] w-full`}
+          className={poster
+            ? `grid grid-cols-[6rem_1fr] w-full ${tierIndex > 0 ? 'border-t-[3px] border-[#0C1220]' : ''}`
+            : `grid ${isExportMode ? 'grid-cols-[6rem_1fr]' : 'grid-cols-[4rem_minmax(0,1fr)] sm:grid-cols-[6rem_minmax(0,1fr)]'} bg-black gap-0.5 sm:gap-1 min-h-[80px] w-full`}
         >
           {/* TIER BADGE — the carousel slicer measures this cell
               and the glyph span inside it: the letter is centered
               over the tier's full height, so its band is protected
               from cuts and split segments get a stamped label. */}
-          <div data-tier-export-label="true" className={`w-full h-full flex items-center justify-center ${tier.color}`}>
+          <div data-tier-export-label="true" className={`w-full h-full flex items-center justify-center ${tier.color} ${poster ? 'border-r-[3px] border-[#0C1220]' : ''}`}>
             <span data-tier-export-glyph="true" className={`text-2xl sm:text-4xl ${displayFont.className} ${tier.text}`}>
               {tier.label}
             </span>
           </div>
 
           {/* SCROLLING CONTAINER */}
-          <div className="flex-1 min-w-0 bg-slate-900 w-full h-full relative">
-            <div 
+          <div className={`flex-1 min-w-0 w-full h-full relative ${poster ? 'bg-white' : 'bg-slate-900'}`}>
+            <div
               className={`w-full h-full ${
-                isExportMode 
-                  ? 'flex flex-wrap gap-1 p-1 content-start' 
+                isExportMode
+                  ? `flex flex-wrap content-start ${poster ? 'gap-2 p-2' : 'gap-1 p-1'}`
                   : 'flex overflow-x-auto flex-nowrap gap-0.5 sm:gap-1 p-0.5 sm:p-1 overscroll-x-contain custom-tier-scrollbar'
               }`}
             >
               {tier.items.length === 0 ? (
                 <div className="flex items-center px-4">
-                  <span className="text-xs font-bold text-slate-700 italic">No items</span>
+                  <span className={`text-xs font-bold italic ${poster ? 'text-slate-400' : 'text-slate-700'}`}>No items</span>
                 </div>
               ) : (
                 tier.items.map((item) => {
@@ -510,14 +541,14 @@ export default function TierListChart({
                       <div
                         key={item.id}
                         data-tier-export-tile="true"
-                        className={`w-20 h-20 sm:w-24 sm:h-24 shrink-0 p-1 flex items-center justify-center ${
+                        className={`${poster ? 'w-36 h-36' : 'w-20 h-20 sm:w-24 sm:h-24'} shrink-0 p-1 flex items-center justify-center ${
                           isExportMode ? '' : 'hover:scale-[1.02] transition-transform cursor-default'
                         }`}
                         title={`#${item.rank} ${item.name}`}
                       >
-                        <div className="w-full h-full relative rounded-md overflow-hidden border border-slate-700 shadow-sm bg-slate-800">
+                        <div className={`w-full h-full relative overflow-hidden shadow-sm ${poster ? 'rounded-lg border-2 border-[#0C1220] bg-white' : 'rounded-md border border-slate-700 bg-slate-800'}`}>
                           <AlbumArtwork albumId={resolvedId} className="absolute inset-0 w-full h-full object-cover" />
-                          <div className="absolute bottom-0 right-0 bg-black/80 text-white text-[9px] font-black px-1.5 py-0.5 rounded-tl-md backdrop-blur-sm">
+                          <div className={`absolute bottom-0 right-0 font-black ${poster ? 'bg-[#0C1220] text-white text-[11px] px-2 py-0.5 rounded-tl-lg' : 'bg-black/80 text-white text-[9px] px-1.5 py-0.5 rounded-tl-md backdrop-blur-sm'}`}>
                             #{item.rank}
                           </div>
                         </div>
@@ -548,13 +579,30 @@ export default function TierListChart({
         </div>
       ))}
     </div>
-  );
+    );
+  };
 
   // Export attribution (header, top right — where the old white CTA
   // box sat). Guests have no username to credit.
   const attributionLine = username
     ? `Tier list for @${username} generated by RankingWeezer.com`
     : 'Tier list generated by RankingWeezer.com';
+
+  /* Poster export header copy (gallery cards only, Nov 8, 2026
+   * remake): the headline names the chart, the subhead bridges to
+   * the full song ranking the album order came from. Counts adapt
+   * to partial rankings so the copy never claims 206 ranked songs
+   * the user hasn't ranked. */
+  const posterHeadline =
+    viewMode === 'albums' ? 'MY WEEZER ALBUM TIERS' : 'MY WEEZER SONG TIERS';
+  const posterSubhead =
+    viewMode === 'albums'
+      ? rankedSongs.length >= 206
+        ? 'from my ranking of all 206 songs'
+        : 'from my song rankings'
+      : rankedSongs.length >= 206
+        ? 'all 206 songs, ranked'
+        : `${rankedSongs.length} songs, ranked`;
 
   return (
     <div className="space-y-4 w-full overflow-hidden">
@@ -626,6 +674,67 @@ export default function TierListChart({
       <div className="absolute left-[-9999px] top-[-9999px] opacity-0 pointer-events-none">
         <div ref={exportRef} className="w-[1024px] p-8" style={{ backgroundColor: POSTER_BLUE }}>
 
+          {fixedView ? (
+          <>
+          {/* POSTER HEADER (gallery cards, Nov 8, 2026 remake): the
+              flying-W hands as a faint back layer behind the type,
+              the card's ONE url above the headline, the gold
+              attribution strip. The slicer reads the header zone
+              from the grid's top, so the layer may bleed behind
+              the board — the board is opaque and covers it. */}
+          <div data-tier-export-header="true" className="relative mb-6 pb-2 text-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/doodles/flying-w-hands.png"
+              alt=""
+              aria-hidden="true"
+              className="pointer-events-none absolute left-1/2 top-[-28px] w-[920px] max-w-none -translate-x-1/2 opacity-[0.38]"
+            />
+            <div className="relative">
+              <p
+                className={`text-[34px] font-bold leading-none text-white ${handFont.className}`}
+                style={{ textShadow: POSTER_SUBHEAD_SHADOW }}
+              >
+                rankingweezer.com
+              </p>
+              <h2
+                className={`mt-3 whitespace-nowrap text-[76px] leading-none text-white ${displayFont.className}`}
+                style={{ textShadow: POSTER_HEADLINE_SHADOW }}
+              >
+                {posterHeadline}
+              </h2>
+              <p
+                className={`mt-2 text-[44px] font-bold leading-none text-white ${handFont.className}`}
+                style={{ textShadow: POSTER_SUBHEAD_SHADOW }}
+              >
+                {posterSubhead}
+              </p>
+              {username && (
+                <div className="mt-5 inline-block -rotate-1 rounded-xl border-[3px] border-[#0C1220] bg-[#FFC72C] px-6 py-2 shadow-[4px_4px_0_rgba(12,18,32,0.85)]">
+                  <span className={`text-[26px] tracking-wide text-[#0C1220] ${displayFont.className}`}>
+                    TIER LIST BY @{username.toUpperCase()}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Renders full wrap desktop version */}
+          {renderTierGrid(true)}
+
+          {/* POSTER FOOTER — the standard card footer (Flying W +
+              project line). The url is NOT repeated here; it lives
+              above the headline, once. The slicer keeps this block
+              in the final slice via its data attribute. */}
+          <div data-tier-export-footer="true" className="flex items-center gap-4 pt-7">
+            <FlyingW className="h-[30px] w-[55px] shrink-0 text-white" />
+            <span className="whitespace-nowrap text-[22px] font-black uppercase tracking-[0.12em] text-white">
+              All My Favorite Songs · The Weezer Song Ranking Project
+            </span>
+          </div>
+          </>
+          ) : (
+          <>
           {/* BRANDING HEADER FOR EXPORT */}
           <div data-tier-export-header="true" className="flex items-start justify-between border-b-2 border-white/50 pb-6 mb-8">
             <div className="flex-1 pr-8">
@@ -657,6 +766,8 @@ export default function TierListChart({
           <div data-tier-export-footer="true" className={`text-center pt-6 text-white text-3xl ${handFont.className}`}>
             Make your own Weezer tier list at RankingWeezer.com
           </div>
+          </>
+          )}
         </div>
       </div>
 

@@ -135,13 +135,16 @@ export function planTierCarouselStamps(
 /**
  * Plan the slices for one rendered tier chart.
  *
- * Balanced first: split into the fewest slices, each as close to
- * totalHeight / count as the allowed boundaries permit — a carousel
- * whose images carry similar weight, not max-filled slices trailed
- * by a stub (owner: "the cuts are awkward", Nov 8, 2026). Tier-
- * section tops (preferredBoundaries) win cuts that land near the
- * ideal. If no balanced plan satisfies every constraint, fall back
- * to the original greedy max-fill. Either way the first slice
+ * Balanced first: split into as few slices as can be dealt
+ * evenly, each as close to totalHeight / count as the allowed
+ * boundaries permit — a carousel whose images carry similar
+ * weight, not max-filled slices trailed by a stub (owner: "the
+ * cuts are awkward", Nov 8, 2026). When the fewest-count split
+ * has no feasible cut, one or two extra slices are tried before
+ * giving up. Tier-section tops (preferredBoundaries) win cuts
+ * that land near the ideal. If no balanced plan satisfies every
+ * constraint, fall back to the original greedy max-fill. Either
+ * way the first slice
  * starts at 0 (so it carries the header) and the last slice ends
  * at totalHeight (so it carries the footer). A chart that fits in
  * one slice yields exactly one slice.
@@ -208,8 +211,7 @@ export function planTierCarouselSlices(
     (input.preferredBoundaries ?? []).map((b) => Math.round(b)),
   );
   const minSliceHeight = Math.floor(maxSliceHeight * 0.25);
-  const planBalanced = (): TierCarouselSlice[] | null => {
-    const count = Math.ceil(totalHeight / maxSliceHeight);
+  const planBalancedForCount = (count: number): TierCarouselSlice[] | null => {
     if (count < 2) return null;
     const target = totalHeight / count;
     const result: TierCarouselSlice[] = [];
@@ -263,8 +265,19 @@ export function planTierCarouselSlices(
     });
     return result;
   };
-  const balanced = planBalanced();
-  if (balanced) return balanced;
+  // Try the fewest slice count first, then one or two more. The
+  // fewest-count split is often geometrically impossible: a total
+  // just over a multiple of the slice height leaves only a sliver
+  // of feasible cut positions (for a 5,091px chart, the two-slice
+  // cut must land within a ~30px window), and falling back to
+  // greedy max-fill for that case is exactly what produced fat
+  // slices with a footer-only stub. One extra slice widens the
+  // target window enormously and still reads as a tight set.
+  const minCount = Math.ceil(totalHeight / maxSliceHeight);
+  for (let count = minCount; count <= minCount + 2; count++) {
+    const balanced = planBalancedForCount(count);
+    if (balanced) return balanced;
+  }
 
   const slices: TierCarouselSlice[] = [];
   let start = 0;

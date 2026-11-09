@@ -8,7 +8,7 @@ import { albumTierLabel } from '../lib/albumTiers';
 import { AlbumArtwork, SHARE_BUTTON_CLASS } from './SharedUI';
 import { displayFont, handFont } from './shareables/fonts';
 import { FlyingW, POSTER_BLUE } from './shareables/ShareCardShell';
-import { FLYING_W_HANDS_SRC } from './handsData';
+import { FlyingWHands } from './ShareCardShell';
 import {
   planTierCarouselSlices,
   planTierCarouselStamps,
@@ -654,15 +654,14 @@ export default function TierListChart({
         {...(ex ? { 'data-tier-export-header': 'true' } : {})}
         className={`relative text-center ${ex ? 'mb-5 pb-2' : 'mb-4'}`}
       >
-        {/* The hands art is an inlined data URI (handsData.ts): a
-            network file raced the export on cold caches and the
-            albums download shipped without it — three times. */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={FLYING_W_HANDS_SRC}
-          alt=""
-          aria-hidden="true"
-          className={`pointer-events-none absolute left-1/2 max-w-none -translate-x-1/2 opacity-[0.38] ${ex ? 'top-[-28px] w-[920px]' : 'top-[-14px] w-[600px]'}`}
+        {/* The hands are inline SVG (FlyingWHands, traced from the
+            approved art): raster <img> versions of this art kept
+            vanishing from the albums export inside the offscreen
+            capture node, through three different loading fixes.
+            Vector shapes have no load to lose — the same reason the
+            Top 10 headline outline is SVG. */}
+        <FlyingWHands
+          className={`pointer-events-none absolute left-1/2 h-auto max-w-none -translate-x-1/2 opacity-[0.38] ${ex ? 'top-[-28px] w-[920px]' : 'top-[-14px] w-[600px]'}`}
         />
         <div className="relative">
           <p

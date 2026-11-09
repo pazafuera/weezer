@@ -8,6 +8,7 @@ import { albumTierLabel } from '../lib/albumTiers';
 import { AlbumArtwork, SHARE_BUTTON_CLASS } from './SharedUI';
 import { displayFont, handFont } from './shareables/fonts';
 import { FlyingW, POSTER_BLUE } from './shareables/ShareCardShell';
+import { FLYING_W_HANDS_SRC } from './handsData';
 import {
   planTierCarouselSlices,
   planTierCarouselStamps,
@@ -281,6 +282,10 @@ async function sliceTierCarouselImage(
   const slices = planTierCarouselSlices({
     totalHeight: image.naturalHeight,
     allowedBoundaries: layout.allowedBoundaries,
+    // Tier-section tops are the cuts a balanced plan prefers when
+    // one lands near its ideal — slices break between tiers
+    // rather than mid-tier when the heights allow it.
+    preferredBoundaries: layout.sections.map((section) => section.top),
     headerEnd: layout.headerEnd,
     footerStart: layout.footerStart,
     maxSliceHeight: TIER_CAROUSEL_HEIGHT,
@@ -640,13 +645,8 @@ export default function TierListChart({
   /* The poster header and footer, shared by the on-screen gallery
    * card and the hidden export copy (one source of truth — the
    * owner, Nov 8, 2026: "the preview should look exactly like the
-   * download"). The hands layer lives here, in the VISIBLE render
-   * too, so the image is loaded long before any export asks
-   * html-to-image to inline it — an export-only <img> can be
-   * skipped by that pipeline (the first preview's hands vanished
-   * from the download while every cover, also on screen, rendered).
-   * The export sizes are tuned so the whole ALBUMS chart fits one
-   * 4:5 carousel slice (2048x2560 at pixelRatio 2). */
+   * download"). The export sizes are tuned so the whole ALBUMS
+   * chart fits one 4:5 carousel slice (2048x2560 at pixelRatio 2). */
   const renderPosterHeader = (size: 'export' | 'visible') => {
     const ex = size === 'export';
     return (
@@ -654,9 +654,12 @@ export default function TierListChart({
         {...(ex ? { 'data-tier-export-header': 'true' } : {})}
         className={`relative text-center ${ex ? 'mb-5 pb-2' : 'mb-4'}`}
       >
+        {/* The hands art is an inlined data URI (handsData.ts): a
+            network file raced the export on cold caches and the
+            albums download shipped without it — three times. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/doodles/flying-w-hands.png"
+          src={FLYING_W_HANDS_SRC}
           alt=""
           aria-hidden="true"
           className={`pointer-events-none absolute left-1/2 max-w-none -translate-x-1/2 opacity-[0.38] ${ex ? 'top-[-28px] w-[920px]' : 'top-[-14px] w-[600px]'}`}

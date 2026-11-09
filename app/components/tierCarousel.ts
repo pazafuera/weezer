@@ -40,6 +40,11 @@ export interface TierCarouselPlanInput {
   totalHeight: number;
   /** Safe cut offsets in image pixels (tops of tier sections / tile rows / footer). */
   allowedBoundaries: number[];
+  /** Subset of the allowed boundaries a balanced plan prefers when
+   *  one lands near its ideal cut — in practice the tier-section
+   *  tops, so slices break between tiers rather than mid-tier when
+   *  the heights allow it. */
+  preferredBoundaries?: number[];
   /** End of the header zone: the first cut may not land before this offset. */
   headerEnd?: number;
   /** Start of the footer zone: no cut may land after this offset. */
@@ -130,11 +135,16 @@ export function planTierCarouselStamps(
 /**
  * Plan the slices for one rendered tier chart.
  *
- * Greedy: from the current start, take the farthest allowed boundary
- * that keeps the slice within maxSliceHeight. The first slice always
- * starts at 0 (so it carries the header) and the last slice always
- * ends at totalHeight (so it carries the footer). A chart that fits
- * in one slice yields exactly one slice.
+ * Balanced first: split into the fewest slices, each as close to
+ * totalHeight / count as the allowed boundaries permit — a carousel
+ * whose images carry similar weight, not max-filled slices trailed
+ * by a stub (owner: "the cuts are awkward", Nov 8, 2026). Tier-
+ * section tops (preferredBoundaries) win cuts that land near the
+ * ideal. If no balanced plan satisfies every constraint, fall back
+ * to the original greedy max-fill. Either way the first slice
+ * starts at 0 (so it carries the header) and the last slice ends
+ * at totalHeight (so it carries the footer). A chart that fits in
+ * one slice yields exactly one slice.
  *
  * Throws when no allowed boundary can keep a slice within the limit —
  * the caller treats that as a failed export rather than cutting
@@ -191,6 +201,71 @@ export function planTierCarouselSlices(
       (span) => boundary > span.start && boundary < span.end,
     );
 
+  // -- Balanced plan (see the doc comment above). Returns null when
+  // the boundaries cannot support an even split under the rules;
+  // the greedy fallback below then applies.
+  const preferred = new Set(
+    (input.preferredBoundaries ?? []).map((b) => Math.round(b)),
+  );
+  const minSliceHeight = Math.floor(maxSliceHeight * 0.25);
+  const planBalanced = (): TierCarouselSlice[] | null => {
+    const count = Math.ceil(totalHeight / maxSliceHeight);
+    if (count < 2) return null;
+    const target = totalHeight / count;
+    const result: TierCarouselSlice[] = [];
+    let start = 0;
+    for (let i = 1; i < count; i++) {
+      const ideal = target * i;
+      const remaining = count - i;
+      const earliest = start === 0 ? headerEnd : start + 1;
+      let best: number | null = null;
+      let bestScore = Infinity;
+      let bestPreferred: number | null = null;
+      let bestPreferredScore = Infinity;
+      for (const boundary of boundaries) {
+        if (boundary <= start || boundary < earliest) continue;
+        if (boundary - start > maxSliceHeight) break;
+        if (boundary - start < minSliceHeight) continue;
+        if (isForbiddenCut(boundary)) continue;
+        const rest = totalHeight - boundary;
+        if (rest > remaining * maxSliceHeight) continue;
+        if (rest < remaining * minSliceHeight) continue;
+        const score = Math.abs(boundary - ideal);
+        if (score < bestScore) {
+          bestScore = score;
+          best = boundary;
+        }
+        if (preferred.has(boundary) && score < bestPreferredScore) {
+          bestPreferredScore = score;
+          bestPreferred = boundary;
+        }
+      }
+      const cut =
+        bestPreferred !== null && bestPreferredScore <= bestScore + 48
+          ? bestPreferred
+          : best;
+      if (cut === null) return null;
+      result.push({
+        start,
+        end: cut,
+        sourceHeight: cut - start,
+        outputHeight: maxSliceHeight,
+      });
+      start = cut;
+    }
+    const lastHeight = totalHeight - start;
+    if (lastHeight <= 0 || lastHeight > maxSliceHeight) return null;
+    result.push({
+      start,
+      end: totalHeight,
+      sourceHeight: lastHeight,
+      outputHeight: maxSliceHeight,
+    });
+    return result;
+  };
+  const balanced = planBalanced();
+  if (balanced) return balanced;
+
   const slices: TierCarouselSlice[] = [];
   let start = 0;
   while (totalHeight - start > maxSliceHeight) {
@@ -222,58 +297,6 @@ export function planTierCarouselSlices(
     sourceHeight: totalHeight - start,
     outputHeight: maxSliceHeight,
   });
-
-  // Rebalance a stubby final slice: greedy max-fill can leave the
-  // last slice holding only a sliver (the songs chart's footer
-  // alone on a full 4:5 of blue padding — owner-flagged Nov 8,
-  // 2026). When the final slice is under 30% of the max and an
-  // allowed boundary can re-split the last two slices more evenly
-  // — under the same boundary, glyph, header and footer rules —
-  // take the most even valid re-split. No candidate, no change.
-  const minLastSlice = Math.floor(maxSliceHeight * 0.3);
-  if (slices.length >= 2) {
-    const lastSlice = slices[slices.length - 1];
-    if (lastSlice.sourceHeight < minLastSlice) {
-      const regionStart = slices[slices.length - 2].start;
-      const earliest = regionStart === 0 ? headerEnd : regionStart + 1;
-      let bestCut = -1;
-      let bestImbalance = Infinity;
-      for (const boundary of boundaries) {
-        if (boundary < earliest || boundary <= regionStart) continue;
-        if (boundary >= totalHeight) break;
-        if (isForbiddenCut(boundary)) continue;
-        const firstPart = boundary - regionStart;
-        const lastPart = totalHeight - boundary;
-        if (firstPart > maxSliceHeight || lastPart > maxSliceHeight) {
-          continue;
-        }
-        if (lastPart < minLastSlice) continue;
-        const imbalance = Math.abs(firstPart - lastPart);
-        if (imbalance < bestImbalance) {
-          bestImbalance = imbalance;
-          bestCut = boundary;
-        }
-      }
-      if (bestCut > 0) {
-        slices.splice(
-          slices.length - 2,
-          2,
-          {
-            start: regionStart,
-            end: bestCut,
-            sourceHeight: bestCut - regionStart,
-            outputHeight: maxSliceHeight,
-          },
-          {
-            start: bestCut,
-            end: totalHeight,
-            sourceHeight: totalHeight - bestCut,
-            outputHeight: maxSliceHeight,
-          },
-        );
-      }
-    }
-  }
   return slices;
 }
 

@@ -594,18 +594,27 @@ export default function TierListChart({
                     );
                   }
 
-                  // SONGS VIEW (Uses colored text blocks)
+                  // SONGS VIEW (Uses colored text blocks). Export
+                  // tiles are a fixed 72px (not the responsive
+                  // w-20/sm:w-24, which also made the export's
+                  // geometry depend on the exporting device's
+                  // viewport): at the full-chart row count the
+                  // smaller tile brings the rendered total into
+                  // two-slice range, so the carousel fills its
+                  // frames instead of dealing three two-thirds-
+                  // empty ones (owner: "use the space better",
+                  // Nov 8, 2026).
                   return (
                     <div
                       key={item.id}
                       data-tier-export-tile="true"
-                      className={`w-20 h-20 sm:w-24 sm:h-24 shrink-0 flex items-center justify-center p-1 text-center select-none ${poster ? 'border-2 border-[#0C1220]' : 'border border-slate-700'} ${
+                      className={`${isExportMode ? 'w-[72px] h-[72px]' : 'w-20 h-20 sm:w-24 sm:h-24'} shrink-0 flex items-center justify-center p-1 text-center select-none ${poster ? 'border-2 border-[#0C1220]' : 'border border-slate-700'} ${
                         isExportMode ? '' : 'hover:scale-[1.02] transition-transform cursor-default'
                       }`}
                       style={{ backgroundColor: theme.bg, color: theme.text }}
                       title={`#${item.rank} ${item.name} (${item.album})`}
                     >
-                      <span className="text-[10px] sm:text-[11px] font-black tracking-tight leading-tight line-clamp-4 text-balance uppercase">
+                      <span className={`${isExportMode ? 'text-[9px]' : 'text-[10px] sm:text-[11px]'} font-black tracking-tight leading-tight line-clamp-4 text-balance uppercase`}>
                         {item.name}
                       </span>
                     </div>

@@ -27,7 +27,7 @@ import {
   isQualifiedSubmission,
   leansClassicist,
 } from '../lib/fanStatsMethodology';
-import WeezerverseMap, { presencePlaceCount } from './WeezerverseMap';
+import WeezerverseMap from './WeezerverseMap';
 import WeezerverseFilterBar, {
   countryName,
   stateName,
@@ -742,7 +742,7 @@ export default function FanStats({
           <div className="bg-white rounded-[18px] border-[3px] border-[#0C1220] shadow-[4px_4px_0_rgba(11,30,63,0.85)] p-4 sm:p-6">
             <WeezerverseMap presence={presence} />
             <p className="text-center text-xs font-bold text-[#3D4A63] mt-3">
-              Fans have ranked from {presencePlaceCount(presence)} places
+              Fans have ranked from all over.
             </p>
           </div>
         )}

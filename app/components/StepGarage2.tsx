@@ -5,9 +5,11 @@
  * PROTOTYPE step (key: 'garage2') next to the old dashboard from
  * the Muse artifact design Mark approved on Nov 4, 2026
  * (poster-system hero, era shelf, Thread + shareables, Fan Stats
- * feature, game card, fandom row, destinations grid — sorting
+ * feature, game card, destinations grid — sorting
  * first, Thread and Fan Stats promoted above the game on Mark's
- * direction later that day). That evening Mark promoted it to
+ * direction later that day; the fandom row was retired Nov 9,
+ * 2026 — its friends card moved above the game and its redundant
+ * leaderboard card was cut). That evening Mark promoted it to
  * THE dashboard: page.tsx renders this component for the
  * 'dashboard' step as well as the 'garage2' alias (his bookmark),
  * and the old StepDashboard stays in the tree, unreferenced, for
@@ -729,16 +731,10 @@ function GameCard() {
               — {display.depth.toLocaleString()} points.
             </p>
             <JourneyBar total={display.depth} />
-            {allPlayed ? (
+            {!allPlayed && next && (
               <p className="mb-[18px] rounded-[10px] border-[1.5px] border-dashed border-white/40 bg-white/10 px-3 py-[9px] text-center text-[14.5px] font-extrabold leading-snug text-white">
-                All five rounds are in. That&rsquo;s the final score.
+                {next.pointsTo.toLocaleString()} points to {next.title}.
               </p>
-            ) : (
-              next && (
-                <p className="mb-[18px] rounded-[10px] border-[1.5px] border-dashed border-white/40 bg-white/10 px-3 py-[9px] text-center text-[14.5px] font-extrabold leading-snug text-white">
-                  {next.pointsTo.toLocaleString()} points to {next.title}.
-                </p>
-              )
             )}
           </div>
         ) : awaitingStanding ? (
@@ -747,8 +743,7 @@ function GameCard() {
           </p>
         ) : (
           <p className="mt-2 max-w-lg text-[16.5px] font-semibold leading-[1.45] text-[#D7E6FA]">
-            Five rounds. Thirty-five questions. One trip through Weezer
-            history.
+            Most fans don&rsquo;t make it home.
           </p>
         )}
 
@@ -1003,23 +998,19 @@ function FanStatsFeature() {
 }
 
 /* ------------------------------------------------------------------ */
-/* In the fandom                                                       */
+/* Fan Friends card                                                    */
 /* ------------------------------------------------------------------ */
 
-function FandomSection() {
+/* The friends card stands on its own now, above the game (owner,
+   Nov 9): the old fandom section and its Leaderboard card are
+   gone — the leaderboard already lives on the game card and in the
+   destinations grid, so a third route to it was redundant. */
+function FriendsCard() {
   const { userId, friendsList, navigateTo } = useWeezer();
   const friendsCount =
     userId && Array.isArray(friendsList) ? friendsList.length : 0;
 
   return (
-    <section>
-      <SectionHeading sub="You ranked yours. Here’s everyone else.">
-        In the fandom
-      </SectionHeading>
-      {/* Fan Stats used to share this grid as a small card; it is
-          now the full-width feature card above the game, so the
-          grid is gone and Fan Friends stands as a full-width row
-          alongside the Leaderboard row. */}
       <button
         type="button"
         onClick={() => navigateTo(userId ? 'friends' : 'login')}
@@ -1063,46 +1054,6 @@ function FandomSection() {
           →
         </span>
       </button>
-
-      <button
-        type="button"
-        onClick={() => openLeaderboard((s) => navigateTo(s))}
-        className={`mt-[14px] flex w-full cursor-pointer items-center gap-[14px] rounded-[18px] border-[3px] border-[#0C1220] bg-[#FFC72C] p-[18px_20px] text-left text-[#0C1220] ${POSTER_CARD_SHADOW} transition-transform duration-150 hover:-translate-y-[3px]`}
-      >
-        <span className="grid h-[52px] w-[52px] flex-none place-items-center rounded-[14px] border-[2.5px] border-[#0C1220] bg-[#0C1220] text-[#FFC72C]">
-          <svg
-            viewBox="0 0 24 24"
-            className="h-[26px] w-[26px]"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2.2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden
-          >
-            <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4Z" />
-            <path d="M7 6H4a1 1 0 0 0-1 1c0 2 1.6 3.5 4 3.5M17 6h3a1 1 0 0 1 1 1c0 2-1.6 3.5-4 3.5" />
-          </svg>
-        </span>
-        <span className="min-w-0 flex-1">
-          <span
-            className={`${displayFont.className} block text-[21px] leading-tight tracking-wide`}
-          >
-            Leaderboard
-          </span>
-          <span className="mt-[3px] block text-sm font-bold leading-snug text-[#4d3a00]">
-            See how your score stacks up against Weezer fans
-            everywhere.
-          </span>
-        </span>
-        <span
-          className={`${displayFont.className} ml-auto flex-none self-center text-[22px] leading-none`}
-          aria-hidden
-        >
-          →
-        </span>
-      </button>
-    </section>
   );
 }
 
@@ -1253,7 +1204,7 @@ function DestinationsGrid() {
 
   return (
     <section>
-      <SectionHeading sub="The whole site, one tap away.">
+      <SectionHeading>
         Everywhere you can go
       </SectionHeading>
       <div className="grid grid-cols-2 gap-3 min-[720px]:grid-cols-3">
@@ -1390,8 +1341,8 @@ export default function StepGarage2() {
         <EraShelf />
         <ThreadSection />
         <FanStatsFeature />
+        <FriendsCard />
         <GameCard />
-        <FandomSection />
         <DestinationsGrid />
       </div>
     </div>

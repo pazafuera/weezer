@@ -19,7 +19,9 @@ import {
 import { FlyingWIcon, AlbumArtwork, SHARE_BUTTON_CLASS } from './SharedUI';
 import { encodeShareData } from '@/utils/shareHelper';
 import { ShareablesGallery } from './shareables';
-import { displayFont } from './shareables/fonts';
+import { displayFont, handFont } from './shareables/fonts';
+import { POSTER_BLUE } from './shareables/ShareCardShell';
+import { FlyingWHands } from './ShareCardShell';
 import { ERAS } from './shareables/EraDnaCard';
 import {
   ARCHETYPE_VIBES,
@@ -1099,15 +1101,34 @@ export default function Step4Wrapped({
           </button>
         </div>
 
-        {/* HEADER */}
-        <div className="text-center px-4">
-          <h1 className={`${displayFont.className} text-5xl sm:text-6xl lg:text-7xl leading-[1.02] tracking-wide text-[#0C1220] mb-2`}>
-            The Sweater <span className="text-[#0072CE]">Thread</span>
-          </h1>
+        {/* HEADER — poster panel (owner-approved mock, Nov 9): flat
+            poster blue, the flying-W hands as a faint back layer, the
+            title in outlined white display type, and the tagline on a
+            gold plaque. No halftone dots in the header (owner's call). */}
+        <div
+          className="relative overflow-hidden rounded-[22px] border-[3px] border-[#0C1220] px-4 pb-7 pt-8 text-center shadow-[6px_6px_0_rgba(12,18,32,0.9)]"
+          style={{ backgroundColor: POSTER_BLUE }}
+        >
+          <FlyingWHands className="pointer-events-none absolute left-1/2 top-[-14px] h-auto w-[118%] max-w-none -translate-x-1/2 opacity-[0.34]" />
+          <div className="relative">
+            <h1
+              className={`${displayFont.className} text-[52px] leading-[0.98] tracking-wide text-white sm:text-6xl lg:text-7xl`}
+              style={{
+                textShadow:
+                  '2.5px 0 0 #0C1220, -2.5px 0 0 #0C1220, 0 2.5px 0 #0C1220, 0 -2.5px 0 #0C1220, 2px 2px 0 #0C1220, 2px -2px 0 #0C1220, -2px 2px 0 #0C1220, -2px -2px 0 #0C1220, 0 6px 0 rgba(12,18,32,0.28)',
+              }}
+            >
+              The Sweater
+              <br />
+              Thread
+            </h1>
 
-          <p className="text-[14.5px] font-semibold leading-snug text-[#3D4A63]">
-            Your Weezer Taste, Unraveled.
-          </p>
+            <p className="mt-4 inline-block -rotate-1 rounded-[11px] border-[3px] border-[#0C1220] bg-[#FFC72C] px-5 py-0.5 shadow-[3px_3px_0_rgba(12,18,32,0.85)]">
+              <span className={`${handFont.className} text-[26px] font-bold leading-tight text-[#0C1220]`}>
+                Your Weezer Taste, Unraveled.
+              </span>
+            </p>
+          </div>
         </div>
 
         {/* THIN-THREAD NOTE — when the Thread is compiled from fewer
@@ -1133,18 +1154,32 @@ export default function Step4Wrapped({
 
         {/* 1. HERO ROW: ANTHEM + VIBE ENCAPSULATED */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-          {/* ANTHEM CARD */}
-          <div className="lg:col-span-7 bg-gradient-to-b from-[#0072CE] via-[#005fA3] to-slate-900 rounded-3xl p-8 sm:p-12 text-center shadow-xl border border-[#0072CE]/30 relative overflow-hidden flex flex-col justify-center">
-            <span className="text-[10px] font-black uppercase tracking-widest text-amber-300 block mb-4">
-              Your Anthem
+          {/* ANTHEM CARD — poster treatment (owner-approved mock,
+              Nov 9): white card, ink frame, gold strip eyebrow, the
+              album line carrying the album's color chip. */}
+          <div className="lg:col-span-7 bg-white rounded-[20px] border-[3px] border-[#0C1220] shadow-[5px_5px_0_rgba(12,18,32,0.9)] p-8 sm:p-10 text-center flex flex-col items-center justify-center">
+            <span className="inline-block -rotate-1 rounded-[11px] border-[3px] border-[#0C1220] bg-[#FFC72C] px-4 py-1 shadow-[3px_3px_0_rgba(12,18,32,0.85)] mb-5">
+              <span className={`${displayFont.className} text-[15px] uppercase tracking-wide text-[#0C1220]`}>
+                Your Anthem
+              </span>
             </span>
 
-            <h2 className="text-4xl sm:text-6xl lg:text-7xl font-black text-white tracking-tighter leading-tight mb-3 drop-shadow-lg">
+            <h2 className={`${displayFont.className} text-4xl sm:text-6xl lg:text-7xl text-[#0C1220] leading-[1.04] mb-3`}>
               "{top10[0]?.title || 'Undecided'}"
             </h2>
 
             {top10[0] && (
-              <p className="text-sm font-bold text-blue-200 uppercase tracking-widest">
+              <p className="flex items-center justify-center gap-2 text-[12.5px] font-black uppercase tracking-[0.18em] text-[#5B6B82]">
+                <span
+                  className="inline-block h-3.5 w-3.5 shrink-0 rounded-[4px] border-2 border-[#0C1220]"
+                  style={{
+                    backgroundColor: getAlbumThemeByName(
+                      ALBUMS_BY_ID[
+                        top10[0].albumId || ALBUM_NAME_TO_ID[top10[0].album]
+                      ]?.name || top10[0].album
+                    ).bg,
+                  }}
+                />
                 {ALBUMS_BY_ID[
                   top10[0].albumId || ALBUM_NAME_TO_ID[top10[0].album]
                 ]?.name || top10[0].album}{' '}
@@ -1153,13 +1188,14 @@ export default function Step4Wrapped({
             )}
           </div>
 
-          {/* VIBE ENCAPSULATED CARD */}
-          <div className="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl text-center flex flex-col justify-center overflow-hidden">
-            <h3 className="text-2xl font-black text-white tracking-tight mb-4">
+          {/* VIBE ENCAPSULATED CARD — poster treatment: white card,
+              ink frame, the GIF inside an ink-bordered frame. */}
+          <div className="lg:col-span-5 bg-white rounded-[20px] border-[3px] border-[#0C1220] shadow-[5px_5px_0_rgba(12,18,32,0.9)] p-5 sm:p-6 text-center flex flex-col justify-center overflow-hidden">
+            <h3 className={`${displayFont.className} text-[29px] text-[#0C1220] leading-tight mb-4`}>
               Your Vibe, Encapsulated
             </h3>
 
-            <div className="w-full aspect-video rounded-2xl overflow-hidden border-4 border-slate-800 shadow-inner bg-slate-900 flex-1">
+            <div className="w-full aspect-video rounded-[14px] overflow-hidden border-[3px] border-[#0C1220] flex-1">
               <img
                 src={stats.finalGif}
                 alt="Weezer Vibe"

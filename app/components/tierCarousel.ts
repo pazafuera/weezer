@@ -222,6 +222,58 @@ export function planTierCarouselSlices(
     sourceHeight: totalHeight - start,
     outputHeight: maxSliceHeight,
   });
+
+  // Rebalance a stubby final slice: greedy max-fill can leave the
+  // last slice holding only a sliver (the songs chart's footer
+  // alone on a full 4:5 of blue padding — owner-flagged Nov 8,
+  // 2026). When the final slice is under 30% of the max and an
+  // allowed boundary can re-split the last two slices more evenly
+  // — under the same boundary, glyph, header and footer rules —
+  // take the most even valid re-split. No candidate, no change.
+  const minLastSlice = Math.floor(maxSliceHeight * 0.3);
+  if (slices.length >= 2) {
+    const lastSlice = slices[slices.length - 1];
+    if (lastSlice.sourceHeight < minLastSlice) {
+      const regionStart = slices[slices.length - 2].start;
+      const earliest = regionStart === 0 ? headerEnd : regionStart + 1;
+      let bestCut = -1;
+      let bestImbalance = Infinity;
+      for (const boundary of boundaries) {
+        if (boundary < earliest || boundary <= regionStart) continue;
+        if (boundary >= totalHeight) break;
+        if (isForbiddenCut(boundary)) continue;
+        const firstPart = boundary - regionStart;
+        const lastPart = totalHeight - boundary;
+        if (firstPart > maxSliceHeight || lastPart > maxSliceHeight) {
+          continue;
+        }
+        if (lastPart < minLastSlice) continue;
+        const imbalance = Math.abs(firstPart - lastPart);
+        if (imbalance < bestImbalance) {
+          bestImbalance = imbalance;
+          bestCut = boundary;
+        }
+      }
+      if (bestCut > 0) {
+        slices.splice(
+          slices.length - 2,
+          2,
+          {
+            start: regionStart,
+            end: bestCut,
+            sourceHeight: bestCut - regionStart,
+            outputHeight: maxSliceHeight,
+          },
+          {
+            start: bestCut,
+            end: totalHeight,
+            sourceHeight: totalHeight - bestCut,
+            outputHeight: maxSliceHeight,
+          },
+        );
+      }
+    }
+  }
   return slices;
 }
 

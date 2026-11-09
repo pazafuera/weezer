@@ -27,12 +27,14 @@ function isMobileDevice(): boolean {
  * Exporting a CSS-scaled preview node produces a tiny card in the corner
  * of a blank canvas.
  *
- * TEXT OUTLINES: html-to-image DROPS -webkit-text-stroke — card display
- * type that needs an ink outline in the export must draw it as a
- * text-shadow ring (offsets in every direction, ink color) ahead of any
- * drop shadow, never as WebkitTextStroke. On screen the two look the
- * same; only the shadow ring survives to the PNG (owner-caught on the
- * Top 10 card, Nov 8, 2026).
+ * TEXT OUTLINES: html-to-image DROPS -webkit-text-stroke — never rely
+ * on it for an export. A text-shadow ring (offsets in every direction,
+ * ink color, ahead of any drop shadow) survives and is the minimum
+ * for display type on flat fields. Over busy art (the Top 10 twins'
+ * vinyl record) even the ring under-delivered — the download kept
+ * washing out while the site looked right — so those headlines paint
+ * the outline as SVG vector strokes via OutlinedDisplayText in
+ * ShareCardShell (owner-caught twice on the Top 10 card, Nov 8, 2026).
  */
 export async function exportNodeAsPng(
   node: HTMLElement | null,

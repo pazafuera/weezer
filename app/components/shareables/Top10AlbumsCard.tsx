@@ -4,6 +4,7 @@ import { forwardRef } from 'react';
 import type { CSSProperties } from 'react';
 import {
   FlyingW,
+  OutlinedDisplayText,
   POSTER_BLUE,
   PosterDomain,
   VinylDisc,
@@ -119,23 +120,24 @@ export const Top10AlbumsCardVisual = forwardRef<
         labelColor="#d4d8db"
         className="absolute left-1/2 top-[-120px] h-[700px] w-[700px] -translate-x-1/2 shadow-[0_24px_60px_rgba(2,60,90,0.35)]"
       />
-      <div className="absolute inset-x-0 top-[104px] z-10 text-center">
-        <h2
-          className={`whitespace-nowrap text-[160px] leading-none text-white ${displayFont.className}`}
-          style={{
-            textShadow: '3px 0 0 #0C1220, -3px 0 0 #0C1220, 0 3px 0 #0C1220, 0 -3px 0 #0C1220, 2px 2px 0 #0C1220, 2px -2px 0 #0C1220, -2px 2px 0 #0C1220, -2px -2px 0 #0C1220, 5px 5px 0 rgba(12,18,32,0.9)',
-          }}
-        >
-          MY TOP 10
-        </h2>
-        <p
-          className={`mt-[2px] whitespace-nowrap text-[66px] font-bold leading-none text-white ${handFont.className}`}
-          style={{
-            textShadow: '2px 0 0 #0C1220, -2px 0 0 #0C1220, 0 2px 0 #0C1220, 0 -2px 0 #0C1220, 1.5px 1.5px 0 #0C1220, 1.5px -1.5px 0 #0C1220, -1.5px 1.5px 0 #0C1220, -1.5px -1.5px 0 #0C1220, 4px 4px 0 rgba(12,18,32,0.9)',
-          }}
-        >
-          Weezer Albums
-        </p>
+      <div className="absolute inset-x-0 top-[104px] z-10">
+        {/* SVG-painted outline, same as the songs card — CSS text
+            effects wash out of the export over the record. */}
+        <OutlinedDisplayText
+          text="MY TOP 10"
+          fontSize={160}
+          strokeWidth={8}
+          className={displayFont.className}
+        />
+        <div className="mt-[2px]">
+          <OutlinedDisplayText
+            text="Weezer Albums"
+            fontSize={66}
+            strokeWidth={5}
+            drop={4}
+            className={`${handFont.className} font-bold`}
+          />
+        </div>
       </div>
 
       {/* the Top 10 Songs card's challenge bubble, kept verbatim —

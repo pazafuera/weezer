@@ -408,7 +408,36 @@ export default function TierListChart({
     
     setTimeout(async () => {
       try {
-        // iOS Safari sometimes renders blank on the first pass with foreignObjects. 
+        // Wait for every image inside the export copy to finish
+        // loading before the first capture. An image that exists
+        // only in this hidden node (the header's flying-W hands)
+        // can still be in flight when the export starts: the
+        // owner's first albums download shipped without the hands
+        // while his songs download, exported moments later from a
+        // warm cache, had them (Nov 8, 2026). Images that also
+        // render on screen are already complete and skip the wait.
+        const exportNode = exportRef.current!;
+        const pendingImages = Array.from(
+          exportNode.querySelectorAll('img'),
+        ).filter((img) => !img.complete || img.naturalWidth === 0);
+        if (pendingImages.length > 0) {
+          await Promise.all(
+            pendingImages.map(
+              (img) =>
+                new Promise<void>((resolve) => {
+                  if (img.complete && img.naturalWidth > 0) {
+                    resolve();
+                    return;
+                  }
+                  const done = () => resolve();
+                  img.addEventListener('load', done, { once: true });
+                  img.addEventListener('error', done, { once: true });
+                  setTimeout(done, 2500);
+                }),
+            ),
+          );
+        }
+        // iOS Safari sometimes renders blank on the first pass with foreignObjects.
         // We generate it once invisibly, then generate it again for safety.
         await toPng(exportRef.current!, { quality: 0.1, pixelRatio: 1 });
         

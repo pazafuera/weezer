@@ -313,6 +313,71 @@ export const ScrapbookVisual = forwardRef<
 /** The flat field blue sampled from Abby's mockups. */
 export const POSTER_BLUE = '#039AD1';
 
+/** A display headline whose ink outline is painted as real SVG
+ *  vector shapes — a stroked <text> over an offset ink copy — so
+ *  the outline survives html-to-image exports intact. CSS text
+ *  effects do not survive that pipeline reliably: the exporter
+ *  drops -webkit-text-stroke outright, and a text-shadow ring
+ *  under-delivers (the Top 10 headline over the vinyl record kept
+ *  washing out in downloads while the site render looked fine —
+ *  owner-caught twice, Nov 8, 2026). SVG strokes travel the same
+ *  painting path as the doodles, which have always exported
+ *  faithfully. The text is centered on the card's 1080 width;
+ *  `className` carries the font face (display or hand). */
+export function OutlinedDisplayText({
+  text,
+  fontSize,
+  strokeWidth = 6,
+  drop = 5,
+  className,
+}: {
+  text: string;
+  fontSize: number;
+  strokeWidth?: number;
+  drop?: number;
+  className?: string;
+}) {
+  const width = 1080;
+  const height = Math.ceil(fontSize * 1.3) + drop;
+  const baseline = Math.round(fontSize * 0.92);
+  return (
+    <svg
+      viewBox={`0 0 ${width} ${height}`}
+      width={width}
+      height={height}
+      className="block"
+      role="img"
+      aria-label={text}
+    >
+      <text
+        x={width / 2 + drop}
+        y={baseline + drop}
+        textAnchor="middle"
+        fontSize={fontSize}
+        fill="#0C1220"
+        opacity={0.9}
+        className={className}
+      >
+        {text}
+      </text>
+      <text
+        x={width / 2}
+        y={baseline}
+        textAnchor="middle"
+        fontSize={fontSize}
+        fill="#FFFFFF"
+        stroke="#0C1220"
+        strokeWidth={strokeWidth}
+        paintOrder="stroke"
+        strokeLinejoin="round"
+        className={className}
+      >
+        {text}
+      </text>
+    </svg>
+  );
+}
+
 /** Domain line in the top-right corner, as in the mockups. It
  *  paints ABOVE card graphics (z-20): every card renders it
  *  first, so a later z-auto graphic that reaches the corner

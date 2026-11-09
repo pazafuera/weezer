@@ -26,6 +26,13 @@ function isMobileDevice(): boolean {
  * TierListChart pattern renders a dedicated off-screen copy for capture).
  * Exporting a CSS-scaled preview node produces a tiny card in the corner
  * of a blank canvas.
+ *
+ * TEXT OUTLINES: html-to-image DROPS -webkit-text-stroke — card display
+ * type that needs an ink outline in the export must draw it as a
+ * text-shadow ring (offsets in every direction, ink color) ahead of any
+ * drop shadow, never as WebkitTextStroke. On screen the two look the
+ * same; only the shadow ring survives to the PNG (owner-caught on the
+ * Top 10 card, Nov 8, 2026).
  */
 export async function exportNodeAsPng(
   node: HTMLElement | null,

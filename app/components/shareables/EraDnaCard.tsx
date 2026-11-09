@@ -189,8 +189,7 @@ export const EraDnaCardVisual = forwardRef<
             <span
               className="block whitespace-nowrap text-[148px] text-white"
               style={{
-                WebkitTextStroke: '3px #0C1220',
-                textShadow: '5px 5px 0 rgba(12,18,32,0.9)',
+                textShadow: '3px 0 0 #0C1220, -3px 0 0 #0C1220, 0 3px 0 #0C1220, 0 -3px 0 #0C1220, 2px 2px 0 #0C1220, 2px -2px 0 #0C1220, -2px 2px 0 #0C1220, -2px -2px 0 #0C1220, 5px 5px 0 rgba(12,18,32,0.9)',
               }}
             >
               I AM{' '}
@@ -200,8 +199,7 @@ export const EraDnaCardVisual = forwardRef<
               className="block whitespace-nowrap text-[136px]"
               style={{
                 color: POSTER_ERA_COLORS[top.key],
-                WebkitTextStroke: '3px #0C1220',
-                textShadow: '5px 5px 0 rgba(12,18,32,0.9)',
+                textShadow: '3px 0 0 #0C1220, -3px 0 0 #0C1220, 0 3px 0 #0C1220, 0 -3px 0 #0C1220, 2px 2px 0 #0C1220, 2px -2px 0 #0C1220, -2px 2px 0 #0C1220, -2px -2px 0 #0C1220, 5px 5px 0 rgba(12,18,32,0.9)',
               }}
             >
               {top.name.toUpperCase()}

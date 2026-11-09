@@ -141,8 +141,7 @@ export const FanhoodCardVisual = forwardRef<
             className={`absolute inset-x-[64px] top-[104px] whitespace-nowrap text-center leading-none text-white ${displayFont.className}`}
             style={{
               fontSize: headerSize,
-              WebkitTextStroke: '2px #0C1220',
-              textShadow: '4px 4px 0 rgba(12,18,32,0.9)',
+              textShadow: '2px 0 0 #0C1220, -2px 0 0 #0C1220, 0 2px 0 #0C1220, 0 -2px 0 #0C1220, 1.5px 1.5px 0 #0C1220, 1.5px -1.5px 0 #0C1220, -1.5px 1.5px 0 #0C1220, -1.5px -1.5px 0 #0C1220, 4px 4px 0 rgba(12,18,32,0.9)',
             }}
           >
             CAN YOU GET BACK TO THE SHACK?
@@ -165,8 +164,7 @@ export const FanhoodCardVisual = forwardRef<
             className={`absolute inset-x-0 top-[340px] whitespace-nowrap text-center leading-none text-white ${displayFont.className}`}
             style={{
               fontSize: stopSize,
-              WebkitTextStroke: '3px #0C1220',
-              textShadow: '5px 5px 0 rgba(12,18,32,0.9)',
+              textShadow: '3px 0 0 #0C1220, -3px 0 0 #0C1220, 0 3px 0 #0C1220, 0 -3px 0 #0C1220, 2px 2px 0 #0C1220, 2px -2px 0 #0C1220, -2px 2px 0 #0C1220, -2px -2px 0 #0C1220, 5px 5px 0 rgba(12,18,32,0.9)',
             }}
           >
             {stop.toUpperCase()}

@@ -124,8 +124,7 @@ export const Top10CardVisual = forwardRef<
         <h2
           className={`whitespace-nowrap text-[160px] leading-none text-white ${displayFont.className}`}
           style={{
-            WebkitTextStroke: '3px #0C1220',
-            textShadow: '5px 5px 0 rgba(12,18,32,0.9)',
+            textShadow: '3px 0 0 #0C1220, -3px 0 0 #0C1220, 0 3px 0 #0C1220, 0 -3px 0 #0C1220, 2px 2px 0 #0C1220, 2px -2px 0 #0C1220, -2px 2px 0 #0C1220, -2px -2px 0 #0C1220, 5px 5px 0 rgba(12,18,32,0.9)',
           }}
         >
           MY TOP 10
@@ -133,8 +132,7 @@ export const Top10CardVisual = forwardRef<
         <p
           className={`mt-[2px] whitespace-nowrap text-[66px] font-bold leading-none text-white ${handFont.className}`}
           style={{
-            WebkitTextStroke: '2px #0C1220',
-            textShadow: '4px 4px 0 rgba(12,18,32,0.9)',
+            textShadow: '2px 0 0 #0C1220, -2px 0 0 #0C1220, 0 2px 0 #0C1220, 0 -2px 0 #0C1220, 1.5px 1.5px 0 #0C1220, 1.5px -1.5px 0 #0C1220, -1.5px 1.5px 0 #0C1220, -1.5px -1.5px 0 #0C1220, 4px 4px 0 rgba(12,18,32,0.9)',
           }}
         >
           Weezer Songs

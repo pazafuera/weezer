@@ -269,8 +269,7 @@ export const TribeBadgeCardVisual = forwardRef<
               className={`absolute inset-0 z-[5] flex flex-col items-center justify-center text-center leading-[0.96] text-white ${displayFont.className}`}
               style={{
                 fontSize: 152,
-                WebkitTextStroke: '3px #0C1220',
-                textShadow: '5px 5px 0 rgba(12,18,32,0.9)',
+                textShadow: '3px 0 0 #0C1220, -3px 0 0 #0C1220, 0 3px 0 #0C1220, 0 -3px 0 #0C1220, 2px 2px 0 #0C1220, 2px -2px 0 #0C1220, -2px 2px 0 #0C1220, -2px -2px 0 #0C1220, 5px 5px 0 rgba(12,18,32,0.9)',
               }}
             >
               {tribe.displayName.split(' ').map((word, i) => (

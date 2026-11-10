@@ -10,6 +10,7 @@ import {
 } from '../lib/saveStatus';
 import { FULL_SONG_POOL } from '../data/constants';
 import { useFanhood, fanhoodGamesPlayed } from '../lib/fanhood';
+import { TOTAL_GAMES } from '../lib/leaderboard';
 import { FlyingWIcon } from './SharedUI';
 import WeezerAccountDrawer from './WeezerAccountDrawer';
 import BucketGuide from './BucketGuide';
@@ -224,7 +225,6 @@ export default function AppShell({
     /** Lands on the lore step with its leaderboard view open
      *  (Stage 3): the click also sets the session flag + event the
      *  lore step listens for. */
-    opensLeaderboard?: boolean;
   }
 
   // Array order matters: each section's rows render in the
@@ -286,20 +286,13 @@ export default function AppShell({
     {
       // The lore game is the front door (owner, Nov 9, 2026):
       // open to everyone, no triage gate — this row is never
-      // disabled and carries no unlock hint.
+      // disabled and carries no unlock hint. It is the ONLY
+      // game row (owner, later Nov 9): the separate
+      // leaderboard row is gone — once all five rounds are
+      // played, this row's pill and destination become the
+      // leaderboard (see renderNavButton).
       label: 'Back to the Shack',
       step: 'lore',
-      group: 'fanhood',
-    },
-    {
-      // The standings live inside the lore step. The row always
-      // renders (owner, Nov 9, 2026): the board is part of the
-      // front door now, not a reward for sorting. Both game
-      // rows carry the game's name (owner, Nov 9, 2026) — this
-      // one is told apart by its Leaderboard pill.
-      label: 'Back to the Shack',
-      step: 'lore',
-      opensLeaderboard: true,
       group: 'fanhood',
     },
   ];
@@ -323,10 +316,14 @@ export default function AppShell({
 
   const activeFriendsCount = Array.isArray(friendsList) ? friendsList.length : 0;
 
-  // The Shack row's Play! prompt retires once this device has a
-  // finished game on record (see the pill in renderNavButton).
+  // The Shack row morphs with progress (owner, Nov 9, 2026):
+  // the pill reads Play! before the first round and Next
+  // round while rounds remain — it does NOT retire after one
+  // round — and once all five are in, the pill and the row's
+  // destination become the leaderboard.
   const fanhood = useFanhood();
-  const hasPlayedShack = fanhoodGamesPlayed(fanhood) > 0;
+  const shackRoundsPlayed = fanhoodGamesPlayed(fanhood);
+  const shackComplete = shackRoundsPlayed >= TOTAL_GAMES;
 
   // One nav row. Rows share one uniform height (py-4 = 48px at
   // the text-xs line height) and touch — no gap between rows.
@@ -342,7 +339,8 @@ export default function AppShell({
   // text instead of spanning the flyout.
   // There are no arrow indicators anywhere in the menu.
   const renderNavButton = (item: NavItem) => {
-    const isActive = step === item.step && !item.opensLeaderboard;
+    const opensBoard = item.step === 'lore' && shackComplete;
+    const isActive = step === item.step && !opensBoard;
     const isDisabled = item.disabled;
 
     return (
@@ -352,7 +350,7 @@ export default function AppShell({
         onClick={() => {
           if (!isDisabled) {
             closeMenu();
-            if (item.opensLeaderboard) {
+            if (opensBoard) {
               // Flag first (a fresh mount of the lore step reads
               // it), then the event (an already-mounted lore step
               // hears it), then navigate.
@@ -419,28 +417,17 @@ export default function AppShell({
             </span>
           )}
 
-        {/* Back to the Shack carries a Play! prompt (owner,
-            Nov 7): an amber pill in the Fan Friends pending-pill
-            style, shown while this
-            device has no finished game yet — once they've played,
-            the prompt has done its job. The Leaderboard row
-            shares step 'lore' and is excluded via
-            opensLeaderboard; locked rows carry the unlock hint
-            in this slot instead. */}
-        {item.step === 'lore' &&
-          !item.opensLeaderboard &&
-          !isDisabled &&
-          !hasPlayedShack && (
-            <span className="bg-amber-400 text-slate-950 font-black text-[10px] px-2 py-0.5 rounded-full">
-              Play!
-            </span>
-          )}
-
-        {/* The board row's pill (owner, Nov 9, 2026): both
-            game rows read "Back to the Shack", so the pill is
-            what tells them apart — Play! for the game,
-            Leaderboard for the standings. */}
-        {item.opensLeaderboard && (
+        {/* The Shack row's pill (owner, Nov 9, 2026): amber
+            while there's a round to play — Play! before the
+            first, Next round while any remain — and the blue
+            Leaderboard pill once all five are in, when the row
+            itself lands on the board. */}
+        {item.step === 'lore' && !isDisabled && !shackComplete && (
+          <span className="bg-amber-400 text-slate-950 font-black text-[10px] px-2 py-0.5 rounded-full">
+            {shackRoundsPlayed === 0 ? 'Play!' : 'Next round'}
+          </span>
+        )}
+        {item.step === 'lore' && !isDisabled && shackComplete && (
           <span className="bg-[#0072CE] text-white font-black text-[10px] px-2 py-0.5 rounded-full">
             Leaderboard
           </span>

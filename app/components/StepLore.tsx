@@ -2016,9 +2016,10 @@ export default function StepLore() {
                 >
                   {stop.title}
                 </span>
-                {/* No YOU'RE HERE / THE GOAL pills (owner,
-                    Nov 9, 2026): the gold marker already says
-                    where you stand — the pills restated it. */}
+                {/* No here/goal pills on the route rows
+                    (owner, Nov 9, 2026): the gold marker
+                    already says where you stand — the pills
+                    restated it. */}
                 {status === 'next' && journeyNext && !pickerAllPlayed && (
                   <span className="ml-auto shrink-0 text-[13px] font-bold text-[#FFD23F]">
                     {journeyNext.pointsTo.toLocaleString('en-US')} to go

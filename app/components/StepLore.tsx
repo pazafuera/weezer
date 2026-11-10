@@ -25,6 +25,7 @@ import {
   youreAtPhrase,
 } from '../data/loreGame';
 import type {
+  LoreGame,
   LoreGameId,
   OpenPrompt,
   RarityTier,
@@ -46,6 +47,11 @@ import {
 import { displayFont } from './shareables/fonts';
 import { syncFanhoodAfterRun } from '../lib/fanhoodSync';
 import { trackAnalytics } from '../lib/analytics';
+import { supabase } from '../../utils/supabase';
+import {
+  parseLeaderboardRows,
+  type LeaderboardEntry,
+} from '../lib/leaderboard';
 import FanhoodLeaderboard from './FanhoodLeaderboard';
 import ShellClaimCard from './ShellClaimCard';
 import type {
@@ -1074,6 +1080,58 @@ export default function StepLore() {
     new Set()
   );
   const [fanhood, setFanhood] = useState<FanhoodRecord | null>(null);
+
+  // The board's rows, fetched once here: the inline board
+  // renders them, and the up-next round card reads the
+  // per-round high score off them (owner, Nov 9, 2026). Null
+  // while loading; the board shows its loading state and the
+  // card simply omits the high until the rows land.
+  const [boardEntries, setBoardEntries] = useState<
+    LeaderboardEntry[] | null
+  >(null);
+  const [boardFailed, setBoardFailed] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data, error } = await supabase.rpc(
+          'get_fanhood_leaderboard'
+        );
+        if (cancelled) return;
+        if (error) {
+          setBoardFailed(true);
+          setBoardEntries([]);
+          return;
+        }
+        setBoardEntries(parseLeaderboardRows(data));
+      } catch {
+        if (!cancelled) {
+          setBoardFailed(true);
+          setBoardEntries([]);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  const roundHigh = (gameId: LoreGameId): number | null => {
+    if (!boardEntries) return null;
+    let high: number | null = null;
+    for (const entry of boardEntries) {
+      const score = entry.gameScores[gameId];
+      if (typeof score === 'number' && (high === null || score > high)) {
+        high = score;
+      }
+    }
+    return high;
+  };
+  const pointsPossible = (game: LoreGame): number =>
+    game.promptIds.reduce(
+      (sum, promptId) =>
+        sum + openPromptExtremes(promptById(promptId)).deepest.depth,
+      0
+    );
   // The game currently being played (or just finished). One-and-done:
   // the picker never starts a game the record already holds, so a
   // non-null activeGameId at the result means THIS run is the one
@@ -2134,12 +2192,24 @@ export default function StepLore() {
                 </>
               )}
               {state === 'up-next' && (
+                <>
+                  {/* The round's stakes, one quiet line
+                      (owner, Nov 9, 2026): what's possible,
+                      and the score to beat once anyone has
+                      posted one. */}
+                  <p className="mt-3 text-[13px] font-bold text-[#3D4A63]">
+                    {pointsPossible(game).toLocaleString()} points
+                    possible
+                    {roundHigh(game.id) !== null &&
+                      ` · High score ${roundHigh(game.id)!.toLocaleString()}`}
+                  </p>
                 <button
                   onClick={() => openGate(game.id)}
                   className="mt-3 w-full cursor-pointer rounded-[14px] border-[3px] border-[#0C1220] bg-[#0072CE] px-5 py-3 text-[15px] font-black text-white shadow-[3px_3px_0_#0C1220] transition-all hover:bg-blue-700 active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_#0C1220]"
                 >
                   Play Round {gameIndex + 1}
                 </button>
+                </>
               )}
               {state === 'locked' && (
                 <p className="text-[15px] font-bold text-[#3D4A63]">
@@ -2186,7 +2256,12 @@ export default function StepLore() {
         </h2>
       </div>
       <div className="mt-4">
-        <FanhoodLeaderboard embedded onBack={() => setShowBoard(false)} />
+        <FanhoodLeaderboard
+          embedded
+          onBack={() => setShowBoard(false)}
+          providedEntries={boardEntries}
+          providedLoadFailed={boardFailed}
+        />
       </div>
     </div>
   );
@@ -2290,6 +2365,19 @@ export default function StepLore() {
             now, centered and two-tier. One fixed order for every
             player: headline, journey card, the Rounds deck, the
             leaderboard entry. */}
+        {/* THE LEADERBOARD — its own view over the picker.
+            (Restored Nov 9, 2026: the ungate edit's slice
+            clipped this mount along with the locked view —
+            the menu row set showBoard and nothing rendered.
+            A harness pin now guards the mount.) */}
+        {showBoard && (
+          <FanhoodLeaderboard
+            onBack={() => setShowBoard(false)}
+            providedEntries={boardEntries}
+            providedLoadFailed={boardFailed}
+          />
+        )}
+
         {!showBoard && phase === 'intro' && (
           <div className="mx-auto w-full max-w-2xl space-y-4 px-4 pb-10 sm:px-6">
             <div className="relative mt-5 overflow-hidden rounded-[18px] border-[3px] border-[#0C1220] bg-[#039AD1] px-[18px] pb-5 pt-4 text-center shadow-[6px_6px_0_#0C1220] sm:mt-7">

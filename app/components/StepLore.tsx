@@ -2016,16 +2016,9 @@ export default function StepLore() {
                 >
                   {stop.title}
                 </span>
-                {status === 'here' && (
-                  <span className="shrink-0 rounded-full bg-[#FFD23F] px-2 py-[3px] text-[11px] font-extrabold tracking-[0.05em] text-[#0C1220]">
-                    YOU'RE HERE
-                  </span>
-                )}
-                {stop.title === 'The Shack' && (
-                  <span className="shrink-0 rounded-full bg-[#FFD23F]/[0.16] px-2 py-[3px] text-[11px] font-extrabold tracking-[0.05em] text-[#FFD23F]">
-                    THE GOAL
-                  </span>
-                )}
+                {/* No YOU'RE HERE / THE GOAL pills (owner,
+                    Nov 9, 2026): the gold marker already says
+                    where you stand — the pills restated it. */}
                 {status === 'next' && journeyNext && !pickerAllPlayed && (
                   <span className="ml-auto shrink-0 text-[13px] font-bold text-[#FFD23F]">
                     {journeyNext.pointsTo.toLocaleString('en-US')} to go

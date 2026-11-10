@@ -25,7 +25,7 @@ import {
   type BucketType,
   type Song,
 } from '../data/constants';
-import { useWeezer, type AppStep, type TriageValue } from '../context/WeezerContext';
+import { getProgressState, type AppStep, type TriageValue } from '../context/WeezerContext';
 import { displayFont } from './shareables/fonts';
 
 interface StepFinalRankingsProps {
@@ -39,7 +39,11 @@ export default function StepFinalRankings({
   triageMap,
   setStep,
 }: StepFinalRankingsProps) {
-  const { progress } = useWeezer();
+  // Progress is derived from the ranking data, the same
+  // way AppShell derives it — the context does not carry
+  // a progress object (a first version of this page read
+  // one off the context and crashed on render).
+  const progress = getProgressState(triageMap, masterList);
   const total = FULL_SONG_POOL.length;
   const complete = masterList.length >= total;
   const topSong = masterList[0] ?? null;

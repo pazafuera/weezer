@@ -2142,7 +2142,7 @@ export default function StepLore() {
         onScroll={handleDeckScroll}
         role="region"
         aria-label="The Rounds — swipe to browse the five rounds"
-        className="lore-deck-scroll mt-3 flex snap-x snap-mandatory items-start gap-2.5 overflow-x-auto px-[8%] pb-2 pt-1 sm:px-[calc((100%_-_380px)/2)] lg:px-[calc((100%_-_420px)/2)]"
+        className="lore-deck-scroll mt-3 flex snap-x snap-mandatory items-stretch gap-2.5 overflow-x-auto px-[8%] pb-2 pt-1 sm:px-[calc((100%_-_380px)/2)] lg:px-[calc((100%_-_420px)/2)]"
       >
         {LORE_GAMES.map((game, gameIndex) => {
           const result = fanhood?.games[game.id];

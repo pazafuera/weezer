@@ -295,10 +295,6 @@ export default function FanhoodLeaderboard({
             </div>
           )}
 
-          <p className="text-xs font-bold leading-relaxed text-[#3D4A63]">
-            Finished games only, scores locked in for good. Fans who
-            finished all five rank first, by total.
-          </p>
         </>
       )}
     </div>

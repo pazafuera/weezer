@@ -343,7 +343,7 @@ export default function SiteStats() {
               hour: 'numeric',
               minute: '2-digit',
             })}
-            . Days run on UTC.
+            . Days run on Pacific time.
           </p>
         </>
       )}

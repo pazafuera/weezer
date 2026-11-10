@@ -124,12 +124,10 @@ export default function ShellClaimCard() {
   return (
     <div className={CARD_CLASS}>
       <h3 className={`${displayFont.className} text-[19px] leading-tight text-[#0C1220]`}>
-        Get on the board
+        Get on the leaderboard
       </h3>
       <p className="text-xs sm:text-sm font-medium text-[#3D4A63] leading-relaxed">
-        Right now this score lives only on this device. Pick a
-        name and it goes on the leaderboard — no email, no
-        password.
+        Pick a name — no email, no password.
       </p>
       <div className="flex flex-col sm:flex-row gap-2">
         <input
@@ -145,7 +143,7 @@ export default function ShellClaimCard() {
           disabled={busy}
           className="shrink-0 font-black text-xs sm:text-sm px-5 py-3 rounded-[14px] border-[3px] border-[#0C1220] bg-[#0072CE] text-white shadow-[4px_4px_0_#0C1220] transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_#0C1220] cursor-pointer disabled:opacity-60"
         >
-          {busy ? 'Claiming…' : 'Claim my spot'}
+          {busy ? 'Saving…' : 'Claim username and save my score'}
         </button>
       </div>
       {error && (

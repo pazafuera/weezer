@@ -2714,6 +2714,14 @@ export default function StepLore() {
               )}
             </div>
 
+            {/* THE CLAIM — moved up to the score (owner,
+                Nov 9, 2026): a guest's save-your-score moment
+                belongs with the score, not buried under the
+                answer cards. Renders only for an unclaimed
+                guest with a finished round; nothing for
+                everyone else. */}
+            <ShellClaimCard />
+
             {/* THE JOURNEY MAP — the whole descent zoomed out,
                 the marker at the STANDING's position (the
                 after-total, not this round's score), so the
@@ -2783,8 +2791,6 @@ export default function StepLore() {
                 </button>
               </div>
             </div>
-
-            <ShellClaimCard />
 
             <div className="bg-white border-[3px] border-[#0C1220] rounded-[18px] p-5 shadow-[4px_4px_0_#0C1220] space-y-3">
               <div>

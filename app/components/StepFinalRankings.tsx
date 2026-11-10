@@ -13,11 +13,12 @@
  * Thread. Editing still lives in Final Review ('master');
  * a quiet link at the bottom opens it.
  *
- * Sections mirror the public profile page (`/u/[username]`)
- * and run on the same derivations (app/lib/profileStats +
- * computeTribe), so the two pages can never disagree: tribe
- * band, Top 10, era bars, bucket breakdown, then the full
- * list in expandable bucket groups. One semantic difference
+ * Sections borrow the public profile page's (`/u/[username]`)
+ * panel language and its bucket-breakdown derivation
+ * (app/lib/profileStats). Above the full list — expandable
+ * bucket groups — sits a simple horizontal scroller of the
+ * fan's top albums, in the same shrinkage-adjusted order
+ * the tier cards use. One semantic difference
  * from the profile page, at the owner's direction: only
  * Bangers and Slaps carry rank numbers here — Mid, Skip and
  * Trash were sorted into buckets but never ranked, so their
@@ -27,6 +28,7 @@
 
 import React, { useMemo, useState } from 'react';
 import {
+  ALBUMS_BY_ID,
   ALBUM_NAME_TO_ID,
   BUCKET_CONFIG,
   FULL_SONG_POOL,
@@ -40,16 +42,22 @@ import {
 } from '../context/WeezerContext';
 import { AlbumArtwork } from './SharedUI';
 import { displayFont, handFont } from './shareables/fonts';
-import { computeTribe, TRIBE_INK } from './shareables/TribeBadgeCard';
 import {
   PROFILE_BUCKET_COLORS,
   PROFILE_BUCKET_ORDER,
   bucketCounts,
-  eraShares,
   listGroups,
-  topEraTop10Note,
-  topTierSongs,
 } from '../lib/profileStats';
+
+/** Bucket points for the album order — the same map the
+ *  shareables tier data uses (StepShareables). */
+const BUCKET_POINTS: Record<string, number> = {
+  banger: 5,
+  slaps: 4,
+  mid: 3,
+  skip: 2,
+  trash: 1,
+};
 
 interface StepFinalRankingsProps {
   masterList: Song[];
@@ -82,17 +90,50 @@ export default function StepFinalRankings({
     const progress = getProgressState(triageMap, masterList);
     const complete = masterList.length >= FULL_SONG_POOL.length;
     const triage = triageMap as Record<string, BucketType>;
-    const topTier = topTierSongs(masterList, triage);
-    const top10 = topTier.slice(0, 10);
-    const shares = eraShares(topTier);
+    // Album order — StepShareables' exact computation:
+    // bucket-points means per album, shrunk toward the
+    // fan's own overall mean (K=5), best first.
+    const albumScores: Record<
+      string,
+      { id: string; name: string; total: number; count: number }
+    > = {};
+    let totalScore = 0;
+    let totalCount = 0;
+    FULL_SONG_POOL.forEach((song) => {
+      const bucket = triageMap[song.id];
+      if (!bucket) return;
+      const score = BUCKET_POINTS[bucket];
+      if (score === undefined) return;
+      totalScore += score;
+      totalCount += 1;
+      const resolvedId =
+        song.albumId || ALBUM_NAME_TO_ID[song.album] || 'unknown';
+      if (!albumScores[resolvedId]) {
+        albumScores[resolvedId] = {
+          id: resolvedId,
+          name: ALBUMS_BY_ID[resolvedId]?.name || song.album,
+          total: 0,
+          count: 0,
+        };
+      }
+      albumScores[resolvedId].total += score;
+      albumScores[resolvedId].count += 1;
+    });
+    const priorMean = totalCount > 0 ? totalScore / totalCount : 3;
+    const SHRINKAGE_K = 5;
+    const albums = Object.values(albumScores)
+      .map((entry) => {
+        const rawMean = entry.total / entry.count;
+        const adjusted =
+          (entry.count / (entry.count + SHRINKAGE_K)) * rawMean +
+          (SHRINKAGE_K / (entry.count + SHRINKAGE_K)) * priorMean;
+        return { id: entry.id, name: entry.name, adjusted };
+      })
+      .sort((x, y) => y.adjusted - x.adjusted);
     return {
       progress,
       complete,
-      topTier,
-      top10,
-      shares,
-      eraNote: topEraTop10Note(top10, shares),
-      tribe: computeTribe(masterList, triage),
+      albums,
       counts: bucketCounts(masterList, triage),
       bucketed: masterList.length,
       groups: listGroups(masterList, triage),
@@ -100,18 +141,8 @@ export default function StepFinalRankings({
     };
   }, [masterList, triageMap]);
 
-  const {
-    progress,
-    complete,
-    top10,
-    shares,
-    eraNote,
-    tribe,
-    counts,
-    bucketed,
-    groups,
-    unknowns,
-  } = data;
+  const { progress, complete, albums, counts, bucketed, groups, unknowns } =
+    data;
   const pct =
     FULL_SONG_POOL.length > 0
       ? Math.round((bucketed / FULL_SONG_POOL.length) * 100)
@@ -218,127 +249,6 @@ export default function StepFinalRankings({
         </section>
       ) : (
         <>
-          {/* Tribe band — the profile page's, verbatim. */}
-          {tribe && (
-            <section className={`${PANEL} p-5 sm:p-6`}>
-              <span className={EYEBROW}>Fandom Archetype</span>
-              <div
-                className={`${displayFont.className} mt-2 text-[31px] leading-[1.05] text-[#0C1220]`}
-              >
-                {tribe.displayName}
-              </div>
-              <div
-                className="my-[10px] h-[7px] rounded-[4px]"
-                style={{
-                  backgroundColor: TRIBE_INK[tribe.name] || INK,
-                }}
-              />
-              <p className="text-[14.5px] font-bold leading-[1.45] text-[#0C1220]">
-                {tribe.fact}
-              </p>
-              <p
-                className={`${handFont.className} mt-[2px] text-[22px] font-bold leading-tight text-[#3D4A63]`}
-              >
-                {tribe.diagnosis}
-              </p>
-            </section>
-          )}
-
-          {/* Top 10 — the profile page's row style. */}
-          {top10.length > 0 && (
-            <section className={`${PANEL} p-5 sm:p-6`}>
-              <div className="mb-[14px] text-center">
-                <span className={EYEBROW}>The Canons</span>
-                <h3
-                  className={`${displayFont.className} mt-[2px] text-2xl tracking-[0.4px] text-[#0C1220]`}
-                >
-                  Your Top 10
-                </h3>
-              </div>
-              <div className="mx-auto max-w-md">
-                {top10.map((song, i) => (
-                  <div
-                    key={song.id}
-                    className="flex items-center gap-[11px] border-b-[1.5px] border-dashed border-[#0C1220]/20 py-[7px] last:border-b-0"
-                  >
-                    <span
-                      className={`${displayFont.className} w-[26px] shrink-0 text-right text-[19px] text-[#0072CE]`}
-                    >
-                      {i + 1}
-                    </span>
-                    <AlbumArtwork
-                      albumId={song.albumId || ALBUM_NAME_TO_ID[song.album]}
-                      className="h-11 w-11 shrink-0 rounded-[11px] border-2 border-[#0C1220] object-cover"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <h4 className="text-sm font-extrabold leading-[1.25] text-[#0C1220]">
-                        {song.title}
-                      </h4>
-                      <p className="mt-[1px] text-[10px] font-bold uppercase tracking-[1.2px] text-[#3D4A63]">
-                        {song.album} · {song.year}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Era bars — the profile page's panel. */}
-          {data.topTier.length > 0 && shares.length > 0 && (
-            <section className={`${PANEL} p-5 sm:p-6`}>
-              <div className="mb-[14px]">
-                <span className={EYEBROW}>Weezer Era</span>
-                <h3
-                  className={`${displayFont.className} mt-[2px] text-2xl tracking-[0.4px] text-[#0C1220]`}
-                >
-                  Where Your Top Songs Live
-                </h3>
-              </div>
-              <div>
-                {shares.map((era) => (
-                  <div
-                    key={era.key}
-                    className="mb-[11px] flex items-center gap-[10px] last:mb-0"
-                  >
-                    <div className="w-[118px] shrink-0">
-                      <div
-                        className={`${displayFont.className} text-[15.5px] leading-[1.1] text-[#0C1220]`}
-                      >
-                        {era.name}
-                      </div>
-                      <div className="text-[9.5px] font-extrabold tracking-[1.4px] text-[#3D4A63]">
-                        {era.label}
-                      </div>
-                    </div>
-                    <div className="h-5 flex-1">
-                      <div
-                        className="h-5 rounded-[6px] border-[2.5px] border-[#0C1220]"
-                        style={{
-                          width: `${shares[0].pct > 0 ? Math.round((era.pct / shares[0].pct) * 100) : 0}%`,
-                          backgroundColor: era.color,
-                        }}
-                      />
-                    </div>
-                    <div
-                      className={`${displayFont.className} w-10 shrink-0 text-base text-[#0C1220]`}
-                    >
-                      {era.pct}%
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {eraNote && (
-                <p
-                  className={`${handFont.className} mt-[6px] text-xl font-bold leading-tight text-[#3D4A63]`}
-                >
-                  {eraNote.countWord} of your Top 10 are{' '}
-                  {eraNote.eraAdjective} songs.
-                </p>
-              )}
-            </section>
-          )}
-
           {/* Bucket breakdown — the profile page's panel. */}
           <section className={`${PANEL} p-5 sm:p-6`}>
             <div className="mb-[14px]">
@@ -392,6 +302,37 @@ export default function StepFinalRankings({
               </p>
             )}
           </section>
+
+          {/* Top albums — a simple horizontal scroller in
+              the fan's album order, above the song listings. */}
+          {albums.length > 0 && (
+            <section>
+              <span className={EYEBROW}>Top Albums</span>
+              <div className="-mx-1 mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-1">
+                {albums.map((album, i) => (
+                  <div
+                    key={album.id}
+                    className="w-[104px] shrink-0 snap-start"
+                  >
+                    <div className="relative">
+                      <AlbumArtwork
+                        albumId={album.id}
+                        className="h-[104px] w-[104px] rounded-[12px] border-[2.5px] border-[#0C1220] object-cover"
+                      />
+                      <span
+                        className={`${displayFont.className} absolute -left-1.5 -top-1.5 flex h-7 min-w-7 items-center justify-center rounded-full border-2 border-[#0C1220] bg-[#FFC72C] px-1 text-[13px] text-[#0C1220]`}
+                      >
+                        {i + 1}
+                      </span>
+                    </div>
+                    <div className="mt-1.5 text-xs font-extrabold leading-tight text-[#0C1220]">
+                      {album.name}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
 
           {/* The full list — the profile page's expandable
               groups, with rank numbers only where songs were

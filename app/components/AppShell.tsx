@@ -294,8 +294,10 @@ export default function AppShell({
     {
       // The standings live inside the lore step. The row always
       // renders (owner, Nov 9, 2026): the board is part of the
-      // front door now, not a reward for sorting.
-      label: 'Leaderboard',
+      // front door now, not a reward for sorting. Both game
+      // rows carry the game's name (owner, Nov 9, 2026) — this
+      // one is told apart by its Leaderboard pill.
+      label: 'Back to the Shack',
       step: 'lore',
       opensLeaderboard: true,
       group: 'fanhood',
@@ -433,6 +435,16 @@ export default function AppShell({
               Play!
             </span>
           )}
+
+        {/* The board row's pill (owner, Nov 9, 2026): both
+            game rows read "Back to the Shack", so the pill is
+            what tells them apart — Play! for the game,
+            Leaderboard for the standings. */}
+        {item.opensLeaderboard && (
+          <span className="bg-[#0072CE] text-white font-black text-[10px] px-2 py-0.5 rounded-full">
+            Leaderboard
+          </span>
+        )}
       </button>
     );
   };

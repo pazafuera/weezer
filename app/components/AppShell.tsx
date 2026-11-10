@@ -9,7 +9,6 @@ import {
   SAVE_NOTICE_MS,
 } from '../lib/saveStatus';
 import { FULL_SONG_POOL } from '../data/constants';
-import { isLoreUnlocked } from '../data/loreGame';
 import { useFanhood, fanhoodGamesPlayed } from '../lib/fanhood';
 import { FlyingWIcon } from './SharedUI';
 import WeezerAccountDrawer from './WeezerAccountDrawer';
@@ -284,32 +283,20 @@ export default function AppShell({
       group: 'fanhood',
     },
     {
-      // The lore game (Oct 26 design): locked until the Blue Album
-      // and Pinkerton triage sections are both complete — the same
-      // section-complete rule the deck milestones use (every song
-      // in the section dealt with, bucket or "Don't Know It"). The
-      // step itself renders the teaser, and the dashboard card
-      // carries the fuller pitch; this row just carries the lock
-      // and its reason, like every other locked row.
+      // The lore game is the front door (owner, Nov 9, 2026):
+      // open to everyone, no triage gate — this row is never
+      // disabled and carries no unlock hint.
       label: 'Back to the Shack',
       step: 'lore',
-      disabled: !isLoreUnlocked(triageMap),
-      unlockHint: 'Unlocks after Blue + Pinkerton',
       group: 'fanhood',
     },
     {
-      // The standings live inside the lore step. The row renders
-      // only once the game is unlocked (owner ruling, Nov 6,
-      // 2026) — the same Blue + Pinkerton condition the Back to
-      // the Shack row above computes, progress-based so a guest
-      // who has done the sorting sees it too. While locked the
-      // row is absent entirely: the Shack row already carries
-      // the unlock message, and a second greyed row under it
-      // was noise. Once unlocked it renders exactly as before.
+      // The standings live inside the lore step. The row always
+      // renders (owner, Nov 9, 2026): the board is part of the
+      // front door now, not a reward for sorting.
       label: 'Leaderboard',
       step: 'lore',
       opensLeaderboard: true,
-      hideIf: !isLoreUnlocked(triageMap),
       group: 'fanhood',
     },
   ];
@@ -431,7 +418,7 @@ export default function AppShell({
 
         {/* Back to the Shack carries a Play! prompt (owner,
             Nov 7): an amber pill in the Fan Friends pending-pill
-            style, shown only while the game is unlocked and this
+            style, shown while this
             device has no finished game yet — once they've played,
             the prompt has done its job. The Leaderboard row
             shares step 'lore' and is excluded via

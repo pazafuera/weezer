@@ -18,7 +18,7 @@
  * again (one claim per device, owner ruling Nov 9, 2026).
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { supabase } from '../../utils/supabase';
 import { useWeezer } from '../context/WeezerContext';
 import { displayFont } from './shareables/fonts';
@@ -30,6 +30,11 @@ import {
   writeShellClaim,
   type ShellClaim,
 } from '../lib/shellClaim';
+import {
+  parseLeaderboardRows,
+  rankLeaderboard,
+  type LeaderboardEntry,
+} from '../lib/leaderboard';
 
 const CARD_CLASS =
   'bg-white border-[3px] border-[#0C1220] rounded-[18px] p-5 shadow-[4px_4px_0_#0C1220] space-y-3';
@@ -43,6 +48,47 @@ export default function ShellClaimCard() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // The claimed state's board window (owner, Nov 9, 2026):
+  // don't just say you're on the board — show the exact
+  // spot, highlighted, with the two scores above and below.
+  // Fetched when this card is a shell's confirmation; one
+  // retry covers the beat while a fresh claim's row syncs.
+  const [boardRows, setBoardRows] = useState<LeaderboardEntry[] | null>(
+    null
+  );
+  const shellNameForBoard =
+    claimedName ?? userProfile?.username ?? stored?.username ?? null;
+  const wantsBoard =
+    (isShell || claimedName !== null) && shellNameForBoard !== null;
+  useEffect(() => {
+    if (!wantsBoard) return;
+    let cancelled = false;
+    let retry: ReturnType<typeof setTimeout> | undefined;
+    const load = async (isRetry: boolean) => {
+      try {
+        const { data, error } = await supabase.rpc(
+          'get_fanhood_leaderboard'
+        );
+        if (cancelled || error) return;
+        const rows = rankLeaderboard(parseLeaderboardRows(data), 'all');
+        setBoardRows(rows);
+        const found = rows.some(
+          (r) => r.username === shellNameForBoard
+        );
+        if (!found && !isRetry) {
+          retry = setTimeout(() => load(true), 2500);
+        }
+      } catch {
+        /* the plain confirmation renders instead */
+      }
+    };
+    load(false);
+    return () => {
+      cancelled = true;
+      if (retry) clearTimeout(retry);
+    };
+  }, [wantsBoard, shellNameForBoard]);
+
   const plan = planShellClaim({ userId, isShell, stored });
   const hasFinishedGame = fanhoodGamesPlayed(record) > 0;
 
@@ -51,15 +97,48 @@ export default function ShellClaimCard() {
   const shellName = claimedName ?? userProfile?.username ?? stored?.username;
   if ((plan === 'is-shell' || claimedName) && shellName) {
     const shown = shellName;
+    const ownIdx = boardRows
+      ? boardRows.findIndex((r) => r.username === shown)
+      : -1;
+    const windowRows =
+      ownIdx >= 0 && boardRows
+        ? boardRows.slice(Math.max(0, ownIdx - 2), ownIdx + 3)
+        : null;
     return (
       <div className={CARD_CLASS}>
         <h3 className={`${displayFont.className} text-[19px] leading-tight text-[#0C1220]`}>
-          You&rsquo;re on the board as @{shown}
+          {ownIdx >= 0
+            ? `You're #${ownIdx + 1} on the board`
+            : `You're on the board as @${shown}`}
         </h3>
-        <p className="text-xs sm:text-sm font-medium text-[#3D4A63] leading-relaxed">
-          This name lives on this device for now. Add an email from
-          your account page and it&rsquo;s yours for good — same
-          name, same scores.
+        {windowRows && (
+          <div className="overflow-hidden rounded-[14px] border-[2.5px] border-[#0C1220]">
+            {windowRows.map((row) => {
+              const rank =
+                boardRows!.findIndex((r) => r.username === row.username) +
+                1;
+              const isYou = row.username === shown;
+              return (
+                <div
+                  key={row.username}
+                  className={`flex items-center justify-between px-3 py-2 text-[13px] ${
+                    isYou
+                      ? 'bg-[#FFE066] font-black text-[#0C1220]'
+                      : 'bg-white font-bold text-[#3D4A63]'
+                  } ${rank > 1 ? 'border-t-2 border-[#0C1220]/10' : ''}`}
+                >
+                  <span>
+                    #{rank} @{row.username}
+                    {isYou ? ' — you' : ''}
+                  </span>
+                  <span>{row.totalDepth.toLocaleString()}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        <p className="text-sm font-black text-[#0C1220]">
+          Add an email so you don&rsquo;t lose it.
         </p>
       </div>
     );

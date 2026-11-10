@@ -118,15 +118,18 @@ export default function StepFinalRankings({
             backgroundSize: '20px 20px',
           }}
         />
-        <div className="relative">
+        <div className="relative text-center">
           <h1
             className={`${displayFont.className} text-[34px] leading-[1.05] text-white [text-wrap:balance] sm:text-[42px]`}
             style={{ textShadow: headlineShadow }}
           >
-            {complete
-              ? 'All My Favorite Weezer Songs, in order.'
-              : 'Not done yet.'}
+            {complete ? 'All Your Favorite Songs' : 'Not done yet.'}
           </h1>
+          {complete && (
+            <p className="mt-2.5 text-sm font-bold text-white/90">
+              Here&rsquo;s how you ranked all the songs.
+            </p>
+          )}
           {!complete && (
             <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-white/30">
               <div
@@ -152,14 +155,14 @@ export default function StepFinalRankings({
                 onClick={() => setStep('shareables')}
                 className="flex-1 rounded-full border-[3px] border-[#0C1220] bg-[#FFC72C] px-5 py-3 text-sm font-black text-[#0C1220] shadow-[4px_4px_0_rgba(12,18,32,0.9)] transition-transform hover:-translate-y-0.5 cursor-pointer"
               >
-                Share your cards
+                Show off your list
               </button>
               <button
                 type="button"
                 onClick={() => setStep('wrapped')}
                 className="flex-1 rounded-full border-[3px] border-[#0C1220] bg-white px-5 py-3 text-sm font-black text-[#0C1220] shadow-[4px_4px_0_rgba(12,18,32,0.9)] transition-transform hover:-translate-y-0.5 cursor-pointer"
               >
-                See your Sweater Thread
+                Unravel Your Sweater Thread
               </button>
             </>
           ) : (
@@ -177,7 +180,7 @@ export default function StepFinalRankings({
                   onClick={() => setStep('wrapped')}
                   className="flex-1 rounded-full border-[3px] border-[#0C1220] bg-white px-5 py-3 text-sm font-black text-[#0C1220] shadow-[4px_4px_0_rgba(12,18,32,0.9)] transition-transform hover:-translate-y-0.5 cursor-pointer"
                 >
-                  See your Sweater Thread
+                  Unravel Your Sweater Thread
                 </button>
               )}
             </>

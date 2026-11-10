@@ -2224,11 +2224,18 @@ export default function StepLore() {
                       (owner, Nov 9, 2026): what's possible,
                       and the score to beat once anyone has
                       posted one. */}
-                  <p className="mt-3 text-[13px] font-bold text-[#3D4A63]">
-                    {pointsPossible(game).toLocaleString()} points possible
-                    {roundHigh(game.id) !== null &&
-                      ` · High score ${roundHigh(game.id)!.toLocaleString()}`}
-                  </p>
+                  <div className="mt-3 space-y-0.5 text-[13px] font-bold leading-snug text-[#3D4A63]">
+                    <p>
+                      {pointsPossible(game).toLocaleString()} points
+                      possible
+                    </p>
+                    {roundHigh(game.id) !== null && (
+                      <p>
+                        High score{' '}
+                        {roundHigh(game.id)!.toLocaleString()}
+                      </p>
+                    )}
+                  </div>
                 <button
                   onClick={() => openGate(game.id)}
                   className="mt-3 w-full cursor-pointer rounded-[14px] border-[3px] border-[#0C1220] bg-[#0072CE] px-5 py-3 text-[15px] font-black text-white shadow-[3px_3px_0_#0C1220] transition-all hover:bg-blue-700 active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_#0C1220]"

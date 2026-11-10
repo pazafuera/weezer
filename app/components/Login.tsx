@@ -191,6 +191,7 @@ export default function Login() {
     closeLogin,
     setAccountCreated,
     userId,
+    isShell,
     userProfile,
     handleSignOut,
   } = useWeezer();
@@ -429,7 +430,7 @@ export default function Login() {
         </div>
 
         <div className="p-6 sm:p-8 space-y-6">
-          {userId ? (
+          {userId && !isShell ? (
             /* ALREADY SIGNED IN — the honest landing for a
                 signed-in user who reaches this step (a deep link,
                 the /login route stub, a menu detour). No form,

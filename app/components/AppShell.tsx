@@ -258,7 +258,13 @@ export default function AppShell({
       step: 'final',
       disabled: !progress.isMasterUnlocked,
       unlockHint: 'Unlocks after Refine',
-      group: 'ranking',
+      // Once the project is done, the finished list is a
+      // fanhood artifact, not a ranking step (owner,
+      // Nov 9, 2026): the row moves to the Fanhood section
+      // (landing right after Dashboard, before the Thread).
+      // While sorting/refining is still in progress it
+      // stays in the Ranking Project section.
+      group: rankingProjectComplete ? 'fanhood' : 'ranking',
     },
     {
       label: 'Sweater Thread',

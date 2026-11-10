@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '../../utils/supabase';
 import { useWeezer } from '../context/WeezerContext';
 import { displayFont } from './shareables/fonts';
+import ShellClaimCard from './ShellClaimCard';
 import { LORE_GAMES } from '../data/loreGame';
 import type { LoreGameId } from '../data/loreGame';
 import {
@@ -132,6 +133,8 @@ export default function FanhoodLeaderboard({
           {ownDisplay.stop} · {ownDisplay.depth.toLocaleString()} points
         </p>
       )}
+
+      <ShellClaimCard />
 
       {/* Worldwide / Friends tabs */}
       <div className="flex gap-2">

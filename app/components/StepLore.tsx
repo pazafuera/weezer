@@ -47,6 +47,7 @@ import { displayFont } from './shareables/fonts';
 import { syncFanhoodAfterRun } from '../lib/fanhoodSync';
 import { trackAnalytics } from '../lib/analytics';
 import FanhoodLeaderboard from './FanhoodLeaderboard';
+import ShellClaimCard from './ShellClaimCard';
 import type {
   FanhoodDeepest,
   FanhoodGameLogEntry,
@@ -2670,6 +2671,8 @@ export default function StepLore() {
                 </button>
               </div>
             </div>
+
+            <ShellClaimCard />
 
             <div className="bg-white border-[3px] border-[#0C1220] rounded-[18px] p-5 shadow-[4px_4px_0_#0C1220] space-y-3">
               <div>

@@ -36,8 +36,14 @@ import type { LeaderboardEntry, LeaderboardScope } from '../lib/leaderboard';
  */
 export default function FanhoodLeaderboard({
   onBack,
+  embedded = false,
 }: {
   onBack: () => void;
+  /** Embedded on the game page itself (owner, Nov 9, 2026):
+   *  no page chrome of its own — no title row, no back button,
+   *  no page padding; the game page frames it. The standalone
+   *  board view (menu row, dashboard) keeps the full chrome. */
+  embedded?: boolean;
 }) {
   const router = useRouter();
   const { userId, friendCards, userProfile, navigateTo } = useWeezer();
@@ -114,18 +120,26 @@ export default function FanhoodLeaderboard({
   };
 
   return (
-    <div className="mx-auto w-full max-w-2xl space-y-4 px-4 pb-10 sm:px-6">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="${displayFont.className} text-lg sm:text-xl text-[#0C1220]">
-          Leaderboard
-        </h2>
-        <button
-          onClick={onBack}
-          className="shrink-0 text-xs font-black text-[#0072CE] hover:underline cursor-pointer"
-        >
-          ← Back to the rounds
-        </button>
-      </div>
+    <div
+      className={
+        embedded
+          ? 'space-y-4'
+          : 'mx-auto w-full max-w-2xl space-y-4 px-4 pb-10 sm:px-6'
+      }
+    >
+      {!embedded && (
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="${displayFont.className} text-lg sm:text-xl text-[#0C1220]">
+            Leaderboard
+          </h2>
+          <button
+            onClick={onBack}
+            className="shrink-0 text-xs font-black text-[#0072CE] hover:underline cursor-pointer"
+          >
+            ← Back to the rounds
+          </button>
+        </div>
+      )}
 
       {ownDisplay && (
         <p className="whitespace-nowrap text-[11px] font-bold text-[#3D4A63] min-[420px]:text-xs sm:text-[13px]">

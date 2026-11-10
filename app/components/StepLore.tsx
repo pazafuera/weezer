@@ -2368,10 +2368,10 @@ export default function StepLore() {
                   </span>
                 )}
                 <h1
-                  className={`min-w-0 flex-1 truncate text-center font-black leading-none tracking-tight text-slate-950 ${
+                  className={`${displayFont.className} min-w-0 flex-1 truncate text-center leading-none tracking-[0.01em] text-slate-950 ${
                     chipText
-                      ? 'text-[19px] min-[420px]:text-[22px] sm:text-[28px]'
-                      : 'text-[26px] sm:text-[28px]'
+                      ? 'text-[23px] min-[420px]:text-[26px] sm:text-[31px]'
+                      : 'text-[31px] sm:text-[34px]'
                   }`}
                 >
                   Back to the Shack

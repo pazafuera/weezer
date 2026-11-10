@@ -97,6 +97,7 @@ export default function WeezerAccountDrawer({
     handleSignOut,
     saveState,
     navigateTo,
+    isShell,
   } = useWeezer();
 
   const [copiedLink, setCopiedLink] = useState(false);
@@ -125,6 +126,14 @@ export default function WeezerAccountDrawer({
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  // Shell-upgrade state (game front door, Nov 9, 2026): the
+  // email + password that convert a name-only account in place.
+  const [upgradeEmail, setUpgradeEmail] = useState('');
+  const [upgradePassword, setUpgradePassword] = useState('');
+  const [upgradeBusy, setUpgradeBusy] = useState(false);
+  const [upgradeError, setUpgradeError] = useState<string | null>(null);
+  const [upgradeSent, setUpgradeSent] = useState(false);
 
   // Keyboard-focus management.
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -199,6 +208,174 @@ export default function WeezerAccountDrawer({
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2500);
   };
+
+  // Shell upgrade: attach an email + password to THIS anonymous
+  // account. Supabase converts it in place — same id, same
+  // username, same scores; the email confirmation link is what
+  // finishes it.
+  const handleUpgrade = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setUpgradeError(null);
+    const email = upgradeEmail.trim();
+    if (!email || !upgradePassword) {
+      setUpgradeError('Enter an email and a password.');
+      return;
+    }
+    if (upgradePassword.length < 6) {
+      setUpgradeError('Passwords need at least 6 characters.');
+      return;
+    }
+    setUpgradeBusy(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        email,
+        password: upgradePassword,
+      });
+      if (error) throw error;
+      setUpgradeSent(true);
+    } catch (err) {
+      setUpgradeError(
+        err instanceof Error
+          ? err.message
+          : 'That didn\u2019t go through — try again.'
+      );
+    } finally {
+      setUpgradeBusy(false);
+    }
+  };
+
+  // SHELL ACCOUNT (game front door, Nov 9, 2026): a name-only
+  // account gets its own drawer. No profile editor, no saving
+  // card, no danger zone — and no sign-out, which would strand
+  // the shell (its session is the only key). The one job here
+  // is the upgrade.
+  if (isShell) {
+    return (
+      <div className="fixed inset-0 z-[120] flex justify-end bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-200">
+        <div className="flex-1" onClick={onClose} aria-hidden="true" />
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="account-drawer-title"
+          className="w-full max-w-sm bg-white h-full shadow-[-6px_0_0_rgba(11,30,63,0.85)] border-l-[3px] border-[#0C1220] p-6 flex flex-col justify-between overflow-y-auto animate-in slide-in-from-right duration-300"
+        >
+          <div>
+            <div className="flex items-center justify-between pb-6 border-b-2 border-[#0C1220]">
+              <h2
+                id="account-drawer-title"
+                className="${displayFont.className} text-xl text-[#0C1220]"
+              >
+                Account & Profile
+              </h2>
+              <button
+                ref={closeButtonRef}
+                onClick={onClose}
+                aria-label="Close account drawer"
+                className="text-[#0C1220] bg-white hover:bg-sky-50 border-[2.5px] border-[#0C1220] rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm transition-colors cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="py-6 space-y-6">
+              <div className="flex items-center gap-4 bg-white p-4 rounded-2xl border-[2.5px] border-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)]">
+                <div className="w-12 h-12 bg-[#0072CE] text-white rounded-xl flex items-center justify-center font-black text-xl border-[2.5px] border-[#0C1220] shrink-0">
+                  {userProfile?.displayName
+                    ? userProfile.displayName.charAt(0).toUpperCase()
+                    : 'W'}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-base font-black text-[#0C1220] truncate">
+                    {userProfile?.displayName || 'Your account'}
+                  </h3>
+                  <p className="text-xs font-bold text-[#0072CE]">
+                    {userProfile?.username
+                      ? `@${userProfile.username}`
+                      : 'No username yet'}
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-sm font-medium text-[#3D4A63] leading-relaxed">
+                You&rsquo;re on the board under this name. For now
+                the account lives on this device — no email, no
+                password. Clear this browser or switch phones
+                before upgrading and it&rsquo;s stranded.
+              </p>
+
+              {upgradeSent ? (
+                <div className="bg-emerald-50 border-[2.5px] border-emerald-600 rounded-2xl p-4 space-y-1">
+                  <h3 className="text-sm font-black text-emerald-900">
+                    Check your email to finish
+                  </h3>
+                  <p className="text-xs font-medium text-emerald-800 leading-relaxed">
+                    Tap the link we sent and this account is fully
+                    yours — same name, same scores, on any device.
+                  </p>
+                </div>
+              ) : (
+                <form onSubmit={handleUpgrade} className="space-y-3">
+                  <h3 className="text-sm font-black text-[#0C1220]">
+                    Make it yours
+                  </h3>
+                  <p className="text-xs font-medium text-[#3D4A63] leading-relaxed">
+                    Add an email and password to this account.
+                    Nothing moves — the name and scores stay right
+                    where they are.
+                  </p>
+                  <input
+                    type="email"
+                    value={upgradeEmail}
+                    onChange={(e) => setUpgradeEmail(e.target.value)}
+                    placeholder="you@email.com"
+                    autoComplete="email"
+                    className="w-full px-3 py-2.5 bg-white border-2 border-[#0C1220] rounded-xl text-sm font-bold text-[#0C1220] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0072CE]"
+                  />
+                  <input
+                    type="password"
+                    value={upgradePassword}
+                    onChange={(e) => setUpgradePassword(e.target.value)}
+                    placeholder="New password (6+ characters)"
+                    autoComplete="new-password"
+                    className="w-full px-3 py-2.5 bg-white border-2 border-[#0C1220] rounded-xl text-sm font-bold text-[#0C1220] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0072CE]"
+                  />
+                  {upgradeError && (
+                    <p className="text-xs font-bold text-rose-600">
+                      {upgradeError}
+                    </p>
+                  )}
+                  <button
+                    type="submit"
+                    disabled={upgradeBusy}
+                    className="w-full bg-[#0072CE] hover:bg-blue-600 border-2 border-[#0C1220] text-white text-sm font-black px-3 py-2.5 rounded-xl transition-colors cursor-pointer disabled:opacity-60"
+                  >
+                    {upgradeBusy ? 'Adding…' : 'Add email & password'}
+                  </button>
+                </form>
+              )}
+            </div>
+          </div>
+
+          <div className="pt-6 border-t-2 border-slate-100 space-y-2">
+            <button
+              onClick={async () => {
+                onClose();
+                await onLogout();
+                navigateTo('login');
+              }}
+              className="w-full text-xs font-black text-[#3D4A63] hover:underline cursor-pointer"
+            >
+              Sign in with a full account instead
+            </button>
+            <p className="text-[11px] font-medium text-slate-400 leading-relaxed text-center">
+              This name stays on the board — you&rsquo;d just be
+              leaving it behind on this device.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const openEditForm = () => {
     setEditUsername(profileRow?.username ?? userProfile?.username ?? '');

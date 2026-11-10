@@ -120,10 +120,12 @@ export default function StepFinalRankings({
         />
         <div className="relative">
           <h1
-            className={`${displayFont.className} text-[34px] leading-[1.02] text-white sm:text-[42px]`}
+            className={`${displayFont.className} text-[34px] leading-[1.05] text-white [text-wrap:balance] sm:text-[42px]`}
             style={{ textShadow: headlineShadow }}
           >
-            {complete ? 'Your list, top to bottom.' : 'Not done yet.'}
+            {complete
+              ? 'All My Favorite Weezer Songs, in order.'
+              : 'Not done yet.'}
           </h1>
           {!complete && (
             <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-white/30">

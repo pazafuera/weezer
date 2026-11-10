@@ -1185,6 +1185,33 @@ export default function StepLore() {
     setDeckIndex(deckUpNextIndex);
   }, [phase, showBoard, deckUpNextIndex]);
 
+  // Screen changes inside this step (picker → gate → run →
+  // results → board) never change the app step, so the
+  // context's step-change scroll-to-top never fires and the
+  // window keeps the picker's scroll — tapping Play Round 1
+  // landed mid-page on the gate (owner report, Nov 9, 2026).
+  // Entering a new screen starts at the top. The run's own
+  // phases count as ONE screen: the plunge choreography
+  // scrolls the stage itself. The mount render is skipped —
+  // the app-level navigation owns the arrival scroll.
+  const screenKey = showBoard
+    ? 'board'
+    : phase === 'intro'
+      ? 'picker'
+      : phase === 'ready'
+        ? 'gate'
+        : phase === 'result'
+          ? 'result'
+          : 'run';
+  const mountedScreenRef = useRef(true);
+  useEffect(() => {
+    if (mountedScreenRef.current) {
+      mountedScreenRef.current = false;
+      return;
+    }
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, [screenKey]);
+
   const handleDeckScroll = () => {
     if (deckScrollRaf.current) return;
     deckScrollRaf.current = requestAnimationFrame(() => {

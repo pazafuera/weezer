@@ -486,21 +486,22 @@ export default function AppShell({
     );
   };
 
-  // The game stands in its own section, first (owner,
-  // Nov 9, 2026): it's the front door, not a fanhood
-  // sub-item — its own band sets it apart from both the
-  // ranking project and the fanhood destinations, whichever
-  // of those two leads.
+  // The game stands in its own section (owner, Nov 9,
+  // 2026) — its own band sets it apart from both the
+  // ranking project and the fanhood destinations — but
+  // it never sits above the leading section: the ranking
+  // project still leads until it's complete, then
+  // fanhood does (owner correction, Nov 9, 2026).
   const orderedSections = (
     rankingProjectComplete
       ? [
-          { title: 'The Game', items: gameGroupItems },
           { title: 'My Fanhood Unraveled', items: fanhoodGroupItems },
+          { title: 'The Game', items: gameGroupItems },
           { title: 'The Ranking Project', items: rankingGroupItems },
         ]
       : [
-          { title: 'The Game', items: gameGroupItems },
           { title: 'The Ranking Project', items: rankingGroupItems },
+          { title: 'The Game', items: gameGroupItems },
           { title: 'My Fanhood Unraveled', items: fanhoodGroupItems },
         ]
   ).filter((section) => section.items.length > 0);

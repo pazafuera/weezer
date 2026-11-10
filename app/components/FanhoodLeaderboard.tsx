@@ -117,8 +117,12 @@ export default function FanhoodLeaderboard({
       tab === 'friends' && userId
         ? filterLeaderboardFriends(entries, friendUsernames)
         : entries;
-    return rankLeaderboard(scoped, scope);
-  }, [entries, tab, userId, friendUsernames, scope]);
+    const ranked = rankLeaderboard(scoped, scope);
+    // The game page's inline board runs to the top 20
+    // (owner, Nov 9, 2026); the full board view keeps
+    // everyone.
+    return embedded ? ranked.slice(0, 20) : ranked;
+  }, [entries, tab, userId, friendUsernames, scope, embedded]);
 
   const scopeIndex =
     scope === 'all' ? -1 : LORE_GAMES.findIndex((g) => g.id === scope);

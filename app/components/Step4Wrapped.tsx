@@ -28,7 +28,7 @@ import {
   normalizeUserVector,
   scoreArchetypes,
 } from '../lib/archetypes';
-import { isLoreUnlocked, youreAtPhrase } from '../data/loreGame';
+import { youreAtPhrase } from '../data/loreGame';
 import { fanhoodDisplay, useFanhood } from '../lib/fanhood';
 import { trackAnalytics } from '../lib/analytics';
 
@@ -175,7 +175,6 @@ function FanhoodStop({
   const { navigateTo } = useWeezer();
   const fanhood = useFanhood();
   const display = fanhoodDisplay(fanhood);
-  const unlocked = isLoreUnlocked(triageMap);
 
   if (display) {
     return (
@@ -220,27 +219,12 @@ function FanhoodStop({
         Five games, seven prompts each, twenty-five seconds a prompt.
         The rarer your answers, the further back you go.
       </p>
-      {unlocked ? (
-        <button
-          onClick={() => navigateTo('lore')}
-          className="mt-6 bg-[#0072CE] hover:bg-blue-600 text-white font-black text-sm px-6 py-3 rounded-full transition-colors cursor-pointer"
-        >
-          Play the game →
-        </button>
-      ) : (
-        <>
-          <p className="mt-3 text-xs font-bold text-slate-400">
-            The game unlocks once you&apos;ve sorted the Blue Album and
-            Pinkerton.
-          </p>
-          <button
-            onClick={() => navigateTo('triage')}
-            className="mt-5 bg-[#0072CE] hover:bg-blue-600 text-white font-black text-sm px-6 py-3 rounded-full transition-colors cursor-pointer"
-          >
-            Keep sorting →
-          </button>
-        </>
-      )}
+      <button
+        onClick={() => navigateTo('lore')}
+        className="mt-6 bg-[#0072CE] hover:bg-blue-600 text-white font-black text-sm px-6 py-3 rounded-full transition-colors cursor-pointer"
+      >
+        Play the game →
+      </button>
     </div>
   );
 }

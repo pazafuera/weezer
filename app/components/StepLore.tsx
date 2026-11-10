@@ -12,8 +12,6 @@ import {
   bandForTotal,
   buildGameRun,
   finishedAtPhrase,
-  isLoreUnlocked,
-  loreGateRemainingAlbums,
   loreGameById,
   nextStopForTotal,
   openAnswerEntries,
@@ -1034,8 +1032,11 @@ function PromptAnswerTables({
 }
 
 export default function StepLore() {
-  const { triageMap, navigateTo, userId } = useWeezer();
-  const unlocked = isLoreUnlocked(triageMap);
+  const { navigateTo, userId } = useWeezer();
+  // The game is the front door (owner, Nov 9, 2026): the old
+  // Blue + Pinkerton triage gate is gone — anyone who lands
+  // here can play, sort or no sort. The pitch for the Gut
+  // Check moved to the results screen and the claim card.
 
   useEffect(() => {
     const open = () => {
@@ -1060,7 +1061,6 @@ export default function StepLore() {
     window.addEventListener('weezer:open-leaderboard', open);
     return () => window.removeEventListener('weezer:open-leaderboard', open);
   }, []);
-  const remainingAlbums = loreGateRemainingAlbums(triageMap);
 
   const [phase, setPhase] = useState<Phase>('intro');
   const [run, setRun] = useState<RunItem[]>([]);
@@ -1113,7 +1113,7 @@ export default function StepLore() {
   // (first mount, and returning from a run or the gate — the
   // record has moved on by then, so the centering follows it).
   useEffect(() => {
-    if (phase !== 'intro' || !unlocked || showBoard) return;
+    if (phase !== 'intro' || showBoard) return;
     const deck = deckRef.current;
     const card = deckCardRefs.current[deckUpNextIndex];
     if (!deck || !card) return;
@@ -1124,7 +1124,7 @@ export default function StepLore() {
       cardRect.width / 2 -
       (deckRect.left + deckRect.width / 2);
     setDeckIndex(deckUpNextIndex);
-  }, [phase, unlocked, showBoard, deckUpNextIndex]);
+  }, [phase, showBoard, deckUpNextIndex]);
 
   const handleDeckScroll = () => {
     if (deckScrollRaf.current) return;
@@ -2240,7 +2240,7 @@ export default function StepLore() {
             centers in the space the chip leaves — the chip
             always keeps its room and the title steps down a size
             rather than crowd it. */}
-        {!(unlocked && !showBoard && phase === 'intro') && (
+        {(showBoard || phase !== 'intro') && (
           (() => {
             const display = fanhoodDisplay(fanhood);
             // In the ready phase the chip moves into the gate
@@ -2285,53 +2285,13 @@ export default function StepLore() {
           })()
         )}
 
-        {/* LOCKED — the teaser. Progress toward the gate is named
-            by album, never by count: the dashboard's Catalog
-            Completion strip already carries those numbers. */}
-        {/* THE LEADERBOARD — its own view over the picker */}
-        {showBoard && (
-          <FanhoodLeaderboard onBack={() => setShowBoard(false)} />
-        )}
-
-        {!unlocked && !showBoard && (
-          <div className="mx-auto w-full max-w-2xl px-4 sm:px-6 pb-8">
-          <div className="bg-white border-[3px] border-[#0C1220] rounded-[18px] p-5 shadow-[4px_4px_0_#0C1220] space-y-3">
-            <div className="flex items-center gap-2">
-              <h2 className="text-lg font-black text-slate-950 tracking-tight">
-                This game is locked
-              </h2>
-            </div>
-            <p className="text-xs sm:text-sm font-medium text-slate-500 leading-relaxed">
-              Five rounds, seven prompts each, twenty-five seconds a prompt.
-              The rarer your answer, the further back it takes you.
-            </p>
-            <p className="text-xs sm:text-sm font-medium text-slate-500 leading-relaxed">
-              {remainingAlbums.length === 2
-                ? 'It unlocks once you\u2019ve sorted two albums in the Gut Check: the Blue Album and Pinkerton.'
-                : remainingAlbums[0] === 'Pinkerton'
-                  ? 'The Blue Album is in the books. Pinkerton is all that\u2019s left — sort it in the Gut Check and the game opens.'
-                  : 'Pinkerton is in the books. The Blue Album is all that\u2019s left — sort it in the Gut Check and the game opens.'}
-            </p>
-            <p className="text-xs font-bold text-slate-400 leading-relaxed">
-              The way back: {DEPTH_BANDS.map((b) => b.title).join(' · ')}
-            </p>
-            <button
-              onClick={() => navigateTo('triage')}
-              className="w-full sm:w-auto bg-[#0072CE] hover:bg-blue-700 active:scale-95 text-white font-black text-xs sm:text-sm px-5 py-3 rounded-2xl transition-all shadow-md cursor-pointer"
-            >
-              Go to the Gut Check →
-            </button>
-          </div>
-          </div>
-        )}
-
-        {/* THE PICKER — unlocked, not playing (mock v5, Oct 30,
+        {/* THE PICKER — not playing (mock v5, Oct 30,
             2026; rounds deck, mock v6, Oct 31; de-duplicated
             Nov 3, 2026): no banner — the headline is the header
             now, centered and two-tier. One fixed order for every
             player: headline, journey card, the Rounds deck, the
             leaderboard entry. */}
-        {unlocked && !showBoard && phase === 'intro' && (
+        {!showBoard && phase === 'intro' && (
           <div className="mx-auto w-full max-w-2xl space-y-4 px-4 pb-10 sm:px-6">
             <div className="relative mt-5 overflow-hidden rounded-[18px] border-[3px] border-[#0C1220] bg-[#039AD1] px-[18px] pb-5 pt-4 text-center shadow-[6px_6px_0_#0C1220] sm:mt-7">
               {/* Halftone dots — the share page's card texture
@@ -2385,7 +2345,7 @@ export default function StepLore() {
             clock: a one-and-done game starts only when the player
             says go. Leaving it starts nothing and consumes nothing,
             and a played game can never reach it. */}
-        {unlocked && !showBoard && phase === 'ready' && gateGameId && (
+        {!showBoard && phase === 'ready' && gateGameId && (
           <div className="mx-auto w-full max-w-2xl px-4 pb-10 sm:px-6">
             {(() => {
               const game = loreGameById(gateGameId);
@@ -2495,7 +2455,7 @@ export default function StepLore() {
         {/* PLAYING / LEAVING / PLUNGING / REVEAL — the descent is
             the stage. During 'plunging' the card is gone entirely:
             nothing stands between the player and the drop. */}
-        {unlocked && !showBoard && item && (phase === 'preview' || phase === 'playing' || phase === 'leaving' || phase === 'plunging' || phase === 'reveal') && (
+        {!showBoard && item && (phase === 'preview' || phase === 'playing' || phase === 'leaving' || phase === 'plunging' || phase === 'reveal') && (
           <div ref={stageRef} className="mx-auto flex w-full max-w-[900px] flex-1 flex-col">
             <DescentStage
               total={stageTotal}
@@ -2538,7 +2498,7 @@ export default function StepLore() {
         )}
 
         {/* RESULT */}
-        {unlocked && !showBoard && phase === 'result' && (
+        {!showBoard && phase === 'result' && (
           <>
           <div className="mx-auto w-full max-w-2xl space-y-6 px-4 pb-10 sm:px-6">
             {/* THE RESULT — one ladder (Nov 1, 2026): the round

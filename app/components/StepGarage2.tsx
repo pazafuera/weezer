@@ -32,8 +32,6 @@ import { FULL_SONG_POOL } from '../data/constants';
 import {
   LORE_GAMES,
   TOTAL_STOPS,
-  isLoreUnlocked,
-  loreGateRemainingAlbums,
   finishedAtPhrase,
   nextStopForTotal,
   stopForTotal,
@@ -617,9 +615,8 @@ const GAME_HALFTONE_STYLE = {
 } as const;
 
 function GameCard() {
-  const { userId, triageMap, navigateTo } = useWeezer();
+  const { userId, navigateTo } = useWeezer();
   const record = useFanhood();
-  const unlocked = isLoreUnlocked(triageMap);
 
   /* The record every fanhood surface reads is the DEVICE record;
      a signed-in player's account record merges into it once per
@@ -647,43 +644,6 @@ function GameCard() {
       live = false;
     };
   }, [userId]);
-
-  if (!unlocked) {
-    const remainingAlbums = loreGateRemainingAlbums(triageMap);
-    return (
-      <button
-        type="button"
-        onClick={() => navigateTo('triage')}
-        className={`relative w-full cursor-pointer overflow-hidden rounded-[26px] border-[3px] border-[#0C1220] bg-[#0B1E3F] p-[26px_22px_24px] text-left text-white ${POSTER_CARD_SHADOW} sm:p-[30px_28px_26px]`}
-      >
-        <span
-          aria-hidden
-          className="pointer-events-none absolute inset-0"
-          style={GAME_HALFTONE_STYLE}
-        />
-        <span className="relative flex flex-col">
-          <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-[#0C1220] px-2.5 py-[5px] text-[11px] font-black uppercase tracking-[0.1em] text-white">
-            Locked 🔒
-          </span>
-          <span
-            className={`${displayFont.className} mt-3 text-[clamp(28px,5.6vw,38px)] leading-[1.02] tracking-wide`}
-          >
-            Can You Get Back to the Shack?
-          </span>
-          <span className="mt-2 max-w-lg text-[16.5px] font-semibold leading-[1.45] text-[#D7E6FA]">
-            {remainingAlbums.length === 2
-              ? 'The game unlocks once you\u2019ve sorted the Blue Album and Pinkerton.'
-              : remainingAlbums[0] === 'Pinkerton'
-                ? 'The Blue Album is sorted — Pinkerton is all that stands between you and the game.'
-                : 'Pinkerton is sorted — the Blue Album is all that stands between you and the game.'}
-          </span>
-          <span className="mt-[18px] inline-flex w-full items-center justify-center rounded-[14px] border-[2.5px] border-[#0a1430] bg-[#42557E] px-[22px] py-[14px] text-base font-black text-[#B9C8E2] shadow-[2px_2px_0_#0a1430]">
-            Keep sorting →
-          </span>
-        </span>
-      </button>
-    );
-  }
 
   const display = fanhoodDisplay(record);
   const played = fanhoodGamesPlayed(record);

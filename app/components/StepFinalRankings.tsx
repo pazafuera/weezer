@@ -34,6 +34,35 @@ interface StepFinalRankingsProps {
   setStep: (step: AppStep) => void;
 }
 
+const BAND_CLASS: Record<BucketType, string> = {
+  banger: 'bg-emerald-100 text-emerald-900',
+  slaps: 'bg-blue-100 text-blue-900',
+  mid: 'bg-amber-100 text-amber-900',
+  skip: 'bg-orange-100 text-orange-900',
+  trash: 'bg-rose-100 text-rose-900',
+};
+
+function BucketBand({
+  bucket,
+  count,
+}: {
+  bucket: BucketType;
+  count: number;
+}) {
+  const cfg = BUCKET_CONFIG[bucket];
+  return (
+    <div
+      className={`flex items-center gap-2 px-4 py-2 ${BAND_CLASS[bucket]}`}
+    >
+      <span className="text-sm leading-none">{cfg.emoji}</span>
+      <span className="text-xs font-black uppercase tracking-[0.14em]">
+        {cfg.label}
+      </span>
+      <span className="text-xs font-black opacity-50">{count}</span>
+    </div>
+  );
+}
+
 export default function StepFinalRankings({
   masterList,
   triageMap,
@@ -46,12 +75,31 @@ export default function StepFinalRankings({
   const progress = getProgressState(triageMap, masterList);
   const total = FULL_SONG_POOL.length;
   const complete = masterList.length >= total;
-  const topSong = masterList[0] ?? null;
 
   const unknowns = useMemo(
     () => FULL_SONG_POOL.filter((s) => triageMap[s.id] === 'unknown'),
     [triageMap]
   );
+
+  // Only Bangers and Slaps were ever ranked in order —
+  // they form the numbered list (the same songs Final
+  // Review numbers). Mid, Skip and Trash were sorted into
+  // buckets but never ranked, so they present as their
+  // own bucket groups with no numbers (owner, Nov 9,
+  // 2026).
+  const bucketOf = (song: Song) =>
+    triageMap[song.id] as BucketType | undefined;
+  const rankedSongs = masterList.filter((song) => {
+    const b = bucketOf(song);
+    return b === 'banger' || b === 'slaps';
+  });
+  const rankById = new Map(rankedSongs.map((song, i) => [song.id, i + 1]));
+  const unrankedGroups = (['mid', 'skip', 'trash'] as BucketType[])
+    .map((bucket) => ({
+      bucket,
+      songs: masterList.filter((song) => bucketOf(song) === bucket),
+    }))
+    .filter((g) => g.songs.length > 0);
 
   const headlineShadow =
     '2px 0 0 #0C1220, -2px 0 0 #0C1220, 0 2px 0 #0C1220, 0 -2px 0 #0C1220, 2px 2px 0 #0C1220, -2px -2px 0 #0C1220, 2px -2px 0 #0C1220, -2px 2px 0 #0C1220, 0 3px 0 #0C1220';
@@ -71,35 +119,21 @@ export default function StepFinalRankings({
           }}
         />
         <div className="relative">
-          <p className="text-[11px] font-black uppercase tracking-[0.22em] text-white/75">
-            {complete ? 'The final list' : 'Your rankings so far'}
-          </p>
           <h1
-            className={`${displayFont.className} mt-2 text-[34px] leading-[1.02] text-white sm:text-[42px]`}
+            className={`${displayFont.className} text-[34px] leading-[1.02] text-white sm:text-[42px]`}
             style={{ textShadow: headlineShadow }}
           >
-            {complete
-              ? `All ${total}, ranked.`
-              : `${masterList.length} of ${total} ranked.`}
+            {complete ? 'Your list, top to bottom.' : 'Not done yet.'}
           </h1>
-          {complete && topSong ? (
-            <p className="mt-2.5 text-sm font-bold leading-relaxed text-white/90">
-              #1 is {topSong.title}. Every song, in your order.
-            </p>
-          ) : (
-            <>
-              <div className="mt-3.5 h-2.5 overflow-hidden rounded-full bg-white/30">
-                <div
-                  className="h-full rounded-full bg-[#FFC72C]"
-                  style={{
-                    width: `${Math.round((masterList.length / total) * 100)}%`,
-                  }}
-                />
-              </div>
-              <p className="mt-2 text-sm font-bold text-white/90">
-                Keep sorting to finish the list.
-              </p>
-            </>
+          {!complete && (
+            <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-white/30">
+              <div
+                className="h-full rounded-full bg-[#FFC72C]"
+                style={{
+                  width: `${Math.round((masterList.length / total) * 100)}%`,
+                }}
+              />
+            </div>
           )}
         </div>
       </section>
@@ -149,8 +183,12 @@ export default function StepFinalRankings({
         </div>
       )}
 
-      {/* The list itself — read-only rows: rank, title,
-          album, bucket pill. Nothing here moves. */}
+      {/* The list itself. The ranked songs (Bangers and
+          Slaps) run as one numbered list with a bucket band
+          where the bucket changes; Mid, Skip and Trash were
+          never ranked, so each gets its own board — band on
+          top, songs under it, no numbers and no pills:
+          the band says the bucket. */}
       {masterList.length === 0 ? (
         <section className="rounded-[18px] border-[3px] border-[#0C1220] bg-white px-5 py-8 text-center shadow-[4px_4px_0_rgba(11,30,63,0.85)]">
           <p className="text-sm font-bold text-[#3D4A63]">
@@ -165,26 +203,60 @@ export default function StepFinalRankings({
           </button>
         </section>
       ) : (
-        <section className="overflow-hidden rounded-[18px] border-[3px] border-[#0C1220] bg-white shadow-[4px_4px_0_rgba(11,30,63,0.85)]">
-          <div className="divide-y divide-slate-200">
-            {masterList.map((song, i) => {
-              const bucket = triageMap[song.id] as BucketType | undefined;
-              const cfg = bucket ? BUCKET_CONFIG[bucket] : null;
-              return (
-                <div
-                  key={song.id}
-                  className="flex items-center gap-3 px-4 py-2.5"
-                >
-                  <span
-                    className={`flex h-6 w-9 shrink-0 items-center justify-center rounded-lg text-[11px] font-black ${
-                      i < 3
-                        ? 'bg-[#FFC72C] text-[#0C1220]'
-                        : 'bg-[#E8EEF6] text-[#3D4A63]'
-                    }`}
-                  >
-                    {i + 1}
-                  </span>
-                  <div className="min-w-0 flex-1">
+        <>
+          {rankedSongs.length > 0 && (
+            <section className="overflow-hidden rounded-[18px] border-[3px] border-[#0C1220] bg-white shadow-[4px_4px_0_rgba(11,30,63,0.85)]">
+              {rankedSongs.map((song, i) => {
+                const bucket = bucketOf(song) as BucketType;
+                const showBand =
+                  i === 0 || bucketOf(rankedSongs[i - 1]) !== bucket;
+                const rank = rankById.get(song.id) ?? i + 1;
+                return (
+                  <React.Fragment key={song.id}>
+                    {showBand && (
+                      <BucketBand
+                        bucket={bucket}
+                        count={
+                          rankedSongs.filter(
+                            (x) => bucketOf(x) === bucket
+                          ).length
+                        }
+                      />
+                    )}
+                    <div className="flex items-center gap-3 border-t border-slate-200 px-4 py-2.5">
+                      <span
+                        className={`flex h-6 w-9 shrink-0 items-center justify-center rounded-lg text-[11px] font-black ${
+                          rank <= 3
+                            ? 'bg-[#FFC72C] text-[#0C1220]'
+                            : 'bg-[#E8EEF6] text-[#3D4A63]'
+                        }`}
+                      >
+                        {rank}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-bold leading-tight text-[#0C1220]">
+                          {song.title}
+                        </p>
+                        <p className="text-[11px] font-bold leading-tight text-[#3D4A63]">
+                          {song.album}
+                        </p>
+                      </div>
+                    </div>
+                  </React.Fragment>
+                );
+              })}
+            </section>
+          )}
+
+          {unrankedGroups.map((group) => (
+            <section
+              key={group.bucket}
+              className="overflow-hidden rounded-[18px] border-[3px] border-[#0C1220] bg-white shadow-[4px_4px_0_rgba(11,30,63,0.85)]"
+            >
+              <BucketBand bucket={group.bucket} count={group.songs.length} />
+              <div className="divide-y divide-slate-200">
+                {group.songs.map((song) => (
+                  <div key={song.id} className="px-4 py-2.5">
                     <p className="text-sm font-bold leading-tight text-[#0C1220]">
                       {song.title}
                     </p>
@@ -192,19 +264,11 @@ export default function StepFinalRankings({
                       {song.album}
                     </p>
                   </div>
-                  {cfg && (
-                    <span
-                      className={`flex w-fit shrink-0 items-center gap-1 rounded-md border px-1.5 py-0.5 text-[9px] font-black leading-none ${cfg.badgeBg} !border-[1.5px] !border-[#0C1220]`}
-                    >
-                      <span className="text-[10px]">{cfg.emoji}</span>
-                      <span>{cfg.label}</span>
-                    </span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </section>
+                ))}
+              </div>
+            </section>
+          ))}
+        </>
       )}
 
       {/* Songs the fan said they don't know — never ranked,

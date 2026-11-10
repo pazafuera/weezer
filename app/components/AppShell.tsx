@@ -221,7 +221,7 @@ export default function AppShell({
      *  which Refine produces. */
     unlockHint?: string;
     /** Which menu section carries the row (see the nav render below). */
-    group?: 'ranking' | 'fanhood';
+    group?: 'ranking' | 'fanhood' | 'game';
     /** Lands on the lore step with its leaderboard view open
      *  (Stage 3): the click also sets the session flag + event the
      *  lore step listens for. */
@@ -293,7 +293,7 @@ export default function AppShell({
       // leaderboard (see renderNavButton).
       label: 'Back to the Shack',
       step: 'lore',
-      group: 'fanhood',
+      group: 'game',
     },
   ];
 
@@ -312,6 +312,9 @@ export default function AppShell({
   );
   const fanhoodGroupItems = visibleNavItems.filter(
     (item) => item.group === 'fanhood'
+  );
+  const gameGroupItems = visibleNavItems.filter(
+    (item) => item.group === 'game'
   );
 
   const activeFriendsCount = Array.isArray(friendsList) ? friendsList.length : 0;
@@ -483,13 +486,20 @@ export default function AppShell({
     );
   };
 
+  // The game stands in its own section, first (owner,
+  // Nov 9, 2026): it's the front door, not a fanhood
+  // sub-item — its own band sets it apart from both the
+  // ranking project and the fanhood destinations, whichever
+  // of those two leads.
   const orderedSections = (
     rankingProjectComplete
       ? [
+          { title: 'The Game', items: gameGroupItems },
           { title: 'My Fanhood Unraveled', items: fanhoodGroupItems },
           { title: 'The Ranking Project', items: rankingGroupItems },
         ]
       : [
+          { title: 'The Game', items: gameGroupItems },
           { title: 'The Ranking Project', items: rankingGroupItems },
           { title: 'My Fanhood Unraveled', items: fanhoodGroupItems },
         ]

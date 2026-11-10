@@ -48,9 +48,9 @@ export default function ShellClaimCard() {
 
   if (plan === 'signed-in') return null;
 
-  if (plan === 'is-shell' || claimedName) {
-    const shown = claimedName ?? userProfile?.username ?? stored?.username;
-    if (!shown) return null;
+  const shellName = claimedName ?? userProfile?.username ?? stored?.username;
+  if ((plan === 'is-shell' || claimedName) && shellName) {
+    const shown = shellName;
     return (
       <div className={CARD_CLASS}>
         <h3 className={`${displayFont.className} text-[19px] leading-tight text-[#0C1220]`}>

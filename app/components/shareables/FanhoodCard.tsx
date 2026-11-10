@@ -95,7 +95,7 @@ export const FanhoodCardVisual = forwardRef<
     Math.min(76, Math.floor(1740 / 'CAN YOU GET BACK TO THE SHACK?'.length))
   );
   // The standing sentence (Nov 5): first person. At the start
-  // stop the form is "I'm at Arnold's Diner."; everywhere else,
+  // stop the form is "I'm at Arnold's Drive-In."; everywhere else,
   // "I made it {arrival}" with the arrival fragment from
   // madeItPhrase — the stop's at-fragment breaks after "made it"
   // for the in/on stops ("I made it in the La Brea Tar Pits").

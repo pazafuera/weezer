@@ -54,7 +54,7 @@ export const DEPTH_BANDS: DepthBand[] = [
   {
     min: 0,
     max: 199,
-    title: "Arnold's Diner",
+    title: "Arnold's Drive-In",
     line: 'The hit, the Happy Days video, TV-land. Every trip back starts here.',
   },
   {
@@ -154,7 +154,7 @@ export interface JourneyStop {
  * untouched; standings re-derive from the totals as recorded.
  */
 export const TOTAL_STOPS: JourneyStop[] = [
-  { min: 0, title: "Arnold's Diner", phrase: "at Arnold's Diner" },
+  { min: 0, title: "Arnold's Drive-In", phrase: "at Arnold's Drive-In" },
   { min: 1500, title: 'Island in the Sun', phrase: 'on an Island in the Sun' },
   { min: 4000, title: 'Across the Sea', phrase: 'across the Sea' },
   { min: 8000, title: 'La Brea Tar Pits', phrase: 'in the La Brea Tar Pits' },
@@ -183,19 +183,15 @@ export function youreAtPhrase(stopName: string): string {
 }
 
 /**
- * The finished-series form of the same sentence: once all five
- * games are in, the road is over and the standing is a result,
- * not a position in progress — "You finished " + the stop's own
- * fragment ("You finished in the La Brea Tar Pits"). One
- * exception: The Shack's fragment is a motion fragment ("back
- * to The Shack"), and after "finished" the arrival is a place,
- * not a trip — "You finished back at The Shack." Same fallback
- * rule as youreAtPhrase.
+ * The finished-series form of the standing sentence (owner,
+ * Nov 9, 2026): once all five games are in, the standing is
+ * stated as an arrival — "You made it " + the stop's made-it
+ * fragment ("You made it to The Garage", "You made it across
+ * the Sea", "You made it back to The Shack"). Built on
+ * madeItPhrase, whose fallback covers unknown names.
  */
 export function finishedAtPhrase(stopName: string): string {
-  if (stopName === 'The Shack') return 'You finished back at The Shack';
-  const stop = TOTAL_STOPS.find((s) => s.title === stopName);
-  return stop ? `You finished ${stop.phrase}` : `You finished at ${stopName}`;
+  return `You made it ${madeItPhrase(stopName)}`;
 }
 
 /**
@@ -207,7 +203,7 @@ export function finishedAtPhrase(stopName: string): string {
  * "made it" and stay: "across the Sea" and "back to The Shack".
  */
 const MADE_IT_FRAGMENTS: Record<string, string> = {
-  "Arnold's Diner": "to Arnold's Diner",
+  "Arnold's Drive-In": "to Arnold's Drive-In",
   'Island in the Sun': 'to an Island in the Sun',
   'Across the Sea': 'across the Sea',
   'La Brea Tar Pits': 'to the La Brea Tar Pits',

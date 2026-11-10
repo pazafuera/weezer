@@ -2618,33 +2618,24 @@ export default function StepLore() {
         {!showBoard && phase === 'result' && (
           <>
           <div className="mx-auto w-full max-w-2xl space-y-6 px-4 pb-10 sm:px-6">
-            {/* THE RESULT — one ladder (Nov 1, 2026): the round
-                reports its own points and nothing else; the only
-                stop named on this screen is the STANDING's, in
-                the standing strip under the banner. The banner
-                keeps the standing stop's layer art. */}
-            <div
-              className={`relative overflow-hidden rounded-[18px] border-[3px] border-[#0C1220] p-6 shadow-[6px_6px_0_#0C1220] space-y-3 ${BAND_STAGE[resultStopIdx].layer}`}
-              style={BAND_STAGE[resultStopIdx].textureStyle}
-            >
-              {/* Banner treatment (game restyle, Nov 5 — the
-                  owner's "think twice about the dark, earthy
-                  colors" caution): the standing stop's layer art
-                  stays — its hue IS the standing's identity, and
-                  the journey map below reports the same colors —
-                  but a banner-local light sheen lifts the art
-                  toward the poster's brightness (light falling
-                  from the surface), and the ink frame + pill +
-                  stroked Lilita headline carry the register. The
-                  sheen lives ONLY here: BAND_STAGE itself is
-                  untouched, so the in-run stage and the map
-                  interior keep the true colors. */}
+            {/* THE RESULT — one card (owner, Nov 9, 2026): the
+                round's points and the standing/distance read
+                together in a single card, in the site's flat
+                poster blue. The stop-hued gradient banner is
+                gone — it didn't fit the site; the journey map
+                below keeps the true band colors. The standing
+                lives in the ink panel inside this card. */}
+            <div className="relative overflow-hidden rounded-[18px] border-[3px] border-[#0C1220] bg-[#039AD1] p-6 text-white shadow-[6px_6px_0_#0C1220] space-y-3">
+              {/* Poster halftone dots — the picker panel's
+                  overlay, carried here so the two game cards
+                  speak the same language. */}
               <div
                 aria-hidden
                 className="pointer-events-none absolute inset-0"
                 style={{
                   backgroundImage:
-                    'linear-gradient(to bottom, rgba(255,255,255,0.28), rgba(255,255,255,0.06) 55%, rgba(255,255,255,0))',
+                    'radial-gradient(rgba(255,255,255,0.16) 1.6px, transparent 1.7px)',
+                  backgroundSize: '20px 20px',
                 }}
               />
               <span
@@ -2678,16 +2669,14 @@ export default function StepLore() {
                   Locked in — this score is on your card for good.
                 </p>
               )}
-            </div>
 
-            {/* THE STANDING STRIP — the compound total's stop, the
-                one ladder's only stop on this screen. A round that
+            {/* THE STANDING — an ink panel inside the result
+                card (one card, owner Nov 9, 2026). A round that
                 carried the player into a new stop says "You made
-                it…"; otherwise it restates where the standing sits.
-                The distance sentence names its scale ("for your
-                standing") and the stop's total-scale threshold
-                (Oct 31, 2026). */}
-            <div className="bg-[#0C1220] text-white rounded-[18px] border-[3px] border-[#0C1220] p-5 shadow-[6px_6px_0_#039AD1] space-y-1">
+                it…"; otherwise it restates where the standing
+                sits. The distance sentence names its scale and
+                the stop's total-scale threshold. */}
+            <div className="relative rounded-[14px] bg-[#0C1220] p-4 space-y-1">
               <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#FFE066]">
                 Your standing
               </p>
@@ -2716,6 +2705,7 @@ export default function StepLore() {
                   </p>
                 )
               )}
+            </div>
             </div>
 
             {/* THE CLAIM — moved up to the score (owner,

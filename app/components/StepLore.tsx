@@ -139,7 +139,7 @@ const BAND_STAGE: {
   coverSrc?: string;
 }[] = [
   {
-    // Arnold's Diner — bright radio-blue. The layer IS the Blue
+    // Arnold's Drive-In — bright radio-blue. The layer IS the Blue
     // Album era, so its cover ghosts the background.
     layer: 'bg-gradient-to-b from-[#039AD1] to-[#0277b6] text-[#eaf7ff]',
     chip: 'bg-white text-[#0277b6]',

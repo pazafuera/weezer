@@ -2168,22 +2168,26 @@ export default function StepLore() {
     </div>
   );
 
-  const pickerLeaderboardButton = (
-    <button
-      onClick={() => setShowBoard(true)}
-      className="flex w-full cursor-pointer items-center gap-3 rounded-[18px] border-[3px] border-[#0C1220] bg-white p-5 text-left shadow-[4px_4px_0_#0C1220] transition-all"
-    >
-      <span className="min-w-0 flex-1">
-        <span
-          className={`block text-[19px] leading-tight text-[#0C1220] ${displayFont.className}`}
-        >
-          Leaderboard
-        </span>
-        <span className="mt-0.5 block text-[13px] font-medium leading-relaxed text-[#3D4A63] sm:text-[15px]">
-          See how your score stacks up against Weezer fans everywhere.
-        </span>
-      </span>
-    </button>
+  // The board lives on the game page now (owner, Nov 9,
+  // 2026): the full leaderboard renders inline under the
+  // rounds, in the rounds' own section dress. The standalone
+  // board view still exists behind the menu row and the
+  // dashboard's finished-state button.
+  const pickerLeaderboardSection = (
+    <div>
+      <div className="flex items-baseline justify-between gap-3 px-1">
+        <h2 className="leading-none">
+          <span
+            className={`${displayFont.className} inline-block -rotate-1 bg-[#FFE066] px-[13px] pb-[3px] pt-[5px] text-[19px] leading-none tracking-[0.03em] text-[#0C1220] shadow-[2px_2px_0_rgba(12,18,32,0.35)]`}
+          >
+            Leaderboard
+          </span>
+        </h2>
+      </div>
+      <div className="mt-4">
+        <FanhoodLeaderboard embedded onBack={() => setShowBoard(false)} />
+      </div>
+    </div>
   );
 
   // Desktop layout pass (Nov 3, 2026): the slim header row caps
@@ -2331,7 +2335,7 @@ export default function StepLore() {
             </div>
             {pickerJourneyCard}
             {pickerRoundsSection}
-            {pickerLeaderboardButton}
+            {pickerLeaderboardSection}
           </div>
         )}
 

@@ -2225,8 +2225,7 @@ export default function StepLore() {
                       and the score to beat once anyone has
                       posted one. */}
                   <p className="mt-3 text-[13px] font-bold text-[#3D4A63]">
-                    {pointsPossible(game).toLocaleString()} points
-                    possible
+                    {pointsPossible(game).toLocaleString()} points possible
                     {roundHigh(game.id) !== null &&
                       ` · High score ${roundHigh(game.id)!.toLocaleString()}`}
                   </p>

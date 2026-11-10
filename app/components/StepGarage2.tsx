@@ -959,63 +959,6 @@ function FanStatsFeature() {
 
 /* ------------------------------------------------------------------ */
 /* Fan Friends card                                                    */
-/* ------------------------------------------------------------------ */
-
-/* The friends card stands on its own now, above the game (owner,
-   Nov 9): the old fandom section and its Leaderboard card are
-   gone — the leaderboard already lives on the game card and in the
-   destinations grid, so a third route to it was redundant. */
-function FriendsCard() {
-  const { userId, friendsList, navigateTo } = useWeezer();
-  const friendsCount =
-    userId && Array.isArray(friendsList) ? friendsList.length : 0;
-
-  return (
-      <button
-        type="button"
-        onClick={() => navigateTo(userId ? 'friends' : 'login')}
-        className={`flex w-full cursor-pointer items-start gap-4 rounded-[18px] border-[3px] border-[#0C1220] bg-white p-5 text-left text-[#0C1220] ${POSTER_CARD_SHADOW} transition-transform duration-150 hover:-translate-y-[3px] active:translate-y-0`}
-      >
-        <span className="grid h-[52px] w-[52px] flex-none place-items-center rounded-[14px] border-[2.5px] border-[#0C1220] bg-[#FF6B4A] text-white">
-          <svg
-            viewBox="0 0 24 24"
-            className="h-[26px] w-[26px]"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2.2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden
-          >
-            <circle cx="9" cy="8" r="3.5" />
-            <path d="M2.5 20c.8-3.2 3.4-5 6.5-5s5.7 1.8 6.5 5" />
-            <circle cx="17.5" cy="9" r="2.6" />
-            <path d="M16 15.2c2.6.3 4.6 1.9 5.3 4.8" />
-          </svg>
-        </span>
-        <span className="min-w-0 flex-1">
-          <span
-            className={`${displayFont.className} block text-[21px] leading-tight tracking-wide`}
-          >
-            Fan Friends
-          </span>
-          <span className="mt-[5px] block text-[14.5px] font-semibold leading-[1.45] text-[#3D4A63]">
-            {!userId
-              ? 'Sign in to compare rankings with friends.'
-              : friendsCount > 0
-                ? `You're comparing rankings with ${friendsCount} friend${friendsCount === 1 ? '' : 's'}.`
-                : 'See what your friends are ranking.'}
-          </span>
-        </span>
-        <span
-          className={`${displayFont.className} ml-auto flex-none self-center text-[22px] leading-none text-[#0072CE]`}
-          aria-hidden
-        >
-          →
-        </span>
-      </button>
-  );
-}
 
 /* ------------------------------------------------------------------ */
 /* Destinations grid                                                   */
@@ -1301,7 +1244,6 @@ export default function StepGarage2() {
         <EraShelf />
         <ThreadSection />
         <FanStatsFeature />
-        <FriendsCard />
         <GameCard />
         <DestinationsGrid />
       </div>

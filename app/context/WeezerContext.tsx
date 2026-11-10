@@ -406,6 +406,12 @@ interface WeezerContextType {
    *  runs the load for real. */
   retryBoot: () => void;
   userId: string | null;
+  /** The session is an anonymous "shell" account (game front
+   *  door, Nov 9, 2026): a real account with a claimed
+   *  username but no email/password yet. Shells are guests
+   *  with a name in every label and CTA — never presented as
+   *  a full account until they upgrade. */
+  isShell: boolean;
   userProfile: UserProfile | null;
   setUserProfile: (profile: UserProfile | null) => void;
   handleSignOut: () => Promise<void>;
@@ -776,6 +782,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   // Auth State
   const [loadingUser, setLoadingUser] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
+  const [isShell, setIsShell] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
   // Social & Friends State
@@ -1299,6 +1306,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         setBootError(false);
         forgetAccountFanhoodSync();
         setUserId(null);
+        setIsShell(false);
         userIdRef.current = null;
         setUserProfile(null);
         setFriendsList([]);
@@ -1538,6 +1546,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         // marker the commit left behind.)
         bootUid = uid;
         setUserId(uid);
+        setIsShell(!!session.user.is_anonymous);
         userIdRef.current = uid;
         setAnalyticsUserId(uid);
 
@@ -2838,6 +2847,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     syncQueueRef.current?.clear();
     await supabase.auth.signOut();
     setUserId(null);
+    setIsShell(false);
     userIdRef.current = null;
     bootFailedUserRef.current = null;
     setBootError(false);
@@ -2892,6 +2902,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         bootError,
         retryBoot,
         userId,
+        isShell,
         userProfile,
         setUserProfile,
         handleSignOut,

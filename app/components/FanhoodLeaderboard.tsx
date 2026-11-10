@@ -34,9 +34,13 @@ import type { LeaderboardEntry, LeaderboardScope } from '../lib/leaderboard';
  * visitors who are signed out get the worldwide board and a
  * sign-in nudge for friends.
  */
+const SHOW_SCOPE_FILTER = false;
+
 export default function FanhoodLeaderboard({
   onBack,
   embedded = false,
+  providedEntries,
+  providedLoadFailed = false,
 }: {
   onBack: () => void;
   /** Embedded on the game page itself (owner, Nov 9, 2026):
@@ -44,6 +48,12 @@ export default function FanhoodLeaderboard({
    *  no page padding; the game page frames it. The standalone
    *  board view (menu row, dashboard) keeps the full chrome. */
   embedded?: boolean;
+  /** When the host (the game page) already fetched the board
+   *  — it needs the per-round highs for the round cards — the
+   *  rows arrive as props and this component skips its own
+   *  fetch. Undefined = fetch it yourself, as before. */
+  providedEntries?: LeaderboardEntry[] | null;
+  providedLoadFailed?: boolean;
 }) {
   const router = useRouter();
   const { userId, friendCards, userProfile, navigateTo } = useWeezer();
@@ -55,12 +65,19 @@ export default function FanhoodLeaderboard({
   const fanhood = useFanhood();
   const ownDisplay = fanhoodDisplay(fanhood);
   const ownFinal = fanhoodGamesPlayed(fanhood) >= LORE_GAMES.length;
-  const [entries, setEntries] = useState<LeaderboardEntry[] | null>(null);
-  const [loadFailed, setLoadFailed] = useState(false);
+  const [fetchedEntries, setEntries] = useState<LeaderboardEntry[] | null>(
+    null
+  );
+  const [fetchedLoadFailed, setLoadFailed] = useState(false);
+  const entries =
+    providedEntries !== undefined ? providedEntries : fetchedEntries;
+  const loadFailed =
+    providedEntries !== undefined ? providedLoadFailed : fetchedLoadFailed;
   const [tab, setTab] = useState<'worldwide' | 'friends'>('worldwide');
   const [scope, setScope] = useState<LeaderboardScope>('all');
 
   useEffect(() => {
+    if (providedEntries !== undefined) return;
     let cancelled = false;
     (async () => {
       try {
@@ -84,7 +101,7 @@ export default function FanhoodLeaderboard({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [providedEntries]);
 
   const ownUsername = userProfile?.username ?? null;
   const friendUsernames = useMemo(() => {
@@ -187,7 +204,13 @@ export default function FanhoodLeaderboard({
         </div>
       ) : (
         <>
-          {/* Per-game filter */}
+          {/* Per-game filter — HIDDEN for now (owner, Nov 9,
+              2026): with a handful of players the six pills are
+              all cost, no signal. The scope state and ranking
+              stay wired; flip SHOW_SCOPE_FILTER to bring the
+              row back when the board is busy enough to need
+              slicing. */}
+          {SHOW_SCOPE_FILTER && (
           <div className="flex flex-wrap gap-1.5">
             <button
               onClick={() => setScope('all')}
@@ -213,6 +236,7 @@ export default function FanhoodLeaderboard({
               </button>
             ))}
           </div>
+          )}
 
           {entries === null ? (
             <p className="text-sm font-bold text-[#3D4A63]">

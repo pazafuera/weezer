@@ -70,6 +70,7 @@ export default function AppShell({
     loadingUser,
     navigateTo,
     handleSignOut,
+    isShell,
     pendingRequestsCount = 0,
     friendsList = [],
     refreshFriends,
@@ -675,16 +676,29 @@ export default function AppShell({
                           'Weezer Fan'}
                       </h3>
                     </div>
-                    <button
-                      onClick={() => {
-                        closeMenu();
-                        handleSignOut();
-                      }}
-                      className="text-[11px] font-bold text-rose-600 hover:underline cursor-pointer ml-3 shrink-0"
-                    >
-                      Sign Out
-                    </button>
+                    {/* A shell has no sign-out (owner, Nov 9,
+                        2026): signing out would strand the
+                        name-only account. Upgrading is the exit. */}
+                    {!isShell && (
+                      <button
+                        onClick={() => {
+                          closeMenu();
+                          handleSignOut();
+                        }}
+                        className="text-[11px] font-bold text-rose-600 hover:underline cursor-pointer ml-3 shrink-0"
+                      >
+                        Sign Out
+                      </button>
+                    )}
                   </div>
+
+                  {isShell && (
+                    <p className="mx-4 mt-1 text-[11px] font-bold leading-snug text-[#3D4A63]">
+                      Name-only account — no email yet. Add one in
+                      Account &amp; Profile so you don&rsquo;t lose
+                      your standing.
+                    </p>
+                  )}
 
                   <button
                     onClick={() => {

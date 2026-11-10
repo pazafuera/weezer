@@ -255,7 +255,7 @@ export default function AppShell({
     },
     {
       label: 'My Rankings',
-      step: 'master',
+      step: 'final',
       disabled: !progress.isMasterUnlocked,
       unlockHint: 'Unlocks after Refine',
       group: 'ranking',

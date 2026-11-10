@@ -313,7 +313,7 @@ function GarageHero() {
                   <>
                     <button
                       type="button"
-                      onClick={() => navigateTo('master')}
+                      onClick={() => navigateTo('final')}
                       className={HERO_BTN_PRIMARY}
                     >
                       My Rankings
@@ -1128,7 +1128,7 @@ function DestinationsGrid() {
     {
       label: 'My Rankings',
       caption: 'Your 1–206 list',
-      action: () => navigateTo('master'),
+      action: () => navigateTo('final'),
     },
     {
       label: 'Sweater Thread',

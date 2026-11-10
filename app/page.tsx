@@ -12,6 +12,7 @@ import StepGarage2 from './components/StepGarage2';
 import Step1Triage from './components/Step1Triage';
 import Step2Refine from './components/Step2Refine';
 import Step3Master from './components/Step3Master';
+import StepFinalRankings from './components/StepFinalRankings';
 import Step4Wrapped from './components/Step4Wrapped';
 import StepShareables from './components/StepShareables';
 import FanStats from './components/FanStats';
@@ -177,6 +178,14 @@ export default function WeezerRankerPage() {
           autoStartMatchups={autoStartMatchups}
           initialStageIdx={refineStageIdx}
           onStageChange={setRefineStageIdx}
+        />
+      )}
+
+      {step === 'final' && (
+        <StepFinalRankings
+          masterList={masterList}
+          triageMap={triageMap}
+          setStep={(s) => navigateTo(s)}
         />
       )}
 

@@ -92,6 +92,7 @@ export type AppStep =
   | 'triage'
   | 'rank_buckets'
   | 'master'
+  | 'final'
   | 'wrapped'
   | 'fan_stats'
   | 'friends'
@@ -124,6 +125,7 @@ const KNOWN_APP_STEPS: readonly AppStep[] = [
   'triage',
   'rank_buckets',
   'master',
+  'final',
   'wrapped',
   'fan_stats',
   'friends',
@@ -225,6 +227,7 @@ export function resolveGuardedStep(
     case 'rank_buckets':
       return progress.isRefineUnlocked ? requested : 'triage';
     case 'master':
+    case 'final':
     case 'wrapped':
       if (progress.isMasterUnlocked) return requested;
       return progress.isRefineUnlocked ? 'rank_buckets' : 'triage';

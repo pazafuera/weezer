@@ -89,6 +89,29 @@ export default function StepFinalRankings({
   const { userProfile } = useWeezer();
   const username = userProfile?.username?.trim();
 
+  // One-touch share of the fan's public profile link: the
+  // native share sheet where offered, else copy + confirm.
+  const [linkCopied, setLinkCopied] = useState(false);
+  const handleShareProfileLink = async () => {
+    if (!username) return;
+    const url = `https://rankingweezer.com/u/${username}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ url });
+        return;
+      } catch (err) {
+        if (err instanceof Error && err.name === 'AbortError') return;
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2500);
+    } catch {
+      /* clipboard unavailable — nothing more to do */
+    }
+  };
+
   const data = useMemo(() => {
     const progress = getProgressState(triageMap, masterList);
     const complete = masterList.length >= FULL_SONG_POOL.length;
@@ -237,6 +260,16 @@ export default function StepFinalRankings({
                 )}
               </div>
             ))}
+
+          {username && bucketed > 0 && (
+            <button
+              type="button"
+              onClick={handleShareProfileLink}
+              className="mt-4 text-[13px] font-black text-white underline decoration-[#FFC72C] decoration-2 underline-offset-4 transition hover:text-[#FFC72C]"
+            >
+              {linkCopied ? '✓ Link copied!' : 'Share your profile link'}
+            </button>
+          )}
         </div>
       </section>
 

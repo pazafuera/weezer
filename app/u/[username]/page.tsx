@@ -143,7 +143,7 @@ export default function PublicProfilePage() {
   const [linkCopied, setLinkCopied] = useState(false);
   const handleShareProfile = async () => {
     if (!targetProfile?.username) return;
-    const url = `${window.location.origin}/u/${targetProfile.username}`;
+    const url = `https://rankingweezer.com/u/${targetProfile.username}`;
     if (navigator.share) {
       try {
         await navigator.share({ url });

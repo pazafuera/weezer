@@ -138,6 +138,29 @@ export default function PublicProfilePage() {
   // (the mock's drawn state); an entry here overrides that default.
   const [groupOverrides, setGroupOverrides] = useState<Record<string, boolean>>({});
 
+  // One-touch profile sharing: the native share sheet where
+  // the browser offers one, else copy the link and say so.
+  const [linkCopied, setLinkCopied] = useState(false);
+  const handleShareProfile = async () => {
+    if (!targetProfile?.username) return;
+    const url = `${window.location.origin}/u/${targetProfile.username}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ url });
+        return;
+      } catch (err) {
+        if (err instanceof Error && err.name === 'AbortError') return;
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2500);
+    } catch {
+      /* clipboard unavailable — nothing more to do */
+    }
+  };
+
   useEffect(() => {
     if (username) fetchProfilesAndRankings();
   }, [username]);
@@ -341,6 +364,33 @@ export default function PublicProfilePage() {
 
   const tName = targetProfile?.display_name || targetProfile?.username;
   const vName = visitorProfile?.display_name || visitorProfile?.username || 'You';
+  // Owner's rule (Nov 10): this page speaks about the fan by
+  // first name only — never the full display name, never "my".
+  const firstNameOf = (n?: string | null) =>
+    (n || '').trim().split(/\s+/)[0] || '';
+  const tFirst = firstNameOf(targetProfile?.display_name) || targetProfile?.username || '';
+  const vFirst = firstNameOf(visitorProfile?.display_name) || visitorProfile?.username || 'You';
+  // The tribe lines are authored first-person for the fan's
+  // own card; on this public page they are re-voiced to the
+  // fan's first name so the page speaks one way throughout.
+  const revoiceFact = (fact: string) =>
+    fact
+      .replace(/^My /, `${tFirst}'s `)
+      .replace(/ of my /g, ` of ${tFirst}'s `)
+      .replace(/^I ranked /, `${tFirst} ranked `);
+  const revoiceDiagnosis = (line: string) => {
+    const map: Record<string, string> = {
+      "I haven't emotionally left 1997.": `${tFirst} hasn't emotionally left 1997.`,
+      "The deep cuts aren't deep to me. They're home.":
+        `The deep cuts aren't deep to ${tFirst}. They're home.`,
+      'I refuse to leave a single era behind.': `${tFirst} refuses to leave a single era behind.`,
+      'I like the new albums. Loudly, and in public.': `${tFirst} likes the new albums. Loudly, and in public.`,
+      "The 2000s weren't a comeback. They were my era.":
+        `The 2000s weren't a comeback. They were ${tFirst}'s era.`,
+      "I don't overthink it. If it slaps, it slaps.": `${tFirst} doesn't overthink it. If it slaps, it slaps.`,
+    };
+    return map[line] ?? line;
+  };
   const hasVisitorData = visitorMaster.length > 0;
 
   // Poster-hero facts (guest view). Coverage is the fan's real
@@ -363,10 +413,10 @@ export default function PublicProfilePage() {
         style={{ backgroundColor: TRIBE_INK[profile.tribe.name] || '#0C1220' }}
       />
       <p className="text-[14.5px] font-bold leading-[1.45] text-[#0C1220]">
-        {profile.tribe.fact}
+        {revoiceFact(profile.tribe.fact)}
       </p>
       <p className={`${handFont.className} mt-[2px] text-[22px] font-bold leading-tight text-[#3D4A63]`}>
-        {profile.tribe.diagnosis}
+        {revoiceDiagnosis(profile.tribe.diagnosis)}
       </p>
     </div>
   ) : null;
@@ -490,16 +540,16 @@ export default function PublicProfilePage() {
                  line uses the display name or neutral phrasing
                  (the same rule the share page follows). */
               <div className="relative mt-5">
-                <div className="absolute -top-[14px] left-1/2 z-10 -translate-x-1/2 -rotate-2 whitespace-nowrap bg-[#FFE066] px-[18px] pb-2 pt-[7px] text-center text-[#0C1220] shadow-[2px_2px_0_rgba(12,18,32,0.35)]">
-                  <div className={`${displayFont.className} text-base uppercase leading-none tracking-[1.2px]`}>
+                <div className="absolute -top-[20px] left-1/2 z-10 -translate-x-1/2 -rotate-2 whitespace-nowrap bg-[#FFE066] px-[18px] pb-2 pt-[7px] text-center text-[#0C1220] shadow-[2px_2px_0_rgba(12,18,32,0.35)]">
+                  <div className="text-[8.5px] font-black uppercase tracking-[2.4px]">
                     Fan Profile
                   </div>
-                  <div className="mt-[2px] text-[8.5px] font-black uppercase tracking-[2.4px]">
+                  <div className={`${displayFont.className} mt-[3px] text-[19px] uppercase leading-none tracking-[1px]`}>
                     @{targetProfile.username}
                   </div>
                 </div>
                 <div
-                  className="relative rounded-[18px] border-[3px] border-[#0C1220] bg-[#039AD1] px-[18px] pb-5 pt-[34px] text-center shadow-[6px_6px_0_#0C1220]"
+                  className="relative rounded-[18px] border-[3px] border-[#0C1220] bg-[#039AD1] px-[18px] pb-5 pt-[42px] text-center shadow-[6px_6px_0_#0C1220]"
                   style={{
                     backgroundImage:
                       'radial-gradient(rgba(255,255,255,0.16) 1.6px, transparent 1.7px)',
@@ -514,7 +564,7 @@ export default function PublicProfilePage() {
                   <h1
                     className={`${displayFont.className} mt-3 text-[clamp(36px,10vw,56px)] uppercase leading-[1.02] text-white [-webkit-text-stroke:1.5px_#0C1220] [text-shadow:4px_4px_0_#0C1220]`}
                   >
-                    {tName}
+                    {tFirst}
                   </h1>
                   <p
                     className={`${handFont.className} mt-[6px] text-[23px] font-bold leading-tight text-white [text-shadow:1px_1px_0_rgba(12,18,32,0.45)]`}
@@ -558,25 +608,20 @@ export default function PublicProfilePage() {
                             {profile.topAlbum.name}
                           </div>
                           <div className="mt-[1px] text-[11px] font-bold text-[#3D4A63]">
-                            {profile.topAlbum.count} of {tName}&apos;s top {profile.topAlbum.topCount} songs
+                            {profile.topAlbum.count} of {tFirst}&apos;s top {profile.topAlbum.topCount} songs
                           </div>
                         </div>
                       </div>
                     )}
-                    <div className="rounded-[14px] border-[3px] border-[#0C1220] bg-[#0C1220] px-[14px] pb-[10px] pt-3 shadow-[4px_4px_0_rgba(12,18,32,0.4)]">
-                      <div className="text-[10px] font-black uppercase tracking-[2.4px] text-[#FFE066]">
-                        Songs Ranked
-                      </div>
-                      <div className={`${displayFont.className} text-[26px] uppercase leading-[1.08] text-white`}>
-                        {heroRanked} of {heroTotal}
-                      </div>
-                      <div className="mt-[1px] text-[11px] font-bold text-[#c8d3e4]">
-                        {heroRanked >= heroTotal && heroTotal > 0
-                          ? 'The whole catalog, sorted'
-                          : `${heroTotal - heroRanked} still to sort`}
-                      </div>
-                    </div>
                   </div>
+
+                  <button
+                    type="button"
+                    onClick={handleShareProfile}
+                    className="mt-[13px] w-full rounded-full border-[3px] border-[#0C1220] bg-[#FFC72C] px-6 py-3 text-sm font-black text-[#0C1220] shadow-[3px_3px_0_#0C1220] transition hover:brightness-105 active:translate-y-[1px]"
+                  >
+                    {linkCopied ? '✓ Link copied!' : 'Share this profile'}
+                  </button>
                 </div>
               </div>
             )}
@@ -600,7 +645,7 @@ export default function PublicProfilePage() {
                       You
                     </span>
                     <h2 className="text-lg sm:text-2xl font-black text-[#0C1220] truncate leading-tight w-full">
-                      {vName}
+                      {vFirst}
                     </h2>
                   </div>
 
@@ -620,7 +665,7 @@ export default function PublicProfilePage() {
                       Friend
                     </span>
                     <h2 className="text-lg sm:text-2xl font-black text-[#0C1220] truncate leading-tight w-full">
-                      {tName}
+                      {tFirst}
                     </h2>
                   </div>
 
@@ -649,7 +694,7 @@ export default function PublicProfilePage() {
                   Want to see how you match up?
                 </h3>
                 <p className="text-xs font-semibold text-[#3D4A63] mb-4 max-w-sm mx-auto">
-                  Create your own Weezer ranking to unlock your compatibility score and see where you and {tName} disagree.
+                  Create your own Weezer ranking to unlock your compatibility score and see where you and {tFirst} disagree.
                 </p>
                 {/* Full-load anchor, same reason as the Back
                     link above: a client-side push home doesn't
@@ -694,7 +739,7 @@ export default function PublicProfilePage() {
                   <div className="flex items-center w-full justify-around relative z-10">
                     <div className="flex flex-col items-center w-2/5">
                       <span className="text-[9px] font-black uppercase text-[#3D4A63] mb-1">
-                        {vName}
+                        {vFirst}
                       </span>
                       <span className="text-2xl font-black text-rose-500">
                         #{stats.biggestFight.vRank}
@@ -703,7 +748,7 @@ export default function PublicProfilePage() {
                     <div className="w-px h-10 bg-rose-100" />
                     <div className="flex flex-col items-center w-2/5">
                       <span className="text-[9px] font-black uppercase text-[#3D4A63] mb-1">
-                        {tName}
+                        {tFirst}
                       </span>
                       <span className="text-2xl font-black text-rose-500">
                         #{stats.biggestFight.tRank}
@@ -750,93 +795,6 @@ export default function PublicProfilePage() {
               </div>
             )}
 
-            {/* SIDE-BY-SIDE TOP 10 */}
-            <div className="bg-white border-[3px] border-[#0C1220] rounded-[18px] shadow-[4px_4px_0_rgba(11,30,63,0.85)] p-6 sm:p-8">
-              <div className="text-center mb-[14px]">
-                <span className="text-[10px] font-black uppercase tracking-widest text-[#0072CE] block mb-1">
-                  The Canons
-                </span>
-                {/* Same literal-string font bug as the hero —
-                    fixed, so this heading gets the display font. */}
-                <h3 className={`${displayFont.className} text-2xl text-[#0C1220]`}>
-                  Top 10 Comparison
-                </h3>
-              </div>
-
-              <div className="flex gap-4 sm:gap-8">
-                {/* VISITOR COLUMN */}
-                {hasVisitorData && (
-                  <div className="flex-1 w-1/2">
-                    <div className="text-center mb-3">
-                      <span className="text-xs font-black uppercase text-[#0C1220] block truncate px-2">
-                        {vName}
-                      </span>
-                    </div>
-                    <div>
-                      {stats?.visitorTop10.map((song, i) => (
-                        <div
-                          key={song.id}
-                          className="flex items-center gap-[11px] border-b-[1.5px] border-dashed border-[#0C1220]/20 py-[7px] last:border-b-0"
-                        >
-                          <span className={`${displayFont.className} w-[26px] shrink-0 text-right text-[19px] text-[#0072CE]`}>
-                            {i + 1}
-                          </span>
-                          <AlbumArtwork
-                            albumId={song.albumId || ALBUM_NAME_TO_ID[song.album]}
-                            className="h-11 w-11 shrink-0 rounded-[11px] border-2 border-[#0C1220] object-cover"
-                          />
-                          <div className="min-w-0 flex-1">
-                            <h4 className="text-sm font-extrabold leading-[1.25] text-[#0C1220]">
-                              {song.title}
-                            </h4>
-                            <p className="mt-[1px] text-[10px] font-bold uppercase tracking-[1.2px] text-[#3D4A63]">
-                              {song.album} · {song.year}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* DIVIDER */}
-                {hasVisitorData && <div className="w-px bg-[#0C1220] hidden sm:block" />}
-
-                {/* TARGET COLUMN */}
-                <div className={`flex-1 ${!hasVisitorData ? 'w-full max-w-sm mx-auto' : 'w-1/2'}`}>
-                  <div className="text-center mb-3">
-                    <span className="text-xs font-black uppercase text-[#0C1220] block truncate px-2">
-                      {tName}
-                    </span>
-                  </div>
-                  <div>
-                    {stats?.targetTop10.map((song, i) => (
-                      <div
-                        key={song.id}
-                        className="flex items-center gap-[11px] border-b-[1.5px] border-dashed border-[#0C1220]/20 py-[7px] last:border-b-0"
-                      >
-                        <span className={`${displayFont.className} w-[26px] shrink-0 text-right text-[19px] text-[#0072CE]`}>
-                          {i + 1}
-                        </span>
-                        <AlbumArtwork
-                          albumId={song.albumId || ALBUM_NAME_TO_ID[song.album]}
-                          className="h-11 w-11 shrink-0 rounded-[11px] border-2 border-[#0C1220] object-cover"
-                        />
-                        <div className="min-w-0 flex-1">
-                          <h4 className="text-sm font-extrabold leading-[1.25] text-[#0C1220]">
-                            {song.title}
-                          </h4>
-                          <p className="mt-[1px] text-[10px] font-bold uppercase tracking-[1.2px] text-[#3D4A63]">
-                            {song.album} · {song.year}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-
             {/* TRIBE BAND — signed-in placement (guests got it
                 under the hero, above). */}
             {hasVisitorData && tribeBand}
@@ -851,7 +809,7 @@ export default function PublicProfilePage() {
                     Weezer Era
                   </span>
                   <h3 className={`${displayFont.className} mt-[2px] text-2xl tracking-[0.4px] text-[#0C1220]`}>
-                    Where {tName}&apos;s Top Songs Live
+                    Where {tFirst}&apos;s Top Songs Live
                   </h3>
                 </div>
                 <div>
@@ -882,7 +840,7 @@ export default function PublicProfilePage() {
                 </div>
                 {profile.eraNote && (
                   <p className={`${handFont.className} mt-[6px] text-xl font-bold leading-tight text-[#3D4A63]`}>
-                    {profile.eraNote.countWord} of {tName}&apos;s Top 10 are {profile.eraNote.eraAdjective} songs.
+                    {profile.eraNote.countWord} of {tFirst}&apos;s Top 10 are {profile.eraNote.eraAdjective} songs.
                   </p>
                 )}
               </div>
@@ -897,7 +855,7 @@ export default function PublicProfilePage() {
                     The Breakdown
                   </span>
                   <h3 className={`${displayFont.className} mt-[2px] text-2xl tracking-[0.4px] text-[#0C1220]`}>
-                    How the {profile.ranked} Shake Out
+                    How They Shake Out
                   </h3>
                 </div>
                 <div className="flex h-[26px] overflow-hidden rounded-lg border-[3px] border-[#0C1220]">
@@ -949,7 +907,7 @@ export default function PublicProfilePage() {
                     The Full List
                   </span>
                   <h3 className={`${displayFont.className} mt-[2px] text-2xl tracking-[0.4px] text-[#0C1220]`}>
-                    All {profile.ranked}, in {tName}&apos;s Order
+                    In {tFirst}&apos;s Order
                   </h3>
                 </div>
                 {profile.groups.map((group, gi) => {
@@ -969,9 +927,9 @@ export default function PublicProfilePage() {
                         aria-expanded={isOpen}
                       >
                         <span className={`${displayFont.className} text-[16.5px] tracking-[0.4px] text-[#0C1220]`}>
-                          {group.label}
+                          {group.key === 'banger' ? 'BANGERS' : group.label}
                         </span>
-                        <span className="text-xs text-[#3D4A63]">{isOpen ? '▾' : '▸'}</span>
+                        <span className="text-[24px] font-black leading-[0.6] text-[#0C1220]">{isOpen ? '▾' : '▸'}</span>
                         <span className="ml-auto text-[10.5px] font-black tracking-[1px] text-[#3D4A63]">
                           #{firstRank}–{lastRank} · {group.songs.length} SONGS
                         </span>
@@ -1001,16 +959,6 @@ export default function PublicProfilePage() {
                 })}
               </div>
             )}
-
-            {/* PAGE FOOTER — the share cards' standard lines. */}
-            <div className="pt-1 text-center">
-              <div className="text-[9px] font-black uppercase tracking-[1.6px] text-[#3D4A63]">
-                All My Favorite Songs · The Weezer Song Ranking Project
-              </div>
-              <div className={`${handFont.className} mt-[3px] text-[21px] font-bold leading-none text-[#3D4A63]`}>
-                Join the debate at rankingweezer.com
-              </div>
-            </div>
 
           </main>
         )}

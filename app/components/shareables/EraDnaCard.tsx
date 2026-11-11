@@ -15,7 +15,7 @@ import type { Bucket, ShareSong } from './Top10Card';
 import { eraShares } from '../../lib/profileStats';
 
 export const ERAS = [
-  { key: 'blue', label: '1994–1996', name: 'The Blue Era', color: '#d97706', test: (y: number) => y >= 1994 && y <= 1996 },
+  { key: 'blue', label: '1994–1996', name: 'The Purist Era', color: '#d97706', test: (y: number) => y >= 1994 && y <= 1996 },
   { key: 'y2k', label: '2001–2005', name: 'Y2K Weezer', color: '#059669', test: (y: number) => y >= 2001 && y <= 2005 },
   { key: 'red', label: '2008–2010', name: 'The Red Era', color: '#dc2626', test: (y: number) => y >= 2008 && y <= 2010 },
   { key: 'comeback', label: '2014–2019', name: 'The Comeback', color: '#0284c7', test: (y: number) => y >= 2014 && y <= 2019 },

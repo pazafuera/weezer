@@ -103,7 +103,7 @@ export function bucketCounts(
 
 export interface ProfileEraShare {
   key: string;
-  /** Canonical era name, e.g. 'The Blue Era' (ERAS in EraDnaCard). */
+  /** Canonical era name, e.g. 'The Purist Era' (ERAS in EraDnaCard). */
   name: string;
   /** Canonical year label, e.g. '1994–1996'. */
   label: string;
@@ -120,7 +120,7 @@ const PROFILE_ERAS: {
   min: number;
   max: number;
 }[] = [
-  { key: 'blue', name: 'The Blue Era', label: '1994–1996', color: '#0B6DAD', min: 1994, max: 1996 },
+  { key: 'blue', name: 'The Purist Era', label: '1994–1996', color: '#0B6DAD', min: 1994, max: 1996 },
   { key: 'y2k', name: 'Y2K Weezer', label: '2001–2005', color: '#C6D92D', min: 2001, max: 2005 },
   { key: 'red', name: 'The Red Era', label: '2008–2010', color: '#F23A2E', min: 2008, max: 2010 },
   { key: 'comeback', name: 'The Comeback', label: '2014–2019', color: '#F6CD5F', min: 2014, max: 2019 },
@@ -263,7 +263,7 @@ const NUMBER_WORDS = [
  * The era section's footnote fact: how many of the fan's Top 10
  * songs fall in their heaviest era. Returns null when fewer than
  * two do — a one-song overlap isn't a pattern worth printing.
- * The era name reads as an adjective ('The Blue Era' → 'Blue Era').
+ * The era name reads as an adjective ('The Purist Era' → 'Purist Era').
  */
 export function topEraTop10Note(
   top10: Song[],

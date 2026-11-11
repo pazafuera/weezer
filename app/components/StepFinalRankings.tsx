@@ -37,6 +37,7 @@ import {
 } from '../data/constants';
 import {
   getProgressState,
+  useWeezer,
   type AppStep,
   type TriageValue,
 } from '../context/WeezerContext';
@@ -85,6 +86,8 @@ export default function StepFinalRankings({
   const [groupOverrides, setGroupOverrides] = useState<
     Record<string, boolean>
   >({});
+  const { userProfile } = useWeezer();
+  const username = userProfile?.username?.trim();
 
   const data = useMemo(() => {
     const progress = getProgressState(triageMap, masterList);
@@ -164,6 +167,14 @@ export default function StepFinalRankings({
           }}
         />
         <div className="relative text-center">
+          {username ? (
+            <div
+              className={`${displayFont.className} mb-2 text-[26px] tracking-[0.5px] text-[#FFC72C]`}
+              style={{ textShadow: headlineShadow }}
+            >
+              @{username}
+            </div>
+          ) : null}
           <h1
             className={`${displayFont.className} text-[34px] leading-[1.05] text-white [text-wrap:balance] sm:text-[42px]`}
             style={{ textShadow: headlineShadow }}
@@ -256,7 +267,7 @@ export default function StepFinalRankings({
               <h3
                 className={`${displayFont.className} mt-[2px] text-2xl tracking-[0.4px] text-[#0C1220]`}
               >
-                How the {bucketed} Shake Out
+                How They Shake Out
               </h3>
             </div>
             <div className="flex h-[26px] overflow-hidden rounded-lg border-[3px] border-[#0C1220]">
@@ -308,7 +319,7 @@ export default function StepFinalRankings({
           {albums.length > 0 && (
             <section>
               <span className={EYEBROW}>Top Albums</span>
-              <div className="-mx-1 mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-1">
+              <div className="mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto px-2.5 pb-1 pt-2">
                 {albums.map((album, i) => (
                   <div
                     key={album.id}
@@ -339,14 +350,6 @@ export default function StepFinalRankings({
               actually ranked (Bangers and Slaps). */}
           {groups.length > 0 && (
             <section className={`${PANEL} p-5 sm:p-6`}>
-              <div className="mb-[6px]">
-                <span className={EYEBROW}>The Full List</span>
-                <h3
-                  className={`${displayFont.className} mt-[2px] text-2xl tracking-[0.4px] text-[#0C1220]`}
-                >
-                  Every Song, in Your Order
-                </h3>
-              </div>
               {groups.map((group, gi) => {
                 const isOpen = groupOverrides[group.key] ?? gi < 2;
                 const ranked = RANKED_GROUPS.has(group.key);
@@ -362,15 +365,15 @@ export default function StepFinalRankings({
                           [group.key]: !isOpen,
                         }))
                       }
-                      className="mt-[14px] flex w-full cursor-pointer items-baseline gap-2 rounded-[10px] border-[2.5px] border-[#0C1220] px-3 py-[9px] text-left"
+                      className={`${gi === 0 ? '' : 'mt-[14px] '}flex w-full cursor-pointer items-baseline gap-2 rounded-[10px] border-[2.5px] border-[#0C1220] px-3 py-[9px] text-left`}
                       aria-expanded={isOpen}
                     >
                       <span
                         className={`${displayFont.className} text-[16.5px] tracking-[0.4px] text-[#0C1220]`}
                       >
-                        {group.label}
+                        {group.key === 'banger' ? 'BANGERS' : group.label}
                       </span>
-                      <span className="text-xs text-[#3D4A63]">
+                      <span className="text-[24px] font-black leading-[0.6] text-[#0C1220]">
                         {isOpen ? '▾' : '▸'}
                       </span>
                       <span className="ml-auto text-[10.5px] font-black tracking-[1px] text-[#3D4A63]">
@@ -449,14 +452,6 @@ export default function StepFinalRankings({
             >
               Need to change something? Open Final Review →
             </button>
-            <div className="mt-5 text-[9px] font-black uppercase tracking-[1.6px] text-[#3D4A63]">
-              All My Favorite Songs · The Weezer Song Ranking Project
-            </div>
-            <div
-              className={`${handFont.className} mt-[3px] text-[21px] font-bold leading-none text-[#3D4A63]`}
-            >
-              Join the debate at rankingweezer.com
-            </div>
           </div>
         </>
       )}

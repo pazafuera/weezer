@@ -430,7 +430,14 @@ export default function StepDashboard() {
           })()}
         </p>
         <div className="pt-0.5 flex items-center text-xs font-black text-[#0072CE] group-hover:underline">
-          {fanhood ? 'Keep playing →' : 'Play the game →'}
+          {(() => {
+            // Same state rule as the Thread's fanhood stop
+            // (owner, Nov 12, 2026): a finished game — all
+            // rounds played — is never told to keep playing.
+            const d = fanhoodDisplay(fanhood);
+            if (d && d.gamesPlayed >= 5) return 'See the leaderboard →';
+            return fanhood ? 'Keep playing →' : 'Play the game →';
+          })()}
         </div>
       </button>
     );

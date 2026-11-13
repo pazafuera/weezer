@@ -28,7 +28,7 @@ import {
   normalizeUserVector,
   scoreArchetypes,
 } from '../lib/archetypes';
-import { youreAtPhrase } from '../data/loreGame';
+import { LORE_GAMES, youreAtPhrase } from '../data/loreGame';
 import { fanhoodDisplay, useFanhood } from '../lib/fanhood';
 import { trackAnalytics } from '../lib/analytics';
 
@@ -162,10 +162,15 @@ function deriveRankClashes(comparisons: RankComparison[]): {
  * THE FANHOOD STOP — how far back you've gotten, woven into the
  * Thread. Once a fanhood is established (a finished game of Back
  * to the Shack — app/lib/fanhood.ts), the stop shows it: the stop
- * your total has reached, the points, and the rarest answer.
- * Before that, the stop is the invitation: the Thread is where a
- * fan reads who they are, so it's where the game asks to be played
- * (respecting the game's own unlock gate on the way in).
+ * your total has reached, the points, and how many rounds are in.
+ * The call to action matches the state (owner, Nov 12, 2026):
+ * mid-journey it says Keep playing; once every round is played
+ * there is nothing left to keep playing, so it points at the
+ * leaderboard instead — and the rarest-answer quote is gone (the
+ * owner called featuring it weird). Before any game, the stop is
+ * the invitation: the Thread is where a fan reads who they are,
+ * so it's where the game asks to be played (respecting the
+ * game's own unlock gate on the way in).
  */
 function FanhoodStop({
   triageMap,
@@ -175,6 +180,8 @@ function FanhoodStop({
   const { navigateTo } = useWeezer();
   const fanhood = useFanhood();
   const display = fanhoodDisplay(fanhood);
+  const allPlayed =
+    display !== null && display.gamesPlayed >= LORE_GAMES.length;
 
   if (display) {
     return (
@@ -188,20 +195,16 @@ function FanhoodStop({
         <p className="mt-2 text-sm font-black text-[#7dd3fc] uppercase tracking-widest">
           {display.depth.toLocaleString()} points
         </p>
-        {display.deepest && (
-          <p className="mt-4 text-sm font-semibold text-slate-300 leading-relaxed">
-            Your rarest answer was {display.deepest.answer} —{' '}
-            {display.deepest.depth.toLocaleString()} points.
-            <span className="block mt-1 text-xs font-bold text-slate-500">
-              {display.deepest.promptLabel}
-            </span>
-          </p>
-        )}
+        <p className="mt-3 text-xs font-bold uppercase tracking-widest text-slate-500">
+          {allPlayed
+            ? 'All 5 rounds played'
+            : `${display.gamesPlayed} of 5 rounds played`}
+        </p>
         <button
           onClick={() => navigateTo('lore')}
           className="mt-6 bg-[#0072CE] hover:bg-blue-600 text-white font-black text-sm px-6 py-3 rounded-full transition-colors cursor-pointer"
         >
-          Keep playing →
+          {allPlayed ? 'See the leaderboard →' : 'Keep playing →'}
         </button>
       </div>
     );

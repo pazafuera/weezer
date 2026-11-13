@@ -23,6 +23,11 @@ import {
 } from '../lib/saveDiagnostics';
 import type { SaveDiagnosticEvent } from '../lib/saveDiagnostics';
 import {
+  loadLowerRankOptIns,
+  saveLowerRankOptIns,
+  withLowerRankOptIn,
+} from '../lib/lowerRank';
+import {
   configureAnalytics,
   crossedToComplete,
   setAnalyticsUserId,
@@ -323,6 +328,12 @@ interface WeezerContextType {
   setStep: (step: AppStep) => void;
   refineStageIdx: number;
   setRefineStageIdx: (idx: number) => void;
+  /** Downstream bucket ranking opt-ins (app/lib/lowerRank.ts):
+   *  the lower buckets — Mid, Skip, Trash — this fan has chosen
+   *  to rank, not just sort. Device-local preference; the order
+   *  itself lives in the master list as always. */
+  lowerRankOptIns: BucketType[];
+  setLowerRankOptIn: (bucket: BucketType, on: boolean) => void;
   autoStartMatchups: boolean;
   setAutoStartMatchups: (val: boolean) => void;
   /** Set by the login page when an in-app sign-up completes: the
@@ -816,6 +827,18 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   // always goes to Refine.) A ref, not state: nothing renders from it.
   const returnStepRef = useRef<Partial<Record<AppStep, AppStep>>>({});
   const [refineStageIdx, setRefineStageIdx] = useState(0);
+  // Downstream ranking opt-ins (app/lib/lowerRank.ts): start
+  // empty and load from localStorage on mount, so the first
+  // render never disagrees with the server-rendered shell.
+  const [lowerRankOptIns, setLowerRankOptIns] = useState<BucketType[]>([]);
+  useEffect(() => {
+    setLowerRankOptIns(loadLowerRankOptIns());
+  }, []);
+  const setLowerRankOptIn = (bucket: BucketType, on: boolean) => {
+    const next = withLowerRankOptIn(lowerRankOptIns, bucket, on);
+    setLowerRankOptIns(next);
+    saveLowerRankOptIns(next);
+  };
   const [autoStartMatchups, setAutoStartMatchups] = useState(false);
   // Post-sign-up banner flag (see the interface note). Plain state:
   // orientation renders from it, unlike the origin ref.
@@ -2880,6 +2903,8 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         setStep,
         refineStageIdx,
         setRefineStageIdx,
+        lowerRankOptIns,
+        setLowerRankOptIn,
         autoStartMatchups,
         setAutoStartMatchups,
         accountCreated,

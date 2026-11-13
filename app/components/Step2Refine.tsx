@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useRef, useEffect } from 'react';
 import { BucketType, Song, BUCKET_CONFIG, BUCKET_TRANSITIONS } from '../data/constants';
-import type { TriageValue } from '../context/WeezerContext';
+import { getProgressState, type TriageValue } from '../context/WeezerContext';
 import { FlyingWIcon, AudioPreviewButton, SortingIncompleteNotice } from './SharedUI';
 import { getRankedSongs, seatMovedSongInBucket } from '@/utils/rankingUtils';
 import Step1_5Matchups from './Step1_5Matchups';
@@ -32,12 +32,18 @@ const BAND_LABEL: Record<BucketType, string> = {
   trash: 'Trash',
 };
 
-const REFINEMENT_STAGES: { bucket: BucketType; title: string; desc: string; nextBtn: string }[] = [
+const LOWER_PLURAL: Partial<Record<BucketType, string>> = {
+  mid: 'Mids',
+  skip: 'Skips',
+  trash: 'Trash',
+};
+
+const REFINEMENT_STAGES: { bucket: BucketType; title: string; desc: string; nextBtn: string; rankTitle?: string; rankDesc?: string }[] = [
   { bucket: 'banger', title: 'Rank Your Bangers', desc: "The absolute best of the best. If you have more than 25 Bangers, you should consider demoting some to Lowkey Slaps.", nextBtn: "Next: Rank Slaps →" },
   { bucket: 'slaps', title: 'Rank Your Slaps', desc: "These rock, but wouldn't make a 20-track mixtape. Put them in order. Promote or demote songs you think don't belong here.", nextBtn: "Next: Review Mid →" },
-  { bucket: 'mid', title: 'Review Your Mid', desc: "These are good jams but wouldn't make your Spotify playlist. Rank order doesn't matter here, so just be sure each song belongs here.", nextBtn: "Next: Review Skips →" },
-  { bucket: 'skip', title: 'Review Your Skips', desc: "You usually skip these. Promote or demote if needed. Order doesn't matter in this bucket.", nextBtn: "Next: Review Trash →" },
-  { bucket: 'trash', title: 'Review Your Trash', desc: "These are songs you'd be fine never hearing again. They are cringe or simply don't do it for you. Rank order doesn't matter here. Just make sure they are actually trash before we wrap up.", nextBtn: "Generate Final List →" },
+  { bucket: 'mid', title: 'Review Your Mid', desc: "These are good jams but wouldn't make your Spotify playlist. Rank order doesn't matter here, so just be sure each song belongs here.", nextBtn: "Next: Review Skips →", rankTitle: 'Rank Your Mids', rankDesc: "These are good jams but wouldn't make your Spotify playlist. Now put them in order. Promote or demote songs you think don't belong here." },
+  { bucket: 'skip', title: 'Review Your Skips', desc: "You usually skip these. Promote or demote if needed. Order doesn't matter in this bucket.", nextBtn: "Next: Review Trash →", rankTitle: 'Rank Your Skips', rankDesc: "You usually skip these — but some are easier to skip than others. Put them in order. Promote or demote if needed." },
+  { bucket: 'trash', title: 'Review Your Trash', desc: "These are songs you'd be fine never hearing again. They are cringe or simply don't do it for you. Rank order doesn't matter here. Just make sure they are actually trash before we wrap up.", nextBtn: "Generate Final List →", rankTitle: 'Rank Your Trash', rankDesc: "Songs you'd be fine never hearing again — put them in order anyway, worst at the bottom. Promote anything that doesn't deserve to be here." },
 ];
 
 // STAGE RESUME (Nov 6, 2026): stageIdx is component state, so a
@@ -103,6 +109,8 @@ export default function Step2Refine({
   autoStartMatchups,
   initialStageIdx = 0,
   onStageChange,
+  lowerRankOptIns,
+  onToggleLowerRank,
 }: {
   bucketRanks: Record<BucketType, Song[]>;
   triageMap: Record<string, TriageValue>;
@@ -114,6 +122,8 @@ export default function Step2Refine({
   autoStartMatchups: boolean;
   initialStageIdx?: number;
   onStageChange?: (idx: number) => void;
+  lowerRankOptIns: BucketType[];
+  onToggleLowerRank: (bucket: BucketType, on: boolean) => void;
 }) {
   // Set inside the initializer when the stage came from
   // sessionStorage, so the prop-sync effect below doesn't stomp
@@ -175,6 +185,16 @@ export default function Step2Refine({
   }, []);
 
   const currentStage = REFINEMENT_STAGES[stageIdx] || REFINEMENT_STAGES[0];
+  // An opted-in lower stage speaks the ranking language
+  // (Rank Your Mids…), not the review language.
+  const stageTitle =
+    lowerRankOptIns.includes(currentStage.bucket) && currentStage.rankTitle
+      ? currentStage.rankTitle
+      : currentStage.title;
+  const stageDesc =
+    lowerRankOptIns.includes(currentStage.bucket) && currentStage.rankDesc
+      ? currentStage.rankDesc
+      : currentStage.desc;
   const bucket = currentStage.bucket;
 
   const songs = bucketRanks[bucket] || [];
@@ -199,7 +219,15 @@ export default function Step2Refine({
   });
 
   const cfg = BUCKET_CONFIG[bucket];
-  const hasSlider = bucket === 'banger' || bucket === 'slaps';
+  // Bangers and Slaps are ranked by the project itself: they
+  // carry rank numbers and the matchup sorter. A lower bucket
+  // joins the ordering when the fan opts in (downstream
+  // ranking, Nov 12, 2026) — drag and the handle follow
+  // canOrder; the rank chip and Help Me Rank stay with the
+  // two buckets that carry real ranks.
+  const isRankableBucket = bucket === 'banger' || bucket === 'slaps';
+  const optedIn = !isRankableBucket && lowerRankOptIns.includes(bucket);
+  const canOrder = isRankableBucket || optedIn;
   const transitions = BUCKET_TRANSITIONS[bucket];
 
   const [pendingMove, setPendingMove] = useState<{ song: Song; targetBucket: BucketType } | null>(null);
@@ -434,13 +462,14 @@ export default function Step2Refine({
             <p className="text-sm font-medium text-slate-600 mb-6 leading-relaxed">
               Are you sure you want to move <span className="font-bold text-slate-900">"{pendingMove.song.title}"</span>?
               {/* DRAG TIP — only on stages where this list actually
-                  offers drag-reorder. hasSlider is the very flag
+                  offers drag-reorder. canOrder is the flag
                   that renders the ☰ handle and enables dragging
-                  (Banger / Lowkey Slaps); the Mid, Skip and Trash
-                  stages have no drag, so the tip must not claim
+                  (Banger / Lowkey Slaps, plus a lower bucket the
+                  fan opted to rank); a lower stage without the
+                  opt-in has no drag, so the tip must not claim
                   there is (owner, Nov 3). No substitute advice
                   where it doesn't apply — the box just isn't there. */}
-              {hasSlider && (
+              {canOrder && (
                 <>
                   <br /><br />
                   <span className="text-xs text-slate-500 flex gap-1.5 bg-slate-50 p-2 rounded-xl border border-slate-100">
@@ -520,13 +549,52 @@ export default function Step2Refine({
           this project is on Tailwind 3.3, which has no
           text-balance utility.) */}
       <div className="text-center space-y-2 px-4 mb-8">
-        <h1 className={`${displayFont.className} text-[32px] text-[#0C1220] [text-wrap:balance]`}>{currentStage.title}</h1>
-        <p className="text-sm font-bold text-[#3D4A63] max-w-sm mx-auto leading-tight">{currentStage.desc}</p>
+        <h1 className={`${displayFont.className} text-[32px] text-[#0C1220] [text-wrap:balance]`}>{stageTitle}</h1>
+        <p className="text-sm font-bold text-[#3D4A63] max-w-sm mx-auto leading-tight">{stageDesc}</p>
       </div>
       </div>
 
+      {/* DOWNSTREAM RANKING OPT-IN (owner, Nov 12, 2026) —
+          lower buckets only, and only once sorting is finished:
+          this is the offer to keep refining past Bangers and
+          Slaps. Opted in, the stage above already speaks the
+          ranking language and the list below has drag; this slim
+          line just confirms it and offers the way back out. */}
+      {!isRankableBucket && getProgressState(triageMap, masterList).isTriageComplete && (
+        optedIn ? (
+          <div className="flex items-center justify-between gap-3 px-1">
+            <p className="text-xs font-bold text-[#3D4A63]">
+              You&rsquo;re ranking these — drag to put them in order.
+            </p>
+            <button
+              type="button"
+              onClick={() => onToggleLowerRank(bucket, false)}
+              className="text-xs font-black text-[#3D4A63] underline decoration-[#3D4A63]/40 underline-offset-4 shrink-0 cursor-pointer"
+            >
+              Stop ranking
+            </button>
+          </div>
+        ) : (
+          <div className="bg-white border-[3px] border-[#0C1220] rounded-[18px] p-4 shadow-[4px_4px_0_rgba(11,30,63,0.85)]">
+            <h3 className={`${displayFont.className} text-lg text-[#0C1220]`}>
+              Want these in order?
+            </h3>
+            <p className="text-sm font-semibold text-[#3D4A63] leading-snug mt-1">
+              Right now they&rsquo;re just sorted — where a song sits doesn&rsquo;t mean anything. Put them in order and your list shows them the way you actually rank them.
+            </p>
+            <button
+              type="button"
+              onClick={() => { triggerHaptic(15); onToggleLowerRank(bucket, true); }}
+              className="mt-3 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm px-6 py-3 rounded-full border-[3px] border-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)] transition active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_rgba(11,30,63,0.85)] cursor-pointer"
+            >
+              Rank my {LOWER_PLURAL[bucket]}
+            </button>
+          </div>
+        )
+      )}
+
       {/* ACTIVE BUCKET DRAG-AND-DROP CONTAINER */}
-      <div className="bg-white border-[3px] border-[#0C1220] rounded-[18px] p-3 sm:p-5 shadow-[4px_4px_0_rgba(11,30,63,0.85)]" onDragOver={hasSlider ? handleDragOver : undefined} onDrop={hasSlider ? () => handleDrop(bucket, songs.length) : undefined}>
+      <div className="bg-white border-[3px] border-[#0C1220] rounded-[18px] p-3 sm:p-5 shadow-[4px_4px_0_rgba(11,30,63,0.85)]" onDragOver={canOrder ? handleDragOver : undefined} onDrop={canOrder ? () => handleDrop(bucket, songs.length) : undefined}>
 
         <div className={`flex items-center justify-between ${BAND_BG[bucket]} border-[2.5px] border-[#0C1220] rounded-xl px-2.5 py-2 mb-3`}>
           {/* One line each (owner, Nov 7): the label and the
@@ -540,7 +608,7 @@ export default function Step2Refine({
           </h2>
 
           {/* HELP ME RANK BUTTON */}
-          {hasSlider && songs.length >= 2 && (
+          {isRankableBucket && songs.length >= 2 && (
             <button
               onClick={() => setShowMatchups(true)}
               className="text-[11px] font-black text-[#0C1220] bg-white hover:bg-slate-50 border-2 border-[#0C1220] px-3 py-1 rounded-[10px] transition cursor-pointer flex gap-1 items-center whitespace-nowrap shrink-0"
@@ -567,10 +635,10 @@ export default function Step2Refine({
                   data-song-card="true"
                   data-bucket={bucket}
                   data-index={idx}
-                  draggable={hasSlider}
-                  onDragStart={hasSlider ? (e) => handleDragStart(e, bucket, song) : undefined}
+                  draggable={canOrder}
+                  onDragStart={canOrder ? (e) => handleDragStart(e, bucket, song) : undefined}
                   onDragOver={handleDragOver}
-                  onDrop={hasSlider ? (e) => { e.stopPropagation(); handleDrop(bucket, idx); } : undefined}
+                  onDrop={canOrder ? (e) => { e.stopPropagation(); handleDrop(bucket, idx); } : undefined}
                   className={`rounded-2xl py-2 px-2.5 flex items-center justify-between gap-2 transition-all duration-150 ${
                     isMouseDrag 
                       ? 'opacity-40 border-2 border-dashed border-slate-300 bg-slate-100 scale-[0.98]'
@@ -580,7 +648,7 @@ export default function Step2Refine({
                   }`}
                 >
                   <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                    {hasSlider && (
+                    {isRankableBucket && (
                       <span className={`w-7 h-7 font-black text-[11px] rounded-lg flex items-center justify-center shrink-0 transition-colors ${
                         isTouchDrag ? 'bg-amber-400 text-slate-950 font-black ring-2 ring-amber-300' : 'bg-[#0072CE] text-white'
                       }`}>
@@ -646,7 +714,7 @@ export default function Step2Refine({
                       )}
                     </div>
 
-                    {hasSlider && (
+                    {canOrder && (
                       <span 
                         onTouchStart={(e) => handleTouchStart(e, bucket, song, idx)}
                         onTouchMove={handleTouchMove}

@@ -78,6 +78,17 @@ const headlineShadow =
 
 const RANKED_GROUPS: ReadonlySet<string> = new Set(['banger', 'slaps']);
 
+/** Downstream ranking (owner, Nov 12, 2026): the lower
+ *  buckets a fan can opt into ranking, their Refine stage
+ *  index, and the plural names the prompt below speaks. */
+const LOWER_BUCKETS: readonly BucketType[] = ['mid', 'skip', 'trash'];
+const LOWER_STAGE_IDX: Record<string, number> = { mid: 2, skip: 3, trash: 4 };
+const LOWER_PLURAL: Record<string, string> = {
+  mid: 'Mids',
+  skip: 'Skips',
+  trash: 'Trash',
+};
+
 export default function StepFinalRankings({
   masterList,
   triageMap,
@@ -86,7 +97,7 @@ export default function StepFinalRankings({
   const [groupOverrides, setGroupOverrides] = useState<
     Record<string, boolean>
   >({});
-  const { userProfile } = useWeezer();
+  const { userProfile, lowerRankOptIns, setRefineStageIdx } = useWeezer();
   const username = userProfile?.username?.trim();
 
   // One-touch share of the fan's public profile link: the
@@ -169,6 +180,17 @@ export default function StepFinalRankings({
 
   const { progress, complete, albums, counts, bucketed, groups, unknowns } =
     data;
+  // Lower buckets with songs in them that this fan has not
+  // opted into ranking — the prompt below offers the first
+  // one's Refine stage.
+  const unrankedLowers = LOWER_BUCKETS.filter(
+    (b) => counts[b] > 0 && !lowerRankOptIns.includes(b),
+  );
+  const lowerNames = unrankedLowers.map((b) => LOWER_PLURAL[b]);
+  const lowerPhrase =
+    lowerNames.length > 1
+      ? `${lowerNames.slice(0, -1).join(', ')} and ${lowerNames[lowerNames.length - 1]}`
+      : lowerNames[0];
   const pct =
     FULL_SONG_POOL.length > 0
       ? Math.round((bucketed / FULL_SONG_POOL.length) * 100)
@@ -346,6 +368,34 @@ export default function StepFinalRankings({
               </p>
             )}
           </section>
+
+          {/* Downstream ranking prompt (owner, Nov 12, 2026):
+              the list page is where a fan looks at their
+              lower buckets, so it carries the same offer
+              the Refine stages make — quietly, once, and
+              only for buckets not yet opted into. */}
+          {complete && unrankedLowers.length > 0 && (
+            <section className={`${PANEL} p-5 sm:p-6`}>
+              <h3 className={`${displayFont.className} text-xl text-[#0C1220]`}>
+                Your {lowerPhrase} aren&rsquo;t ranked yet.
+              </h3>
+              <p className="mt-1.5 text-sm font-semibold leading-snug text-[#3D4A63]">
+                They&rsquo;re sorted, but where they sit doesn&rsquo;t mean
+                anything. Put them in order and your list says exactly
+                what you mean.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setRefineStageIdx(LOWER_STAGE_IDX[unrankedLowers[0]]);
+                  setStep('rank_buckets');
+                }}
+                className="mt-3.5 rounded-full border-[3px] border-[#0C1220] bg-[#FFC72C] px-6 py-3 text-sm font-black text-[#0C1220] shadow-[3px_3px_0_#0C1220] transition hover:brightness-105 active:translate-y-[1px]"
+              >
+                Put them in order →
+              </button>
+            </section>
+          )}
 
           {/* Top albums — a simple horizontal scroller in
               the fan's album order, above the song listings. */}

@@ -36,6 +36,8 @@ export default function WeezerRankerPage() {
     moveMasterSong,
     refineStageIdx,
     setRefineStageIdx,
+    lowerRankOptIns,
+    setLowerRankOptIn,
     autoStartMatchups,
     setAutoStartMatchups,
     navigateTo,
@@ -178,6 +180,8 @@ export default function WeezerRankerPage() {
           autoStartMatchups={autoStartMatchups}
           initialStageIdx={refineStageIdx}
           onStageChange={setRefineStageIdx}
+          lowerRankOptIns={lowerRankOptIns}
+          onToggleLowerRank={setLowerRankOptIn}
         />
       )}
 

@@ -377,10 +377,10 @@ export default function StepFinalRankings({
           {complete && unrankedLowers.length > 0 && (
             <section className={`${PANEL} p-5 sm:p-6`}>
               <h3 className={`${displayFont.className} text-xl text-[#0C1220]`}>
-                You&rsquo;re ranking like a legit fan.
+                You&rsquo;re ranking like a legit fan!
               </h3>
               <p className="mt-1.5 text-sm font-semibold leading-snug text-[#3D4A63]">
-                Your {lowerPhrase} are still just sorted. Keep going?
+                Your {lowerPhrase} are still just sorted. Do you want to keep ranking?
               </p>
               <button
                 type="button"
@@ -390,7 +390,7 @@ export default function StepFinalRankings({
                 }}
                 className="mt-3.5 rounded-full border-[3px] border-[#0C1220] bg-[#FFC72C] px-6 py-3 text-sm font-black text-[#0C1220] shadow-[3px_3px_0_#0C1220] transition hover:brightness-105 active:translate-y-[1px]"
               >
-                Put them in order →
+                Rank my {LOWER_PLURAL[unrankedLowers[0]]}
               </button>
             </section>
           )}

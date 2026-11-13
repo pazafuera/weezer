@@ -6,8 +6,6 @@ import { AudioPreviewButton, SortingIncompleteNotice } from './SharedUI';
 import type { TriageValue } from '../context/WeezerContext';
 import { displayFont } from './shareables/fonts';
 
-const K_FACTOR = 32;
-
 export default function Step1_5Matchups({
   songs,
   bucketTitle,
@@ -27,35 +25,46 @@ export default function Step1_5Matchups({
   onKeepSorting?: () => void;
 }) {
   const [round, setRound] = useState(1);
-  const [elos, setElos] = useState<Record<string, number>>({});
-  const [currentPair, setCurrentPair] = useState<[Song, Song] | null>(null);
+  const [working, setWorking] = useState<Song[]>([]);
+  const [cursor, setCursor] = useState(0);
   const [animating, setAnimating] = useState<'left' | 'right' | null>(null);
 
   // Dynamic round calculation: Min 10, Max 20, or half the bucket size
   const totalRounds = Math.min(Math.max(10, Math.ceil(songs.length / 2)), 20);
 
+  // NEIGHBOR SWEEP (Nov 12, 2026) — replaces the random-pair Elo
+  // engine. The old model drew random pairs, scored them in a
+  // fresh Elo table, and overwrote the bucket order with the
+  // session result: on a big bucket a 20-pick session touched
+  // barely half the songs, and re-running it re-shuffled instead
+  // of refining. Now the session works on the bucket's CURRENT
+  // order: it presents neighboring songs (positions cursor and
+  // cursor + 1), and picking the lower one swaps the pair —
+  // every pick is a small, real improvement to the order, and
+  // the next session starts from wherever the order now stands,
+  // so sessions compound. The sweep starts at a random offset
+  // each session (a big bucket gets a different stretch covered
+  // each time) and wraps to the top when it runs off the end;
+  // it never pairs the last song against the first.
   useEffect(() => {
     if (songs.length < 2) {
       onComplete(songs);
       return;
     }
-    const initialElos: Record<string, number> = {};
-    songs.forEach(s => initialElos[s.id] = 1000);
-    setElos(initialElos);
-    pickRandomPair(songs);
+    setWorking([...songs]);
+    setCursor(Math.floor(Math.random() * (songs.length - 1)));
+    setRound(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [songs]);
 
-  const pickRandomPair = (pool: Song[]) => {
-    const idx1 = Math.floor(Math.random() * pool.length);
-    let idx2 = Math.floor(Math.random() * pool.length);
-    while (idx1 === idx2) idx2 = Math.floor(Math.random() * pool.length);
-    setCurrentPair([pool[idx1], pool[idx2]]);
-  };
+  const currentPair: [Song, Song] | null =
+    working.length >= 2 && cursor + 1 < working.length
+      ? [working[cursor], working[cursor + 1]]
+      : null;
 
   const handlePick = (winnerIdx: 0 | 1) => {
     if (!currentPair || animating) return;
-    
+
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new Event('kill-all-audio'));
     }
@@ -66,29 +75,22 @@ export default function Step1_5Matchups({
     }
 
     setTimeout(() => {
-      const winner = currentPair[winnerIdx];
-      const loser = currentPair[winnerIdx === 0 ? 1 : 0];
-
-      const rA = elos[winner.id] || 1000;
-      const rB = elos[loser.id] || 1000;
-
-      const expectedA = 1 / (1 + Math.pow(10, (rB - rA) / 400));
-      const expectedB = 1 / (1 + Math.pow(10, (rA - rB) / 400));
-
-      const newElos = {
-        ...elos,
-        [winner.id]: rA + K_FACTOR * (1 - expectedA),
-        [loser.id]: rB + K_FACTOR * (0 - expectedB)
-      };
-      
-      setElos(newElos);
-
+      // Picking the upper song holds the pair as-is; picking the
+      // lower one swaps them, so the winner climbs one spot.
+      const next = [...working];
+      if (winnerIdx === 1) {
+        const tmp = next[cursor];
+        next[cursor] = next[cursor + 1];
+        next[cursor + 1] = tmp;
+      }
       if (round >= totalRounds) {
-        const sorted = [...songs].sort((a, b) => (newElos[b.id] || 1000) - (newElos[a.id] || 1000));
-        onComplete(sorted);
+        onComplete(next);
       } else {
+        setWorking(next);
+        let nextCursor = cursor + 2;
+        if (nextCursor + 1 >= next.length) nextCursor = 0;
+        setCursor(nextCursor);
         setRound(prev => prev + 1);
-        pickRandomPair(songs);
         setAnimating(null);
       }
     }, 400);
@@ -118,7 +120,7 @@ export default function Step1_5Matchups({
           Matchup {round} of {totalRounds}
         </span>
         <h2 className={`${displayFont.className} text-[27px] text-[#0C1220] mt-1`}>Which {bucketTitle} is Better?</h2>
-        <p className="text-sm font-bold text-[#3D4A63]">Tap your favorite to give it a boost.</p>
+        <p className="text-sm font-bold text-[#3D4A63]">Tap your favorite — winners climb.</p>
       </div>
 
       <div className="flex-1 flex flex-col gap-4 relative min-h-0">
@@ -191,18 +193,17 @@ export default function Step1_5Matchups({
       
       <div className="text-center mt-4 shrink-0">
         {/* The only exit this interstitial has — before any pick it
-            is honestly "Skip Pre-Sort"; after picks exist, the same
-            control abandons the session and its results are lost,
-            so the label says exactly that instead of inviting a
-            tap under a false name. (Abandoning loses only the
-            matchup session; the bucket work outside persists.) */}
+            is honestly "Skip Pre-Sort"; after picks exist, every
+            pick has already improved the working order (each one
+            is a swap, not a score in some table), so exiting
+            KEEPS them and the label says that. */}
         <button
-          onClick={() => onComplete(songs)}
+          onClick={() => onComplete(working.length >= 2 ? working : songs)}
           className="min-h-[44px] px-4 text-sm font-black text-[#3D4A63] underline underline-offset-4 hover:text-[#0C1220] cursor-pointer"
         >
           {round <= 1
             ? 'Skip Pre-Sort'
-            : `Exit and discard ${round - 1} pick${round - 1 === 1 ? '' : 's'}`}
+            : `Exit and keep ${round - 1} pick${round - 1 === 1 ? '' : 's'}`}
         </button>
       </div>
     </div>

@@ -377,12 +377,10 @@ export default function StepFinalRankings({
           {complete && unrankedLowers.length > 0 && (
             <section className={`${PANEL} p-5 sm:p-6`}>
               <h3 className={`${displayFont.className} text-xl text-[#0C1220]`}>
-                Your {lowerPhrase} aren&rsquo;t ranked yet.
+                You&rsquo;re ranking like a legit fan.
               </h3>
               <p className="mt-1.5 text-sm font-semibold leading-snug text-[#3D4A63]">
-                They&rsquo;re sorted, but where they sit doesn&rsquo;t mean
-                anything. Put them in order and your list says exactly
-                what you mean.
+                Your {lowerPhrase} are still just sorted. Keep going?
               </p>
               <button
                 type="button"

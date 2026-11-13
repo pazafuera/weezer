@@ -577,10 +577,10 @@ export default function Step2Refine({
         ) : (
           <div className="bg-white border-[3px] border-[#0C1220] rounded-[18px] p-4 shadow-[4px_4px_0_rgba(11,30,63,0.85)]">
             <h3 className={`${displayFont.className} text-lg text-[#0C1220]`}>
-              Want these in order?
+              You&rsquo;re ranking like a legit fan.
             </h3>
             <p className="text-sm font-semibold text-[#3D4A63] leading-snug mt-1">
-              Right now they&rsquo;re just sorted — where a song sits doesn&rsquo;t mean anything. Put them in order and your list shows them the way you actually rank them.
+              Keep going? Put these in order too — right now they&rsquo;re just sorted, and where a song sits doesn&rsquo;t mean anything.
             </p>
             <button
               type="button"

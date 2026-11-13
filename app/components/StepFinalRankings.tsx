@@ -97,7 +97,8 @@ export default function StepFinalRankings({
   const [groupOverrides, setGroupOverrides] = useState<
     Record<string, boolean>
   >({});
-  const { userProfile, lowerRankOptIns, setRefineStageIdx } = useWeezer();
+  const { userProfile, lowerRankOptIns, setRefineStageIdx, setAutoStartMatchups } =
+    useWeezer();
   const username = userProfile?.username?.trim();
 
   // One-touch share of the fan's public profile link: the
@@ -385,8 +386,17 @@ export default function StepFinalRankings({
               <button
                 type="button"
                 onClick={() => {
-                  setRefineStageIdx(LOWER_STAGE_IDX[unrankedLowers[0]]);
+                  // Order matters (owner bug report, Nov 12,
+                  // 2026): navigateTo resets the Refine stage
+                  // to 0 on every fresh entry, so the stage is
+                  // set AFTER the navigation — the same
+                  // after-navigateTo pattern the Sweater
+                  // Thread's edit-intent uses for the matchup
+                  // flag in page.tsx. Setting it first landed
+                  // everyone on Rank Your Bangers.
                   setStep('rank_buckets');
+                  setRefineStageIdx(LOWER_STAGE_IDX[unrankedLowers[0]]);
+                  setAutoStartMatchups(false);
                 }}
                 className="mt-3.5 rounded-full border-[3px] border-[#0C1220] bg-[#FFC72C] px-6 py-3 text-sm font-black text-[#0C1220] shadow-[3px_3px_0_#0C1220] transition hover:brightness-105 active:translate-y-[1px]"
               >

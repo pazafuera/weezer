@@ -6,6 +6,31 @@ import { AudioPreviewButton, SortingIncompleteNotice } from './SharedUI';
 import type { TriageValue } from '../context/WeezerContext';
 import { displayFont } from './shareables/fonts';
 
+const SWEEP_STORE_KEY = 'weezer-sweep-cursors';
+
+function readSweepCursor(title: string, n: number): number | null {
+  try {
+    const raw = localStorage.getItem(SWEEP_STORE_KEY);
+    if (!raw) return null;
+    const map = JSON.parse(raw) as Record<string, number>;
+    const c = map[title];
+    return typeof c === 'number' && c >= 0 && c + 1 < n ? c : null;
+  } catch {
+    return null;
+  }
+}
+
+function storeSweepCursor(title: string, c: number) {
+  try {
+    const raw = localStorage.getItem(SWEEP_STORE_KEY);
+    const map = raw ? (JSON.parse(raw) as Record<string, number>) : {};
+    map[title] = c;
+    localStorage.setItem(SWEEP_STORE_KEY, JSON.stringify(map));
+  } catch {
+    /* storage unavailable — resuming is best-effort */
+  }
+}
+
 export default function Step1_5Matchups({
   songs,
   bucketTitle,
@@ -42,17 +67,22 @@ export default function Step1_5Matchups({
   // cursor + 1), and picking the lower one swaps the pair —
   // every pick is a small, real improvement to the order, and
   // the next session starts from wherever the order now stands,
-  // so sessions compound. The sweep starts at a random offset
-  // each session (a big bucket gets a different stretch covered
-  // each time) and wraps to the top when it runs off the end;
-  // it never pairs the last song against the first.
+  // so sessions compound. The sweep REMEMBERS where it left
+  // off in each bucket and resumes there next session (random
+  // start only the very first time) — a fresh random start
+  // could drop the player right back into the stretch they
+  // just played, and since neighbors stay neighbors until
+  // picks move them, that read as "the same matchups again."
+  // The sweep wraps to the top when it runs off the end; it
+  // never pairs the last song against the first.
   useEffect(() => {
     if (songs.length < 2) {
       onComplete(songs);
       return;
     }
     setWorking([...songs]);
-    setCursor(Math.floor(Math.random() * (songs.length - 1)));
+    const stored = readSweepCursor(bucketTitle, songs.length);
+    setCursor(stored ?? Math.floor(Math.random() * (songs.length - 1)));
     setRound(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [songs]);
@@ -83,12 +113,15 @@ export default function Step1_5Matchups({
         next[cursor] = next[cursor + 1];
         next[cursor + 1] = tmp;
       }
+      let nextCursor = cursor + 2;
+      if (nextCursor + 1 >= next.length) nextCursor = 0;
+      // Wherever this session ends — finished or bailed — the
+      // next one resumes at the first pair not yet presented.
+      storeSweepCursor(bucketTitle, nextCursor);
       if (round >= totalRounds) {
         onComplete(next);
       } else {
         setWorking(next);
-        let nextCursor = cursor + 2;
-        if (nextCursor + 1 >= next.length) nextCursor = 0;
         setCursor(nextCursor);
         setRound(prev => prev + 1);
         setAnimating(null);

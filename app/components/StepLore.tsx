@@ -2043,12 +2043,30 @@ export default function StepLore() {
             </p>
           </div>
         </div>
-        <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-white/[0.14]">
-          <div
-            className="h-full rounded-full bg-[#FFD23F]"
-            style={{ width: `${journeyLegPct}%` }}
-          />
-        </div>
+        {!pickerAllPlayed && (
+          <div className="mt-4">
+            <div className="h-2.5 overflow-hidden rounded-full bg-white/[0.14]">
+              <div
+                className="h-full rounded-full bg-[#FFD23F]"
+                style={{ width: `${journeyLegPct}%` }}
+              />
+            </div>
+            {/* The bar is the current leg: how far the total
+                has travelled from this stop toward the next
+                (journeyLegPct). Its endpoints are named right
+                under it — the owner, Nov 12, 2026: it was
+                presented with no context at all. A finished
+                journey hides the bar entirely: with no rounds
+                left, the leg can never move again, so a
+                progress bar only undersells a final score. */}
+            <div className="mt-1.5 flex items-center justify-between text-[11px] font-bold uppercase tracking-[0.08em]">
+              <span className="text-slate-400">{journeyStop.title}</span>
+              <span className="text-[#FFD23F]">
+                {journeyNext ? journeyNext.title : 'Top stop'}
+              </span>
+            </div>
+          </div>
+        )}
         <div className="mt-3 border-t border-white/[0.14] pt-1.5">
           {TOTAL_STOPS.map((stop, i) => {
             const status =

@@ -32,18 +32,12 @@ const BAND_LABEL: Record<BucketType, string> = {
   trash: 'Trash',
 };
 
-const LOWER_PLURAL: Partial<Record<BucketType, string>> = {
-  mid: 'Mids',
-  skip: 'Skips',
-  trash: 'Trash',
-};
-
-const REFINEMENT_STAGES: { bucket: BucketType; title: string; desc: string; nextBtn: string; rankTitle?: string; rankDesc?: string; offerDesc?: string }[] = [
+const REFINEMENT_STAGES: { bucket: BucketType; title: string; desc: string; nextBtn: string; rankTitle?: string; rankDesc?: string }[] = [
   { bucket: 'banger', title: 'Rank Your Bangers', desc: "To you, these songs are the best of the best. Now it's time to put them in rank order.", nextBtn: "Next: Rank Slaps →" },
   { bucket: 'slaps', title: 'Rank Your Slaps', desc: "You think these songs rock, but they wouldn't make your 20-song mixtape. Put them in rank order. Promote or demote songs you think don't belong here.", nextBtn: "Next: Review Mid →" },
-  { bucket: 'mid', title: 'Review Your Mids', desc: "These are good jams but wouldn't make your Spotify playlist.", nextBtn: "Next: Review Skips →", rankTitle: 'Rank Your Mids', rankDesc: "These are good jams but wouldn't make your Spotify playlist. Put them in rank order. Promote or demote songs you think don't belong here.", offerDesc: "These are good jams but wouldn't make your Spotify playlist. Do you want to keep ranking?" },
-  { bucket: 'skip', title: 'Review Your Skips', desc: "These are songs you skip when no one is watching.", nextBtn: "Next: Review Trash →", rankTitle: 'Rank Your Skips', rankDesc: "These are songs you skip when no one is watching. Put them in rank order. Promote or demote songs you think don't belong here.", offerDesc: "These are songs you skip when no one is watching. Do you want to keep ranking?" },
-  { bucket: 'trash', title: 'Review Your Trash', desc: "These are songs you'd be fine never hearing again.", nextBtn: "Generate Final List →", rankTitle: 'Rank Your Trash', rankDesc: "These are songs you'd be fine never hearing again. Put them in rank order. Promote anything that doesn't deserve to be here.", offerDesc: "These are songs you'd be fine never hearing again. Do you want to keep ranking?" },
+  { bucket: 'mid', title: 'Review Your Mids', desc: "These are good jams but wouldn't make your Spotify playlist.", nextBtn: "Next: Review Skips →", rankTitle: 'Rank Your Mids', rankDesc: "These are good jams but wouldn't make your Spotify playlist. Put them in rank order. Promote or demote songs you think don't belong here." },
+  { bucket: 'skip', title: 'Review Your Skips', desc: "These are songs you skip when no one is watching.", nextBtn: "Next: Review Trash →", rankTitle: 'Rank Your Skips', rankDesc: "These are songs you skip when no one is watching. Put them in rank order. Promote or demote songs you think don't belong here." },
+  { bucket: 'trash', title: 'Review Your Trash', desc: "These are songs you'd be fine never hearing again.", nextBtn: "Generate Final List →", rankTitle: 'Rank Your Trash', rankDesc: "These are songs you'd be fine never hearing again. Put them in rank order. Promote anything that doesn't deserve to be here." },
 ];
 
 // STAGE RESUME (Nov 6, 2026): stageIdx is component state, so a
@@ -154,7 +148,6 @@ export default function Step2Refine({
   };
 
   const [showMatchups, setShowMatchups] = useState(false);
-  const [dismissedOffers, setDismissedOffers] = useState<ReadonlySet<BucketType>>(new Set());
 
   useEffect(() => {
     if (skipPropSyncRef.current) {
@@ -221,27 +214,28 @@ export default function Step2Refine({
 
   const cfg = BUCKET_CONFIG[bucket];
   // Bangers and Slaps are ranked by the project itself: they
-  // carry rank numbers and the matchup sorter. A lower bucket
-  // joins the ordering when the fan opts in (downstream
-  // ranking, Nov 12, 2026) — drag and the handle follow
-  // canOrder; the rank chip and Help Me Rank stay with the
-  // two buckets that carry real ranks.
+  // carry rank numbers. A lower bucket joins the ordering
+  // when its Rank toggle is on (downstream ranking, Nov 12,
+  // 2026) — drag, the handle, and Help Me Rank all follow
+  // canOrder, so a ranked lower bucket gets the matchup
+  // sorter just like Bangers and Slaps (owner, Nov 12). The
+  // rank chip stays with the two buckets that carry ranks.
   const isRankableBucket = bucket === 'banger' || bucket === 'slaps';
   const optedIn = !isRankableBucket && lowerRankOptIns.includes(bucket);
   const canOrder = isRankableBucket || optedIn;
-  // THE BLENDED OFFER (owner, Nov 12, 2026): on a lower stage,
-  // once sorting is finished, the subhead itself carries the
-  // offer — one paragraph, two small buttons, no card. "Just
-  // review" dismisses it for this visit and the plain review
-  // subhead comes back.
-  const showOffer =
+  // THE RANK / REVIEW TOGGLE (owner, Nov 12, 2026): on a
+  // lower stage, once sorting is finished and the bucket has
+  // songs, a segmented switch under the subhead flips the
+  // stage between reviewing (no drag) and ranking (drag on,
+  // Help Me Rank in the band). It replaces the earlier
+  // one-shot offer buttons — the switch stays put, so the
+  // fan can flip back and forth. It deliberately does NOT
+  // sit at the title's right: that top-right spot belongs
+  // to Help Me Rank.
+  const showToggle =
     !isRankableBucket &&
-    !optedIn &&
-    !dismissedOffers.has(bucket) &&
     (bucketRanks[bucket] || []).length > 0 &&
     getProgressState(triageMap, masterList).isTriageComplete;
-  const headerDesc =
-    showOffer && currentStage.offerDesc ? currentStage.offerDesc : stageDesc;
   const transitions = BUCKET_TRANSITIONS[bucket];
 
   const [pendingMove, setPendingMove] = useState<{ song: Song; targetBucket: BucketType } | null>(null);
@@ -435,11 +429,11 @@ export default function Step2Refine({
     if (previewBtn) previewBtn.click();
   };
 
-  if (showMatchups && (bucket === 'banger' || bucket === 'slaps') && songs.length >= 2) {
+  if (showMatchups && canOrder && songs.length >= 2) {
     return (
       <Step1_5Matchups
         songs={songs}
-        bucketTitle={bucket === 'banger' ? 'Banger' : 'Slap'}
+        bucketTitle={bucket === 'banger' ? 'Banger' : bucket === 'slaps' ? 'Slap' : cfg.label}
         onComplete={(sorted) => {
           onUpdateRanks({ ...bucketRanks, [bucket]: sorted });
           setShowMatchups(false);
@@ -564,49 +558,35 @@ export default function Step2Refine({
           text-balance utility.) */}
       <div className="text-center space-y-2 px-4 mb-8">
         <h1 className={`${displayFont.className} text-[32px] text-[#0C1220] [text-wrap:balance]`}>{stageTitle}</h1>
-        <p className="text-sm font-bold text-[#3D4A63] max-w-sm mx-auto leading-tight">{headerDesc}</p>
-        {showOffer && (
-          <div className="flex flex-wrap items-center justify-center gap-2 pt-1.5">
-            <button
-              type="button"
-              onClick={() => { triggerHaptic(15); onToggleLowerRank(bucket, true); }}
-              className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-[13px] px-5 py-2.5 rounded-full border-[2.5px] border-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)] transition active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_rgba(11,30,63,0.85)] cursor-pointer"
+        <p className="text-sm font-bold text-[#3D4A63] max-w-sm mx-auto leading-tight">{stageDesc}</p>
+        {showToggle && (
+          <div className="flex items-center justify-center pt-1.5">
+            <div
+              className="flex rounded-full border-[2.5px] border-[#0C1220] bg-white shadow-[2px_2px_0_rgba(11,30,63,0.85)] overflow-hidden"
+              role="group"
+              aria-label="Rank or review these songs"
             >
-              Rank my {LOWER_PLURAL[bucket]}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                triggerHaptic(10);
-                setDismissedOffers((prev) => new Set(prev).add(bucket));
-              }}
-              className="text-[13px] font-black text-[#3D4A63] underline decoration-[#3D4A63]/40 underline-offset-4 px-2 py-2.5 cursor-pointer"
-            >
-              Just review my {LOWER_PLURAL[bucket]}
-            </button>
+              <button
+                type="button"
+                aria-pressed={optedIn}
+                onClick={() => { if (!optedIn) { triggerHaptic(15); onToggleLowerRank(bucket, true); } }}
+                className={`px-5 py-2 text-[13px] font-black transition cursor-pointer ${optedIn ? 'bg-amber-400 text-slate-950' : 'text-[#3D4A63]'}`}
+              >
+                Rank
+              </button>
+              <button
+                type="button"
+                aria-pressed={!optedIn}
+                onClick={() => { if (optedIn) { triggerHaptic(10); onToggleLowerRank(bucket, false); } }}
+                className={`px-5 py-2 text-[13px] font-black transition cursor-pointer border-l-[2.5px] border-[#0C1220] ${!optedIn ? 'bg-amber-400 text-slate-950' : 'text-[#3D4A63]'}`}
+              >
+                Review
+              </button>
+            </div>
           </div>
         )}
       </div>
       </div>
-
-      {/* DOWNSTREAM RANKING (owner, Nov 12, 2026) — the offer
-          itself is blended into the stage header above; what
-          remains here is only the opted-in confirmation line
-          and the way back out. */}
-      {!isRankableBucket && optedIn && (
-        <div className="flex items-center justify-between gap-3 px-1">
-          <p className="text-xs font-bold text-[#3D4A63]">
-            You&rsquo;re ranking these — drag to put them in order.
-          </p>
-          <button
-            type="button"
-            onClick={() => onToggleLowerRank(bucket, false)}
-            className="text-xs font-black text-[#3D4A63] underline decoration-[#3D4A63]/40 underline-offset-4 shrink-0 cursor-pointer"
-          >
-            Stop ranking
-          </button>
-        </div>
-      )}
 
       {/* ACTIVE BUCKET DRAG-AND-DROP CONTAINER */}
       <div className="bg-white border-[3px] border-[#0C1220] rounded-[18px] p-3 sm:p-5 shadow-[4px_4px_0_rgba(11,30,63,0.85)]" onDragOver={canOrder ? handleDragOver : undefined} onDrop={canOrder ? () => handleDrop(bucket, songs.length) : undefined}>
@@ -622,8 +602,10 @@ export default function Step2Refine({
             {cfg.emoji} {BAND_LABEL[bucket]} <span className="text-[#3D4A63]">({songs.length})</span>
           </h2>
 
-          {/* HELP ME RANK BUTTON */}
-          {isRankableBucket && songs.length >= 2 && (
+          {/* HELP ME RANK BUTTON — always on the two rankable
+              buckets, and on a lower bucket while its Rank
+              toggle is on (canOrder), per the owner. */}
+          {canOrder && songs.length >= 2 && (
             <button
               onClick={() => setShowMatchups(true)}
               className="text-[11px] font-black text-[#0C1220] bg-white hover:bg-slate-50 border-2 border-[#0C1220] px-3 py-1 rounded-[10px] transition cursor-pointer flex gap-1 items-center whitespace-nowrap shrink-0"

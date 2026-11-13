@@ -108,13 +108,13 @@ export default function Step1_5Matchups({
   if (!currentPair) return null;
 
   return (
-    <div className="flex flex-col h-[80vh] py-6 px-4 max-w-lg mx-auto animate-in fade-in duration-500">
+    <div className="flex flex-col py-6 px-4 max-w-lg mx-auto animate-in fade-in duration-500">
       {triageMap && onKeepSorting && (
         <div className="shrink-0 mb-4">
           <SortingIncompleteNotice triageMap={triageMap} onKeepSorting={onKeepSorting} />
         </div>
       )}
-      <div className="text-center mb-6 mt-3 shrink-0">
+      <div className="text-center mb-4 mt-2 shrink-0">
         <span className="text-[10px] font-black uppercase tracking-widest text-[#3D4A63]">
           Matchup {round} of {totalRounds}
         </span>
@@ -122,14 +122,14 @@ export default function Step1_5Matchups({
         <p className="text-sm font-bold text-[#3D4A63]">Tap your favorite to give it a boost.</p>
       </div>
 
-      <div className="flex-1 flex flex-col gap-4 relative min-h-0">
+      <div className="flex flex-col gap-4 relative">
         {/* OPTION A */}
         <div
           onClick={() => handlePick(0)}
           onKeyDown={(e) => handleCardKeyDown(e, 0)}
           role="button"
           tabIndex={0}
-          className={`flex-1 rounded-[18px] border-[3px] px-4 pt-3 pb-7 sm:px-6 sm:pt-5 sm:pb-9 flex flex-col items-center justify-center transition-all duration-300 cursor-pointer overflow-hidden ${
+          className={`h-[280px] sm:h-[296px] rounded-[18px] border-[3px] px-4 pt-3 pb-7 sm:px-6 sm:pt-5 sm:pb-9 flex flex-col items-center justify-center transition-all duration-300 cursor-pointer overflow-hidden ${
             animating === 'left' ? 'bg-[#0072CE] border-[#0072CE] text-white scale-105 shadow-2xl z-10' :
             animating === 'right' ? 'bg-slate-100 border-slate-200 opacity-40 scale-95' :
             'bg-white border-[#0C1220] shadow-[4px_4px_0_rgba(11,30,63,0.85)]'
@@ -139,13 +139,15 @@ export default function Step1_5Matchups({
             albumId={resolveAlbumId(currentPair[0]) ?? ''}
             className="w-16 h-16 shrink-0 object-cover rounded-[10px] border-[2.5px] border-[#0C1220] mb-3"
           />
-          {/* shrink-0 on the title is load-bearing: this card
-              is a fixed-height flex column, and line-clamp's
-              overflow:hidden makes the title the one child
-              the layout may shrink — when the Nov 5, 2026
-              album-cover refresh added the art's height, the
-              column started crushing the title to zero and
-              the songs went nameless on phone heights. */}
+          {/* shrink-0 on the title is load-bearing: in a
+              flex column, line-clamp's overflow:hidden makes
+              the title the one child the layout may shrink —
+              when the Nov 5, 2026 album-cover refresh added
+              the art's height inside the old fixed 80vh stack,
+              the column started crushing the title to zero
+              and the songs went nameless on phone heights.
+              The cards now carry explicit heights sized to
+              their content, and every child is shrink-0. */}
           <h3 className={`${displayFont.className} shrink-0 text-2xl sm:text-3xl leading-tight text-center mb-2 line-clamp-3 ${animating === 'left' ? 'text-white' : 'text-[#0C1220]'}`}>
             {currentPair[0].title}
           </h3>
@@ -171,7 +173,7 @@ export default function Step1_5Matchups({
           onKeyDown={(e) => handleCardKeyDown(e, 1)}
           role="button"
           tabIndex={0}
-          className={`flex-1 rounded-[18px] border-[3px] px-4 pt-7 pb-3 sm:px-6 sm:pt-9 sm:pb-5 flex flex-col items-center justify-center transition-all duration-300 cursor-pointer overflow-hidden ${
+          className={`h-[280px] sm:h-[296px] rounded-[18px] border-[3px] px-4 pt-7 pb-3 sm:px-6 sm:pt-9 sm:pb-5 flex flex-col items-center justify-center transition-all duration-300 cursor-pointer overflow-hidden ${
             animating === 'right' ? 'bg-amber-400 border-amber-500 text-slate-900 scale-105 shadow-2xl z-10' :
             animating === 'left' ? 'bg-slate-100 border-slate-200 opacity-40 scale-95' :
             'bg-white border-[#0C1220] shadow-[4px_4px_0_rgba(11,30,63,0.85)]'
@@ -194,7 +196,7 @@ export default function Step1_5Matchups({
         </div>
       </div>
       
-      <div className="text-center mt-6 shrink-0">
+      <div className="text-center mt-4 shrink-0">
         {/* The only exit this interstitial has — before any pick it
             is honestly "Skip Pre-Sort"; after picks exist, the same
             control abandons the session and its results are lost,

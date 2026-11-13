@@ -580,7 +580,7 @@ export default function Step2Refine({
                 triggerHaptic(10);
                 setDismissedOffers((prev) => new Set(prev).add(bucket));
               }}
-              className="bg-white hover:bg-slate-50 text-[#0C1220] font-black text-[13px] px-5 py-2.5 rounded-full border-[2.5px] border-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)] transition active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_rgba(11,30,63,0.85)] cursor-pointer"
+              className="text-[13px] font-black text-[#3D4A63] underline decoration-[#3D4A63]/40 underline-offset-4 px-2 py-2.5 cursor-pointer"
             >
               Just review my {LOWER_PLURAL[bucket]}
             </button>

@@ -13,6 +13,7 @@ import Step1Triage from './components/Step1Triage';
 import Step2Refine from './components/Step2Refine';
 import Step3Master from './components/Step3Master';
 import StepFinalRankings from './components/StepFinalRankings';
+import { SpotifyReturnGate } from './components/SpotifyExport';
 import Step4Wrapped from './components/Step4Wrapped';
 import StepShareables from './components/StepShareables';
 import FanStats from './components/FanStats';
@@ -267,6 +268,12 @@ export default function WeezerRankerPage() {
           answers only to him server-side. Deliberately no menu
           entry; the account drawer holds the only door. */}
       {step === 'owner_stats' && <SiteStats />}
+
+      {/* Spotify return gate (Nov 14, 2026): after the
+          Spotify sign-in round-trip, the playlist modal
+          reopens wherever the fan landed. Renders nothing
+          unless a return is pending. */}
+      <SpotifyReturnGate />
         </>
       )}
       </AppShell>

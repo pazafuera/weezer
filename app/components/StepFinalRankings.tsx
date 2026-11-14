@@ -18,12 +18,12 @@
  * (app/lib/profileStats). Above the full list — expandable
  * bucket groups — sits a simple horizontal scroller of the
  * fan's top albums, in the same shrinkage-adjusted order
- * the tier cards use. One semantic difference
- * from the profile page, at the owner's direction: only
- * Bangers and Slaps carry rank numbers here — Mid, Skip and
- * Trash were sorted into buckets but never ranked, so their
- * groups show no numbers. Songs marked "Don't Know It" were
- * never ranked either and sit in their own tail group.
+ * the tier cards use. Rank numbers: Bangers and Slaps
+ * always carry them; a lower bucket carries them too once
+ * the fan has opted into ranking it (owner, Nov 14, 2026 —
+ * supersedes the Nov 10 top-two-only rule on this page).
+ * Songs marked "Don't Know It" were never ranked and sit
+ * in their own tail group.
  */
 
 import React, { useMemo, useState } from 'react';
@@ -76,7 +76,9 @@ const EYEBROW =
 const headlineShadow =
   '3px 3px 0 #0C1220, -1.5px -1.5px 0 #0C1220, 1.5px -1.5px 0 #0C1220, -1.5px 1.5px 0 #0C1220, 1.5px 1.5px 0 #0C1220, -1.5px 0 0 #0C1220, 1.5px 0 0 #0C1220, 0 -1.5px 0 #0C1220, 0 1.5px 0 #0C1220';
 
-const RANKED_GROUPS: ReadonlySet<string> = new Set(['banger', 'slaps']);
+// The groups that carry rank numbers are derived in the
+// component now: the always-ranked two plus any lower
+// bucket the fan opted into ranking (owner, Nov 14, 2026).
 
 /** Downstream ranking (owner, Nov 12, 2026): the lower
  *  buckets a fan can opt into ranking, their Refine stage
@@ -105,6 +107,11 @@ export default function StepFinalRankings({
     setLowerRankOptIn,
     setRefineOpenTools,
   } = useWeezer();
+  const rankedGroups: ReadonlySet<string> = new Set([
+    'banger',
+    'slaps',
+    ...lowerRankOptIns,
+  ]);
   const username = userProfile?.username?.trim();
 
   // One-touch share of the fan's public profile link: the
@@ -451,13 +458,14 @@ export default function StepFinalRankings({
           )}
 
           {/* The full list — the profile page's expandable
-              groups, with rank numbers only where songs were
-              actually ranked (Bangers and Slaps). */}
+              groups, with rank numbers wherever songs were
+              actually ranked (Bangers, Slaps, and any lower
+              bucket the fan opted into ranking). */}
           {groups.length > 0 && (
             <section className={`${PANEL} p-5 sm:p-6`}>
               {groups.map((group, gi) => {
                 const isOpen = groupOverrides[group.key] ?? gi < 2;
-                const ranked = RANKED_GROUPS.has(group.key);
+                const ranked = rankedGroups.has(group.key);
                 const firstRank = group.songs[0].rank;
                 const lastRank = group.songs[group.songs.length - 1].rank;
                 return (

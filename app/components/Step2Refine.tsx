@@ -288,6 +288,27 @@ export default function Step2Refine({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openTools]);
+  // TOOL-USE MEMORY (owner, Nov 14, 2026): once a tool has
+  // actually been used in a bucket — a matchup session that
+  // changed the order, or an applied split pass — the module
+  // speaks as a returning state ("drag to refine further, or
+  // use the tools again") instead of a fresh start. Device-
+  // local, like the mode decisions.
+  const [toolUse, setToolUse] = useState<Partial<Record<BucketType, boolean>>>({});
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('weezer-refine-tooluse');
+      if (raw) setToolUse(JSON.parse(raw));
+    } catch { /* storage unavailable */ }
+  }, []);
+  const markToolUsed = (b: BucketType) => {
+    setToolUse((prev) => {
+      if (prev[b]) return prev;
+      const next = { ...prev, [b]: true };
+      try { localStorage.setItem('weezer-refine-tooluse', JSON.stringify(next)); } catch { /* best-effort */ }
+      return next;
+    });
+  };
   const chooseRefineMode = (m: RefineMode) => {
     triggerHaptic(10);
     if (!isRankableBucket) {
@@ -502,6 +523,7 @@ export default function Step2Refine({
         bucket={bucket}
         plural={SPLIT_PLURAL[bucket]}
         onApply={(sorted) => {
+          markToolUsed(bucket);
           onUpdateRanks({ ...bucketRanks, [bucket]: sorted });
         }}
         onExit={() => setShowSplit(false)}
@@ -517,6 +539,12 @@ export default function Step2Refine({
         songs={songs}
         bucketTitle={bucket === 'banger' ? 'Banger' : bucket === 'slaps' ? 'Slap' : cfg.label}
         onComplete={(sorted) => {
+          // A session counts as USED when it changed the
+          // order (Skip Pre-Sort and hold-only sessions hand
+          // back the same sequence and don't count).
+          const before = (bucketRanks[bucket] || []).map((x) => x.id).join('|');
+          const after = sorted.map((x) => x.id).join('|');
+          if (before !== after) markToolUsed(bucket);
           onUpdateRanks({ ...bucketRanks, [bucket]: sorted });
           setShowMatchups(false);
         }}
@@ -659,6 +687,7 @@ export default function Step2Refine({
           onChooseMode={chooseRefineMode}
           onLaunchMatchups={() => { setModuleOpen(false); setShowMatchups(true); }}
           onLaunchSplit={() => { setModuleOpen(false); setShowSplit(true); }}
+          toolsTouched={!!toolUse[bucket]}
         />
       )}
 

@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/utils/supabase';
+import ConnectedTop20 from '@/app/components/ConnectedTop20';
 import { Song, BucketType, ALBUM_NAME_TO_ID, BUCKET_CONFIG } from '@/app/data/constants';
 import { AlbumArtwork } from '@/app/components/SharedUI';
 import AppShell from '@/app/components/AppShell';
@@ -442,6 +443,16 @@ export default function PublicProfilePage() {
     targetMaster.forEach((song, i) => {
       if (ALL_REAL.includes(targetTriage[song.id])) tAllRank.set(song.id, i + 1);
     });
+    // CONNECTED TOP 20 data: each fan's first 20 bucketed
+    // songs in list order, numbered 1..20.
+    const top20Of = (master: Song[], triage: Record<string, string>) =>
+      master
+        .filter((song) => ALL_REAL.includes(triage[song.id]))
+        .slice(0, 20)
+        .map((song, i) => ({ id: song.id, title: song.title, rank: i + 1 }));
+    const visitorTop20 = top20Of(visitorMaster, visitorTriage);
+    const targetTop20 = top20Of(targetMaster, targetTriage);
+
     const fullTau = calculateKendallTau(vAllRank, tAllRank);
     const fullScore =
       fullTau.sampleSize >= 2 ? Math.round(((fullTau.tau + 1) / 2) * 100) : null;
@@ -453,6 +464,8 @@ export default function PublicProfilePage() {
       sharedSample,
       fullScore,
       fullSample: fullTau.sampleSize,
+      visitorTop20,
+      targetTop20,
       biggestFight,
       sharedFavorites: sharedFavorites.slice(0, 3),
       quip:
@@ -913,40 +926,16 @@ export default function PublicProfilePage() {
               </div>
             )}
 
-            {/* COMMON GROUND */}
-            {hasVisitorData && stats?.sharedFavorites && stats.sharedFavorites.length > 0 && (
-              <div className="bg-emerald-50 border-[3px] border-[#0C1220] rounded-[18px] shadow-[4px_4px_0_rgba(11,30,63,0.85)] p-6 sm:p-8">
-                <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 block mb-1 text-center">
-                  🤝 Common Ground
-                </span>
-                <h3 className="text-xl sm:text-2xl font-black text-center text-emerald-950 mb-5 tracking-tight">
-                  Tracks you both put in your Top 20.
-                </h3>
-                <div className="space-y-2.5">
-                  {stats.sharedFavorites.map((song) => {
-                    const resolvedId = song.albumId || ALBUM_NAME_TO_ID[song.album];
-                    return (
-                      <div
-                        key={song.id}
-                        className="flex items-center gap-3 bg-white p-3 rounded-2xl border-2 border-[#0C1220]"
-                      >
-                        <AlbumArtwork
-                          albumId={resolvedId}
-                          className="w-10 h-10 rounded-xl border-2 border-[#0C1220] object-cover"
-                        />
-                        <div className="min-w-0 flex-1">
-                          <h4 className="text-xs sm:text-sm font-extrabold text-[#0C1220] truncate">
-                            {song.title}
-                          </h4>
-                          <p className="text-[9px] font-bold text-[#3D4A63] uppercase tracking-widest truncate">
-                            {song.album}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+            {/* CONNECTED TOP 20 — replaces Common Ground
+                (owner, Nov 14, 2026): both Top 20s side by
+                side, lines joining the songs in both. */}
+            {hasVisitorData && stats && stats.sharedSample >= 2 && stats.visitorTop20.length > 0 && stats.targetTop20.length > 0 && (
+              <ConnectedTop20
+                visitorName={vFirst}
+                targetName={tFirst}
+                visitorTop={stats.visitorTop20}
+                targetTop={stats.targetTop20}
+              />
             )}
 
             {/* TRIBE BAND — signed-in placement (guests got it

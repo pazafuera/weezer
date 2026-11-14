@@ -89,7 +89,7 @@ export default function RefineToolsModule({
           onClick={onClose}
           className="text-[12px] font-black text-[#3D4A63] underline underline-offset-4 hover:text-[#0C1220] cursor-pointer min-h-[32px] px-1"
         >
-          Done ▾
+          Close ▾
         </button>
       </div>
 
@@ -137,7 +137,7 @@ export default function RefineToolsModule({
           <p className="text-[15px] font-black text-[#0C1220] leading-snug mb-3">
             {toolsTouched
               ? 'Drag to refine further, or use the tools again:'
-              : 'How do you want to start?'}
+              : 'How do you want to rank?'}
           </p>
           <div className="space-y-2.5">
             {toolsTouched && (

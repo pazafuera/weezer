@@ -555,7 +555,7 @@ export default function Step2Refine({
   }
 
   return (
-    <div className="space-y-6 pb-24 relative">
+    <div className="space-y-6 pb-36 relative">
 
       {/* SORTING-INCOMPLETE NOTICE — tops every refine stage when
           triage isn't finished (renders nothing at 206). The

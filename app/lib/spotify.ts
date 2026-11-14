@@ -210,6 +210,24 @@ export async function adoptPendingSpotifyTokens(): Promise<void> {
 }
 
 /** The fan's connection: account row first, local fallback. */
+export async function disconnectSpotify(): Promise<void> {
+  try {
+    localStorage.removeItem(LS_LOCAL);
+    localStorage.removeItem(LS_PENDING);
+  } catch {
+    /* no-op */
+  }
+  try {
+    const { data } = await supabase.auth.getUser();
+    const uid = data.user?.id;
+    if (uid) {
+      await supabase.from('spotify_connections').delete().eq('user_id', uid);
+    }
+  } catch {
+    /* best effort — the local copy is already gone */
+  }
+}
+
 export async function loadSpotifyConnection(): Promise<SpotifyConnection | null> {
   const {
     data: { session },

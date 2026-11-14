@@ -272,12 +272,26 @@ export default function Step2Refine({
     : optedIn
       ? 'rank'
       : (modeDecisions[bucket] ?? null);
+  // SEQUENTIAL GATING (owner, Nov 14, 2026): a lower bucket
+  // is only OFFERED ranking once the lower bucket before it
+  // (Mid → Skip → Trash) has been ranked. An empty previous
+  // bucket never locks. A bucket already opted in keeps its
+  // ranking even if the one before it is later un-ranked.
+  const LOWER_SEQ: BucketType[] = ['mid', 'skip', 'trash'];
+  const prevLower: BucketType | undefined = !isRankableBucket
+    ? LOWER_SEQ[LOWER_SEQ.indexOf(bucket) - 1]
+    : undefined;
+  const rankLocked =
+    !!prevLower &&
+    !optedIn &&
+    (bucketRanks[prevLower] || []).length > 0 &&
+    !lowerRankOptIns.includes(prevLower);
   const [moduleOpen, setModuleOpen] = useState(false);
   // Landings: an undecided lower bucket opens on its
   // question; anything already decided lands collapsed.
   useEffect(() => {
     if (!decisionsLoaded) return;
-    setModuleOpen(!isRankableBucket && moduleMode === null && showModule);
+    setModuleOpen(!isRankableBucket && moduleMode === null && showModule && !rankLocked);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bucket, decisionsLoaded]);
   // The My Rankings prompt arms openTools: land on the tools.
@@ -310,6 +324,7 @@ export default function Step2Refine({
     });
   };
   const chooseRefineMode = (m: RefineMode) => {
+    if (m === 'rank' && rankLocked) return;
     triggerHaptic(10);
     if (!isRankableBucket) {
       onToggleLowerRank(bucket, m === 'rank');
@@ -688,6 +703,9 @@ export default function Step2Refine({
           onLaunchMatchups={() => { setModuleOpen(false); setShowMatchups(true); }}
           onLaunchSplit={() => { setModuleOpen(false); setShowSplit(true); }}
           toolsTouched={!!toolUse[bucket]}
+          locked={rankLocked}
+          lockedPrevPlural={prevLower ? SPLIT_PLURAL[prevLower] : undefined}
+          onJumpToPrevious={() => goToStage(stageIdx - 1)}
         />
       )}
 

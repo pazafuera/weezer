@@ -298,21 +298,39 @@ export default function PublicProfilePage() {
       compatibilityScore = sampleSize >= 2 ? Math.round(((tau + 1) / 2) * 100) : 0;
       sharedSample = sampleSize;
 
-      const comparisons: any[] = [];
-      const vCount = vExplicit.length;
-      const tCount = tExplicit.length;
-
       vExplicit.forEach((song) => {
         const vRank = vRankMap.get(song.id);
         const tRank = tRankMap.get(song.id);
 
         if (vRank !== undefined && tRank !== undefined) {
-          const vPct = vCount > 1 ? (vRank - 1) / (vCount - 1) : 0;
-          const tPct = tCount > 1 ? (tRank - 1) / (tCount - 1) : 0;
-          comparisons.push({ song, vRank, tRank, diff: Math.abs(vPct - tPct) });
-
           if (vRank <= 20 && tRank <= 20) sharedFavorites.push(song);
         }
+      });
+
+      // THE BIGGEST WAR — across the WHOLE list, not just
+      // the top two buckets. Ranks are true positions in
+      // each fan's full list (the same numbers their final
+      // lists show); a war needs a 41+ spot gap (0.20 of
+      // the 206-song catalogue).
+      const REAL_BUCKETS = ['banger', 'slaps', 'mid', 'skip', 'trash'];
+      const vFullRank = new Map<string, number>();
+      visitorMaster.forEach((song, i) => vFullRank.set(song.id, i + 1));
+      const tFullRank = new Map<string, number>();
+      targetMaster.forEach((song, i) => tFullRank.set(song.id, i + 1));
+
+      const comparisons: any[] = [];
+      visitorMaster.forEach((song) => {
+        if (!REAL_BUCKETS.includes(visitorTriage[song.id])) return;
+        if (!REAL_BUCKETS.includes(targetTriage[song.id])) return;
+        const vRank = vFullRank.get(song.id);
+        const tRank = tFullRank.get(song.id);
+        if (vRank === undefined || tRank === undefined) return;
+        comparisons.push({
+          song,
+          vRank,
+          tRank,
+          diff: Math.abs(vRank - tRank) / 206,
+        });
       });
 
       if (comparisons.length > 0) {

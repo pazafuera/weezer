@@ -44,12 +44,12 @@ const BAND_LABEL: Record<BucketType, string> = {
   trash: 'Trash',
 };
 
-const REFINEMENT_STAGES: { bucket: BucketType; title: string; desc: string; nextBtn: string; rankTitle?: string; rankDesc?: string }[] = [
-  { bucket: 'banger', title: 'Rank Your Bangers', desc: "To you, these songs are the best of the best. Now it's time to put them in rank order.", nextBtn: "Next: Rank Slaps →" },
-  { bucket: 'slaps', title: 'Rank Your Slaps', desc: "You think these songs rock, but they wouldn't make your 20-song mixtape. Put them in rank order. Promote or demote songs you think don't belong here.", nextBtn: "Next: Review Mid →" },
-  { bucket: 'mid', title: 'Review Your Mids', desc: "These are good jams but wouldn't make your Spotify playlist.", nextBtn: "Next: Review Skips →", rankTitle: 'Rank Your Mids', rankDesc: "These are good jams but wouldn't make your Spotify playlist. Put them in rank order. Promote or demote songs you think don't belong here." },
-  { bucket: 'skip', title: 'Review Your Skips', desc: "These are songs you skip when no one is watching.", nextBtn: "Next: Review Trash →", rankTitle: 'Rank Your Skips', rankDesc: "These are songs you skip when no one is watching. Put them in rank order. Promote or demote songs you think don't belong here." },
-  { bucket: 'trash', title: 'Review Your Trash', desc: "These are songs you'd be fine never hearing again.", nextBtn: "Generate Final List →", rankTitle: 'Rank Your Trash', rankDesc: "These are songs you'd be fine never hearing again. Put them in rank order. Promote anything that doesn't deserve to be here." },
+const REFINEMENT_STAGES: { bucket: BucketType; title: string; desc: string; nextBtn: string; rankTitle?: string }[] = [
+  { bucket: 'banger', title: 'Rank Your Bangers', desc: "To you, these songs are the best of the best.", nextBtn: "Next: Rank Slaps →" },
+  { bucket: 'slaps', title: 'Rank Your Slaps', desc: "You think these songs rock, but they wouldn't make your 20-song mixtape.", nextBtn: "Next: Review Mid →" },
+  { bucket: 'mid', title: 'Review Your Mids', desc: "These are good jams but wouldn't make your Spotify playlist.", nextBtn: "Next: Review Skips →", rankTitle: 'Rank Your Mids' },
+  { bucket: 'skip', title: 'Review Your Skips', desc: "These are songs you skip when no one is watching.", nextBtn: "Next: Review Trash →", rankTitle: 'Rank Your Skips' },
+  { bucket: 'trash', title: 'Review Your Trash', desc: "These are songs you'd be fine never hearing again.", nextBtn: "Generate Final List →", rankTitle: 'Rank Your Trash' },
 ];
 
 // STAGE RESUME (Nov 6, 2026): stageIdx is component state, so a
@@ -205,10 +205,11 @@ export default function Step2Refine({
     lowerRankOptIns.includes(currentStage.bucket) && currentStage.rankTitle
       ? currentStage.rankTitle
       : currentStage.title;
-  const stageDesc =
-    lowerRankOptIns.includes(currentStage.bucket) && currentStage.rankDesc
-      ? currentStage.rankDesc
-      : currentStage.desc;
+  // The subhead is the explainer only, in both modes: the
+  // "put them in rank order / promote or demote" instruction
+  // tail retired Nov 14, 2026 — the tools module under the
+  // header carries the ranking ask now (owner).
+  const stageDesc = currentStage.desc;
   const bucket = currentStage.bucket;
 
   const songs = bucketRanks[bucket] || [];

@@ -14,6 +14,13 @@
  * are listed as chips underneath. No measured layout, no
  * SVG — every row is self-contained, so it holds up on a
  * phone.
+ *
+ * Ties and near-ties (owner screenshot, Nov 14, 2026,
+ * Mark vs Abby): an exact tie collapses to ONE gold badge
+ * — a perfect match reads at a glance. Near pairs spread
+ * symmetrically around their midpoint so the badges never
+ * overlap and bury a number (his 4 was hiding behind her
+ * 5 on My Name Is Jonas).
  */
 
 export interface Top20Entry {
@@ -69,8 +76,27 @@ export default function ConnectedTop20({
           const match = targetById.get(entry.id);
           if (!match) return null;
           const gap = Math.abs(entry.rank - match.rank);
-          const left = Math.min(pos(entry.rank), pos(match.rank));
-          const width = Math.abs(pos(entry.rank) - pos(match.rank));
+          // Badge positions, spread so they never overlap.
+          const MIN_SEP = 11; // % of track ≈ 36px on a phone
+          let lo = Math.min(pos(entry.rank), pos(match.rank));
+          let hi = Math.max(pos(entry.rank), pos(match.rank));
+          if (gap > 0 && hi - lo < MIN_SEP) {
+            const mid = (lo + hi) / 2;
+            lo = mid - MIN_SEP / 2;
+            hi = mid + MIN_SEP / 2;
+            if (lo < 0) {
+              hi -= lo;
+              lo = 0;
+            }
+            if (hi > 100) {
+              lo -= hi - 100;
+              hi = 100;
+            }
+          }
+          const visitorLeft = entry.rank <= match.rank ? lo : hi;
+          const targetLeft = entry.rank <= match.rank ? hi : lo;
+          const left = lo;
+          const width = hi - lo;
           return (
             <div
               key={entry.id}
@@ -85,27 +111,41 @@ export default function ConnectedTop20({
                   style={{
                     left: `${left}%`,
                     width: `${Math.max(width, 1.5)}%`,
-                    backgroundColor: barColor(gap),
+                    backgroundColor: gap === 0 ? '#FFC72C' : barColor(gap),
                   }}
                 />
-                <span
-                  className="absolute top-1/2 flex h-[30px] w-[30px] -translate-y-1/2 items-center justify-center rounded-full border-2 border-[#0C1220] bg-[#0072CE] text-[11px] font-black text-white"
-                  style={{
-                    left: `${pos(entry.rank)}%`,
-                    transform: `translate(${gap === 0 ? 'calc(-50% - 13px)' : '-50%'}, -50%)`,
-                  }}
-                >
-                  {entry.rank}
-                </span>
-                <span
-                  className="absolute top-1/2 flex h-[30px] w-[30px] -translate-y-1/2 items-center justify-center rounded-full border-2 border-[#0C1220] bg-[#0C1220] text-[11px] font-black text-white"
-                  style={{
-                    left: `${pos(match.rank)}%`,
-                    transform: `translate(${gap === 0 ? 'calc(-50% + 13px)' : '-50%'}, -50%)`,
-                  }}
-                >
-                  {match.rank}
-                </span>
+                {gap === 0 ? (
+                  <span
+                    className="absolute top-1/2 flex h-[30px] w-[30px] items-center justify-center rounded-full border-2 border-[#0C1220] bg-[#FFC72C] text-[11px] font-black text-[#0C1220]"
+                    style={{
+                      left: `${pos(entry.rank)}%`,
+                      transform: 'translate(-50%, -50%)',
+                    }}
+                  >
+                    {entry.rank}
+                  </span>
+                ) : (
+                  <>
+                    <span
+                      className="absolute top-1/2 flex h-[30px] w-[30px] items-center justify-center rounded-full border-2 border-[#0C1220] bg-[#0072CE] text-[11px] font-black text-white"
+                      style={{
+                        left: `${visitorLeft}%`,
+                        transform: 'translate(-50%, -50%)',
+                      }}
+                    >
+                      {entry.rank}
+                    </span>
+                    <span
+                      className="absolute top-1/2 flex h-[30px] w-[30px] items-center justify-center rounded-full border-2 border-[#0C1220] bg-[#0C1220] text-[11px] font-black text-white"
+                      style={{
+                        left: `${targetLeft}%`,
+                        transform: 'translate(-50%, -50%)',
+                      }}
+                    >
+                      {match.rank}
+                    </span>
+                  </>
+                )}
               </div>
             </div>
           );

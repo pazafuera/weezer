@@ -82,8 +82,8 @@ body {
    step change (keyed by step), which replays this. */
 @keyframes refine-step-in {
   from {
-    opacity: 0;
-    transform: translateX(28px);
+    opacity: 0.25;
+    transform: translateX(48px);
   }
   to {
     opacity: 1;
@@ -92,7 +92,7 @@ body {
 }
 
 .refine-step-in {
-  animation: refine-step-in 0.32s cubic-bezier(0.22, 0.9, 0.3, 1) both;
+  animation: refine-step-in 0.65s cubic-bezier(0.22, 0.9, 0.3, 1) both;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -5,11 +5,22 @@ import { getProgressState, type TriageValue } from '../context/WeezerContext';
 import { FlyingWIcon, AudioPreviewButton, SortingIncompleteNotice } from './SharedUI';
 import { getRankedSongs, seatMovedSongInBucket } from '@/utils/rankingUtils';
 import Step1_5Matchups from './Step1_5Matchups';
+import Step1_5SplitPass from './Step1_5SplitPass';
 import { displayFont } from './shareables/fonts';
 
 // The bucket band's pastel strip (Round 2): the -100 tint of the
 // bucket's own badge family in BUCKET_CONFIG (badgeBg's bg token),
 // worn as a framed band above the stage list.
+// Plural bucket names for the split pass's copy ("Split the
+// Mids", "Best Slaps").
+const SPLIT_PLURAL: Record<BucketType, string> = {
+  banger: 'Bangers',
+  slaps: 'Slaps',
+  mid: 'Mids',
+  skip: 'Skips',
+  trash: 'Trash'
+};
+
 const BAND_BG: Record<BucketType, string> = {
   banger: 'bg-emerald-100',
   slaps: 'bg-blue-100',
@@ -148,6 +159,7 @@ export default function Step2Refine({
   };
 
   const [showMatchups, setShowMatchups] = useState(false);
+  const [showSplit, setShowSplit] = useState(false);
 
   useEffect(() => {
     if (skipPropSyncRef.current) {
@@ -429,6 +441,26 @@ export default function Step2Refine({
     if (previewBtn) previewBtn.click();
   };
 
+  // THE SPLIT PASS takeover (Nov 13, 2026): coarse-sort game
+  // for big buckets — see Step1_5SplitPass. onApply writes the
+  // new order but keeps the takeover open (its done panel
+  // offers to split a third); onExit closes it.
+  if (showSplit && canOrder && songs.length > 30) {
+    return (
+      <Step1_5SplitPass
+        songs={songs}
+        bucket={bucket}
+        plural={SPLIT_PLURAL[bucket]}
+        onApply={(sorted) => {
+          onUpdateRanks({ ...bucketRanks, [bucket]: sorted });
+        }}
+        onExit={() => setShowSplit(false)}
+        triageMap={triageMap}
+        onKeepSorting={onKeepSorting}
+      />
+    );
+  }
+
   if (showMatchups && canOrder && songs.length >= 2) {
     return (
       <Step1_5Matchups
@@ -615,6 +647,21 @@ export default function Step2Refine({
             </button>
           )}
         </div>
+
+        {/* SPLIT PASS entry — big buckets only (owner,
+            Nov 13, 2026): past ~30 songs, plain dragging
+            breaks down on distance, so the coarse-sort game
+            is offered under the band. Same canOrder family
+            as Help Me Rank. */}
+        {canOrder && songs.length > 30 && (
+          <button
+            type="button"
+            onClick={() => setShowSplit(true)}
+            className="w-full mb-3 rounded-xl border-2 border-dashed border-[#0C1220]/40 bg-amber-50 hover:bg-amber-100 px-3 py-2 text-[12px] font-black text-[#0C1220] transition cursor-pointer"
+          >
+            ✂️ Split the {SPLIT_PLURAL[bucket]} into thirds
+          </button>
+        )}
 
         {songs.length === 0 ? (
           <div className="p-4 text-center text-xs font-bold text-slate-400 bg-slate-50 rounded-2xl border border-dashed border-slate-200">

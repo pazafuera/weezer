@@ -13,7 +13,8 @@ export default function Step3Master({
   setSongBucket,
   setStep,
   onBack,
-  onKeepSorting
+  onKeepSorting,
+  lowerRankOptIns
 }: {
   masterList: Song[];
   triageMap: Record<string, TriageValue>;
@@ -22,6 +23,11 @@ export default function Step3Master({
   setStep: (s: 'wrapped') => void;
   onBack: () => void;
   onKeepSorting: () => void;
+  /** Downstream ranking opt-ins: lower buckets the fan chose
+   *  to rank carry real rank numbers here too (owner,
+   *  Nov 14, 2026 — "when a user opts to rank a bucket, it
+   *  should then show up in my final list as ranked"). */
+  lowerRankOptIns: BucketType[];
 }) {
   const triggerHaptic = (duration = 15) => {
     if (typeof window !== 'undefined' && 'vibrate' in navigator) try { navigator.vibrate(duration); } catch (e) {}
@@ -31,8 +37,15 @@ export default function Step3Master({
   // triage map is unranked — never infer a bucket (especially Trash) for it.
   const rankedSongs = getRankedSongs(masterList, triageMap);
 
+  // A bucket is RANKED in the final list when it's one of
+  // the always-ranked two or a lower bucket the fan opted
+  // into ranking (Nov 14, 2026). Ranked rows get numbers
+  // and the drag handle; the rest keep the "-" chip.
+  const isRankedFinal = (b: TriageValue | undefined): boolean =>
+    b === 'banger' || b === 'slaps' || (b !== undefined && lowerRankOptIns.includes(b as BucketType));
+
   // Find the index of the very last rankable song (so we can disable the down arrow on it)
-  const lastRankableIndex = rankedSongs.map(s => triageMap[s.id]).findLastIndex(b => b === 'banger' || b === 'slaps');
+  const lastRankableIndex = rankedSongs.map(s => triageMap[s.id]).findLastIndex(b => isRankedFinal(b));
 
   // Displayed rank numbers count ONLY the rankable songs (Banger/Slaps —
   // the songs that actually carry a master-list rank), in order. Using
@@ -42,7 +55,7 @@ export default function Step3Master({
   const rankNumberById = new Map<string, number>();
   rankedSongs.forEach((s) => {
     const b = triageMap[s.id];
-    if (b === 'banger' || b === 'slaps') {
+    if (isRankedFinal(b)) {
       rankNumberById.set(s.id, rankNumberById.size + 1);
     }
   });
@@ -307,7 +320,7 @@ export default function Step3Master({
             // rankedSongs only holds real buckets (getRankedSongs), so
             // 'unknown'/missing can't occur — narrow for the config lookup.
             if (bucket === undefined || bucket === 'unknown') return null;
-            const isRankable = bucket === 'banger' || bucket === 'slaps';
+            const isRankable = isRankedFinal(bucket);
             const cfg = BUCKET_CONFIG[bucket];
 
             const isMouseDrag = dragState?.type === 'mouse' && dragState.songId === song.id;
@@ -371,7 +384,7 @@ export default function Step3Master({
                     far under the old 77px / 63px. The row's
                     padding, the chip, the handle, and the
                     title→meta gap all stay compacted. */}
-                {/* ONLY SHOW RANK NUMBERS FOR TOP TWO BUCKETS */}
+                {/* RANK NUMBERS FOR RANKED BUCKETS (top two + opted-in lowers) */}
                 {isRankable ? (
                   <span className={`w-7 h-6 font-black text-[11px] rounded-lg flex items-center justify-center shrink-0 shadow-2xs transition-colors ${
                     isTouchDrag ? 'bg-amber-400 text-slate-950 ring-2 ring-amber-300' : 'bg-[#0072CE] text-white'

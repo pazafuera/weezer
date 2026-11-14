@@ -209,6 +209,7 @@ export default function WeezerRankerPage() {
             closeMaster();
           }}
           onKeepSorting={() => navigateTo('triage')}
+          lowerRankOptIns={lowerRankOptIns}
         />
       )}
 

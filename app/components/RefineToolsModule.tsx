@@ -32,7 +32,8 @@ export default function RefineToolsModule({
   onClose,
   onChooseMode,
   onLaunchMatchups,
-  onLaunchSplit
+  onLaunchSplit,
+  toolsTouched = false
 }: {
   open: boolean;
   /** 'rank' | 'review' once decided; null = a lower bucket
@@ -48,6 +49,12 @@ export default function RefineToolsModule({
   onChooseMode: (mode: RefineMode) => void;
   onLaunchMatchups: () => void;
   onLaunchSplit: () => void;
+  /** True once a tool has actually been used in this bucket
+   *  (a matchup session that changed the order, or an applied
+   *  split pass). The tools step then speaks as a RETURNING
+   *  state — drag first, tools again — instead of a fresh
+   *  "how do you want to start?" (owner, Nov 14, 2026). */
+  toolsTouched?: boolean;
 }) {
   if (!open) {
     return (
@@ -55,11 +62,13 @@ export default function RefineToolsModule({
         type="button"
         onClick={onOpen}
         aria-label="Open the ranking tools"
-        className="w-full rounded-xl border-[2.5px] border-[#0C1220] bg-white hover:bg-slate-50 px-4 py-2.5 flex items-center justify-between shadow-[2px_2px_0_rgba(11,30,63,0.85)] transition cursor-pointer"
+        className="refine-step-in w-full rounded-xl border-[2.5px] border-[#0C1220] bg-white hover:bg-slate-50 px-4 py-2.5 flex items-center justify-between shadow-[2px_2px_0_rgba(11,30,63,0.85)] transition cursor-pointer"
       >
         <span className="text-[12px] font-black text-[#0C1220]">
           {mode === 'rank'
-            ? 'Ranking — drag, or use a tool'
+            ? toolsTouched
+              ? 'Drag to refine — or use a tool again'
+              : 'Ranking — drag, or use a tool'
             : mode === 'review'
               ? 'Just reviewing'
               : `Rank your ${plural}, or just review?`}
@@ -70,7 +79,7 @@ export default function RefineToolsModule({
   }
 
   return (
-    <div className="rounded-[18px] border-[2.5px] border-[#0C1220] bg-white p-4 shadow-[3px_3px_0_rgba(11,30,63,0.85)] animate-in fade-in duration-200">
+    <div className="rounded-[18px] border-[2.5px] border-[#0C1220] bg-white p-4 shadow-[3px_3px_0_rgba(11,30,63,0.85)] refine-step-in">
       <div className="flex items-start justify-between mb-3">
         <span className="text-[10px] font-black uppercase tracking-widest text-[#3D4A63] pt-1">
           {mode === 'rank' ? 'Ranking tools' : 'Optional deep dive'}
@@ -85,7 +94,7 @@ export default function RefineToolsModule({
       </div>
 
       {mode === null && (
-        <div key="ask" className="animate-in slide-in-from-right-6 fade-in duration-300">
+        <div key="ask" className="refine-step-in">
           <p className="text-[15px] font-black text-[#0C1220] leading-snug mb-3">
             Do you want to Rank your {plural} or Just Review?
           </p>
@@ -109,7 +118,7 @@ export default function RefineToolsModule({
       )}
 
       {mode === 'review' && (
-        <div key="review" className="animate-in slide-in-from-right-6 fade-in duration-300">
+        <div key="review" className="refine-step-in">
           <p className="text-[15px] font-black text-[#0C1220] leading-snug mb-3">
             You're just reviewing these.
           </p>
@@ -124,11 +133,25 @@ export default function RefineToolsModule({
       )}
 
       {mode === 'rank' && (
-        <div key="tools" className="animate-in slide-in-from-right-6 fade-in duration-300">
+        <div key="tools" className="refine-step-in">
           <p className="text-[15px] font-black text-[#0C1220] leading-snug mb-3">
-            How do you want to start?
+            {toolsTouched
+              ? 'Drag to refine further, or use the tools again:'
+              : 'How do you want to start?'}
           </p>
           <div className="space-y-2.5">
+            {toolsTouched && (
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-full text-left rounded-xl border-2 border-[#0C1220] bg-white px-3.5 py-2.5 shadow-[2px_2px_0_rgba(11,30,63,0.85)] transition cursor-pointer"
+              >
+                <span className="block text-[13px] font-black text-[#0C1220]">↕️ Just drag</span>
+                <span className="block text-[11px] font-bold text-[#3D4A63]">
+                  Order them yourself in the list.
+                </span>
+              </button>
+            )}
             <button
               type="button"
               onClick={onLaunchMatchups}
@@ -136,7 +159,7 @@ export default function RefineToolsModule({
             >
               <span className="block text-[13px] font-black text-[#0C1220]">⚡️ Head to Head</span>
               <span className="block text-[11px] font-bold text-[#3D4A63]">
-                Two at a time. Most precise.
+                {toolsTouched ? 'Another round, two at a time.' : 'Two at a time. Most precise.'}
               </span>
             </button>
             {songCount > 30 && (
@@ -147,20 +170,22 @@ export default function RefineToolsModule({
               >
                 <span className="block text-[13px] font-black text-[#0C1220]">✂️ Split in Chunks</span>
                 <span className="block text-[11px] font-bold text-[#3D4A63]">
-                  Thirds at a time. Fastest on big buckets.
+                  {toolsTouched ? 'Split another chunk.' : 'Thirds at a time. Fastest on big buckets.'}
                 </span>
               </button>
             )}
-            <button
-              type="button"
-              onClick={onClose}
-              className="w-full text-left rounded-xl border-2 border-[#0C1220] bg-white px-3.5 py-2.5 shadow-[2px_2px_0_rgba(11,30,63,0.85)] transition cursor-pointer"
-            >
-              <span className="block text-[13px] font-black text-[#0C1220]">↕️ Just drag</span>
-              <span className="block text-[11px] font-bold text-[#3D4A63]">
-                Order them yourself in the list.
-              </span>
-            </button>
+            {!toolsTouched && (
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-full text-left rounded-xl border-2 border-[#0C1220] bg-white px-3.5 py-2.5 shadow-[2px_2px_0_rgba(11,30,63,0.85)] transition cursor-pointer"
+              >
+                <span className="block text-[13px] font-black text-[#0C1220]">↕️ Just drag</span>
+                <span className="block text-[11px] font-bold text-[#3D4A63]">
+                  Order them yourself in the list.
+                </span>
+              </button>
+            )}
           </div>
           {!isRankableBucket && (
             <button

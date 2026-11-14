@@ -14,7 +14,8 @@ export default function Step3Master({
   setStep,
   onBack,
   onKeepSorting,
-  lowerRankOptIns
+  lowerRankOptIns,
+  onRankBucket
 }: {
   masterList: Song[];
   triageMap: Record<string, TriageValue>;
@@ -28,6 +29,9 @@ export default function Step3Master({
    *  Nov 14, 2026 — "when a user opts to rank a bucket, it
    *  should then show up in my final list as ranked"). */
   lowerRankOptIns: BucketType[];
+  /** Deep link from the "stopped ranking" divider: land on
+   *  that bucket's Refine stage with ranking switched on. */
+  onRankBucket: (bucket: BucketType) => void;
 }) {
   const triggerHaptic = (duration = 15) => {
     if (typeof window !== 'undefined' && 'vibrate' in navigator) try { navigator.vibrate(duration); } catch (e) {}
@@ -43,6 +47,26 @@ export default function Step3Master({
   // and the drag handle; the rest keep the "-" chip.
   const isRankedFinal = (b: TriageValue | undefined): boolean =>
     b === 'banger' || b === 'slaps' || (b !== undefined && lowerRankOptIns.includes(b as BucketType));
+
+  // THE STOPPED-RANKING DIVIDER (owner, Nov 14, 2026): on
+  // the full list, mark where the numbers stop — the first
+  // unranked lower bucket with ranked songs above it gets a
+  // divider naming it, with a button that deep-links to its
+  // Refine stage. Motivates finishing the ranking instead of
+  // leaving the tail silently unnumbered.
+  const DIVIDER_PLURAL: Partial<Record<BucketType, string>> = { mid: 'Mids', skip: 'Skips', trash: 'Trash' };
+  const dividerTarget = (['mid', 'skip', 'trash'] as BucketType[]).find(
+    (b) => rankedSongs.some((x) => triageMap[x.id] === b) && !isRankedFinal(b)
+  );
+  const dividerBeforeIdx = dividerTarget
+    ? rankedSongs.findIndex((x) => triageMap[x.id] === dividerTarget)
+    : -1;
+  const dividerBucket: BucketType | null =
+    dividerTarget !== undefined &&
+    dividerBeforeIdx > 0 &&
+    rankedSongs.slice(0, dividerBeforeIdx).some((x) => isRankedFinal(triageMap[x.id]))
+      ? dividerTarget
+      : null;
 
   // Find the index of the very last rankable song (so we can disable the down arrow on it)
   const lastRankableIndex = rankedSongs.map(s => triageMap[s.id]).findLastIndex(b => isRankedFinal(b));
@@ -327,8 +351,31 @@ export default function Step3Master({
             const isTouchDrag = dragState?.type === 'touch' && dragState.songId === song.id;
 
             return (
+              <React.Fragment key={song.id}>
+              {dividerBucket !== null && idx === dividerBeforeIdx && (
+                <div className="py-3 px-1">
+                  <div className="flex items-center gap-3">
+                    <div className="h-[2.5px] flex-1 bg-[#0C1220]/60 rounded" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-[#3D4A63]">
+                      You stopped ranking here
+                    </span>
+                    <div className="h-[2.5px] flex-1 bg-[#0C1220]/60 rounded" />
+                  </div>
+                  <p className="text-center text-[12px] font-bold text-[#3D4A63] mt-2">
+                    Your {DIVIDER_PLURAL[dividerBucket]} are only sorted, not ranked.
+                  </p>
+                  <div className="flex justify-center mt-2">
+                    <button
+                      type="button"
+                      onClick={() => { triggerHaptic(15); onRankBucket(dividerBucket); }}
+                      className="rounded-full border-[2.5px] border-[#0C1220] bg-[#FFC72C] px-5 py-2 text-[12px] font-black text-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)] transition hover:brightness-105 active:translate-y-[1px] cursor-pointer"
+                    >
+                      Rank your {DIVIDER_PLURAL[dividerBucket]} →
+                    </button>
+                  </div>
+                </div>
+              )}
               <div
-                key={song.id}
                 data-song-card="true"
                 data-index={idx}
                 draggable={isRankable}
@@ -438,6 +485,7 @@ export default function Step3Master({
                   </div>
                 </div>
               </div>
+              </React.Fragment>
             );
           })}
         </div>

@@ -210,6 +210,19 @@ export default function WeezerRankerPage() {
           }}
           onKeepSorting={() => navigateTo('triage')}
           lowerRankOptIns={lowerRankOptIns}
+          onRankBucket={(b) => {
+            // Same after-navigateTo ordering as the My
+            // Rankings prompt (owner bug, Nov 12, 2026):
+            // navigate first, THEN set the stage, or the
+            // landing resets to Bangers.
+            const stageIdx = ({ mid: 2, skip: 3, trash: 4 } as Record<string, number>)[b];
+            if (stageIdx === undefined) return;
+            navigateTo('rank_buckets');
+            setRefineStageIdx(stageIdx);
+            setAutoStartMatchups(false);
+            setLowerRankOptIn(b, true);
+            setRefineOpenTools(true);
+          }}
         />
       )}
 

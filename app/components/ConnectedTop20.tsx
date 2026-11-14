@@ -74,20 +74,12 @@ export default function ConnectedTop20({
           return (
             <div
               key={entry.id}
-              className="rounded-2xl border-2 border-[#0C1220] bg-white px-3.5 py-2.5"
+              className="rounded-2xl border-2 border-[#0C1220] bg-white px-3.5 pb-3 pt-2.5"
             >
-              <div className="flex items-baseline gap-2">
-                <span className="w-8 shrink-0 text-[15px] font-black text-[#0072CE]">
-                  #{entry.rank}
-                </span>
-                <span className="min-w-0 flex-1 text-center text-[13px] font-extrabold leading-tight text-[#0C1220]">
-                  {entry.title}
-                </span>
-                <span className="w-8 shrink-0 text-right text-[15px] font-black text-[#0C1220]">
-                  #{match.rank}
-                </span>
+              <div className="text-center text-[13px] font-extrabold leading-tight text-[#0C1220]">
+                {entry.title}
               </div>
-              <div className="relative mx-1 mb-1 mt-2.5 h-[6px] rounded-full bg-slate-200">
+              <div className="relative mx-5 mb-2.5 mt-3.5 h-[6px] rounded-full bg-slate-200">
                 <div
                   className="absolute top-0 h-[6px] rounded-full"
                   style={{
@@ -97,13 +89,23 @@ export default function ConnectedTop20({
                   }}
                 />
                 <span
-                  className="absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-[#0072CE]"
-                  style={{ left: `${pos(entry.rank)}%` }}
-                />
+                  className="absolute top-1/2 flex h-[30px] w-[30px] -translate-y-1/2 items-center justify-center rounded-full border-2 border-[#0C1220] bg-[#0072CE] text-[11px] font-black text-white"
+                  style={{
+                    left: `${pos(entry.rank)}%`,
+                    transform: `translate(${gap === 0 ? 'calc(-50% - 13px)' : '-50%'}, -50%)`,
+                  }}
+                >
+                  {entry.rank}
+                </span>
                 <span
-                  className="absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-[#0C1220]"
-                  style={{ left: `${pos(match.rank)}%` }}
-                />
+                  className="absolute top-1/2 flex h-[30px] w-[30px] -translate-y-1/2 items-center justify-center rounded-full border-2 border-[#0C1220] bg-[#0C1220] text-[11px] font-black text-white"
+                  style={{
+                    left: `${pos(match.rank)}%`,
+                    transform: `translate(${gap === 0 ? 'calc(-50% + 13px)' : '-50%'}, -50%)`,
+                  }}
+                >
+                  {match.rank}
+                </span>
               </div>
             </div>
           );
@@ -111,7 +113,7 @@ export default function ConnectedTop20({
       </div>
 
       <p className="mt-4 text-center text-[11px] font-bold text-[#3D4A63]">
-        Blue dot is {visitorName}&apos;s rank, black dot is {targetName}&apos;s — the longer the bar, the bigger the fight.
+        Blue badge is {visitorName}&apos;s rank, black badge is {targetName}&apos;s — the longer the bar, the bigger the fight.
       </p>
 
       {(onlyVisitor.length > 0 || onlyTarget.length > 0) && (

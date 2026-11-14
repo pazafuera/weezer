@@ -239,11 +239,11 @@ export default function Step2Refine({
   // lower stage, once sorting is finished and the bucket has
   // songs, a segmented switch under the subhead flips the
   // stage between reviewing (no drag) and ranking (drag on,
-  // Help Me Rank in the band). It replaces the earlier
-  // one-shot offer buttons — the switch stays put, so the
-  // fan can flip back and forth. It deliberately does NOT
-  // sit at the title's right: that top-right spot belongs
-  // to Help Me Rank.
+  // tools row live). It replaces the earlier one-shot offer
+  // buttons — the switch stays put, so the fan can flip back
+  // and forth. It deliberately does NOT sit at the title's
+  // right: that top-right spot was reserved for the tools
+  // (which moved to their own row under the band, Nov 13).
   const showToggle =
     !isRankableBucket &&
     (bucketRanks[bucket] || []).length > 0 &&
@@ -634,33 +634,35 @@ export default function Step2Refine({
             {cfg.emoji} {BAND_LABEL[bucket]} <span className="text-[#3D4A63]">({songs.length})</span>
           </h2>
 
-          {/* HELP ME RANK BUTTON — always on the two rankable
-              buckets, and on a lower bucket while its Rank
-              toggle is on (canOrder), per the owner. */}
-          {canOrder && songs.length >= 2 && (
-            <button
-              onClick={() => setShowMatchups(true)}
-              className="text-[11px] font-black text-[#0C1220] bg-white hover:bg-slate-50 border-2 border-[#0C1220] px-3 py-1 rounded-[10px] transition cursor-pointer flex gap-1 items-center whitespace-nowrap shrink-0"
-            >
-              <span>⚡️</span>
-              Help Me Rank
-            </button>
-          )}
         </div>
 
-        {/* SPLIT PASS entry — big buckets only (owner,
-            Nov 13, 2026): past ~30 songs, plain dragging
-            breaks down on distance, so the coarse-sort game
-            is offered under the band. Same canOrder family
-            as Help Me Rank. */}
-        {canOrder && songs.length > 30 && (
-          <button
-            type="button"
-            onClick={() => setShowSplit(true)}
-            className="w-full mb-3 rounded-xl border-2 border-dashed border-[#0C1220]/40 bg-amber-50 hover:bg-amber-100 px-3 py-2 text-[12px] font-black text-[#0C1220] transition cursor-pointer"
-          >
-            ✂️ Split the {SPLIT_PLURAL[bucket]} into thirds
-          </button>
+        {/* REFINEMENT TOOLS ROW (owner, Nov 13, 2026): the
+            two refinement games share one row under the band,
+            named as a pair — Head to Head (the matchup sorter)
+            and Split in Chunks (the coarse split pass, big
+            buckets only). Help Me Rank used to sit in the
+            band's top-right; the owner moved it here so the
+            two tools read as varieties of one thing. Same
+            canOrder family for both. */}
+        {canOrder && songs.length >= 2 && (
+          <div className="flex gap-2.5 mb-3">
+            <button
+              type="button"
+              onClick={() => setShowMatchups(true)}
+              className="flex-1 rounded-xl border-2 border-[#0C1220] bg-white hover:bg-slate-50 shadow-[2px_2px_0_rgba(11,30,63,0.85)] px-3 py-2 text-[12px] font-black text-[#0C1220] transition cursor-pointer whitespace-nowrap"
+            >
+              ⚡️ Head to Head
+            </button>
+            {songs.length > 30 && (
+              <button
+                type="button"
+                onClick={() => setShowSplit(true)}
+                className="flex-1 rounded-xl border-2 border-[#0C1220] bg-amber-50 hover:bg-amber-100 shadow-[2px_2px_0_rgba(11,30,63,0.85)] px-3 py-2 text-[12px] font-black text-[#0C1220] transition cursor-pointer whitespace-nowrap"
+              >
+                ✂️ Split in Chunks
+              </button>
+            )}
+          </div>
         )}
 
         {songs.length === 0 ? (

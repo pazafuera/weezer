@@ -33,7 +33,10 @@ export default function RefineToolsModule({
   onChooseMode,
   onLaunchMatchups,
   onLaunchSplit,
-  toolsTouched = false
+  toolsTouched = false,
+  locked = false,
+  lockedPrevPlural,
+  onJumpToPrevious
 }: {
   open: boolean;
   /** 'rank' | 'review' once decided; null = a lower bucket
@@ -55,6 +58,14 @@ export default function RefineToolsModule({
    *  state — drag first, tools again — instead of a fresh
    *  "how do you want to start?" (owner, Nov 14, 2026). */
   toolsTouched?: boolean;
+  /** Sequential gating (owner, Nov 14, 2026): a lower bucket
+   *  can't be offered ranking until the lower bucket before
+   *  it has been ranked. While locked, the module shows the
+   *  lock instead of the rank/review question. */
+  locked?: boolean;
+  /** Plural name of the bucket that must be ranked first. */
+  lockedPrevPlural?: string;
+  onJumpToPrevious?: () => void;
 }) {
   if (!open) {
     return (
@@ -65,7 +76,9 @@ export default function RefineToolsModule({
         className="refine-step-in w-full rounded-xl border-[2.5px] border-[#0C1220] bg-white hover:bg-slate-50 px-4 py-2.5 flex items-center justify-between shadow-[2px_2px_0_rgba(11,30,63,0.85)] transition cursor-pointer"
       >
         <span className="text-[12px] font-black text-[#0C1220]">
-          {mode === 'rank'
+          {locked
+            ? `Rank your ${lockedPrevPlural} first to unlock ranking`
+            : mode === 'rank'
             ? toolsTouched
               ? 'Drag to refine — or use a tool again'
               : 'Drag to rank, or use a tool'
@@ -75,6 +88,40 @@ export default function RefineToolsModule({
         </span>
         <span className="text-[12px] font-black text-[#3D4A63]">▾</span>
       </button>
+    );
+  }
+
+  if (locked) {
+    return (
+      <div className="rounded-[18px] border-[2.5px] border-[#0C1220] bg-white p-4 shadow-[3px_3px_0_rgba(11,30,63,0.85)] refine-step-in">
+        <div className="flex items-start justify-between mb-3">
+          <span className="text-[10px] font-black uppercase tracking-widest text-[#3D4A63] pt-1">
+            Optional deep dive
+          </span>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-[12px] font-black text-[#3D4A63] underline underline-offset-4 hover:text-[#0C1220] cursor-pointer min-h-[32px] px-1"
+          >
+            Close ▾
+          </button>
+        </div>
+        <div key="locked" className="refine-step-in">
+          <p className="text-[15px] font-black text-[#0C1220] leading-snug mb-1">
+            Ranking unlocks in order.
+          </p>
+          <p className="text-[12px] font-bold text-[#3D4A63] leading-snug mb-3">
+            Rank your {lockedPrevPlural} first — then these unlock. Until then, these are just sorted.
+          </p>
+          <button
+            type="button"
+            onClick={onJumpToPrevious}
+            className="w-full rounded-xl border-2 border-[#0C1220] bg-amber-400 px-3 py-2.5 text-[13px] font-black text-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)] transition cursor-pointer"
+          >
+            Go to your {lockedPrevPlural} →
+          </button>
+        </div>
+      </div>
     );
   }
 

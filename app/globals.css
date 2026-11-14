@@ -74,6 +74,33 @@ body {
   animation: welcome-record-spin 2.4s linear infinite;
 }
 
+/* Refine tools module (RefineToolsModule.tsx): when a choice
+   is made, the next step slides in from the right — small
+   progressive motion so the program feels like it's
+   advancing (owner, Nov 14, 2026). Hand-rolled keyframes
+   like the others above: the step wrappers remount on every
+   step change (keyed by step), which replays this. */
+@keyframes refine-step-in {
+  from {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.refine-step-in {
+  animation: refine-step-in 0.32s cubic-bezier(0.22, 0.9, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .refine-step-in {
+    animation: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .welcome-record-spin {
     animation: none;

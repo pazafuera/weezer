@@ -6,6 +6,7 @@ import { FlyingWIcon, AudioPreviewButton, SortingIncompleteNotice } from './Shar
 import { getRankedSongs, seatMovedSongInBucket } from '@/utils/rankingUtils';
 import Step1_5Matchups from './Step1_5Matchups';
 import Step1_5SplitPass from './Step1_5SplitPass';
+import RefineToolsModule, { type RefineMode } from './RefineToolsModule';
 import { displayFont } from './shareables/fonts';
 
 // The bucket band's pastel strip (Round 2): the -100 tint of the
@@ -116,6 +117,8 @@ export default function Step2Refine({
   onStageChange,
   lowerRankOptIns,
   onToggleLowerRank,
+  openTools,
+  onConsumeOpenTools,
 }: {
   bucketRanks: Record<BucketType, Song[]>;
   triageMap: Record<string, TriageValue>;
@@ -129,6 +132,11 @@ export default function Step2Refine({
   onStageChange?: (idx: number) => void;
   lowerRankOptIns: BucketType[];
   onToggleLowerRank: (bucket: BucketType, on: boolean) => void;
+  /** Armed by the My Rankings prompt's deep link: land with
+   *  the tools module open on its tool step. Consumed on
+   *  sight (onConsumeOpenTools clears the context flag). */
+  openTools: boolean;
+  onConsumeOpenTools: () => void;
 }) {
   // Set inside the initializer when the stage came from
   // sessionStorage, so the prop-sync effect below doesn't stomp
@@ -235,19 +243,60 @@ export default function Step2Refine({
   const isRankableBucket = bucket === 'banger' || bucket === 'slaps';
   const optedIn = !isRankableBucket && lowerRankOptIns.includes(bucket);
   const canOrder = isRankableBucket || optedIn;
-  // THE RANK / REVIEW TOGGLE (owner, Nov 12, 2026): on a
-  // lower stage, once sorting is finished and the bucket has
-  // songs, a segmented switch under the subhead flips the
-  // stage between reviewing (no drag) and ranking (drag on,
-  // tools row live). It replaces the earlier one-shot offer
-  // buttons — the switch stays put, so the fan can flip back
-  // and forth. It deliberately does NOT sit at the title's
-  // right: that top-right spot was reserved for the tools
-  // (which moved to their own row under the band, Nov 13).
-  const showToggle =
-    !isRankableBucket &&
-    (bucketRanks[bucket] || []).length > 0 &&
-    getProgressState(triageMap, masterList).isTriageComplete;
+  // THE MICRO-PROGRAM MODULE (owner, Nov 14, 2026) — the
+  // Nov 12 Rank/Review toggle and the Nov 13 tools row are
+  // replaced by one guided, collapsible module under the
+  // header (RefineToolsModule): step 1 asks rank-or-review
+  // once per lower bucket, step 2 offers the tools, and the
+  // resting state is a slim collapsed strip so the song list
+  // sits high. The mode itself still rides the existing
+  // opt-in flag (canOrder above); what's new is a device-
+  // local record of DECISIONS, so "chose Review" is
+  // distinguishable from "never asked" and step 1 only
+  // greets the undecided.
+  const showModule =
+    songs.length > 0 &&
+    (isRankableBucket || getProgressState(triageMap, masterList).isTriageComplete);
+  const [modeDecisions, setModeDecisions] = useState<Partial<Record<BucketType, RefineMode>>>({});
+  const [decisionsLoaded, setDecisionsLoaded] = useState(false);
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('weezer-refine-decisions');
+      if (raw) setModeDecisions(JSON.parse(raw));
+    } catch { /* storage unavailable — step 1 just asks again */ }
+    setDecisionsLoaded(true);
+  }, []);
+  const moduleMode: RefineMode | null = isRankableBucket
+    ? 'rank'
+    : optedIn
+      ? 'rank'
+      : (modeDecisions[bucket] ?? null);
+  const [moduleOpen, setModuleOpen] = useState(false);
+  // Landings: an undecided lower bucket opens on its
+  // question; anything already decided lands collapsed.
+  useEffect(() => {
+    if (!decisionsLoaded) return;
+    setModuleOpen(!isRankableBucket && moduleMode === null && showModule);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bucket, decisionsLoaded]);
+  // The My Rankings prompt arms openTools: land on the tools.
+  useEffect(() => {
+    if (openTools) {
+      setModuleOpen(true);
+      onConsumeOpenTools();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openTools]);
+  const chooseRefineMode = (m: RefineMode) => {
+    triggerHaptic(10);
+    if (!isRankableBucket) {
+      onToggleLowerRank(bucket, m === 'rank');
+      const next = { ...modeDecisions, [bucket]: m };
+      setModeDecisions(next);
+      try { localStorage.setItem('weezer-refine-decisions', JSON.stringify(next)); } catch { /* best-effort */ }
+    }
+    if (m === 'review') setModuleOpen(false);
+  };
   const transitions = BUCKET_TRANSITIONS[bucket];
 
   const [pendingMove, setPendingMove] = useState<{ song: Song; targetBucket: BucketType } | null>(null);
@@ -591,34 +640,26 @@ export default function Step2Refine({
       <div className="text-center space-y-2 px-4 mb-8">
         <h1 className={`${displayFont.className} text-[32px] text-[#0C1220] [text-wrap:balance]`}>{stageTitle}</h1>
         <p className="text-sm font-bold text-[#3D4A63] max-w-sm mx-auto leading-tight">{stageDesc}</p>
-        {showToggle && (
-          <div className="flex items-center justify-center pt-1.5">
-            <div
-              className="flex rounded-full border-[2.5px] border-[#0C1220] bg-white shadow-[2px_2px_0_rgba(11,30,63,0.85)] overflow-hidden"
-              role="group"
-              aria-label="Rank or review these songs"
-            >
-              <button
-                type="button"
-                aria-pressed={optedIn}
-                onClick={() => { if (!optedIn) { triggerHaptic(15); onToggleLowerRank(bucket, true); } }}
-                className={`px-5 py-2 text-[13px] font-black transition cursor-pointer ${optedIn ? 'bg-amber-400 text-slate-950' : 'text-[#3D4A63]'}`}
-              >
-                Rank
-              </button>
-              <button
-                type="button"
-                aria-pressed={!optedIn}
-                onClick={() => { if (optedIn) { triggerHaptic(10); onToggleLowerRank(bucket, false); } }}
-                className={`px-5 py-2 text-[13px] font-black transition cursor-pointer border-l-[2.5px] border-[#0C1220] ${!optedIn ? 'bg-amber-400 text-slate-950' : 'text-[#3D4A63]'}`}
-              >
-                Review
-              </button>
-            </div>
-          </div>
-        )}
       </div>
       </div>
+
+      {/* THE MICRO-PROGRAM MODULE — between the header and
+          the list card (owner, Nov 14, 2026). Collapsed, it's
+          one slim strip; the song list below is the star. */}
+      {showModule && (
+        <RefineToolsModule
+          open={moduleOpen}
+          mode={moduleMode}
+          isRankableBucket={isRankableBucket}
+          songCount={songs.length}
+          plural={SPLIT_PLURAL[bucket]}
+          onOpen={() => setModuleOpen(true)}
+          onClose={() => setModuleOpen(false)}
+          onChooseMode={chooseRefineMode}
+          onLaunchMatchups={() => { setModuleOpen(false); setShowMatchups(true); }}
+          onLaunchSplit={() => { setModuleOpen(false); setShowSplit(true); }}
+        />
+      )}
 
       {/* ACTIVE BUCKET DRAG-AND-DROP CONTAINER */}
       <div className="bg-white border-[3px] border-[#0C1220] rounded-[18px] p-3 sm:p-5 shadow-[4px_4px_0_rgba(11,30,63,0.85)]" onDragOver={canOrder ? handleDragOver : undefined} onDrop={canOrder ? () => handleDrop(bucket, songs.length) : undefined}>
@@ -636,34 +677,6 @@ export default function Step2Refine({
 
         </div>
 
-        {/* REFINEMENT TOOLS ROW (owner, Nov 13, 2026): the
-            two refinement games share one row under the band,
-            named as a pair — Head to Head (the matchup sorter)
-            and Split in Chunks (the coarse split pass, big
-            buckets only). Help Me Rank used to sit in the
-            band's top-right; the owner moved it here so the
-            two tools read as varieties of one thing. Same
-            canOrder family for both. */}
-        {canOrder && songs.length >= 2 && (
-          <div className="flex gap-2.5 mb-3">
-            <button
-              type="button"
-              onClick={() => setShowMatchups(true)}
-              className="flex-1 rounded-xl border-2 border-[#0C1220] bg-white hover:bg-slate-50 shadow-[2px_2px_0_rgba(11,30,63,0.85)] px-3 py-2 text-[12px] font-black text-[#0C1220] transition cursor-pointer whitespace-nowrap"
-            >
-              ⚡️ Head to Head
-            </button>
-            {songs.length > 30 && (
-              <button
-                type="button"
-                onClick={() => setShowSplit(true)}
-                className="flex-1 rounded-xl border-2 border-[#0C1220] bg-amber-50 hover:bg-amber-100 shadow-[2px_2px_0_rgba(11,30,63,0.85)] px-3 py-2 text-[12px] font-black text-[#0C1220] transition cursor-pointer whitespace-nowrap"
-              >
-                ✂️ Split in Chunks
-              </button>
-            )}
-          </div>
-        )}
 
         {songs.length === 0 ? (
           <div className="p-4 text-center text-xs font-bold text-slate-400 bg-slate-50 rounded-2xl border border-dashed border-slate-200">

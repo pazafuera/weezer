@@ -68,7 +68,7 @@ export default function RefineToolsModule({
           {mode === 'rank'
             ? toolsTouched
               ? 'Drag to refine — or use a tool again'
-              : 'Ranking — drag, or use a tool'
+              : 'Drag to rank, or use a tool'
             : mode === 'review'
               ? 'Just reviewing'
               : `Rank your ${plural}, or just review?`}

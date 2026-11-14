@@ -55,14 +55,14 @@ export default function RefineToolsModule({
         type="button"
         onClick={onOpen}
         aria-label="Open the ranking tools"
-        className="w-full rounded-xl border-[2.5px] border-[#0C1220] bg-amber-50 hover:bg-amber-100 px-4 py-2.5 flex items-center justify-between shadow-[2px_2px_0_rgba(11,30,63,0.85)] transition cursor-pointer"
+        className="w-full rounded-xl border-[2.5px] border-[#0C1220] bg-white hover:bg-slate-50 px-4 py-2.5 flex items-center justify-between shadow-[2px_2px_0_rgba(11,30,63,0.85)] transition cursor-pointer"
       >
         <span className="text-[12px] font-black text-[#0C1220]">
           {mode === 'rank'
             ? 'Ranking — drag, or use a tool'
             : mode === 'review'
               ? 'Just reviewing'
-              : 'Rank or review these?'}
+              : `Rank your ${plural}, or just review?`}
         </span>
         <span className="text-[12px] font-black text-[#3D4A63]">▾</span>
       </button>
@@ -70,7 +70,7 @@ export default function RefineToolsModule({
   }
 
   return (
-    <div className="rounded-[18px] border-[2.5px] border-[#0C1220] bg-amber-50 p-4 shadow-[3px_3px_0_rgba(11,30,63,0.85)] animate-in fade-in duration-200">
+    <div className="rounded-[18px] border-[2.5px] border-[#0C1220] bg-white p-4 shadow-[3px_3px_0_rgba(11,30,63,0.85)] animate-in fade-in duration-200">
       <div className="flex items-start justify-between mb-3">
         <span className="text-[10px] font-black uppercase tracking-widest text-[#3D4A63] pt-1">
           {mode === 'rank' ? 'Ranking tools' : 'Optional deep dive'}
@@ -85,12 +85,9 @@ export default function RefineToolsModule({
       </div>
 
       {mode === null && (
-        <>
-          <p className="text-[15px] font-black text-[#0C1220] leading-snug mb-1">
-            Rank these, or just review?
-          </p>
-          <p className="text-[12px] font-bold text-[#3D4A63] leading-snug mb-3">
-            Totally optional — your Bangers and Slaps are already ranked.
+        <div key="ask" className="animate-in slide-in-from-right-6 fade-in duration-300">
+          <p className="text-[15px] font-black text-[#0C1220] leading-snug mb-3">
+            Do you want to Rank your {plural} or Just Review?
           </p>
           <div className="flex gap-2.5">
             <button
@@ -108,11 +105,11 @@ export default function RefineToolsModule({
               Just review
             </button>
           </div>
-        </>
+        </div>
       )}
 
       {mode === 'review' && (
-        <>
+        <div key="review" className="animate-in slide-in-from-right-6 fade-in duration-300">
           <p className="text-[15px] font-black text-[#0C1220] leading-snug mb-3">
             You're just reviewing these.
           </p>
@@ -123,11 +120,11 @@ export default function RefineToolsModule({
           >
             Rank them instead
           </button>
-        </>
+        </div>
       )}
 
       {mode === 'rank' && (
-        <>
+        <div key="tools" className="animate-in slide-in-from-right-6 fade-in duration-300">
           <p className="text-[15px] font-black text-[#0C1220] leading-snug mb-3">
             How do you want to start?
           </p>
@@ -159,7 +156,7 @@ export default function RefineToolsModule({
               onClick={onClose}
               className="w-full text-left rounded-xl border-2 border-[#0C1220] bg-white px-3.5 py-2.5 shadow-[2px_2px_0_rgba(11,30,63,0.85)] transition cursor-pointer"
             >
-              <span className="block text-[13px] font-black text-[#0C1220]">✋ Just drag</span>
+              <span className="block text-[13px] font-black text-[#0C1220]">↕️ Just drag</span>
               <span className="block text-[11px] font-bold text-[#3D4A63]">
                 Order them yourself in the list.
               </span>
@@ -174,7 +171,7 @@ export default function RefineToolsModule({
               Switch to just reviewing
             </button>
           )}
-        </>
+        </div>
       )}
     </div>
   );

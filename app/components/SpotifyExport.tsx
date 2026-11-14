@@ -1,36 +1,43 @@
 'use client';
 
 /**
- * "Save to Spotify" (owner feature, Nov 14, 2026): on the
- * My Rankings page, under the share buttons. Connect once
- * (PKCE round-trip), then one tap per playlist — the full
- * ranking or a single bucket — built in the fan's own
- * Spotify account in their ranked order. Track matching
- * leans on the verified preview-map names (app/lib/spotify).
+ * Spotify playlist export — the modal experience (owner
+ * redesign, Nov 14, 2026; replaces the inline button/panel
+ * shipped earlier the same day).
  *
- * Renders nothing until it knows the deployment has a
- * Spotify client ID, so the feature simply doesn't exist
- * on deployments where the env var isn't set.
+ * Discovery: a feature card on My Rankings ("Your ranking,
+ * as a playlist"). Everything else happens in ONE modal:
+ * intro → (Spotify sign-in round-trip) → pick a list →
+ * building progress → done, with errors inside the modal.
+ *
+ * The flow rule the owner set after his first run: never
+ * lose the thread. Clicking Connect leaves a note
+ * (localStorage `weezer-spotify-return`); when the OAuth
+ * round-trip lands back on the site — dashboard included —
+ * the modal reopens on its own at the pick-a-list step
+ * with a "You're connected" confirmation. The root page
+ * mounts <SpotifyReturnGate /> for exactly that; the card
+ * instance on My Rankings never auto-opens.
+ *
+ * Env-gated like before: no client ID in the deployment,
+ * no card, no modal, no gate.
  */
 import { useEffect, useMemo, useState } from 'react';
 import {
   adoptPendingSpotifyTokens,
   createSpotifyPlaylist,
+  disconnectSpotify,
   getSpotifyClientId,
   loadSpotifyConnection,
   startSpotifyConnect,
   type ExportSong,
   type SpotifyConnection,
 } from '@/app/lib/spotify';
+import { useWeezer } from '../context/WeezerContext';
 
-type Phase =
-  | 'loading'
-  | 'hidden'
-  | 'disconnected'
-  | 'connected'
-  | 'working'
-  | 'done'
-  | 'error';
+const RETURN_KEY = 'weezer-spotify-return';
+
+type Phase = 'loading' | 'hidden' | 'intro' | 'scope' | 'working' | 'done' | 'error';
 
 const BUCKETS: { key: string; plural: string }[] = [
   { key: 'banger', plural: 'Bangers' },
@@ -42,21 +49,57 @@ const BUCKETS: { key: string; plural: string }[] = [
 
 const REAL = new Set(BUCKETS.map((b) => b.key));
 
-export default function SpotifyExport({
+interface ScopeOption {
+  label: string;
+  songs: ExportSong[];
+}
+
+type SongLike = { id: string; title: string; album: string };
+
+function SpotifyFlow({
   masterList,
   triageMap,
   username,
+  variant,
 }: {
-  masterList: { id: string; title: string; album: string }[];
+  masterList: SongLike[];
   triageMap: Record<string, string>;
   username: string;
+  variant: 'card' | 'gate';
 }) {
   const [phase, setPhase] = useState<Phase>('loading');
   const [conn, setConn] = useState<SpotifyConnection | null>(null);
-  const [panelOpen, setPanelOpen] = useState(false);
-  const [progress, setProgress] = useState('');
+  const [modalOpen, setModalOpen] = useState(false);
+  const [justConnected, setJustConnected] = useState(false);
+  const [selected, setSelected] = useState('Full ranking');
+  const [progress, setProgress] = useState({ done: 0, total: 0 });
   const [errorMsg, setErrorMsg] = useState('');
-  const [doneInfo, setDoneInfo] = useState<{ url: string; added: number; missing: string[] } | null>(null);
+  const [doneInfo, setDoneInfo] = useState<{
+    name: string;
+    url: string;
+    added: number;
+    missing: string[];
+  } | null>(null);
+
+  const scopes = useMemo<ScopeOption[]>(() => {
+    const byBucket = new Map<string, ExportSong[]>();
+    const full: ExportSong[] = [];
+    for (const song of masterList) {
+      const bucket = triageMap[song.id];
+      if (!bucket || !REAL.has(bucket)) continue;
+      const entry = { id: song.id, title: song.title, album: song.album };
+      full.push(entry);
+      const list = byBucket.get(bucket) || [];
+      list.push(entry);
+      byBucket.set(bucket, list);
+    }
+    const options: ScopeOption[] = [{ label: 'Full ranking', songs: full }];
+    for (const { key, plural } of BUCKETS) {
+      const songs = byBucket.get(key) || [];
+      if (songs.length > 0) options.push({ label: plural, songs });
+    }
+    return options;
+  }, [masterList, triageMap]);
 
   useEffect(() => {
     let cancelled = false;
@@ -69,14 +112,43 @@ export default function SpotifyExport({
       await adoptPendingSpotifyTokens();
       const connection = await loadSpotifyConnection();
       if (cancelled) return;
+
+      let returning = false;
+      try {
+        returning = localStorage.getItem(RETURN_KEY) === '1';
+        if (returning) localStorage.removeItem(RETURN_KEY);
+      } catch {
+        /* no-op */
+      }
+
       if (connection) {
         setConn(connection);
-        setPhase('connected');
+        setPhase('scope');
       } else {
-        setPhase('disconnected');
+        setPhase('intro');
         try {
           if (new URLSearchParams(window.location.search).get('spotify') === 'error') {
             setErrorMsg("Spotify connect didn't go through — try again.");
+          }
+        } catch {
+          /* no-op */
+        }
+      }
+
+      // The return trip: reopen the modal wherever the fan
+      // landed, at the right step, exactly once. The gate
+      // owns this on non-rankings pages; the card instance
+      // owns it when the fan is already on My Rankings.
+      const shouldAutoOpen =
+        returning || new URLSearchParams(window.location.search).get('spotify') === 'connected';
+      if (shouldAutoOpen && (variant === 'gate' || returning)) {
+        if (connection) setJustConnected(true);
+        setModalOpen(true);
+        try {
+          const url = new URL(window.location.href);
+          if (url.searchParams.has('spotify')) {
+            url.searchParams.delete('spotify');
+            window.history.replaceState({}, '', url.toString());
           }
         } catch {
           /* no-op */
@@ -86,37 +158,55 @@ export default function SpotifyExport({
     return () => {
       cancelled = true;
     };
+    // variant is fixed per mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const scopes = useMemo(() => {
-    const byBucket = new Map<string, ExportSong[]>();
-    const full: ExportSong[] = [];
-    for (const song of masterList) {
-      const bucket = triageMap[song.id];
-      if (!bucket || !REAL.has(bucket)) continue;
-      const entry = { id: song.id, title: song.title, album: song.album };
-      full.push(entry);
-      const list = byBucket.get(bucket) || [];
-      list.push(entry);
-      byBucket.set(bucket, list);
-    }
-    return { full, byBucket };
-  }, [masterList, triageMap]);
-
   if (phase === 'loading' || phase === 'hidden') return null;
+  if (variant === 'gate' && !modalOpen) return null;
 
-  const runExport = async (label: string, songs: ExportSong[]) => {
-    if (!conn || songs.length === 0) return;
+  const selectedScope = scopes.find((s) => s.label === selected) || scopes[0];
+  const playlistName =
+    selectedScope.label === 'Full ranking'
+      ? 'My Weezer Ranking'
+      : `My Weezer ${selectedScope.label}`;
+
+  const handleConnect = () => {
+    try {
+      localStorage.setItem(RETURN_KEY, '1');
+    } catch {
+      /* no-op */
+    }
+    void startSpotifyConnect();
+  };
+
+  const handleDisconnect = async () => {
+    await disconnectSpotify();
+    setConn(null);
+    setJustConnected(false);
+    setPhase('intro');
+  };
+
+  const runExport = async () => {
+    if (!conn || selectedScope.songs.length === 0) return;
     setPhase('working');
     setErrorMsg('');
-    setProgress(`Finding your songs on Spotify… 0/${songs.length}`);
+    setProgress({ done: 0, total: selectedScope.songs.length });
     try {
-      const name = label === 'Full ranking' ? 'My Weezer Ranking' : `My Weezer ${label}`;
       const description = `Ranked by @${username} on RankingWeezer — https://rankingweezer.com/u/${username}`;
-      const result = await createSpotifyPlaylist(conn, name, description, songs, (done, total) =>
-        setProgress(`Finding your songs on Spotify… ${done}/${total}`)
+      const result = await createSpotifyPlaylist(
+        conn,
+        playlistName,
+        description,
+        selectedScope.songs,
+        (done, total) => setProgress({ done, total })
       );
-      setDoneInfo({ url: result.playlistUrl, added: result.added, missing: result.missing });
+      setDoneInfo({
+        name: playlistName,
+        url: result.playlistUrl,
+        added: result.added,
+        missing: result.missing,
+      });
       setPhase('done');
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : 'Something went wrong building the playlist.');
@@ -124,106 +214,254 @@ export default function SpotifyExport({
     }
   };
 
-  const buttonClass =
-    'rounded-full border-[3px] border-[#0C1220] bg-white px-6 py-3 text-sm font-black text-[#0C1220] shadow-[3px_3px_0_#0C1220] transition hover:bg-sky-50 active:translate-y-[1px] cursor-pointer';
+  const closeModal = () => {
+    if (phase === 'working') return;
+    setModalOpen(false);
+    setJustConnected(false);
+    if (phase === 'done' || phase === 'error') {
+      setPhase(conn ? 'scope' : 'intro');
+      setDoneInfo(null);
+      setErrorMsg('');
+    }
+  };
+
+  const title =
+    phase === 'intro'
+      ? 'Your ranking, as a playlist.'
+      : phase === 'scope'
+        ? 'Pick your list.'
+        : phase === 'working'
+          ? 'Building your playlist…'
+          : phase === 'done'
+            ? "It's on Spotify."
+            : "That didn't work.";
 
   return (
-    <div className="mt-4 flex flex-col items-center">
-      {phase === 'disconnected' && (
-        <>
-          <button type="button" onClick={() => void startSpotifyConnect()} className={buttonClass}>
-            Connect Spotify
-          </button>
-          {errorMsg && (
-            <p className="mt-2 text-center text-xs font-bold text-rose-700">{errorMsg}</p>
-          )}
-        </>
-      )}
-
-      {(phase === 'connected' || phase === 'working' || phase === 'error') && (
-        <>
-          <button
-            type="button"
-            onClick={() => setPanelOpen((v) => !v)}
-            disabled={phase === 'working'}
-            className={buttonClass}
-          >
-            {phase === 'working' ? 'Building your playlist…' : 'Save to Spotify'}
-          </button>
-
-          {phase === 'working' && (
-            <p className="mt-2 text-center text-xs font-bold text-[#3D4A63]">{progress}</p>
-          )}
-          {phase === 'error' && (
-            <p className="mt-2 max-w-sm text-center text-xs font-bold text-rose-700">{errorMsg}</p>
-          )}
-
-          {panelOpen && phase !== 'working' && (
-            <div className="mt-3 w-full max-w-md rounded-2xl border-2 border-[#0C1220] bg-white p-3">
-              <p className="mb-2 text-center text-[10px] font-black uppercase tracking-widest text-[#3D4A63]">
-                Make a playlist from…
-              </p>
-              <div className="flex flex-col gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => void runExport('Full ranking', scopes.full)}
-                  className="flex items-center justify-between rounded-xl border-2 border-[#0C1220] bg-[#FFC72C] px-4 py-2.5 text-[13px] font-black text-[#0C1220] transition hover:brightness-105 cursor-pointer"
-                >
-                  <span>Full ranking</span>
-                  <span>{scopes.full.length} songs</span>
-                </button>
-                {BUCKETS.map(({ key, plural }) => {
-                  const songs = scopes.byBucket.get(key) || [];
-                  if (songs.length === 0) return null;
-                  return (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => void runExport(plural, songs)}
-                      className="flex items-center justify-between rounded-xl border-2 border-[#0C1220] bg-white px-4 py-2.5 text-[13px] font-black text-[#0C1220] transition hover:bg-sky-50 cursor-pointer"
-                    >
-                      <span>{plural}</span>
-                      <span>{songs.length} songs</span>
-                    </button>
-                  );
-                })}
-              </div>
-              <p className="mt-2 text-center text-[11px] font-bold text-[#3D4A63]">
-                Lands in your Spotify as a private playlist, in your order.
-              </p>
+    <>
+      {variant === 'card' && (
+        <div className="mt-4 w-full max-w-md rounded-[18px] border-[3px] border-[#0C1220] bg-white p-4 shadow-[4px_4px_0_rgba(11,30,63,0.85)]">
+          <div className="flex items-center gap-3.5">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border-2 border-[#0C1220] bg-[#1DB954]/15 text-[22px]">
+              🎧
             </div>
-          )}
-        </>
-      )}
-
-      {phase === 'done' && doneInfo && (
-        <div className="mt-1 flex flex-col items-center">
-          <a
-            href={doneInfo.url}
-            target="_blank"
-            rel="noreferrer"
-            className="rounded-full border-[3px] border-[#0C1220] bg-[#1DB954] px-6 py-3 text-sm font-black text-[#0C1220] shadow-[3px_3px_0_#0C1220] transition hover:brightness-105 active:translate-y-[1px]"
-          >
-            Open in Spotify →
-          </a>
-          <p className="mt-2 max-w-sm text-center text-xs font-bold text-[#3D4A63]">
-            {doneInfo.added} songs added.
-            {doneInfo.missing.length > 0 &&
-              ` Not on Spotify: ${doneInfo.missing.slice(0, 4).join(', ')}${doneInfo.missing.length > 4 ? ` and ${doneInfo.missing.length - 4} more` : ''}.`}
-          </p>
+            <div className="min-w-0 flex-1 text-left">
+              <div className="text-[15px] font-black leading-tight text-[#0C1220]">
+                Your ranking, as a playlist
+              </div>
+              <div className="text-xs font-semibold leading-snug text-[#3D4A63]">
+                Same songs, same order — ready to play in Spotify.
+              </div>
+            </div>
+          </div>
           <button
             type="button"
-            onClick={() => {
-              setDoneInfo(null);
-              setPhase('connected');
-              setPanelOpen(true);
-            }}
-            className="mt-1 text-xs font-black text-[#0072CE] underline underline-offset-4 cursor-pointer"
+            onClick={() => setModalOpen(true)}
+            className="mt-3.5 w-full cursor-pointer rounded-full border-[3px] border-[#0C1220] bg-[#1DB954] px-6 py-3 text-sm font-black text-[#0C1220] shadow-[3px_3px_0_#0C1220] transition hover:brightness-105 active:translate-y-[1px]"
           >
-            Make another
+            Make my playlist
           </button>
         </div>
       )}
-    </div>
+
+      {modalOpen && (
+        <div className="fixed inset-0 z-[90] flex items-end justify-center bg-[#0C1220]/60 sm:items-center sm:p-6">
+          <div className="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-[22px] border-[3px] border-[#0C1220] bg-white p-6 shadow-[6px_6px_0_rgba(11,30,63,0.85)] sm:rounded-[22px]">
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <h3 className="text-xl font-black tracking-tight text-[#0C1220]">{title}</h3>
+              {phase !== 'working' && (
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  aria-label="Close"
+                  className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full border-2 border-[#0C1220] text-sm font-black text-[#0C1220]"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            {phase === 'intro' && (
+              <div>
+                <p className="text-sm font-semibold leading-snug text-[#3D4A63]">
+                  Turn your list into a Spotify playlist — same songs, same order, ready to play.
+                </p>
+                <div className="mt-4 space-y-1.5">
+                  {scopes.map((option) => (
+                    <div
+                      key={option.label}
+                      className="flex items-center justify-between rounded-xl border-2 border-[#0C1220]/15 bg-slate-50 px-4 py-2 text-[13px] font-black text-[#0C1220]"
+                    >
+                      <span>{option.label}</span>
+                      <span className="text-[#3D4A63]">{option.songs.length} songs</span>
+                    </div>
+                  ))}
+                </div>
+                {errorMsg && (
+                  <p className="mt-3 text-center text-xs font-bold text-rose-700">{errorMsg}</p>
+                )}
+                <button
+                  type="button"
+                  onClick={handleConnect}
+                  className="mt-5 w-full cursor-pointer rounded-full border-[3px] border-[#0C1220] bg-[#1DB954] px-6 py-3 text-sm font-black text-[#0C1220] shadow-[3px_3px_0_#0C1220] transition hover:brightness-105 active:translate-y-[1px]"
+                >
+                  Connect Spotify
+                </button>
+                <p className="mt-3 text-center text-[11px] font-bold text-[#3D4A63]">
+                  Private playlist, created in your Spotify account. Delete it anytime.
+                </p>
+              </div>
+            )}
+
+            {phase === 'scope' && (
+              <div>
+                {justConnected && (
+                  <div className="mb-3 rounded-xl border-2 border-[#0C1220] bg-emerald-50 px-4 py-2.5 text-center text-[13px] font-black text-emerald-900">
+                    You&apos;re connected ✓
+                  </div>
+                )}
+                <div className="flex flex-col gap-1.5">
+                  {scopes.map((option) => {
+                    const isSelected = option.label === selectedScope.label;
+                    return (
+                      <button
+                        key={option.label}
+                        type="button"
+                        onClick={() => setSelected(option.label)}
+                        className={`flex cursor-pointer items-center justify-between rounded-xl border-2 border-[#0C1220] px-4 py-2.5 text-[13px] font-black text-[#0C1220] transition ${
+                          isSelected ? 'bg-[#FFC72C]' : 'bg-white hover:bg-sky-50'
+                        }`}
+                      >
+                        <span>{option.label}</span>
+                        <span>{option.songs.length} songs</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="mt-3 text-center text-xs font-bold text-[#3D4A63]">
+                  Playlist name: “{playlistName}”
+                </p>
+                <button
+                  type="button"
+                  onClick={() => void runExport()}
+                  className="mt-3 w-full cursor-pointer rounded-full border-[3px] border-[#0C1220] bg-[#1DB954] px-6 py-3 text-sm font-black text-[#0C1220] shadow-[3px_3px_0_#0C1220] transition hover:brightness-105 active:translate-y-[1px]"
+                >
+                  Create playlist
+                </button>
+                <p className="mt-3 text-center text-[11px] font-bold text-[#3D4A63]">
+                  Connected as {conn?.displayName || 'your Spotify account'} ·{' '}
+                  <button
+                    type="button"
+                    onClick={() => void handleDisconnect()}
+                    className="cursor-pointer font-black text-[#0072CE] underline underline-offset-2"
+                  >
+                    Disconnect
+                  </button>
+                </p>
+              </div>
+            )}
+
+            {phase === 'working' && (
+              <div>
+                <p className="text-center text-sm font-bold text-[#3D4A63]">
+                  Finding your songs on Spotify… {progress.done}/{progress.total}
+                </p>
+                <div className="mt-4 h-3 overflow-hidden rounded-full border-2 border-[#0C1220] bg-slate-100">
+                  <div
+                    className="h-full bg-[#1DB954] transition-all duration-300"
+                    style={{
+                      width: `${progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0}%`,
+                    }}
+                  />
+                </div>
+                <p className="mt-3 text-center text-[11px] font-bold text-[#3D4A63]">
+                  Then it lands in your Spotify as “{playlistName}”, in your order.
+                </p>
+              </div>
+            )}
+
+            {phase === 'done' && doneInfo && (
+              <div className="text-center">
+                <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full border-[3px] border-[#0C1220] bg-[#1DB954] text-2xl font-black text-[#0C1220]">
+                  ✓
+                </div>
+                <p className="text-sm font-semibold leading-snug text-[#3D4A63]">
+                  “{doneInfo.name}” is live in your Spotify — {doneInfo.added} songs, in your order.
+                </p>
+                {doneInfo.missing.length > 0 && (
+                  <p className="mt-2 text-xs font-bold text-[#3D4A63]">
+                    Not on Spotify: {doneInfo.missing.slice(0, 6).join(', ')}
+                    {doneInfo.missing.length > 6 ? ` and ${doneInfo.missing.length - 6} more` : ''}.
+                  </p>
+                )}
+                <a
+                  href={doneInfo.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-4 block w-full rounded-full border-[3px] border-[#0C1220] bg-[#1DB954] px-6 py-3 text-sm font-black text-[#0C1220] shadow-[3px_3px_0_#0C1220] transition hover:brightness-105"
+                >
+                  Open in Spotify →
+                </a>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDoneInfo(null);
+                    setPhase('scope');
+                  }}
+                  className="mt-3 cursor-pointer text-xs font-black text-[#0072CE] underline underline-offset-4"
+                >
+                  Make another
+                </button>
+              </div>
+            )}
+
+            {phase === 'error' && (
+              <div className="text-center">
+                <p className="text-sm font-semibold leading-snug text-rose-700">{errorMsg}</p>
+                <button
+                  type="button"
+                  onClick={() => setPhase(conn ? 'scope' : 'intro')}
+                  className="mt-4 w-full cursor-pointer rounded-full border-[3px] border-[#0C1220] bg-white px-6 py-3 text-sm font-black text-[#0C1220] shadow-[3px_3px_0_#0C1220] transition hover:bg-sky-50 active:translate-y-[1px]"
+                >
+                  Try again
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+export default function SpotifyExport({
+  masterList,
+  triageMap,
+  username,
+}: {
+  masterList: SongLike[];
+  triageMap: Record<string, string>;
+  username: string;
+}) {
+  return (
+    <SpotifyFlow masterList={masterList} triageMap={triageMap} username={username} variant="card" />
+  );
+}
+
+/**
+ * Mounted once on the root page: if the fan just came back
+ * from Spotify sign-in, reopen the modal wherever they
+ * landed. Renders nothing otherwise.
+ */
+export function SpotifyReturnGate() {
+  const { userProfile, masterList, triageMap } = useWeezer();
+  const username = userProfile?.username?.trim();
+  if (!username) return null;
+  return (
+    <SpotifyFlow
+      masterList={masterList as SongLike[]}
+      triageMap={triageMap as Record<string, string>}
+      username={username}
+      variant="gate"
+    />
   );
 }

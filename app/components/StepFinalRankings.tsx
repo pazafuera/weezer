@@ -42,6 +42,7 @@ import {
   type TriageValue,
 } from '../context/WeezerContext';
 import { AlbumArtwork } from './SharedUI';
+import SpotifyExport from './SpotifyExport';
 import { displayFont, handFont } from './shareables/fonts';
 import {
   PROFILE_BUCKET_COLORS,
@@ -296,6 +297,14 @@ export default function StepFinalRankings({
                 )}
               </div>
             ))}
+
+          {complete && username && (
+            <SpotifyExport
+              masterList={masterList}
+              triageMap={triageMap}
+              username={username}
+            />
+          )}
 
           {username && bucketed > 0 && (
             <button

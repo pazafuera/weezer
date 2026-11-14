@@ -70,6 +70,10 @@ function storePass(key: string, rec: StoredPass | null) {
 interface ActivePass {
   scopeKey: string;
   title: string;
+  /** Drill path from the bucket root, e.g. ['Top third'] —
+   *  rendered as a breadcrumb so a fan splitting a split
+   *  always knows where they are (owner, Nov 13, 2026). */
+  path: string[];
   base: Song[];
   start: number;
   end: number;
@@ -108,6 +112,7 @@ export default function Step1_5SplitPass({
   const startPass = (
     scopeKey: string,
     title: string,
+    path: string[],
     start: number,
     end: number,
     base: Song[]
@@ -129,6 +134,7 @@ export default function Step1_5SplitPass({
     setPass({
       scopeKey,
       title,
+      path,
       base,
       start,
       end,
@@ -146,7 +152,7 @@ export default function Step1_5SplitPass({
     if (startedRef.current) return;
     startedRef.current = true;
     const base = songsRef.current;
-    startPass('whole', `Split the ${plural}`, 0, base.length, base);
+    startPass('whole', `Split the ${plural}`, [], 0, base.length, base);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -251,6 +257,15 @@ export default function Step1_5SplitPass({
     if (zone !== null) place(zone);
   };
 
+  const zoneBounds = pass
+    ? [
+        pass.start,
+        pass.start + Math.ceil((pass.end - pass.start) / 3),
+        pass.start + Math.ceil((2 * (pass.end - pass.start)) / 3),
+        pass.end
+      ]
+    : [0, 0, 0, 0];
+
   const current = pass && pass.queue.length > 0 ? pass.queue[0] : null;
   const placedCount = pass ? pass.placed.length : 0;
   const totalInPass = pass ? pass.end - pass.start : 0;
@@ -275,6 +290,11 @@ export default function Step1_5SplitPass({
             <span className="text-[10px] font-black uppercase tracking-widest text-[#3D4A63]">
               {placedCount} of {totalInPass} placed
             </span>
+            {pass.path.length > 0 && (
+              <div className="text-[11px] font-black uppercase tracking-wider text-slate-400 mt-1">
+                {plural} › {pass.path.join(' › ')} · spots {pass.start + 1}–{pass.end}
+              </div>
+            )}
             <h2 className={`${displayFont.className} text-[27px] text-[#0C1220] mt-1`}>
               {pass.title}
             </h2>
@@ -311,7 +331,7 @@ export default function Step1_5SplitPass({
               <p className="text-xs font-bold uppercase tracking-widest text-[#3D4A63] mb-4">
                 {current.album}
               </p>
-              <div onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>
+              <div className="flex justify-center" onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>
                 <AudioPreviewButton id={current.id} title={current.title} album={current.album} />
               </div>
             </div>
@@ -334,10 +354,13 @@ export default function Step1_5SplitPass({
                 }`}
               >
                 <span className={`${displayFont.className} text-xl text-[#0C1220]`}>
-                  {BAND_NAMES[b]} {plural}
+                  {pass.path.length === 0
+                    ? `${BAND_NAMES[b]} ${plural}`
+                    : `${BAND_NAMES[b]} of the ${pass.path[pass.path.length - 1].toLowerCase()}`}
                 </span>
-                <span className="text-[11px] font-black uppercase tracking-wider text-[#3D4A63]">
-                  {bandCounts[b]} placed
+                <span className="text-[11px] font-black uppercase tracking-wider text-[#3D4A63] whitespace-nowrap">
+                  spots {zoneBounds[b] + 1}–{zoneBounds[b + 1]}
+                  {bandCounts[b] > 0 ? ` · ${bandCounts[b]} in` : ''}
                 </span>
               </button>
             ))}
@@ -381,15 +404,15 @@ export default function Step1_5SplitPass({
 
           <div className="flex-1 flex flex-col gap-2.5 min-h-0">
             {([
-              { label: `Top third`, sub: `${third} songs`, start: 0, end: third, key: `t0` },
-              { label: `Middle third`, sub: `${third2 - third} songs`, start: third, end: third2, key: `t${third}` },
-              { label: `Bottom third`, sub: `${n - third2} songs`, start: third2, end: n, key: `t${third2}` }
+              { label: `Top third`, sub: `spots 1–${third}`, start: 0, end: third, key: `t0` },
+              { label: `Middle third`, sub: `spots ${third + 1}–${third2}`, start: third, end: third2, key: `t${third}` },
+              { label: `Bottom third`, sub: `spots ${third2 + 1}–${n}`, start: third2, end: n, key: `t${third2}` }
             ]).map((t) => (
               <button
                 key={t.key}
                 type="button"
                 onClick={() =>
-                  startPass(t.key, `Split the ${t.label.toLowerCase()}`, t.start, t.end, songsRef.current)
+                  startPass(t.key, `Split the ${t.label.toLowerCase()}`, [t.label], t.start, t.end, songsRef.current)
                 }
                 className="flex-1 rounded-[14px] border-[2.5px] border-[#0C1220] bg-white shadow-[2px_2px_0_rgba(11,30,63,0.85)] px-4 flex items-center justify-between cursor-pointer"
               >

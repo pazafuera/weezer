@@ -71,6 +71,94 @@ function getWeezerCompatibilityQuip(score: number) {
   };
 }
 
+// PAIRED CHARACTERIZATION (owner, Nov 14, 2026): the
+// scorecard shows TWO scores — Favorites (agreement inside
+// the top two buckets) and Full list (agreement across
+// every bucketed song) — and the verdict describes the
+// PAIR, especially the gap between them: agreeing on the
+// great stuff while fighting about the deep cuts is a
+// different relationship than matching top to bottom.
+function getPairCharacterization(fav: number, full: number) {
+  const gap = fav - full;
+  const color =
+    full >= 75
+      ? 'text-emerald-600'
+      : full >= 50
+        ? 'text-[#0072CE]'
+        : full >= 35
+          ? 'text-amber-600'
+          : 'text-rose-600';
+  if (full > fav + 5) {
+    return {
+      title: 'Deep Cut Twins 💿',
+      phrase:
+        'Funny — you two fight about the favorites but agree on almost everything buried underneath.',
+      color,
+    };
+  }
+  if (full >= 85) {
+    return {
+      title: 'Soulmates in Blue 💙',
+      phrase:
+        '"In the Garage together forever." You line up on the great stuff AND the deep cuts.',
+      color,
+    };
+  }
+  if (fav >= 70 && gap >= 8) {
+    return {
+      title: 'The Good Life 🎸',
+      phrase:
+        "You agree on what's great — the fighting starts further down the list.",
+      color,
+    };
+  }
+  if (full >= 60 && Math.abs(gap) < 8) {
+    return {
+      title: 'Island in the Sun ☀️',
+      phrase:
+        'Steady agreement, top to bottom. Your taste matches all the way down.',
+      color,
+    };
+  }
+  if (fav >= 55 && full < 50) {
+    return {
+      title: 'Hash Pipe ⚡️',
+      phrase:
+        'You love the same songs — and disagree about almost everything else.',
+      color,
+    };
+  }
+  if (full >= 50) {
+    return {
+      title: 'The Good Life 🎸',
+      phrase:
+        'Solid overlap across the whole catalogue, favorites included.',
+      color,
+    };
+  }
+  if (full >= 35) {
+    return {
+      title: 'Hash Pipe ⚡️',
+      phrase:
+        "A little chaotic, but there's common ground if you dig for it.",
+      color,
+    };
+  }
+  if (full >= 20) {
+    return {
+      title: "Say It Ain't So 🥀",
+      phrase: 'Different canons, different planets. Tread carefully!',
+      color,
+    };
+  }
+  return {
+    title: 'Pink Triangle 📐',
+    phrase:
+      '"If anyone’s gonna be the one, it’s not you." Complete taste incompatibility!',
+    color,
+  };
+}
+
 // STATISTICAL HELPER: Kendall's Tau (Rank Agreement)
 function calculateKendallTau(
   userRankMap: Map<string, number>,
@@ -342,14 +430,35 @@ export default function PublicProfilePage() {
       }
     }
 
+    // FULL-LIST SCORE: the same Kendall tau across every
+    // song both fans bucketed (any real bucket), at true
+    // list positions. Null until at least 2 shared songs.
+    const ALL_REAL = ['banger', 'slaps', 'mid', 'skip', 'trash'];
+    const vAllRank = new Map<string, number>();
+    visitorMaster.forEach((song, i) => {
+      if (ALL_REAL.includes(visitorTriage[song.id])) vAllRank.set(song.id, i + 1);
+    });
+    const tAllRank = new Map<string, number>();
+    targetMaster.forEach((song, i) => {
+      if (ALL_REAL.includes(targetTriage[song.id])) tAllRank.set(song.id, i + 1);
+    });
+    const fullTau = calculateKendallTau(vAllRank, tAllRank);
+    const fullScore =
+      fullTau.sampleSize >= 2 ? Math.round(((fullTau.tau + 1) / 2) * 100) : null;
+
     return {
       targetTop10: tExplicit.slice(0, 10),
       visitorTop10: vExplicit.slice(0, 10),
       compatibilityScore,
       sharedSample,
+      fullScore,
+      fullSample: fullTau.sampleSize,
       biggestFight,
       sharedFavorites: sharedFavorites.slice(0, 3),
-      quip: getWeezerCompatibilityQuip(compatibilityScore),
+      quip:
+        fullScore !== null && sharedSample >= 2
+          ? getPairCharacterization(compatibilityScore, fullScore)
+          : getWeezerCompatibilityQuip(compatibilityScore),
     };
   }, [targetMaster, targetTriage, visitorMaster, visitorTriage]);
 
@@ -667,15 +776,42 @@ export default function PublicProfilePage() {
                     </h2>
                   </div>
 
-                  {/* SCORE BADGE */}
-                  <div className="flex flex-col items-center justify-center shrink-0 px-2">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-[#3D4A63] mb-0.5">
-                      Match
-                    </span>
-                    <span className={`text-4xl sm:text-5xl font-black ${stats.quip.color}`}>
-                      {stats.compatibilityScore}%
-                    </span>
-                  </div>
+                  {/* SCORE BADGE — two scores (owner,
+                      Nov 14, 2026): Favorites = agreement
+                      inside the shared top buckets; Full
+                      list = agreement across everything
+                      both fans bucketed. Falls back to the
+                      single Match number when a full-list
+                      score can't be computed. */}
+                  {stats.fullScore !== null && stats.fullScore !== undefined ? (
+                    <div className="flex flex-col items-center justify-center shrink-0 px-2 gap-1.5">
+                      <div className="flex flex-col items-center">
+                        <span className="text-[9px] font-black uppercase tracking-widest text-[#3D4A63]">
+                          Favorites
+                        </span>
+                        <span className={`text-3xl sm:text-4xl font-black leading-none ${stats.quip.color}`}>
+                          {stats.compatibilityScore}%
+                        </span>
+                      </div>
+                      <div className="flex flex-col items-center">
+                        <span className="text-[9px] font-black uppercase tracking-widest text-[#3D4A63]">
+                          Full list
+                        </span>
+                        <span className={`text-3xl sm:text-4xl font-black leading-none ${stats.quip.color}`}>
+                          {stats.fullScore}%
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center shrink-0 px-2">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-[#3D4A63] mb-0.5">
+                        Match
+                      </span>
+                      <span className={`text-4xl sm:text-5xl font-black ${stats.quip.color}`}>
+                        {stats.compatibilityScore}%
+                      </span>
+                    </div>
+                  )}
 
                   {/* TARGET NAME */}
                   <div className="flex flex-col items-end w-2/5 min-w-0 text-right">

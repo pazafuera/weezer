@@ -40,6 +40,8 @@ export default function WeezerRankerPage() {
     setLowerRankOptIn,
     autoStartMatchups,
     setAutoStartMatchups,
+    refineOpenTools,
+    setRefineOpenTools,
     navigateTo,
     guardNotice,
     dismissGuardNotice,
@@ -182,6 +184,8 @@ export default function WeezerRankerPage() {
           onStageChange={setRefineStageIdx}
           lowerRankOptIns={lowerRankOptIns}
           onToggleLowerRank={setLowerRankOptIn}
+          openTools={refineOpenTools}
+          onConsumeOpenTools={() => setRefineOpenTools(false)}
         />
       )}
 

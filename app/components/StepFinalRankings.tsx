@@ -103,6 +103,7 @@ export default function StepFinalRankings({
     setRefineStageIdx,
     setAutoStartMatchups,
     setLowerRankOptIn,
+    setRefineOpenTools,
   } = useWeezer();
   const username = userProfile?.username?.trim();
 
@@ -405,6 +406,11 @@ export default function StepFinalRankings({
                   // The button promises ranking, so the stage's
                   // Rank toggle is flipped on for the landing.
                   setLowerRankOptIn(unrankedLowers[0], true);
+                  // …and the stage's tools module lands open
+                  // on its tool step (micro-program, Nov 14,
+                  // 2026): the tap was the mode choice, so
+                  // step 1 would be asking twice.
+                  setRefineOpenTools(true);
                 }}
                 className="mt-3.5 rounded-full border-[3px] border-[#0C1220] bg-[#FFC72C] px-6 py-3 text-sm font-black text-[#0C1220] shadow-[3px_3px_0_#0C1220] transition hover:brightness-105 active:translate-y-[1px]"
               >

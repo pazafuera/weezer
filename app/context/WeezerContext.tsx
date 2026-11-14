@@ -336,6 +336,12 @@ interface WeezerContextType {
   setLowerRankOptIn: (bucket: BucketType, on: boolean) => void;
   autoStartMatchups: boolean;
   setAutoStartMatchups: (val: boolean) => void;
+  /** Set by the My Rankings prompt when it deep-links into a
+   *  Refine stage ("Rank my mids"): the tools module lands
+   *  OPEN on its tool step, since that tap was the mode
+   *  choice. Step2Refine consumes and clears it. */
+  refineOpenTools: boolean;
+  setRefineOpenTools: (val: boolean) => void;
   /** Set by the login page when an in-app sign-up completes: the
    *  user lands on orientation under an "account created" banner
    *  instead of the old signup_success step. Orientation clears it
@@ -840,6 +846,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     saveLowerRankOptIns(next);
   };
   const [autoStartMatchups, setAutoStartMatchups] = useState(false);
+  const [refineOpenTools, setRefineOpenTools] = useState(false);
   // Post-sign-up banner flag (see the interface note). Plain state:
   // orientation renders from it, unlike the origin ref.
   const [accountCreated, setAccountCreated] = useState(false);
@@ -2906,6 +2913,8 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         lowerRankOptIns,
         setLowerRankOptIn,
         autoStartMatchups,
+        refineOpenTools,
+        setRefineOpenTools,
         setAutoStartMatchups,
         accountCreated,
         setAccountCreated,

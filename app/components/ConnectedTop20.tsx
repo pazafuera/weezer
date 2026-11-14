@@ -112,10 +112,6 @@ export default function ConnectedTop20({
         })}
       </div>
 
-      <p className="mt-4 text-center text-[11px] font-bold text-[#3D4A63]">
-        Blue badge is {visitorName}&apos;s rank, black badge is {targetName}&apos;s — the longer the bar, the bigger the fight.
-      </p>
-
       {(onlyVisitor.length > 0 || onlyTarget.length > 0) && (
         <div className="mt-5 space-y-3">
           {onlyVisitor.length > 0 && (

@@ -391,7 +391,7 @@ export default function Step2Refine({
       const subtitle = dragGhost.querySelector('span.text-\\[10px\\]');
       if (subtitle) subtitle.style.color = '#cbd5e1';
 
-      const rankBadge = dragGhost.querySelector('span.w-7');
+      const rankBadge = dragGhost.querySelector('span.w-10');
       if (rankBadge) {
         (rankBadge as HTMLElement).style.backgroundColor = '#fbbf24';
         (rankBadge as HTMLElement).style.color = '#020617';
@@ -756,7 +756,7 @@ export default function Step2Refine({
                 >
                   <div className="flex items-center gap-2.5 min-w-0 flex-1">
                     {isRankableBucket && (
-                      <span className={`w-7 h-7 font-black text-[11px] rounded-lg flex items-center justify-center shrink-0 transition-colors ${
+                      <span className={`w-10 h-7 font-black text-[11px] rounded-lg flex items-center justify-center shrink-0 transition-colors ${
                         isTouchDrag ? 'bg-amber-400 text-slate-950 font-black ring-2 ring-amber-300' : 'bg-[#0072CE] text-white'
                       }`}>
                         #{rankNumberById.get(song.id) ?? idx + 1}

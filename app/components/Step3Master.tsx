@@ -194,7 +194,7 @@ export default function Step3Master({
       const subtitle = dragGhost.querySelector('span.truncate');
       if (subtitle) (subtitle as HTMLElement).style.color = '#cbd5e1';
 
-      const rankBadge = dragGhost.querySelector('span.w-7');
+      const rankBadge = dragGhost.querySelector('span.w-10');
       if (rankBadge) {
         (rankBadge as HTMLElement).style.backgroundColor = '#fbbf24';
         (rankBadge as HTMLElement).style.color = '#020617';
@@ -433,13 +433,13 @@ export default function Step3Master({
                     title→meta gap all stay compacted. */}
                 {/* RANK NUMBERS FOR RANKED BUCKETS (top two + opted-in lowers) */}
                 {isRankable ? (
-                  <span className={`w-7 h-6 font-black text-[11px] rounded-lg flex items-center justify-center shrink-0 shadow-2xs transition-colors ${
+                  <span className={`w-10 h-6 font-black text-[11px] rounded-lg flex items-center justify-center shrink-0 shadow-2xs transition-colors ${
                     isTouchDrag ? 'bg-amber-400 text-slate-950 ring-2 ring-amber-300' : 'bg-[#0072CE] text-white'
                   }`}>
                     #{rankNumberById.get(song.id)}
                   </span>
                 ) : (
-                  <span className="w-7 h-6 bg-slate-200 text-[#3D4A63] font-black text-[11px] rounded-lg flex items-center justify-center shrink-0 shadow-2xs">
+                  <span className="w-10 h-6 bg-slate-200 text-[#3D4A63] font-black text-[11px] rounded-lg flex items-center justify-center shrink-0 shadow-2xs">
                     -
                   </span>
                 )}

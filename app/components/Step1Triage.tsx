@@ -10,6 +10,13 @@ import {
   useWeezer,
 } from '../context/WeezerContext';
 import { isQualifiedSubmission } from '../lib/fanStatsMethodology';
+import {
+  CASUAL_SONG_IDS,
+  loadSortPath,
+  saveSortPath,
+  sortPathLabel,
+  type SortPath,
+} from '../lib/sortPath';
 import { trackAnalytics } from '../lib/analytics';
 import { FlyingWIcon, AudioPreviewButton, HelpButton } from './SharedUI';
 import Step1Deck from './Step1Deck';
@@ -95,6 +102,26 @@ export default function Step1Triage({
       contributors,
       scopeRatings: rated,
     };
+  };
+
+  // SORT PATH (owner, Nov 14, 2026): a fresh sorter picks a
+  // scope before the deck — casual (Blue + Pinkerton + the
+  // singles), chosen albums, or all 206. Device-local, read
+  // after mount like the view mode. The picker shows when no
+  // path is stored AND nothing is categorized yet, or when
+  // the path banner reopens it (pickerForced). A path only
+  // scopes the sections below; it never touches saved data.
+  const [sortPath, setSortPath] = useState<SortPath | null>(null);
+  const [pathLoaded, setPathLoaded] = useState(false);
+  const [pickerForced, setPickerForced] = useState(false);
+  useEffect(() => {
+    setSortPath(loadSortPath());
+    setPathLoaded(true);
+  }, []);
+  const choosePath = (next: SortPath) => {
+    saveSortPath(next);
+    setSortPath(next);
+    setPickerForced(false);
   };
 
   const [hideSorted, setHideSorted] = useState(false);
@@ -240,7 +267,7 @@ export default function Step1Triage({
   frontIds.forEach((id) => shownIds.add(id));
   singlesSongs.forEach((s) => shownIds.add(s.id));
 
-  const sections: TriageSection[] = [
+  const allSections: TriageSection[] = [
     {
       key: 'album-the-blue-album',
       title: 'The Blue Album',
@@ -286,10 +313,65 @@ export default function Step1Triage({
       .filter((sec) => sec.songs.length > 0),
   ];
 
+  // PATH SCOPING — the sections this sorter actually faces.
+  // Casual keeps the recognition-first front of the catalog
+  // (Blue, Pinkerton, the Singles block — the exact sections
+  // the deck already leads with). Albums builds one section
+  // per chosen album with ALL its songs, singles included.
+  // 'all' (and no path yet) is the catalog as it ever was.
+  const pathAlbums =
+    sortPath?.kind === 'albums' ? sortPath.albums : [];
+  const sections: TriageSection[] =
+    sortPath?.kind === 'casual'
+      ? allSections.filter((sec) =>
+          [
+            'album-the-blue-album',
+            'album-pinkerton',
+            'album-the-singles',
+          ].includes(sec.key)
+        )
+      : sortPath?.kind === 'albums'
+        ? albumsGrouped
+            .filter((a) => pathAlbums.includes(a))
+            .map(
+              (albumName): TriageSection => ({
+                key: `album-${albumName.replace(/\s+/g, '-').toLowerCase()}`,
+                title: albumName,
+                eyebrow: null,
+                bannerClass: null,
+                songs: FULL_SONG_POOL.filter((x) => x.album === albumName),
+                showAlbumPerRow: false,
+              })
+            )
+        : allSections;
+
   // The flat recognition-first display order, derived from the very
   // sections the list renders below. Deck mode walks this exact list,
   // so the two views can never disagree about song order.
   const orderedSongs: Song[] = sections.flatMap((section) => section.songs);
+
+  // Scoped progress: on a path, every count runs over the
+  // path's songs only — the finish line is the path's end,
+  // not 206. Unscoped, these are exactly the counts above.
+  const scoped = sortPath !== null && sortPath.kind !== 'all';
+  const scopeTotal = scoped ? orderedSongs.length : FULL_SONG_POOL.length;
+  const categorizedScoped = scoped
+    ? orderedSongs.filter((x) => triageMap[x.id] !== undefined).length
+    : categorizedCount;
+  const bucketedScoped = scoped
+    ? orderedSongs.filter((x) => isRealBucket(triageMap[x.id])).length
+    : bucketedCount;
+  const progressPercentScoped = Math.round(
+    (categorizedScoped / scopeTotal) * 100
+  );
+  const isCompleteScoped = categorizedScoped === scopeTotal;
+  const hasPartialScoped = bucketedScoped >= 1;
+  // The picker gate: fresh sorters (nothing categorized, no
+  // path stored) choose before they sort. The global count
+  // is the gate — any prior sorting anywhere skips it.
+  const showPicker =
+    pathLoaded &&
+    (pickerForced || (sortPath === null && categorizedCount === 0));
 
   // Keep the user's place across a bucket tap. A tap re-renders the
   // whole list, and with "Hide Sorted" on the tapped row (and any album
@@ -360,9 +442,11 @@ export default function Step1Triage({
   return (
     <div
       className={
-        effectiveMode === 'list'
-          ? 'space-y-6 pb-44'
-          : // Deck mode: the step itself becomes a column AT LEAST
+        showPicker
+          ? 'max-w-2xl mx-auto w-full space-y-4 pb-24'
+          : effectiveMode === 'list'
+            ? 'space-y-6 pb-44'
+            : // Deck mode: the step itself becomes a column AT LEAST
             // one screen tall under the sticky AppShell header
             // (h-14 = 56px, lg:h-16 = 64px in AppShell.tsx), bleeding
             // over <main>'s padding (p-4 / sm:p-6 / lg:p-8) the same
@@ -375,6 +459,38 @@ export default function Step1Triage({
             'flex flex-col -m-4 sm:-m-6 lg:-m-8 min-h-[calc(100dvh-56px)] lg:min-h-[calc(100dvh-64px)]'
       }
     >
+      {showPicker ? (
+        <SortPathPicker
+          albumsGrouped={albumsGrouped}
+          initial={sortPath}
+          onChoose={choosePath}
+          onCancel={
+            sortPath !== null ? () => setPickerForced(false) : undefined
+          }
+        />
+      ) : (
+      <>
+      {scoped && sortPath && (
+        <div
+          className={`flex items-center justify-between gap-3 rounded-xl border-2 border-[#0C1220] bg-white px-3.5 py-2.5 shadow-[3px_3px_0_rgba(11,30,63,0.85)] ${
+            effectiveMode === 'deck' ? 'mx-4 mt-3 shrink-0' : ''
+          }`}
+        >
+          <p className="text-xs font-bold leading-snug text-[#3D4A63]">
+            Your path:{' '}
+            <span className="font-black text-[#0C1220]">
+              {sortPathLabel(sortPath)}
+            </span>{' '}
+            · {scopeTotal} songs
+          </p>
+          <button
+            onClick={() => setPickerForced(true)}
+            className="shrink-0 cursor-pointer text-xs font-black text-[#0072CE]"
+          >
+            Change path
+          </button>
+        </div>
+      )}
       {effectiveMode === 'list' && (
       <>
       {/* STICKY PROGRESS & ALBUM QUICK-JUMP BAR (EXPANDED FOR DESKTOP) */}
@@ -390,9 +506,9 @@ export default function Step1Triage({
                   sorter has never seen a dashboard to go
                   "back" to). */}
               <span className="uppercase tracking-wider">
-                Progress: <strong className="text-[#0072CE] font-mono text-sm">{categorizedCount}</strong> / {FULL_SONG_POOL.length}
+                Progress: <strong className="text-[#0072CE] font-mono text-sm">{categorizedScoped}</strong> / {scopeTotal}
               </span>
-              <span className="text-[#0072CE] font-mono text-sm font-black">{progressPercent}%</span>
+              <span className="text-[#0072CE] font-mono text-sm font-black">{progressPercentScoped}%</span>
             </div>
 
             <div className="flex items-center gap-3">
@@ -403,7 +519,7 @@ export default function Step1Triage({
                   onChange={(e) => setHideSorted(e.target.checked)}
                   className="rounded border-slate-300 text-[#0072CE] focus:ring-[#0072CE] w-3.5 h-3.5 cursor-pointer"
                 />
-                <span>Hide Sorted ({categorizedCount})</span>
+                <span>Hide Sorted ({categorizedScoped})</span>
               </label>
               <HelpButton />
             </div>
@@ -414,11 +530,11 @@ export default function Step1Triage({
             <div className="absolute inset-0 bg-[#E0F2FE] rounded-full border border-blue-200 z-10" />
             <div
               className="absolute top-0 left-0 h-full bg-[#7DD3FC] rounded-full transition-all duration-300 z-20"
-              style={{ width: `${progressPercent}%` }}
+              style={{ width: `${progressPercentScoped}%` }}
             />
             <div
               className="absolute top-1/2 -translate-y-1/2 transition-all duration-300 z-30 ml-[-17px] grid h-[34px] w-[34px] place-items-center rounded-full border-2 border-[#0C1220] bg-[#FFC72C]"
-              style={{ left: `${Math.min(98, Math.max(2, progressPercent))}%` }}
+              style={{ left: `${Math.min(98, Math.max(2, progressPercentScoped))}%` }}
             >
               <FlyingWIcon className="h-auto w-[24px] text-[#0072CE]" />
             </div>
@@ -494,6 +610,7 @@ export default function Step1Triage({
           triageMap={triageMap}
           orderedSongs={orderedSongs}
           sections={sections}
+          scoped={scoped}
           handleSetBucket={handleSetBucket}
           handleFinishTriage={handleFinishTriage}
           isGuest={isGuest}
@@ -652,7 +769,7 @@ export default function Step1Triage({
 
       {/* FLOATING ACTION BUTTON */}
       <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-auto flex flex-col items-center gap-2">
-        {isGutCheckComplete && bucketedCount === 0 ? (
+        {isCompleteScoped && bucketedScoped === 0 ? (
           /* All 206 categorized but every one is Don't Know It:
              Refine is still locked (≥1 real bucket required), so
              the amber button guard-bounced straight back here —
@@ -662,7 +779,7 @@ export default function Step1Triage({
             Refine Buckets unlocks with 1 song in a real bucket —
             Don&apos;t Know It doesn&apos;t count
           </div>
-        ) : isGutCheckComplete ? (
+        ) : isCompleteScoped ? (
           <button
             onClick={handleFinishTriage}
             className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm sm:text-base px-8 py-4 rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.35)] transition transform hover:scale-105 cursor-pointer border-2 border-amber-200 flex items-center gap-2.5 whitespace-nowrap"
@@ -675,7 +792,7 @@ export default function Step1Triage({
             disabled
             className="bg-slate-800/95 text-slate-400 font-extrabold text-xs sm:text-sm px-6 py-3.5 rounded-full border border-slate-700 cursor-not-allowed shadow-xl backdrop-blur-md whitespace-nowrap"
           >
-            🔒 Categorize All Songs ({categorizedCount}/{FULL_SONG_POOL.length})
+            🔒 {scoped ? 'Finish Your Path' : 'Categorize All Songs'} ({categorizedScoped}/{scopeTotal})
           </button>
         )}
         {/* The partial-sort forward path (UAT P-7): a real
@@ -685,12 +802,12 @@ export default function Step1Triage({
             action (handleFinishTriage's partial path), ≥44px
             target, visually secondary to the amber primary that
             replaces the lock pill at full completion. */}
-        {hasPartialTriage && !isGutCheckComplete && (
+        {hasPartialScoped && !isCompleteScoped && (
           <button
             onClick={handleFinishTriage}
             className="min-h-[44px] flex items-center bg-white hover:bg-slate-50 text-slate-900 border border-slate-300 shadow-lg font-black text-xs px-5 rounded-full transition-all active:scale-[0.98] cursor-pointer whitespace-nowrap"
           >
-            Continue with {bucketedCount} of {FULL_SONG_POOL.length} bucketed →
+            Continue with {bucketedScoped} of {scopeTotal} bucketed →
           </button>
         )}
         {/* The neutral early-Refine line (UAT P-6, owner's
@@ -698,7 +815,7 @@ export default function Step1Triage({
             jump to Refine, both doors are named and neither is
             sold — no Thread-unlock pitch. Same line on the
             deck's early-Refine offers (Step1Deck). */}
-        {hasPartialTriage && !isGutCheckComplete && (
+        {hasPartialScoped && !isCompleteScoped && (
           <p className="text-[11px] font-semibold text-slate-200 bg-slate-950/60 backdrop-blur-sm rounded-2xl px-3 py-1.5 max-w-[300px] text-center leading-snug">
             You can refine the songs you&apos;ve sorted so far, or
             keep sorting and refine the full set later.
@@ -707,7 +824,7 @@ export default function Step1Triage({
         {/* Songs categorized but none bucketed yet (all Don't Know
             It so far): no Continue link exists and nothing said
             why. One line names the unlock. */}
-        {!isGutCheckComplete && categorizedCount > 0 && bucketedCount === 0 && (
+        {!isCompleteScoped && categorizedScoped > 0 && bucketedScoped === 0 && (
           <span className="text-[11px] font-semibold text-slate-300/90 bg-slate-950/60 rounded-full px-3 py-1 backdrop-blur-sm whitespace-nowrap">
             One song in a real bucket unlocks Refine — Don&apos;t Know It doesn&apos;t count
           </span>
@@ -715,6 +832,169 @@ export default function Step1Triage({
       </div>
       </>
       )}
+      </>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Pick your path (owner, Nov 14, 2026) — shown to a fresh
+ * sorter before the deck, and reopened from the path banner.
+ * Three scopes: the casual set, chosen albums, or all 206.
+ * Picking a path only scopes the deck; it writes nothing to
+ * the ranking itself, and re-picking never loses a sort.
+ */
+function SortPathPicker({
+  albumsGrouped,
+  initial,
+  onChoose,
+  onCancel,
+}: {
+  albumsGrouped: string[];
+  initial: SortPath | null;
+  onChoose: (path: SortPath) => void;
+  onCancel?: () => void;
+}) {
+  const [albumsOpen, setAlbumsOpen] = useState(
+    initial?.kind === 'albums'
+  );
+  const [chosenAlbums, setChosenAlbums] = useState<string[]>(
+    initial?.kind === 'albums' ? initial.albums : []
+  );
+  const albumSongCount = (name: string) =>
+    FULL_SONG_POOL.filter((x) => x.album === name).length;
+  const chosenSongTotal = chosenAlbums.reduce(
+    (n, name) => n + albumSongCount(name),
+    0
+  );
+  const toggleAlbum = (name: string) =>
+    setChosenAlbums((prev) =>
+      prev.includes(name)
+        ? prev.filter((a) => a !== name)
+        : [...prev, name]
+    );
+
+  const cardClass =
+    'w-full text-left bg-white border-[3px] border-[#0C1220] rounded-[18px] shadow-[4px_4px_0_rgba(11,30,63,0.85)] p-4 sm:p-5';
+
+  return (
+    <div className="space-y-4 pt-2">
+      {onCancel && (
+        <div className="flex items-center justify-start">
+          <button
+            onClick={onCancel}
+            className="flex cursor-pointer items-center gap-1 text-xs font-black text-[#3D4A63] transition-colors hover:text-[#0C1220]"
+          >
+            ← Keep my current path
+          </button>
+        </div>
+      )}
+      <div className="space-y-1.5 text-center">
+        <h1 className="text-3xl font-black tracking-tighter text-slate-950">
+          Pick your <span className="text-[#0072CE]">path</span>
+        </h1>
+        <p className="mx-auto max-w-sm text-sm font-bold leading-snug text-slate-500">
+          Start where you are. You can always do the rest later —
+          anything you sort stays sorted.
+        </p>
+      </div>
+
+      <button
+        onClick={() => onChoose({ kind: 'casual' })}
+        className={`${cardClass} cursor-pointer transition-transform hover:scale-[1.01]`}
+      >
+        <div className="flex items-start gap-3.5">
+          <span className="text-3xl leading-none">🎧</span>
+          <div className="min-w-0 flex-1">
+            <div className="text-lg font-black text-[#0C1220]">
+              I&apos;m a casual
+            </div>
+            <p className="text-sm font-bold leading-snug text-[#3D4A63]">
+              Just Blue, Pinkerton, and the hits.
+            </p>
+          </div>
+          <span className="shrink-0 rounded-full bg-[#E0F2FE] px-2.5 py-1 text-[11px] font-black text-[#0072CE]">
+            {CASUAL_SONG_IDS.size} songs
+          </span>
+        </div>
+      </button>
+
+      <div className={cardClass}>
+        <div className="flex items-start gap-3.5">
+          <span className="text-3xl leading-none">💿</span>
+          <div className="min-w-0 flex-1">
+            <div className="text-lg font-black text-[#0C1220]">
+              Album by album
+            </div>
+            <p className="text-sm font-bold leading-snug text-[#3D4A63]">
+              Pick an album, rank its songs. Add more whenever
+              you&apos;re ready.
+            </p>
+          </div>
+          {!albumsOpen && (
+            <button
+              onClick={() => setAlbumsOpen(true)}
+              className="shrink-0 cursor-pointer rounded-full bg-[#0C1220] px-3.5 py-1.5 text-[11px] font-black text-white"
+            >
+              Choose albums
+            </button>
+          )}
+        </div>
+        {albumsOpen && (
+          <div className="mt-4 space-y-1">
+            {albumsGrouped.map((name) => (
+              <label
+                key={name}
+                className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2 py-1.5 hover:bg-slate-50"
+              >
+                <input
+                  type="checkbox"
+                  checked={chosenAlbums.includes(name)}
+                  onChange={() => toggleAlbum(name)}
+                  className="h-4 w-4 shrink-0 cursor-pointer rounded border-slate-300 text-[#0072CE] focus:ring-[#0072CE]"
+                />
+                <span className="flex-1 text-sm font-bold text-[#0C1220]">
+                  {name}
+                </span>
+                <span className="text-[11px] font-black text-[#3D4A63]">
+                  {albumSongCount(name)} songs
+                </span>
+              </label>
+            ))}
+            <button
+              onClick={() =>
+                chosenAlbums.length > 0 &&
+                onChoose({ kind: 'albums', albums: chosenAlbums })
+              }
+              disabled={chosenAlbums.length === 0}
+              className="mt-3 w-full cursor-pointer rounded-xl bg-[#0072CE] py-3 text-sm font-black text-white transition-all hover:bg-blue-600 disabled:cursor-not-allowed disabled:bg-slate-300"
+            >
+              {chosenAlbums.length === 0
+                ? 'Pick at least one album'
+                : `Start with ${chosenAlbums.length} album${chosenAlbums.length === 1 ? '' : 's'} · ${chosenSongTotal} songs`}
+            </button>
+          </div>
+        )}
+      </div>
+
+      <button
+        onClick={() => onChoose({ kind: 'all' })}
+        className={`${cardClass} cursor-pointer transition-transform hover:scale-[1.01]`}
+      >
+        <div className="flex items-start gap-3.5">
+          <span className="text-3xl leading-none">🤘</span>
+          <div className="min-w-0 flex-1">
+            <div className="text-lg font-black text-[#0C1220]">All 206</div>
+            <p className="text-sm font-bold leading-snug text-[#3D4A63]">
+              The whole catalog. B-sides, deep cuts, all of it.
+            </p>
+          </div>
+          <span className="shrink-0 rounded-full bg-[#E0F2FE] px-2.5 py-1 text-[11px] font-black text-[#0072CE]">
+            206 songs
+          </span>
+        </div>
+      </button>
     </div>
   );
 }

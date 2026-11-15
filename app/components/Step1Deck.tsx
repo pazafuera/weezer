@@ -5,6 +5,7 @@ import { BucketType, BUCKET_CONFIG, FULL_SONG_POOL, Song } from '../data/constan
 import {
   countBucketedSongs,
   countCategorizedSongs,
+  isRealBucket,
   TriageValue,
 } from '../context/WeezerContext';
 import { trackAnalytics } from '../lib/analytics';
@@ -946,6 +947,7 @@ export default function Step1Deck({
   triageMap,
   orderedSongs,
   sections,
+  scoped,
   handleSetBucket,
   handleFinishTriage,
   isGuest,
@@ -958,6 +960,11 @@ export default function Step1Deck({
   triageMap: Record<string, TriageValue>;
   orderedSongs: Song[];
   sections: TriageSection[];
+  /** Sort-path scope (owner, Nov 14, 2026): when true,
+   *  orderedSongs IS the whole world — progress, completion,
+   *  and the milestone guard all run over it instead of the
+   *  full 206-song pool. Absent/false = the full catalog. */
+  scoped?: boolean;
   handleSetBucket: (id: string, bucket: TriageValue) => void;
   handleFinishTriage: () => void;
   /** A dashboard album tap's target section (Step1Triage holds
@@ -1181,9 +1188,13 @@ export default function Step1Deck({
     }
   }, []);
 
-  const categorizedCount = countCategorizedSongs(triageMap);
-  const bucketedCount = countBucketedSongs(triageMap);
-  const total = FULL_SONG_POOL.length;
+  const categorizedCount = scoped
+    ? orderedSongs.filter((x) => triageMap[x.id] !== undefined).length
+    : countCategorizedSongs(triageMap);
+  const bucketedCount = scoped
+    ? orderedSongs.filter((x) => isRealBucket(triageMap[x.id])).length
+    : countBucketedSongs(triageMap);
+  const total = scoped ? orderedSongs.length : FULL_SONG_POOL.length;
   const deckLength = orderedSongs.length;
   const progressPercent = Math.round((categorizedCount / total) * 100);
   const isComplete = categorizedCount === total;
@@ -1323,7 +1334,9 @@ export default function Step1Deck({
     // nothing fires retroactively. (Completing the LAST open
     // section lands on `total`, which shows the completion
     // card instead — milestones never fire there.)
-    const newCategorized = countCategorizedSongs(prospective);
+    const newCategorized = scoped
+      ? orderedSongs.filter((x) => prospective[x.id] !== undefined).length
+      : countCategorizedSongs(prospective);
     if (newCategorized < total) {
       const section = sections.find((s) =>
         s.songs.some((x) => x.id === song.id)
@@ -2595,7 +2608,7 @@ export default function Step1Deck({
                 All {total} songs sorted
               </h2>
               <p className="text-sm font-bold text-slate-500 leading-snug max-w-sm mx-auto">
-                206 songs. One very personal theory of Weezer. Time to
+                {total} songs. One very personal theory of Weezer. Time to
                 fine-tune your rankings.
               </p>
               {isGuest && <SaveProgressButton onClick={onCreateAccount} />}

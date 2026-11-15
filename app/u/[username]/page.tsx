@@ -472,6 +472,8 @@ export default function PublicProfilePage() {
       fullSample: fullTau.sampleSize,
       visitorTop20,
       targetTop20,
+      visitorAllRank: vAllRank,
+      targetAllRank: tAllRank,
       biggestFight,
       sharedFavorites: sharedFavorites.slice(0, 3),
       quip:
@@ -941,6 +943,8 @@ export default function PublicProfilePage() {
                 targetName={tFirst}
                 visitorTop={stats.visitorTop20}
                 targetTop={stats.targetTop20}
+                visitorAllRank={stats.visitorAllRank}
+                targetAllRank={stats.targetAllRank}
               />
             )}
 

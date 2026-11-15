@@ -11,9 +11,14 @@
  * right) joined by a bar. Bar length IS the disagreement;
  * bar color repeats the house language (small gap blue,
  * big gap rose, middle slate). Songs in only one Top 20
- * are listed as chips underneath. No measured layout, no
- * SVG — every row is self-contained, so it holds up on a
- * phone.
+ * are listed underneath. No measured layout, no SVG —
+ * every row is self-contained, so it holds up on a phone.
+ *
+ * Only-in lists (owner, Nov 14, 2026, later): vertical rows,
+ * not chips — and each row notes where the OTHER fan ranks
+ * the song on their full list (or that they didn't rank
+ * it). The chips wrapped long titles into pills and hid
+ * the interesting half: how far down the other fan has it.
  *
  * Ties and near-ties (owner screenshot, Nov 14, 2026,
  * Mark vs Abby): an exact tie collapses to ONE gold badge
@@ -45,11 +50,16 @@ export default function ConnectedTop20({
   targetName,
   visitorTop,
   targetTop,
+  visitorAllRank,
+  targetAllRank,
 }: {
   visitorName: string;
   targetName: string;
   visitorTop: Top20Entry[];
   targetTop: Top20Entry[];
+  /** Full-list rank by song id (bucketed songs only). */
+  visitorAllRank: Map<string, number>;
+  targetAllRank: Map<string, number>;
 }) {
   const targetById = new Map(targetTop.map((e) => [e.id, e]));
   const visitorById = new Map(visitorTop.map((e) => [e.id, e]));
@@ -153,38 +163,60 @@ export default function ConnectedTop20({
       </div>
 
       {(onlyVisitor.length > 0 || onlyTarget.length > 0) && (
-        <div className="mt-5 space-y-3">
+        <div className="mt-5 space-y-4">
           {onlyVisitor.length > 0 && (
             <div>
-              <div className="mb-1.5 text-[9px] font-black uppercase tracking-widest text-[#3D4A63]">
+              <div className="mb-1 text-[9px] font-black uppercase tracking-widest text-[#3D4A63]">
                 Only in {visitorName}&apos;s Top 20
               </div>
-              <div className="flex flex-wrap gap-1.5">
-                {onlyVisitor.map((e) => (
-                  <span
-                    key={e.id}
-                    className="rounded-full border border-[#0C1220]/25 bg-white/70 px-2 py-0.5 text-[11px] font-bold text-[#0C1220]"
-                  >
-                    #{e.rank} {e.title}
-                  </span>
-                ))}
+              <div>
+                {onlyVisitor.map((e) => {
+                  const other = targetAllRank.get(e.id);
+                  return (
+                    <div
+                      key={e.id}
+                      className="flex items-baseline gap-2 border-b border-[#0C1220]/10 py-[5px] last:border-b-0"
+                    >
+                      <span className="w-8 shrink-0 text-[12px] font-black text-[#0C1220]">
+                        #{e.rank}
+                      </span>
+                      <span className="min-w-0 flex-1 text-[13px] font-bold leading-snug text-[#0C1220]">
+                        {e.title}
+                      </span>
+                      <span className="shrink-0 text-[11px] font-bold text-[#3D4A63]">
+                        {targetName}: {other ? `#${other}` : 'not ranked'}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
           {onlyTarget.length > 0 && (
             <div>
-              <div className="mb-1.5 text-[9px] font-black uppercase tracking-widest text-[#3D4A63]">
+              <div className="mb-1 text-[9px] font-black uppercase tracking-widest text-[#3D4A63]">
                 Only in {targetName}&apos;s Top 20
               </div>
-              <div className="flex flex-wrap gap-1.5">
-                {onlyTarget.map((e) => (
-                  <span
-                    key={e.id}
-                    className="rounded-full border border-[#0C1220]/25 bg-white/70 px-2 py-0.5 text-[11px] font-bold text-[#0C1220]"
-                  >
-                    #{e.rank} {e.title}
-                  </span>
-                ))}
+              <div>
+                {onlyTarget.map((e) => {
+                  const other = visitorAllRank.get(e.id);
+                  return (
+                    <div
+                      key={e.id}
+                      className="flex items-baseline gap-2 border-b border-[#0C1220]/10 py-[5px] last:border-b-0"
+                    >
+                      <span className="w-8 shrink-0 text-[12px] font-black text-[#0C1220]">
+                        #{e.rank}
+                      </span>
+                      <span className="min-w-0 flex-1 text-[13px] font-bold leading-snug text-[#0C1220]">
+                        {e.title}
+                      </span>
+                      <span className="shrink-0 text-[11px] font-bold text-[#3D4A63]">
+                        {visitorName}: {other ? `#${other}` : 'not ranked'}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

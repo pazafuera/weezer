@@ -4,7 +4,8 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/utils/supabase';
 import ConnectedTop20 from '@/app/components/ConnectedTop20';
-import { Song, BucketType, ALBUM_NAME_TO_ID, BUCKET_CONFIG } from '@/app/data/constants';
+import { Song, BucketType, ALBUM_NAME_TO_ID, BUCKET_CONFIG, FULL_SONG_POOL } from '@/app/data/constants';
+import { refreshMasterListMetadata } from '@/app/lib/catalogMetadata';
 import { AlbumArtwork } from '@/app/components/SharedUI';
 import AppShell from '@/app/components/AppShell';
 import { displayFont, handFont } from '@/app/components/shareables/fonts';
@@ -281,7 +282,12 @@ export default function PublicProfilePage() {
 
       // 2. Target rankings arrive inside the same get_public_fan() payload.
       if (fan.master_list) {
-        setTargetMaster(fan.master_list);
+        // Heal stale catalog fields (title/album/year) frozen in the
+        // saved row — the same refresh the owner's own app state gets
+        // in WeezerContext. Without it, another fan's public page
+        // shows pre-correction titles forever (e.g. 'Summer Elaine
+        // and Dr. Pepper' for 'Summer Elaine and Drunk Dori').
+        setTargetMaster(refreshMasterListMetadata(fan.master_list, FULL_SONG_POOL));
         setTargetTriage(fan.triage_map || {});
       }
 
@@ -306,7 +312,7 @@ export default function PublicProfilePage() {
             .maybeSingle();
 
           if (vRanks?.master_list) {
-            setVisitorMaster(vRanks.master_list);
+            setVisitorMaster(refreshMasterListMetadata(vRanks.master_list, FULL_SONG_POOL));
             setVisitorTriage(vRanks.triage_map || {});
           }
         }

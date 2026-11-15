@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/utils/supabase';
 import { useWeezer } from '../context/WeezerContext';
 import { displayFont } from './shareables/fonts';
+import { FULL_SONG_POOL } from '../data/constants';
+import { refreshMasterListMetadata } from '../lib/catalogMetadata';
 
 interface FriendProfile {
   id: string;
@@ -87,9 +89,16 @@ export default function WeezerFriends() {
       const incomingList: FriendProfile[] = [];
 
       cards.forEach((c: any) => {
+        // Heal the saved list's catalog fields before reading the
+        // #1 title — saved rows freeze titles at save time and go
+        // stale when the catalog corrects one.
+        const healedList =
+          c.master_list && c.master_list.length > 0
+            ? refreshMasterListMetadata(c.master_list, FULL_SONG_POOL)
+            : c.master_list;
         const topSong =
-          c.master_list && c.master_list.length > 0 && c.master_list[0].title
-            ? c.master_list[0].title
+          healedList && healedList.length > 0 && healedList[0].title
+            ? healedList[0].title
             : 'Not ranked yet';
 
         if (c.status === 'accepted') {

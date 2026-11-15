@@ -1173,7 +1173,9 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
 
             data.forEach((row: { master_list: unknown; triage_map: unknown }) => {
               if (Array.isArray(row.master_list) && row.master_list.length > 0) {
-                cleanRankings.push(row.master_list);
+                cleanRankings.push(
+                  refreshMasterListMetadata(row.master_list as Song[], FULL_SONG_POOL)
+                );
               }
               if (row.triage_map && Object.keys(row.triage_map).length > 0) {
                 cleanTriageMaps.push(row.triage_map as Record<string, TriageValue>);

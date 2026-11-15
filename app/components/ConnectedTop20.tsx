@@ -198,8 +198,10 @@ export default function ConnectedTop20({
             .filter((sec) => sec.rows.length > 0)
             .map((sec) => (
               <div key={sec.ownerName + sec.otherName}>
-                <div className="mb-1 text-[9px] font-black uppercase tracking-widest text-[#3D4A63]">
-                  Only in {sec.ownerName}&apos;s Top 20
+                <div className="mb-1.5">
+                  <span className="inline-block border-b-4 border-[#FFC72C] pb-0.5 text-[13px] font-black uppercase tracking-wider text-[#0C1220]">
+                    Only in {sec.ownerName}&apos;s Top 20
+                  </span>
                 </div>
                 <div className="flex items-baseline gap-2 pb-1 text-[9px] font-black uppercase tracking-widest text-[#3D4A63]">
                   <span className="w-8 shrink-0">{sec.ownerName}</span>

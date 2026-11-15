@@ -895,8 +895,7 @@ function SortPathPicker({
           Pick your <span className="text-[#0072CE]">path</span>
         </h1>
         <p className="mx-auto max-w-sm text-sm font-bold leading-snug text-slate-500">
-          Start where you are. You can always do the rest later —
-          anything you sort stays sorted.
+          Start small or go big. The choice is yours.
         </p>
       </div>
 

@@ -20,6 +20,14 @@
  * it). The chips wrapped long titles into pills and hid
  * the interesting half: how far down the other fan has it.
  *
+ * Visual pass (owner, Nov 14, 2026, night): the other fan's
+ * name moves to a column header (it was repeated on every
+ * row), and their rank sits in a cell shaded by distance —
+ * how far their full-list rank sits from the owner's
+ * Top 20 rank. Heat ramp: close green, then yellow, orange,
+ * far rose. The number stays on the cell; the color is the
+ * at-a-glance read.
+ *
  * Ties and near-ties (owner screenshot, Nov 14, 2026,
  * Mark vs Abby): an exact tie collapses to ONE gold badge
  * — a perfect match reads at a glance. Near pairs spread
@@ -38,6 +46,15 @@ function barColor(gap: number): string {
   if (gap <= 4) return '#0072CE';
   if (gap >= 10) return '#F43F5E';
   return '#94A3B8';
+}
+
+/** Distance shading for the other fan's rank cell:
+ * |owner's Top 20 rank − other fan's full-list rank|. */
+function gapTint(gap: number): string {
+  if (gap <= 12) return '#BBF7D0';
+  if (gap <= 35) return '#FEF08A';
+  if (gap <= 70) return '#FED7AA';
+  return '#FDA4AF';
 }
 
 /** Rank 1..20 → percent along the track. */
@@ -164,62 +181,63 @@ export default function ConnectedTop20({
 
       {(onlyVisitor.length > 0 || onlyTarget.length > 0) && (
         <div className="mt-5 space-y-4">
-          {onlyVisitor.length > 0 && (
-            <div>
-              <div className="mb-1 text-[9px] font-black uppercase tracking-widest text-[#3D4A63]">
-                Only in {visitorName}&apos;s Top 20
+          {[
+            {
+              ownerName: visitorName,
+              otherName: targetName,
+              rows: onlyVisitor,
+              otherRank: targetAllRank,
+            },
+            {
+              ownerName: targetName,
+              otherName: visitorName,
+              rows: onlyTarget,
+              otherRank: visitorAllRank,
+            },
+          ]
+            .filter((sec) => sec.rows.length > 0)
+            .map((sec) => (
+              <div key={sec.ownerName + sec.otherName}>
+                <div className="mb-1 text-[9px] font-black uppercase tracking-widest text-[#3D4A63]">
+                  Only in {sec.ownerName}&apos;s Top 20
+                </div>
+                <div className="flex items-baseline gap-2 pb-1 text-[9px] font-black uppercase tracking-widest text-[#3D4A63]">
+                  <span className="w-8 shrink-0">{sec.ownerName}</span>
+                  <span className="min-w-0 flex-1" />
+                  <span className="w-[76px] shrink-0 text-center">{sec.otherName}</span>
+                </div>
+                <div>
+                  {sec.rows.map((e) => {
+                    const other = sec.otherRank.get(e.id);
+                    return (
+                      <div
+                        key={e.id}
+                        className="flex items-center gap-2 border-b border-[#0C1220]/10 py-[5px] last:border-b-0"
+                      >
+                        <span className="w-8 shrink-0 text-[12px] font-black text-[#0C1220]">
+                          #{e.rank}
+                        </span>
+                        <span className="min-w-0 flex-1 text-[13px] font-bold leading-snug text-[#0C1220]">
+                          {e.title}
+                        </span>
+                        {other ? (
+                          <span
+                            className="w-[76px] shrink-0 rounded-md py-[3px] text-center text-[12px] font-black text-[#0C1220]"
+                            style={{ backgroundColor: gapTint(Math.abs(e.rank - other)) }}
+                          >
+                            #{other}
+                          </span>
+                        ) : (
+                          <span className="w-[76px] shrink-0 text-center text-[10px] font-bold text-[#3D4A63]">
+                            not ranked
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-              <div>
-                {onlyVisitor.map((e) => {
-                  const other = targetAllRank.get(e.id);
-                  return (
-                    <div
-                      key={e.id}
-                      className="flex items-baseline gap-2 border-b border-[#0C1220]/10 py-[5px] last:border-b-0"
-                    >
-                      <span className="w-8 shrink-0 text-[12px] font-black text-[#0C1220]">
-                        #{e.rank}
-                      </span>
-                      <span className="min-w-0 flex-1 text-[13px] font-bold leading-snug text-[#0C1220]">
-                        {e.title}
-                      </span>
-                      <span className="shrink-0 text-[11px] font-bold text-[#3D4A63]">
-                        {targetName}: {other ? `#${other}` : 'not ranked'}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-          {onlyTarget.length > 0 && (
-            <div>
-              <div className="mb-1 text-[9px] font-black uppercase tracking-widest text-[#3D4A63]">
-                Only in {targetName}&apos;s Top 20
-              </div>
-              <div>
-                {onlyTarget.map((e) => {
-                  const other = visitorAllRank.get(e.id);
-                  return (
-                    <div
-                      key={e.id}
-                      className="flex items-baseline gap-2 border-b border-[#0C1220]/10 py-[5px] last:border-b-0"
-                    >
-                      <span className="w-8 shrink-0 text-[12px] font-black text-[#0C1220]">
-                        #{e.rank}
-                      </span>
-                      <span className="min-w-0 flex-1 text-[13px] font-bold leading-snug text-[#0C1220]">
-                        {e.title}
-                      </span>
-                      <span className="shrink-0 text-[11px] font-bold text-[#3D4A63]">
-                        {visitorName}: {other ? `#${other}` : 'not ranked'}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+            ))}
         </div>
       )}
     </div>

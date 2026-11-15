@@ -310,6 +310,56 @@ export default function SiteStats() {
             )}
           </div>
 
+          {payload.visitors && (
+            <div className={CARD_CLASS}>
+              <span className="text-[10px] font-black uppercase tracking-widest text-[#3D4A63] block">
+                Unique visitors
+              </span>
+              <div className="grid grid-cols-[1fr_repeat(3,64px)] items-baseline gap-x-2 border-b border-slate-200 pb-2 pt-2">
+                <span />
+                <span className="text-right text-[10px] font-black uppercase tracking-widest text-[#3D4A63]">
+                  Today
+                </span>
+                <span className="text-right text-[10px] font-black uppercase tracking-widest text-[#3D4A63]">
+                  7 days
+                </span>
+                <span className="text-right text-[10px] font-black uppercase tracking-widest text-[#3D4A63]">
+                  All time
+                </span>
+              </div>
+              <div className="grid grid-cols-[1fr_repeat(3,64px)] items-baseline gap-x-2 border-b border-slate-100 py-2">
+                <span className="text-sm font-bold text-[#0C1220]">Everyone</span>
+                <span className="text-right text-sm font-semibold text-[#3D4A63]">
+                  {payload.visitors.today}
+                </span>
+                <span className="text-right text-sm font-semibold text-[#3D4A63]">
+                  {payload.visitors.last7Days}
+                </span>
+                <span className="text-right text-sm font-black text-[#0C1220]">
+                  {payload.visitors.allTime}
+                </span>
+              </div>
+              <div className="grid grid-cols-[1fr_repeat(3,64px)] items-baseline gap-x-2 py-2">
+                <span className="text-sm font-bold text-[#0C1220]">Excluding you</span>
+                <span className="text-right text-sm font-semibold text-[#3D4A63]">
+                  {payload.visitors.todayExclOwner}
+                </span>
+                <span className="text-right text-sm font-semibold text-[#3D4A63]">
+                  {payload.visitors.last7DaysExclOwner}
+                </span>
+                <span className="text-right text-sm font-black text-[#0C1220]">
+                  {payload.visitors.allTimeExclOwner}
+                </span>
+              </div>
+              <p className="pt-2 text-xs font-medium leading-relaxed text-[#3D4A63]">
+                One count per browser, however many times it visits.
+                Counting started Nov 14 — earlier visits weren&apos;t
+                stamped. &ldquo;Excluding you&rdquo; removes your
+                signed-in visits; signed-out ones still count.
+              </p>
+            </div>
+          )}
+
           <div className={`${CARD_CLASS} space-y-2`}>
             <span className="text-[10px] font-black uppercase tracking-widest text-[#3D4A63] block">
               Shares by card

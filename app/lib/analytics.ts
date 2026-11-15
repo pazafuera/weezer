@@ -65,6 +65,40 @@ export interface AnalyticsRow {
   event: AnalyticsEventName;
   card: ShareCardType | null;
   user_id: string | null;
+  visitor_id: string | null;
+}
+
+const VISITOR_KEY = 'weezer-visitor-id';
+
+/**
+ * The unique-visitor stamp (Nov 14, 2026 — the owner's call:
+ * "I want unique"). A random id generated once per browser
+ * and kept in localStorage, stamped on every event so the
+ * stats RPC can count distinct visitors. Deliberately NOT a
+ * cookie and NOT a fingerprint: it identifies a browser, not
+ * a person — the same human on two devices is two visitors,
+ * and clearing site data mints a new one. Any storage failure
+ * (private mode, blocked storage) yields null, and the event
+ * simply doesn't count toward uniques.
+ */
+export function getVisitorId(): string | null {
+  try {
+    if (typeof localStorage === 'undefined') return null;
+    const existing = localStorage.getItem(VISITOR_KEY);
+    if (existing) return existing;
+    const fresh =
+      typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+            const r = (Math.random() * 16) | 0;
+            const v = c === 'x' ? r : (r & 0x3) | 0x8;
+            return v.toString(16);
+          });
+    localStorage.setItem(VISITOR_KEY, fresh);
+    return fresh;
+  } catch {
+    return null;
+  }
 }
 
 const EVENT_NAMES: ReadonlySet<string> = new Set([
@@ -105,7 +139,12 @@ export function shapeAnalyticsRow(
     name === 'share_initiated' && opts?.card && CARD_TYPES.has(opts.card)
       ? (opts.card as ShareCardType)
       : null;
-  return { event: name, card, user_id: opts?.userId ?? null };
+  return {
+    event: name,
+    card,
+    user_id: opts?.userId ?? null,
+    visitor_id: getVisitorId(),
+  };
 }
 
 /**

@@ -36,10 +36,51 @@ export interface EventCounts {
   allTime: number;
 }
 
+/**
+ * The unique-visitor block (Nov 14, 2026 migration): distinct
+ * visitor_id counts over session_start rows, with an
+ * excluding-the-owner twin for each window — his signed-in
+ * testing doesn't inflate the number he reads. Optional in
+ * the payload: until the owner runs that migration the RPC
+ * doesn't send it, and the page simply doesn't show the card.
+ */
+export interface VisitorCounts {
+  today: number;
+  last7Days: number;
+  allTime: number;
+  todayExclOwner: number;
+  last7DaysExclOwner: number;
+  allTimeExclOwner: number;
+}
+
 export interface EventStatsPayload {
   byEvent: Record<string, EventCounts>;
   sharesByCard: { card: string; count: number }[];
   generatedAt: string;
+  visitors: VisitorCounts | null;
+}
+
+function parseVisitors(v: unknown): VisitorCounts | null {
+  if (!v || typeof v !== 'object') return null;
+  const c = v as Record<string, unknown>;
+  if (
+    !isNum(c.today) ||
+    !isNum(c.last_7_days) ||
+    !isNum(c.all_time) ||
+    !isNum(c.today_excl_owner) ||
+    !isNum(c.last_7_days_excl_owner) ||
+    !isNum(c.all_time_excl_owner)
+  ) {
+    return null;
+  }
+  return {
+    today: c.today,
+    last7Days: c.last_7_days,
+    allTime: c.all_time,
+    todayExclOwner: c.today_excl_owner,
+    last7DaysExclOwner: c.last_7_days_excl_owner,
+    allTimeExclOwner: c.all_time_excl_owner,
+  };
 }
 
 /**
@@ -109,5 +150,10 @@ export function parseEventStatsPayload(
     sharesByCard.push({ card: entry.card, count: entry.count });
   }
 
-  return { byEvent, sharesByCard, generatedAt: d.generated_at };
+  return {
+    byEvent,
+    sharesByCard,
+    generatedAt: d.generated_at,
+    visitors: parseVisitors(d.visitors),
+  };
 }

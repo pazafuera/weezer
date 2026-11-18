@@ -2078,7 +2078,7 @@ function AlbumTrackCards({
         </p>
       </div>
 
-      <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory px-2 pb-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] items-start">
+      <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory px-2 pb-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] items-stretch">
         {rankedAlbums.map((album, albumIdx) => {
           const tracks = tracksByAlbum.get(album.id) ?? [];
           // Albums the fan barely touched (a single or two from
@@ -2091,7 +2091,7 @@ function AlbumTrackCards({
           return (
             <div
               key={album.id}
-              className="w-[85vw] sm:w-[320px] shrink-0 snap-start bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-xl"
+              className="w-[85vw] sm:w-[320px] h-[480px] shrink-0 snap-start bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-xl flex flex-col"
             >
               <div
                 className="px-5 py-4"
@@ -2108,7 +2108,7 @@ function AlbumTrackCards({
                 ) : null}
               </div>
 
-              <div className="p-4 space-y-2">
+              <div className="p-4 space-y-2 flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                 {tracks.map((song, trackIdx) => {
                   const bucket = triageMap[song.id];
                   const rank = rankById.get(song.id);

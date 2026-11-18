@@ -14,6 +14,7 @@ import {
   FULL_SONG_POOL,
   ALBUMS_BY_ID,
   ALBUM_NAME_TO_ID,
+  BUCKET_CONFIG,
   getAlbumThemeByName,
 } from '../data/constants';
 import { FlyingWIcon, AlbumArtwork, SHARE_BUTTON_CLASS } from './SharedUI';
@@ -245,7 +246,7 @@ export default function Step4Wrapped({
   ) => void;
   globalConsensus?: string[];
 }) {
-  const { userProfile, friendCards } = useWeezer();
+  const { userProfile, friendCards, lowerRankOptIns } = useWeezer();
 
   // RATED count for the thin-Thread note below: real buckets only —
   // a "Don't Know It" mark is not a rating and doesn't feed the Thread.
@@ -1975,6 +1976,15 @@ export default function Step4Wrapped({
           </div>
         </div>
 
+        {/* ALBUM BY ALBUM — one card per album: every track in
+            the band's order, with the fan's own ranking beside it. */}
+        <AlbumTrackCards
+          masterList={masterList}
+          triageMap={triageMap}
+          rankedAlbums={stats.rankedAlbums}
+          lowerRankOptIns={lowerRankOptIns}
+        />
+
         {/* FANHOOD STOP — the depth game's verdict (or its
             invitation), sitting with the share module and the
             asset library it feeds. */}
@@ -2009,6 +2019,145 @@ export default function Step4Wrapped({
           />
         </div>
       </main>
+    </div>
+  );
+}
+
+
+/**
+ * ALBUM BY ALBUM — a horizontal scroller of album cards for the
+ * Sweater Thread (Mark, Nov 17, 2026). One card per album the fan
+ * has rated, in the fan's own album order (the Top Albums order).
+ * Tracks stay in the band's track order — the fan's global rank
+ * rides beside each one. Rank numbers follow the standing rule:
+ * Bangers/Slaps always carry numbers; a lower bucket carries one
+ * only when the fan opted into ranking it (device-local opt-ins),
+ * otherwise its bucket emoji stands in. Unrated tracks say so.
+ */
+function AlbumTrackCards({
+  masterList,
+  triageMap,
+  rankedAlbums,
+  lowerRankOptIns,
+}: {
+  masterList: Song[];
+  triageMap: Record<string, TriageValue>;
+  rankedAlbums: { id: string; name: string; count: number }[];
+  lowerRankOptIns: BucketType[];
+}) {
+  const rankById = useMemo(() => {
+    const m = new Map<string, number>();
+    masterList.forEach((song, i) => m.set(song.id, i + 1));
+    return m;
+  }, [masterList]);
+
+  const tracksByAlbum = useMemo(() => {
+    const m = new Map<string, Song[]>();
+    FULL_SONG_POOL.forEach((song) => {
+      const id = song.albumId || ALBUM_NAME_TO_ID[song.album] || 'unknown';
+      const list = m.get(id);
+      if (list) list.push(song);
+      else m.set(id, [song]);
+    });
+    return m;
+  }, []);
+
+  if (rankedAlbums.length === 0) return null;
+
+  return (
+    <div>
+      <div className="mb-4 px-2">
+        <h3
+          className={`${displayFont.className} text-2xl sm:text-3xl leading-tight tracking-wide text-[#0C1220]`}
+        >
+          Album by Album
+        </h3>
+        <p className="text-xs font-bold text-slate-500 mt-1">
+          Every track in the order the band put them — your ranking
+          beside each one.
+        </p>
+      </div>
+
+      <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory px-2 pb-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] items-start">
+        {rankedAlbums.map((album, albumIdx) => {
+          const tracks = tracksByAlbum.get(album.id) ?? [];
+          // Albums the fan barely touched (a single or two from
+          // the casual path) don't earn a card — the scroller is
+          // for albums they actually engaged with. The header
+          // number stays the album's true Top Albums position.
+          if (tracks.length === 0 || album.count < 3) return null;
+          const theme = getAlbumThemeByName(album.name);
+          const year = ALBUMS_BY_ID[album.id]?.year;
+          return (
+            <div
+              key={album.id}
+              className="w-[85vw] sm:w-[320px] shrink-0 snap-start bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-xl"
+            >
+              <div
+                className="px-5 py-4"
+                style={{ backgroundColor: theme.bg, color: theme.text }}
+              >
+                <div className="text-[10px] font-black uppercase tracking-widest opacity-80">
+                  Your #{albumIdx + 1} album
+                </div>
+                <div className="text-lg font-black leading-tight">
+                  {album.name}
+                </div>
+                {year ? (
+                  <div className="text-xs font-bold opacity-80">{year}</div>
+                ) : null}
+              </div>
+
+              <div className="p-4 space-y-2">
+                {tracks.map((song, trackIdx) => {
+                  const bucket = triageMap[song.id];
+                  const rank = rankById.get(song.id);
+                  const ranked =
+                    bucket === 'banger' ||
+                    bucket === 'slaps' ||
+                    (bucket !== undefined &&
+                      isRealBucket(bucket) &&
+                      lowerRankOptIns.includes(bucket));
+                  return (
+                    <div key={song.id} className="flex items-center gap-2.5">
+                      <span className="text-[11px] font-bold text-slate-500 w-5 text-right shrink-0">
+                        {trackIdx + 1}
+                      </span>
+                      <span
+                        className={`flex-1 min-w-0 text-[13px] font-semibold leading-snug ${
+                          bucket ? 'text-white' : 'text-slate-500'
+                        }`}
+                      >
+                        {song.title}
+                      </span>
+                      {bucket === 'unknown' ? (
+                        <span className="text-[10px] font-bold text-slate-500 shrink-0">
+                          don&rsquo;t know it
+                        </span>
+                      ) : ranked && rank !== undefined ? (
+                        <span className="shrink-0 inline-flex items-center justify-center min-w-9 h-6 px-1.5 rounded-md bg-[#0072CE] text-white text-[11px] font-black">
+                          #{rank}
+                        </span>
+                      ) : bucket && isRealBucket(bucket) ? (
+                        <span
+                          className="shrink-0 text-base leading-none"
+                          title={BUCKET_CONFIG[bucket].label}
+                        >
+                          {BUCKET_CONFIG[bucket].emoji}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-bold text-slate-600 shrink-0">
+                          not sorted
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

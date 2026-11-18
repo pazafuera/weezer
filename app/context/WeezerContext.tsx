@@ -24,6 +24,7 @@ import {
 import type { SaveDiagnosticEvent } from '../lib/saveDiagnostics';
 import {
   loadLowerRankOptIns,
+  parseLowerRankOptIns,
   saveLowerRankOptIns,
   withLowerRankOptIn,
 } from '../lib/lowerRank';
@@ -837,13 +838,83 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
   // empty and load from localStorage on mount, so the first
   // render never disagrees with the server-rendered shell.
   const [lowerRankOptIns, setLowerRankOptIns] = useState<BucketType[]>([]);
-  useEffect(() => {
-    setLowerRankOptIns(loadLowerRankOptIns());
-  }, []);
-  const setLowerRankOptIn = (bucket: BucketType, on: boolean) => {
-    const next = withLowerRankOptIn(lowerRankOptIns, bucket, on);
+  // DB sync for the opt-ins (Nov 17, 2026): the account row
+  // (weezer_rankings.lower_rank_opt_ins) is the durable home, so
+  // the flag follows the fan across devices and domains;
+  // localStorage stays as the device cache and the seed source.
+  // DB mode turns on only after a probe select of the column
+  // succeeds, so a build shipped before the column exists behaves
+  // exactly like the legacy localStorage-only build — ranking
+  // saves never touch a column that isn't there.
+  const lowerRankOptInsRef = useRef<BucketType[]>([]);
+  const optInsDbReadyRef = useRef(false);
+  const applyLowerRankOptIns = (next: BucketType[]) => {
+    lowerRankOptInsRef.current = next;
     setLowerRankOptIns(next);
     saveLowerRankOptIns(next);
+  };
+  useEffect(() => {
+    const local = loadLowerRankOptIns();
+    lowerRankOptInsRef.current = local;
+    setLowerRankOptIns(local);
+  }, []);
+  // Once the signed-in user is known, reconcile with the DB row:
+  // a non-empty DB value wins; an empty one is seeded once from
+  // the device copy (the only record of the fan's choice today).
+  useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from('weezer_rankings')
+        .select('lower_rank_opt_ins')
+        .eq('user_id', userId)
+        .maybeSingle();
+      if (cancelled || error) return; // column missing → legacy mode
+      optInsDbReadyRef.current = true;
+      const dbList = parseLowerRankOptIns(
+        JSON.stringify(
+          (data as { lower_rank_opt_ins?: unknown } | null)
+            ?.lower_rank_opt_ins ?? []
+        )
+      );
+      if (dbList.length > 0) {
+        applyLowerRankOptIns(dbList);
+        return;
+      }
+      const local = lowerRankOptInsRef.current;
+      const SEED_KEY = 'weezer-optins-db-seeded';
+      let seededFor: string | null = null;
+      try {
+        seededFor = window.localStorage.getItem(SEED_KEY);
+      } catch {
+        /* storage unavailable — treat as unseeded */
+      }
+      if (local.length > 0 && seededFor !== userId) {
+        try {
+          window.localStorage.setItem(SEED_KEY, userId);
+        } catch {
+          /* ignore — the rankings save below still carries it */
+        }
+        await supabase
+          .from('weezer_rankings')
+          .update({ lower_rank_opt_ins: local })
+          .eq('user_id', userId);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+  const setLowerRankOptIn = (bucket: BucketType, on: boolean) => {
+    const next = withLowerRankOptIn(lowerRankOptInsRef.current, bucket, on);
+    applyLowerRankOptIns(next);
+    if (optInsDbReadyRef.current && userId) {
+      void supabase
+        .from('weezer_rankings')
+        .update({ lower_rank_opt_ins: next })
+        .eq('user_id', userId);
+    }
   };
   const [autoStartMatchups, setAutoStartMatchups] = useState(false);
   const [refineOpenTools, setRefineOpenTools] = useState(false);
@@ -1946,6 +2017,12 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
       triage_map: payload.map,
       master_list: payload.master,
       updated_at: new Date().toISOString(),
+      // Only once the column is known to exist (probe above) —
+      // an upsert naming a missing column would fail the whole
+      // rankings save.
+      ...(optInsDbReadyRef.current
+        ? { lower_rank_opt_ins: lowerRankOptInsRef.current }
+        : {}),
     };
     if (opts.keepalive) {
       // The page is going away (hide/pagehide): write through a

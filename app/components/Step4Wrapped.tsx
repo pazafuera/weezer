@@ -2094,18 +2094,26 @@ function AlbumTrackCards({
               className="w-[85vw] sm:w-[320px] h-[480px] shrink-0 snap-start bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-xl flex flex-col"
             >
               <div
-                className="px-5 py-4"
+                className="px-5 py-4 flex items-start justify-between gap-3"
                 style={{ backgroundColor: theme.bg, color: theme.text }}
               >
-                <div className="text-[10px] font-black uppercase tracking-widest opacity-80">
-                  Your #{albumIdx + 1} album
+                <div className="min-w-0">
+                  <div className="text-[10px] font-black uppercase tracking-widest">
+                    Your #{albumIdx + 1} album
+                  </div>
+                  <div className="text-lg font-black leading-tight">
+                    {album.name}
+                  </div>
+                  {year ? (
+                    <div className="text-xs font-bold">{year}</div>
+                  ) : null}
                 </div>
-                <div className="text-lg font-black leading-tight">
-                  {album.name}
+                <div className="w-14 h-14 rounded-lg overflow-hidden relative shrink-0 shadow-md border border-black/10">
+                  <AlbumArtwork
+                    albumId={album.id}
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
                 </div>
-                {year ? (
-                  <div className="text-xs font-bold opacity-80">{year}</div>
-                ) : null}
               </div>
 
               <div className="p-4 space-y-2 flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">

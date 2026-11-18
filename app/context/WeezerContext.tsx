@@ -2298,7 +2298,7 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     const derived = getDerivedBucketRanks(newMap, masterList);
     updateAndSyncBucketRanks(derived, newMap);
 
-    alert('Magic Fill Complete! 206 songs bucketed.');
+    alert(`Magic Fill Complete! ${FULL_SONG_POOL.length} songs bucketed.`);
   };
 
   const moveMasterSong = (index: number, direction: 'up' | 'down') => {

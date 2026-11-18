@@ -726,7 +726,7 @@ export default function FanStats({
             Weezerverse
           </h1>
           <p className="text-base font-semibold text-[#3D4A63] max-w-sm mx-auto leading-relaxed">
-            Here&apos;s how the fans ranked all 206 songs — and where they&apos;re ranking from.
+            Here&apos;s how the fans ranked all {FULL_SONG_POOL.length} songs — and where they&apos;re ranking from.
           </p>
         </div>
 

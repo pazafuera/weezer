@@ -85,7 +85,7 @@ export async function GET() {
               display: 'flex',
             }}
           >
-            Rank all 206 Weezer songs — and see if you can get back to the shack.
+            Rank all 218 Weezer songs — and see if you can get back to the shack.
           </div>
 
           {/* Footer */}

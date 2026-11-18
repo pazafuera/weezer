@@ -29,7 +29,7 @@ export default function StepDashboard() {
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
 
   // Metrics
-  const totalSongs = FULL_SONG_POOL.length; // 206
+  const totalSongs = FULL_SONG_POOL.length;
   const triageSortedCount = Object.keys(triageMap).length;
   const triagePct = Math.round((triageSortedCount / totalSongs) * 100);
   const progress = getProgressState(triageMap, masterList); const isTriageComplete = progress.isTriageComplete;
@@ -108,7 +108,7 @@ export default function StepDashboard() {
       id: 'triage',
       title: 'The Gut Check',
       desc: isTriageComplete
-        ? 'All 206 songs sorted'
+        ? `All ${totalSongs} songs sorted`
         : `${triageSortedCount}/${totalSongs} sorted`,
       isComplete: isTriageComplete,
       isCurrent: !isTriageComplete,
@@ -632,10 +632,10 @@ export default function StepDashboard() {
             </div>
             <div className="space-y-1">
               <h2 className="text-xl sm:text-2xl font-black tracking-tight leading-tight">
-                Ready to Build Your 1–206 Master Ranking?
+                Ready to Build Your 1–{totalSongs} Master Ranking?
               </h2>
               <p className="text-xs sm:text-sm text-blue-100 font-medium leading-relaxed">
-                You&apos;ve bucketed all 206 songs! Run quick head-to-head matchups to fine-tune your definitive Weezer canon.
+                You&apos;ve bucketed all {totalSongs} songs! Run quick head-to-head matchups to fine-tune your definitive Weezer canon.
               </p>
             </div>
             <button

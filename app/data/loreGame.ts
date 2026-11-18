@@ -2284,7 +2284,7 @@ export const OPEN_PROMPTS: OpenPrompt[] = [
     prompt: 'Name a Weezer song with a color in the title.',
     songs: true,
     loreLine:
-      'Just three color titles in the whole 206-song catalog — and two of them are blue.',
+      'Just three color titles in the whole 218-song catalog — and two of them are blue.',
     answers: [
       { text: 'Pink Triangle', depth: 173 },
       { text: 'Blue Dream', depth: 425 },

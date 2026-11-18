@@ -984,13 +984,13 @@ function SortPathPicker({
         <div className="flex items-start gap-3.5">
           <span className="text-3xl leading-none">🤘</span>
           <div className="min-w-0 flex-1">
-            <div className="text-lg font-black text-[#0C1220]">All 206</div>
+            <div className="text-lg font-black text-[#0C1220]">All {FULL_SONG_POOL.length}</div>
             <p className="text-sm font-bold leading-snug text-[#3D4A63]">
               The whole catalog. B-sides, deep cuts, all of it.
             </p>
           </div>
           <span className="shrink-0 rounded-full bg-[#E0F2FE] px-2.5 py-1 text-[11px] font-black text-[#0072CE]">
-            206 songs
+            {FULL_SONG_POOL.length} songs
           </span>
         </div>
       </button>

@@ -172,6 +172,12 @@ export const CURATED_SONG_ALIASES: Readonly<Record<string, readonly string[]>> =
   // "Summer Elaine and Drunk Dori" (White Album) — either girl's
   // name is how fans name it.
   wh_7: ['drunk dori', 'summer elaine'],
+  // The Futurescope Trilogy parts (EWBAITE) — fans drop the
+  // roman-numeral prefixes, and Part III's Ithaka is the Greek
+  // spelling; fans type the English "Ithaca" (Mark, Nov 17).
+  ew_11: ['the waste land'],
+  ew_12: ['anonymous'],
+  ew_13: ['return to ithaka', 'return to ithaca', 'ithaka', 'ithaca'],
 };
 
 /**

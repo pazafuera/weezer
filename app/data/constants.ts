@@ -1707,7 +1707,17 @@ export const BSIDE_ORIGIN_ALBUM: Record<string, string> = {
 export function getAlbumThemeByName(
   album: string
 ): { bg: string; text: string } {
-  return ALBUM_COLORS[album] ?? DEFAULT_ALBUM_THEME;
+  // The palette keys follow the songs' album strings ('Green
+  // Album'), while the registry's formal names carry the article
+  // ('The Green Album') — six albums silently fell back to the
+  // default slate for registry-name callers (Nov 17, 2026).
+  // Try the exact name, then with the article stripped/added.
+  return (
+    ALBUM_COLORS[album] ??
+    ALBUM_COLORS[album.replace(/^The /, '')] ??
+    ALBUM_COLORS[`The ${album}`] ??
+    DEFAULT_ALBUM_THEME
+  );
 }
 
 /**

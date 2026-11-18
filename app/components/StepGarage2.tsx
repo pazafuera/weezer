@@ -754,7 +754,7 @@ const SHARE_TILES: {
   },
   {
     title: 'Tier List',
-    line: 'All 206, tier by tier.',
+    line: `All ${FULL_SONG_POOL.length}, tier by tier.`,
     tileClass: 'bg-white hover:bg-slate-50',
     titleClass: 'text-slate-950',
     lineClass: 'text-slate-500',
@@ -1060,7 +1060,7 @@ function DestinationsGrid() {
   const tiles: { label: string; caption: string; action: () => void }[] = [
     {
       label: 'Sort',
-      caption: 'Bucket all 206',
+      caption: `Bucket all ${FULL_SONG_POOL.length}`,
       action: () => navigateTo('triage'),
     },
     {
@@ -1070,7 +1070,7 @@ function DestinationsGrid() {
     },
     {
       label: 'My Rankings',
-      caption: 'Your 1–206 list',
+      caption: `Your 1–${FULL_SONG_POOL.length} list`,
       action: () => navigateTo('final'),
     },
     {

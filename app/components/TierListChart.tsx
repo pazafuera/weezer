@@ -2,7 +2,7 @@
 
 import React, { useRef, useState, useMemo } from 'react';
 import { toPng } from 'html-to-image';
-import { ALBUM_NAME_TO_ID, BucketType, getAlbumTheme, getAlbumThemeByName } from '../data/constants';
+import { ALBUM_NAME_TO_ID, BucketType, FULL_SONG_POOL, getAlbumTheme, getAlbumThemeByName } from '../data/constants';
 import { cardFromExportFilename, trackAnalytics } from '../lib/analytics';
 import { albumTierLabel } from '../lib/albumTiers';
 import { AlbumArtwork, SHARE_BUTTON_CLASS } from './SharedUI';
@@ -59,7 +59,7 @@ const SONG_TIERS = [
   { label: 'A', color: 'bg-[#FFBF7F]', text: 'text-orange-950', max: 35 },
   { label: 'B', color: 'bg-[#FFFF7F]', text: 'text-yellow-950', max: 80 },
   { label: 'C', color: 'bg-[#7FFF7F]', text: 'text-green-950', max: 130 },
-  { label: 'F', color: 'bg-[#BF7FFF]', text: 'text-purple-950', max: 206 },
+  { label: 'F', color: 'bg-[#BF7FFF]', text: 'text-purple-950', max: FULL_SONG_POOL.length },
 ];
 
 // Album tiers (same five rows). Membership is NOT read off these
@@ -644,11 +644,11 @@ export default function TierListChart({
     viewMode === 'albums' ? 'MY WEEZER ALBUM TIERS' : 'MY WEEZER SONG TIERS';
   const posterSubhead =
     viewMode === 'albums'
-      ? rankedSongs.length >= 206
-        ? 'from my ranking of all 206 songs'
+      ? rankedSongs.length >= FULL_SONG_POOL.length
+        ? `from my ranking of all ${FULL_SONG_POOL.length} songs`
         : 'from my song rankings'
-      : rankedSongs.length >= 206
-        ? 'all 206 songs, ranked'
+      : rankedSongs.length >= FULL_SONG_POOL.length
+        ? `all ${FULL_SONG_POOL.length} songs, ranked`
         : `${rankedSongs.length} songs, ranked`;
 
   /* The poster header and footer, shared by the on-screen gallery

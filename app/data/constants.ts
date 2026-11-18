@@ -185,6 +185,13 @@ export const B_SIDES_CANON: Song[] = [
     year: 2016,
     isBSide: true,
   },
+  {
+    id: 'bs_19',
+    title: 'Represent',
+    album: 'B-Sides & Rarities',
+    year: 2010,
+    isBSide: true,
+  },
 ];
 
 export const WEEZER_CANON: Song[] = [
@@ -714,6 +721,73 @@ export const WEEZER_CANON: Song[] = [
     year: 2010,
   },
 
+  // Death to False Metal (2010)
+  {
+    id: 'dtfm_1',
+    title: 'Turning Up the Radio',
+    album: 'Death to False Metal',
+    year: 2010,
+  },
+  {
+    id: 'dtfm_2',
+    title: "I Don't Want Your Loving",
+    album: 'Death to False Metal',
+    year: 2010,
+  },
+  {
+    id: 'dtfm_3',
+    title: "Blowin' My Stack",
+    album: 'Death to False Metal',
+    year: 2010,
+  },
+  {
+    id: 'dtfm_4',
+    title: 'Losing My Mind',
+    album: 'Death to False Metal',
+    year: 2010,
+  },
+  {
+    id: 'dtfm_5',
+    title: 'Everyone',
+    album: 'Death to False Metal',
+    year: 2010,
+  },
+  {
+    id: 'dtfm_6',
+    title: "I'm a Robot",
+    album: 'Death to False Metal',
+    year: 2010,
+  },
+  {
+    id: 'dtfm_7',
+    title: 'Trampoline',
+    album: 'Death to False Metal',
+    year: 2010,
+  },
+  {
+    id: 'dtfm_8',
+    title: 'The Odd Couple',
+    album: 'Death to False Metal',
+    year: 2010,
+  },
+  {
+    id: 'dtfm_9',
+    title: 'Autopilot',
+    album: 'Death to False Metal',
+    year: 2010,
+  },
+  {
+    id: 'dtfm_10',
+    title: 'Yellow Camaro',
+    album: 'Death to False Metal',
+    year: 2010,
+  },
+  {
+    id: 'dtfm_11',
+    title: 'Outta Here',
+    album: 'Death to False Metal',
+    year: 2010,
+  },
   // Everything Will Be Alright in the End (2014)
   {
     id: 'ew_1',
@@ -1566,8 +1640,10 @@ export const ALBUMS_BY_ID: Record<
  * olive) used wherever the collection shows as one album; its
  * SONGS never resolve here — getAlbumTheme routes them to
  * their origin albums via BSIDE_ORIGIN_ALBUM below.
- * Death to False Metal and the Teal Album hold no songs in the
- * catalog and are deliberately absent (the proposal's call);
+ * The Teal Album holds no songs in the catalog and is
+ * deliberately absent (the proposal's call); Death to False
+ * Metal joined the catalog Nov 2026 and takes its cover's
+ * deep slate-plum;
  * unmapped names fall back to DEFAULT_ALBUM_THEME.
  */
 export const ALBUM_COLORS: Record<string, { bg: string; text: string }> = {
@@ -1579,6 +1655,7 @@ export const ALBUM_COLORS: Record<string, { bg: string; text: string }> = {
   'Red Album': { bg: '#D92338', text: '#fff' },
   'Raditude': { bg: '#6E4218', text: '#fff' },
   'Hurley': { bg: '#A05E33', text: '#fff' },
+  'Death to False Metal': { bg: '#64575F', text: '#fff' },
   'EWBAITE': { bg: '#D18D60', text: '#000' },
   'Everything Will Be Alright in the End': { bg: '#D18D60', text: '#000' },
   'White Album': { bg: '#F2F2EF', text: '#000' },
@@ -1623,6 +1700,7 @@ export const BSIDE_ORIGIN_ALBUM: Record<string, string> = {
   bs_16: 'Pinkerton',
   bs_17: 'Raditude',
   bs_18: 'White Album',
+  bs_19: 'Hurley',
 };
 
 /** Album-level theme: one album name → its palette entry. */

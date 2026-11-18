@@ -96,7 +96,7 @@ export default function Step0Splash() {
           <div>
             <h3 className="text-xs font-black text-[#0C1220] leading-tight">Build Your Personal Rankings</h3>
             <p className="text-[12px] font-medium text-[#3D4A63] mt-0.5 leading-snug">
-              Rank 206 canon album songs from Blue through Gold.
+              Rank 218 canon album songs from Blue through Gold.
             </p>
           </div>
         </div>

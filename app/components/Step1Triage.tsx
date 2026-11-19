@@ -900,25 +900,22 @@ function SortPathPicker({
       </div>
 
       <button
-        onClick={() => onChoose({ kind: 'casual' })}
+        onClick={() => onChoose({ kind: 'all' })}
         className={`${cardClass} cursor-pointer transition-transform hover:scale-[1.01]`}
       >
         <div className="flex items-start gap-3.5">
-          <span className="text-3xl leading-none">🎧</span>
+          <span className="text-3xl leading-none">🤘</span>
           <div className="min-w-0 flex-1">
-            <div className="text-lg font-black text-[#0C1220]">
-              I&apos;m a casual
-            </div>
+            <div className="text-lg font-black text-[#0C1220]">All {FULL_SONG_POOL.length}</div>
             <p className="text-sm font-bold leading-snug text-[#3D4A63]">
-              Just Blue, Pinkerton, and the hits.
+              The whole catalog. B-sides, deep cuts, all of it.
             </p>
           </div>
           <span className="shrink-0 rounded-full bg-[#E0F2FE] px-2.5 py-1 text-[11px] font-black text-[#0072CE]">
-            {CASUAL_SONG_IDS.size} songs
+            {FULL_SONG_POOL.length} songs
           </span>
         </div>
       </button>
-
       <div className={cardClass}>
         <div className="flex items-start gap-3.5">
           <span className="text-3xl leading-none">💿</span>
@@ -978,22 +975,25 @@ function SortPathPicker({
       </div>
 
       <button
-        onClick={() => onChoose({ kind: 'all' })}
+        onClick={() => onChoose({ kind: 'casual' })}
         className={`${cardClass} cursor-pointer transition-transform hover:scale-[1.01]`}
       >
         <div className="flex items-start gap-3.5">
-          <span className="text-3xl leading-none">🤘</span>
+          <span className="text-3xl leading-none">🎧</span>
           <div className="min-w-0 flex-1">
-            <div className="text-lg font-black text-[#0C1220]">All {FULL_SONG_POOL.length}</div>
+            <div className="text-lg font-black text-[#0C1220]">
+              I&apos;m a casual
+            </div>
             <p className="text-sm font-bold leading-snug text-[#3D4A63]">
-              The whole catalog. B-sides, deep cuts, all of it.
+              Just Blue, Pinkerton, and the hits.
             </p>
           </div>
           <span className="shrink-0 rounded-full bg-[#E0F2FE] px-2.5 py-1 text-[11px] font-black text-[#0072CE]">
-            {FULL_SONG_POOL.length} songs
+            {CASUAL_SONG_IDS.size} songs
           </span>
         </div>
       </button>
+
     </div>
   );
 }

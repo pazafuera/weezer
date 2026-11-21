@@ -34,6 +34,17 @@ import {
   setAnalyticsUserId,
   trackAnalytics,
 } from '../lib/analytics';
+import {
+  CASUAL_SONG_IDS,
+  loadSortPath,
+  sortPathLabel,
+} from '../lib/sortPath';
+import { readShellClaim } from '../lib/shellClaim';
+import {
+  trackMetaCustom,
+  trackMetaScopeCompleteOnce,
+  trackMetaSortStartOnce,
+} from '../lib/metaPixel';
 import { parseCommunityStatsPayload } from '../lib/communityAggregates';
 import type { CommunityStatsPayload } from '../lib/communityAggregates';
 import { decideSmartEntry } from '../lib/smartEntry';
@@ -1025,6 +1036,41 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     userIdRef.current = userId;
   }, [userId]);
 
+  // Guest sort persistence (owner, Nov 20, 2026): a guest who
+  // starts sorting gets an anonymous session at their first
+  // bucket, so the work saves to a real row from song one —
+  // resumable, countable, and visible — instead of living and
+  // dying in the tab. (The Nov 19 boost sent 89 visits; the
+  // starters among them left no trace anywhere.) The auth
+  // listener boots the new account like any sign-in, and the
+  // boot's guest-work reconcile adopts the device copy the
+  // guest has already made. One attempt per page load;
+  // failures stay silent and sorting continues device-local,
+  // exactly as it did before.
+  const guestSessionAttemptRef = useRef(false);
+  const ensureGuestSession = () => {
+    if (guestSessionAttemptRef.current) return;
+    guestSessionAttemptRef.current = true;
+    void (async () => {
+      try {
+        // A device that remembers an owner is never a true
+        // guest: its unstamped work may be a stranded owner's,
+        // and minting a shell would split it onto a throwaway
+        // account. A device that already claimed a board name
+        // has its identity too — that shell, not a new one.
+        if (readLastUserId() || readShellClaim()) return;
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (session) return; // a live/restored session — the listener boots it
+        await supabase.auth.signInAnonymously();
+      } catch {
+        // No session could be established (offline, provider
+        // hiccup): the sort carries on device-local.
+      }
+    })();
+  };
+
   // Deep-link intent parsed from ?step= on initial load. It is applied
   // (with prerequisite guards) only after user/ranking state has loaded.
   const [deepLinkIntent, setDeepLinkIntent] = useState<{
@@ -1284,6 +1330,20 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
     const raw = params.get('step');
+    // Campaign landing intent (?path=): stashed in
+    // sessionStorage for Step1Triage, which applies it only to
+    // a fresh sorter with no stored path. Parsed here because
+    // this effect owns the one guaranteed read of the arrival
+    // URL — later step changes rewrite the query string.
+    try {
+      const pathIntent = params.get('path');
+      if (pathIntent) {
+        window.sessionStorage.setItem('weezer-path-intent', pathIntent);
+      }
+    } catch {
+      // Storage unavailable: the link degrades to the normal
+      // front door with its path picker.
+    }
     if (raw !== null) {
       const resolved = resolveUrlStep(raw);
       if (resolved !== null && resolved !== raw) {
@@ -2239,14 +2299,48 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
     // state this edit was built from; nextState is its result.
     // The tracker's once-rule keeps a dip-and-return within
     // the session from refiring.
+    const prevBucketed = countBucketedSongs(triageMap);
+    const nextBucketed = countBucketedSongs(nextState.triageMap);
     if (
-      crossedToComplete(
-        countBucketedSongs(triageMap),
-        countBucketedSongs(nextState.triageMap),
-        FULL_SONG_POOL.length
-      )
+      crossedToComplete(prevBucketed, nextBucketed, FULL_SONG_POOL.length)
     ) {
       trackAnalytics('sort_completed', { oncePerSession: true });
+      trackMetaCustom('SortComplete');
+    }
+    // Meta mirror of the funnel's start: app_events'
+    // sort_started fires from the triage surfaces; the pixel
+    // listens here so every edit surface counts, once.
+    if (crossedToComplete(prevBucketed, nextBucketed, 1)) {
+      trackMetaSortStartOnce();
+    }
+    // Scoped completion: on a sort path, finishing the path's
+    // songs is its own finish line — the campaign's conversion
+    // event. Same crossing rule, counted over the path's ids
+    // only; the 'all' path's finish is SortComplete above.
+    const activePath = loadSortPath();
+    if (activePath && activePath.kind !== 'all') {
+      const scopeIds: ReadonlySet<string> =
+        activePath.kind === 'casual'
+          ? CASUAL_SONG_IDS
+          : new Set(
+              FULL_SONG_POOL.filter((s) =>
+                activePath.albums.includes(s.album)
+              ).map((s) => s.id)
+            );
+      const countScoped = (map: Record<string, TriageValue>) =>
+        FULL_SONG_POOL.reduce(
+          (n, s) => (scopeIds.has(s.id) && isRealBucket(map[s.id]) ? n + 1 : n),
+          0
+        );
+      if (
+        crossedToComplete(
+          countScoped(triageMap),
+          countScoped(nextState.triageMap),
+          scopeIds.size
+        )
+      ) {
+        trackMetaScopeCompleteOnce(sortPathLabel(activePath));
+      }
     }
     setTriageMap(nextState.triageMap);
     setMasterList(nextState.masterList);
@@ -2288,6 +2382,11 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
       // No account to save to (guest, or stranded): the work is
       // on this device only, and the indicator says exactly that.
       setSaveState({ phase: 'local-only', savedAt: Date.now() });
+      // A true guest's first bucket starts their anonymous
+      // session (see ensureGuestSession): from the next edit
+      // on, this branch is no longer taken and their saves flow
+      // to a real row like anyone's.
+      if (nextBucketed > 0) ensureGuestSession();
       return;
     }
     if (loadBlocked) {

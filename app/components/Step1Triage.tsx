@@ -70,7 +70,7 @@ export default function Step1Triage({
   // the data behind the deck milestone cards' community mirror
   // line (synthetic-fans plan §E.2). Empty until the fetch lands;
   // the deck treats empty stats as "no line", never a placeholder.
-  const { communityTriageMaps = [] } = useWeezer();
+  const { communityTriageMaps = [], loadingUser } = useWeezer();
 
   // The pooled community top-bucket share over a card's exact
   // scope: sum of Banger+Slaps ratings on the scope's songs ÷
@@ -366,6 +366,35 @@ export default function Step1Triage({
   );
   const isCompleteScoped = categorizedScoped === scopeTotal;
   const hasPartialScoped = bucketedScoped >= 1;
+
+  // Campaign landing intent (owner, Nov 20, 2026): the
+  // ?path=bluepinkerton link's promise is "rank the 20 Blue +
+  // Pinkerton songs" — a fresh sorter arriving with that
+  // intent starts inside the scope, no picker. Applied only
+  // once the boot has settled (a returning fan's progress must
+  // be visible before freshness is judged), only when no path
+  // is stored and nothing is categorized, and consumed either
+  // way so it can never ambush a later visit in the same tab.
+  const pathIntentAppliedRef = useRef(false);
+  useEffect(() => {
+    if (loadingUser || pathIntentAppliedRef.current) return;
+    pathIntentAppliedRef.current = true;
+    let intent: string | null = null;
+    try {
+      intent = window.sessionStorage.getItem('weezer-path-intent');
+      window.sessionStorage.removeItem('weezer-path-intent');
+    } catch {
+      intent = null;
+    }
+    if (intent !== 'bluepinkerton') return;
+    if (sortPath !== null || categorizedCount !== 0) return;
+    const path: SortPath = {
+      kind: 'albums',
+      albums: ['The Blue Album', 'Pinkerton'],
+    };
+    saveSortPath(path);
+    setSortPath(path);
+  }, [loadingUser, sortPath, categorizedCount]);
   // The picker gate: fresh sorters (nothing categorized, no
   // path stored) choose before they sort. The global count
   // is the gate — any prior sorting anywhere skips it.

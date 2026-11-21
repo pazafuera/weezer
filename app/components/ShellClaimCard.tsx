@@ -179,10 +179,18 @@ export default function ShellClaimCard() {
         setError('That name is taken. Pick another.');
         return;
       }
-      const { data: authData, error: authErr } =
-        await supabase.auth.signInAnonymously();
-      if (authErr) throw authErr;
-      const newUserId = authData.user?.id;
+      // Reuse the live session when there is one: a fan who
+      // started sorting first already holds an anonymous
+      // account (their rankings live on it), and the name must
+      // land on THAT account — signing in again would mint a
+      // second shell and split the person in two.
+      let newUserId = userId;
+      if (!newUserId) {
+        const { data: authData, error: authErr } =
+          await supabase.auth.signInAnonymously();
+        if (authErr) throw authErr;
+        newUserId = authData.user?.id ?? null;
+      }
       if (!newUserId) throw new Error('No session came back.');
       const { error: profileErr } = await supabase.from('profiles').upsert({
         id: newUserId,

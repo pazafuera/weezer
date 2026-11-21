@@ -33,7 +33,7 @@ import type { CommunityScopeStats, TriageSection } from './Step1Triage';
  * little — the owner accepted that in exchange for a song card tall
  * enough to hold a two-line title without pushing the preview button
  * off it. The milestone, completion and end-of-deck states replace
- * the card inside the same column at the same 362px floor — their
+ * the card inside the same column at the same 332px floor — their
  * shell is adaptive and grows past it when a state's content needs
  * the room (see DeckCardShell); the song card's height never moves.
  *
@@ -663,21 +663,24 @@ type CardAnimPhase =
  * height — it never grows or shrinks with content — so a song title
  * can never push the preview button off the card. The milestone,
  * completion and end-of-deck states render in the same shell with
- * `adaptive` set instead: a 362px MINIMUM height that grows to fit
+ * `adaptive` set instead: a 332px MINIMUM height that grows to fit
  * content (Overnight 3.5 — the milestone action stack's tallest
  * guest state runs ~569px of content at phone width, which no
- * spacing trim could fit into 362; a non-song state short enough
+ * spacing trim could fit the floor; a non-song state short enough
  * to fit renders identically to the fixed shell). The backing
  * layers are inset-0, so they scale with a taller shell and the
  * stacked-deck peek survives at any height.
  *
- * Slot budget (mobile-first, sums to the 362px height — the card
- * was 392 until the owner asked for it a little shorter so the
- * bucket tray pulls up): card vertical padding py-4 (32) + art
- * slot h-28 (112) + gap-2.5 (10) + two-line title slot h-[104px]
- * (104 — two lines at the ladder's largest size, text-5xl ×
- * leading-[1.05], is 100.8) + gap-2.5 (10) + meta line text-sm
- * (20) + gap-2.5 (10) + preview-button slot h-16 (64) = 362.
+ * Slot budget (mobile-first, sums to the 332px height — the card
+ * was 392 originally, then 362 after the owner's first trim, and
+ * 332 now (Nov 21, 2026), each time for the same reason: pulling
+ * the bucket tray up so it clears the fold on typical iOS
+ * screens): card vertical padding py-3 (24) + art slot h-24
+ * (96) + gap-2 (8) + two-line title slot h-[104px] (104 — two
+ * lines at the ladder's largest size, text-5xl × leading-[1.05],
+ * is 100.8; the title slot is never trimmed — a title must
+ * never be squeezed) + gap-2 (8) + meta line text-sm (20) +
+ * gap-2 (8) + preview-button slot h-16 (64) = 332.
  */
 function DeckCardShell({
   children,
@@ -688,13 +691,13 @@ function DeckCardShell({
   children: React.ReactNode;
   /**
    * Non-song states only (milestone / completion / end-of-deck):
-   * the shell's fixed 362px height becomes a 362px MINIMUM and
+   * the shell's fixed 332px height becomes a 332px MINIMUM and
    * the shell grows to fit its content (see the shell comment
    * above). Song cards never set it — their rendering path is
    * byte-for-byte the fixed shell. The inner content containers
-   * of adaptive states pair this with min-h-[362px] in place of
+   * of adaptive states pair this with min-h-[332px] in place of
    * h-full, so a state that fits still centers its content in
-   * exactly 362px, identically to before.
+   * exactly 332px, identically to before.
    */
   adaptive?: boolean;
   /**
@@ -773,7 +776,7 @@ function DeckCardShell({
     <div
       data-tutorial="card"
       className={`relative w-full ${
-        adaptive ? 'min-h-[362px]' : 'h-[362px]'
+        adaptive ? 'min-h-[332px]' : 'h-[332px]'
       } [perspective:1200px]${swaying ? ' deck-tutorial-sway' : ''}`}
     >
       <div
@@ -798,14 +801,14 @@ function DeckCardShell({
             cursor: swipe.isDragging ? 'grabbing' : 'grab',
           }}
           className={`relative ${
-            adaptive ? 'min-h-[362px]' : 'h-full'
+            adaptive ? 'min-h-[332px]' : 'h-full'
           } rounded-[28px] bg-white border-[3px] border-[#0C1220] shadow-[4px_4px_0_rgba(11,30,63,0.85)] select-none`}
         >
           {/* Directional stamps: all three are CENTERED OVER THE
               ALBUM ART (owner: the old corner stamps rotated
-              off-screen first and were hard to see). top-[72px] is
-              the art slot's vertical center — the content's py-4
-              (16px) plus half the h-28 art slot (56px). Opacity is
+              off-screen first and were hard to see). top-[60px] is
+              the art slot's vertical center — the content's py-3
+              (12px) plus half the h-24 art slot (48px). Opacity is
               proportional to drag distance (computed by the
               parent), and only the stamp for the current drag
               direction renders. NOT SORTED is the stamp motif in
@@ -815,7 +818,7 @@ function DeckCardShell({
             <span
               aria-hidden="true"
               style={{ opacity: swipe.stampOpacity }}
-              className="pointer-events-none absolute left-1/2 top-[72px] z-20 -translate-x-1/2 -translate-y-1/2 -rotate-12 rounded-lg border-[3px] border-slate-500 px-2.5 py-1 text-base font-black uppercase tracking-widest text-slate-600 bg-white/70"
+              className="pointer-events-none absolute left-1/2 top-[60px] z-20 -translate-x-1/2 -translate-y-1/2 -rotate-12 rounded-lg border-[3px] border-slate-500 px-2.5 py-1 text-base font-black uppercase tracking-widest text-slate-600 bg-white/70"
             >
               Not Sorted
             </span>
@@ -824,7 +827,7 @@ function DeckCardShell({
             <span
               aria-hidden="true"
               style={{ opacity: swipe.stampOpacity }}
-              className="pointer-events-none absolute left-1/2 top-[72px] z-20 -translate-x-1/2 -translate-y-1/2 -rotate-12 rounded-lg border-[3px] border-slate-500 px-2.5 py-1 text-lg font-black uppercase tracking-widest text-slate-600 bg-white/70"
+              className="pointer-events-none absolute left-1/2 top-[60px] z-20 -translate-x-1/2 -translate-y-1/2 -rotate-12 rounded-lg border-[3px] border-slate-500 px-2.5 py-1 text-lg font-black uppercase tracking-widest text-slate-600 bg-white/70"
             >
               Next
             </span>
@@ -833,7 +836,7 @@ function DeckCardShell({
             <span
               aria-hidden="true"
               style={{ opacity: swipe.stampOpacity }}
-              className="pointer-events-none absolute left-1/2 top-[72px] z-20 -translate-x-1/2 -translate-y-1/2 rotate-12 rounded-lg border-[3px] border-[#0072CE] px-2.5 py-1 text-lg font-black uppercase tracking-widest text-[#0072CE] bg-white/70"
+              className="pointer-events-none absolute left-1/2 top-[60px] z-20 -translate-x-1/2 -translate-y-1/2 rotate-12 rounded-lg border-[3px] border-[#0072CE] px-2.5 py-1 text-lg font-black uppercase tracking-widest text-[#0072CE] bg-white/70"
             >
               Back
             </span>
@@ -843,7 +846,7 @@ function DeckCardShell({
       ) : (
         <div
           className={`relative ${
-            adaptive ? 'min-h-[362px]' : 'h-full'
+            adaptive ? 'min-h-[332px]' : 'h-full'
           } rounded-[28px] bg-white border-[3px] border-[#0C1220] shadow-[4px_4px_0_rgba(11,30,63,0.85)]`}
         >
           {children}
@@ -2490,9 +2493,9 @@ export default function Step1Deck({
 
       {/* CARD REGION — flex-1 and centered; the milestone,
           completion and end-of-deck states replace the card right
-          here, in the adaptive shell (362px floor, grows to fit —
+          here, in the adaptive shell (332px floor, grows to fit —
           see DeckCardShell). */}
-      <div className="relative flex-1 min-h-0 flex items-center justify-center py-2">
+      <div className="relative flex-1 min-h-0 flex items-center justify-center py-1">
         {milestonePending ? (
           /* MILESTONE — a sort just completed a section (see the
              SECTION MILESTONES block up top). It replaces the
@@ -2516,12 +2519,12 @@ export default function Step1Deck({
              under it, and the Refine text link (25+ real
              buckets) at the very bottom of the singles and
              album cards. The shell here is ADAPTIVE (Overnight
-             3.5): the tallest stacks can't fit 362px at phone
+             3.5): the tallest stacks can't fit 332px at phone
              width, so the card grows to fit them in flow instead
              of the stack painting outside the card's bounds;
-             stacks that fit render in exactly 362px, as before. */
+             stacks that fit render in exactly 332px, as before. */
           <DeckCardShell adaptive>
-            <div className="min-h-[362px] flex flex-col items-center justify-center text-center px-6 py-3 sm:px-8 sm:py-4 space-y-1.5 sm:space-y-2">
+            <div className="min-h-[332px] flex flex-col items-center justify-center text-center px-6 py-3 sm:px-8 sm:py-4 space-y-1.5 sm:space-y-2">
               {/* Tape strip naming the section (Round 2) — the
                   section's own title, the same words the Jump
                   row and the album headlines use. */}
@@ -2602,7 +2605,7 @@ export default function Step1Deck({
              link that used to close this stack.) Signed-in users
              see no Save, just the Refine button. */
           <DeckCardShell adaptive>
-            <div className="min-h-[362px] flex flex-col items-center justify-center text-center p-6 sm:p-8 space-y-5">
+            <div className="min-h-[332px] flex flex-col items-center justify-center text-center p-6 sm:p-8 space-y-5">
               <div className="text-4xl">🏆</div>
               <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-950">
                 All {total} songs sorted
@@ -2658,7 +2661,7 @@ export default function Step1Deck({
              lead; its "Create a free account" is the tappable link
              inside the sentence. Signed-in users see no line. */
           <DeckCardShell swipe={swipeProps} adaptive>
-            <div className="min-h-[362px] flex flex-col items-center justify-center text-center p-6 sm:p-8 space-y-5">
+            <div className="min-h-[332px] flex flex-col items-center justify-center text-center p-6 sm:p-8 space-y-5">
               <div className="text-4xl">🎴</div>
               <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-950">
                 That&apos;s the whole deck
@@ -2754,10 +2757,10 @@ export default function Step1Deck({
              no layout height and never competes with the progress
              line above the card. */
           <DeckCardShell swipe={swipeProps} swaying={tutorialSwaying}>
-            <div className="relative h-full flex flex-col items-center text-center px-5 py-4 gap-2.5">
+            <div className="relative h-full flex flex-col items-center text-center px-5 py-3 gap-2">
               {/* STATIC STAMP — same anchor as the drag stamps
-                  (the art slot's center: py-4 + half of h-28 =
-                  top-[72px]), rendered only while no drag stamp
+                  (the art slot's center: py-3 + half of h-24 =
+                  top-[60px]), rendered only while no drag stamp
                   is up. It sits over the art; the preview button
                   lives in the card's bottom slot, far below the
                   stamp's band, so they can never overlap.
@@ -2768,19 +2771,19 @@ export default function Step1Deck({
               {shownStamp && stampKind === null && (
                 <span
                   aria-hidden="true"
-                  className={`pointer-events-none absolute left-1/2 top-[72px] z-10 -translate-x-1/2 -translate-y-1/2 -rotate-[10deg] rounded-lg border-[3px] px-3 py-1 font-black uppercase tracking-widest opacity-90 bg-white/60 ${shownStamp.size} ${shownStamp.ink}`}
+                  className={`pointer-events-none absolute left-1/2 top-[60px] z-10 -translate-x-1/2 -translate-y-1/2 -rotate-[10deg] rounded-lg border-[3px] px-3 py-1 font-black uppercase tracking-widest opacity-90 bg-white/60 ${shownStamp.size} ${shownStamp.ink}`}
                 >
                   {shownStamp.text}
                 </span>
               )}
-              {/* ART — a fixed 112px slot; it no longer flexes or
+              {/* ART — a fixed 96px slot; it no longer flexes or
                   shrinks to make room for the title. */}
-              <div className="h-28 w-full flex items-center justify-center">
+              <div className="h-24 w-full flex items-center justify-center">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={albumCoverSrc(resolveAlbumId(currentSong))}
                   alt={`${currentSong.album} cover art`}
-                  className="h-28 w-28 object-cover rounded-xl border-[3px] border-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)]"
+                  className="h-24 w-24 object-cover rounded-xl border-[3px] border-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)]"
                 />
               </div>
               {/* TITLE — a fixed two-line slot. line-clamp-2 caps the

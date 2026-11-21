@@ -26,6 +26,16 @@ body {
     rgb(var(--background-start-rgb));
 }
 
+/* Reserve the scrollbar track permanently (owner, Nov 21,
+   2026): when a collapsible (the Refine tools module) changed
+   the page height, the scrollbar came and went and the whole
+   page visibly shifted sideways on every open and close. A
+   stable gutter keeps the content width — and position —
+   constant. */
+html {
+  scrollbar-gutter: stable;
+}
+
 /* Deck tutorial, final step ("Don't know it? Swipe."): the
    card shell gently sways side to side to show the deck
    slides both ways. Toggled purely by tutorial step state in

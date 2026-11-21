@@ -2,6 +2,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { BucketType, Song, BUCKET_CONFIG, BUCKET_TRANSITIONS } from '../data/constants';
 import { getProgressState, type TriageValue } from '../context/WeezerContext';
+import { loadSortPath, sortPathSongIds } from '../lib/sortPath';
+import { loadRefineDecisions, recordRefineDecision } from '../lib/lowerRank';
 import { FlyingWIcon, AudioPreviewButton, SortingIncompleteNotice } from './SharedUI';
 import { getRankedSongs, seatMovedSongInBucket } from '@/utils/rankingUtils';
 import Step1_5Matchups from './Step1_5Matchups';
@@ -255,16 +257,25 @@ export default function Step2Refine({
   // local record of DECISIONS, so "chose Review" is
   // distinguishable from "never asked" and step 1 only
   // greets the undecided.
-  const showModule =
-    songs.length > 0 &&
-    (isRankableBucket || getProgressState(triageMap, masterList).isTriageComplete);
+  // The completeness gate is measured against the fan's own
+  // finish line (owner, Nov 20, 2026): on a sort path,
+  // finishing the path IS finishing triage. The full-pool
+  // check alone hid this module — the rank-or-review
+  // question and the tools with it — from every scoped
+  // sorter, leaving Final Review's divider as the only door
+  // to ranking the lower buckets.
+  const activePath = loadSortPath();
+  const triageDone =
+    activePath && activePath.kind !== 'all'
+      ? sortPathSongIds(activePath).every(
+          (id) => triageMap[id] !== undefined
+        )
+      : getProgressState(triageMap, masterList).isTriageComplete;
+  const showModule = songs.length > 0 && (isRankableBucket || triageDone);
   const [modeDecisions, setModeDecisions] = useState<Partial<Record<BucketType, RefineMode>>>({});
   const [decisionsLoaded, setDecisionsLoaded] = useState(false);
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem('weezer-refine-decisions');
-      if (raw) setModeDecisions(JSON.parse(raw));
-    } catch { /* storage unavailable — step 1 just asks again */ }
+    setModeDecisions(loadRefineDecisions());
     setDecisionsLoaded(true);
   }, []);
   const moduleMode: RefineMode | null = isRankableBucket
@@ -328,9 +339,7 @@ export default function Step2Refine({
     triggerHaptic(10);
     if (!isRankableBucket) {
       onToggleLowerRank(bucket, m === 'rank');
-      const next = { ...modeDecisions, [bucket]: m };
-      setModeDecisions(next);
-      try { localStorage.setItem('weezer-refine-decisions', JSON.stringify(next)); } catch { /* best-effort */ }
+      setModeDecisions(recordRefineDecision(bucket, m));
     }
     if (m === 'review') setModuleOpen(false);
   };

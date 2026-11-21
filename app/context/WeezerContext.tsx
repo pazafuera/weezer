@@ -37,6 +37,9 @@ import {
 import {
   CASUAL_SONG_IDS,
   loadSortPath,
+  parseSortPath,
+  registerSortPathDbWriter,
+  saveSortPathLocal,
   sortPathLabel,
 } from '../lib/sortPath';
 import { readShellClaim } from '../lib/shellClaim';
@@ -927,6 +930,79 @@ export const WeezerProvider = ({ children }: { children: ReactNode }) => {
         .eq('user_id', userId);
     }
   };
+
+  // Sort path → database (owner, Nov 20, 2026): the path was
+  // the last piece of the sort still living only in one
+  // browser's storage — a guest test watched the scope vanish
+  // on a return visit while the (now account-backed) songs
+  // came back. Same probe-gated pattern as the opt-ins above:
+  // DB mode turns on only after a probe select of the
+  // sort_path column succeeds, so this build behaves exactly
+  // like the device-local build until the column exists.
+  // While DB mode is on, a writer is registered with
+  // lib/sortPath so every path choice mirrors to the row.
+  const sortPathDbReadyRef = useRef(false);
+  useEffect(() => {
+    if (!userId) {
+      sortPathDbReadyRef.current = false;
+      registerSortPathDbWriter(null);
+      return;
+    }
+    let cancelled = false;
+    registerSortPathDbWriter((path) => {
+      if (!sortPathDbReadyRef.current) return;
+      void supabase
+        .from('weezer_rankings')
+        .update({ sort_path: path })
+        .eq('user_id', userId);
+    });
+    (async () => {
+      const { data, error } = await supabase
+        .from('weezer_rankings')
+        .select('sort_path')
+        .eq('user_id', userId)
+        .maybeSingle();
+      if (cancelled || error) return; // column missing → device-local mode
+      sortPathDbReadyRef.current = true;
+      const dbPath = parseSortPath(
+        (data as { sort_path?: unknown } | null)?.sort_path ?? null
+      );
+      if (dbPath) {
+        // The account's path wins: refresh the device copy and
+        // tell a mounted triage screen to adopt it.
+        saveSortPathLocal(dbPath);
+        try {
+          window.dispatchEvent(new CustomEvent('weezer:sort-path-db'));
+        } catch {
+          /* no listener — the next triage mount reads the copy */
+        }
+        return;
+      }
+      const local = loadSortPath();
+      const SEED_KEY = 'weezer-path-db-seeded';
+      let seededFor: string | null = null;
+      try {
+        seededFor = window.localStorage.getItem(SEED_KEY);
+      } catch {
+        /* storage unavailable — treat as unseeded */
+      }
+      if (local && seededFor !== userId) {
+        try {
+          window.localStorage.setItem(SEED_KEY, userId);
+        } catch {
+          /* ignore — a later choice still mirrors via the writer */
+        }
+        await supabase
+          .from('weezer_rankings')
+          .update({ sort_path: local })
+          .eq('user_id', userId);
+      }
+    })();
+    return () => {
+      cancelled = true;
+      registerSortPathDbWriter(null);
+    };
+  }, [userId]);
   const [autoStartMatchups, setAutoStartMatchups] = useState(false);
   const [refineOpenTools, setRefineOpenTools] = useState(false);
   // Post-sign-up banner flag (see the interface note). Plain state:

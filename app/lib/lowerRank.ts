@@ -88,3 +88,57 @@ export function saveLowerRankOptIns(list: BucketType[]): void {
     /* storage unavailable — the opt-in simply won't persist */
   }
 }
+
+/**
+ * The Refine module's per-bucket decisions (owner, Nov 14,
+ * 2026): 'rank' or 'review' per lower bucket, device-local
+ * under 'weezer-refine-decisions'. Step2Refine's module reads
+ * them to tell "chose Review" from "never asked"; the
+ * triage-completion card (page.tsx, Nov 20, 2026) writes them
+ * when the fan answers the rank-depth question up front, so
+ * the Refine runway never re-asks bucket by bucket.
+ */
+export type LowerRankDecision = 'rank' | 'review';
+
+const REFINE_DECISIONS_KEY = 'weezer-refine-decisions';
+
+export function loadRefineDecisions(): Partial<
+  Record<BucketType, LowerRankDecision>
+> {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = window.localStorage.getItem(REFINE_DECISIONS_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as Record<string, unknown> | null;
+    const out: Partial<Record<BucketType, LowerRankDecision>> = {};
+    for (const b of LOWER_RANK_BUCKETS) {
+      const v = parsed?.[b];
+      if (v === 'rank' || v === 'review') out[b] = v;
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+export function saveRefineDecisions(
+  next: Partial<Record<BucketType, LowerRankDecision>>
+): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(REFINE_DECISIONS_KEY, JSON.stringify(next));
+  } catch {
+    /* storage unavailable — the module just asks again */
+  }
+}
+
+/** Merge one bucket's decision into the stored record and
+ *  return the merged record (for state kept beside it). */
+export function recordRefineDecision(
+  bucket: BucketType,
+  decision: LowerRankDecision
+): Partial<Record<BucketType, LowerRankDecision>> {
+  const next = { ...loadRefineDecisions(), [bucket]: decision };
+  saveRefineDecisions(next);
+  return next;
+}

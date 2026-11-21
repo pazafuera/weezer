@@ -1,7 +1,14 @@
 'use client';
 
-import React from 'react';
-import { useWeezer } from './context/WeezerContext';
+import React, { useState } from 'react';
+import { useWeezer, countCategorizedSongs } from './context/WeezerContext';
+import { BUCKET_CONFIG } from './data/constants';
+import {
+  LOWER_RANK_BUCKETS,
+  loadRefineDecisions,
+  saveRefineDecisions,
+} from './lib/lowerRank';
+import { displayFont } from './components/shareables/fonts';
 import AppShell from './components/AppShell';
 import WelcomeInterstitial from './components/WelcomeInterstitial';
 import { GuardNotice, SyncNotice } from './components/SharedUI';
@@ -21,6 +28,12 @@ import WeezerFriends from './components/WeezerFriends';
 import Login from './components/Login';
 import StepLore from './components/StepLore';
 import SiteStats from './components/SiteStats';
+
+const LOWER_PLURALS: Record<string, string> = {
+  mid: 'Mids',
+  skip: 'Skips',
+  trash: 'Trash',
+};
 
 export default function WeezerRankerPage() {
   const {
@@ -55,7 +68,56 @@ export default function WeezerRankerPage() {
     userId,
   } = useWeezer();
 
+  // THE RANK-DEPTH QUESTION (owner, Nov 20, 2026): asked
+  // ONCE, at the moment sorting finishes — how far down do
+  // you want to rank? Bangers and Slaps always rank; the
+  // lower buckets form a ladder (the site's own sequential
+  // rule: Skips rank only behind Mids, Trash behind Skips).
+  // The answer writes the opt-in flags AND the Refine
+  // module's decision record, so the runway that follows
+  // never re-asks bucket by bucket, and Final Review's
+  // divider stops being the only door. A fan whose lower
+  // buckets are all already decided — or who has none —
+  // never sees the card: the finish goes straight to Refine.
+  const lowerCounts: Record<string, number> = { mid: 0, skip: 0, trash: 0 };
+  for (const v of Object.values(triageMap)) {
+    if (v === 'mid' || v === 'skip' || v === 'trash') lowerCounts[v] += 1;
+  }
+  const presentLowers = LOWER_RANK_BUCKETS.filter((b) => lowerCounts[b] > 0);
+  const [rankDepthPrompt, setRankDepthPrompt] = useState(false);
+  const [rankDepth, setRankDepth] = useState(0);
+
   const handleFinishTriage = () => {
+    const decisions = loadRefineDecisions();
+    const undecided = presentLowers.some(
+      (b) => !decisions[b] && !lowerRankOptIns.includes(b)
+    );
+    if (presentLowers.length > 0 && undecided) {
+      // Start the ladder where the flags already stand.
+      let depth = 0;
+      while (
+        depth < presentLowers.length &&
+        lowerRankOptIns.includes(presentLowers[depth])
+      ) {
+        depth += 1;
+      }
+      setRankDepth(depth);
+      setRankDepthPrompt(true);
+      return;
+    }
+    setAutoStartMatchups(true);
+    navigateTo('rank_buckets');
+  };
+
+  const confirmRankDepth = () => {
+    const decisions = { ...loadRefineDecisions() };
+    presentLowers.forEach((b, i) => {
+      const on = i < rankDepth;
+      setLowerRankOptIn(b, on);
+      decisions[b] = on ? 'rank' : 'review';
+    });
+    saveRefineDecisions(decisions);
+    setRankDepthPrompt(false);
     setAutoStartMatchups(true);
     navigateTo('rank_buckets');
   };
@@ -274,6 +336,84 @@ export default function WeezerRankerPage() {
           reopens wherever the fan landed. Renders nothing
           unless a return is pending. */}
       <SpotifyReturnGate />
+
+      {/* The rank-depth question (owner, Nov 20, 2026): the
+          one up-front ask at the end of sorting, rendered
+          over the triage screen the fan just finished. */}
+      {rankDepthPrompt && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-[#0C1220]/50 p-4 sm:items-center"
+          role="dialog"
+          aria-modal="true"
+          aria-label="How far down do you want to rank?"
+        >
+          <div className="w-full max-w-md space-y-4 rounded-[18px] border-[3px] border-[#0C1220] bg-white p-5 shadow-[4px_4px_0_#0C1220]">
+            <h3
+              className={`${displayFont.className} text-[24px] leading-tight text-[#0C1220]`}
+            >
+              Your {countCategorizedSongs(triageMap)} songs are sorted.
+            </h3>
+            <p className="text-sm font-medium leading-relaxed text-[#3D4A63]">
+              Next you&rsquo;ll rank your Bangers and Slaps. How much
+              further down do you want to rank? You can change your mind
+              later from your list.
+            </p>
+            <div className="space-y-2" role="radiogroup" aria-label="Rank depth">
+              {Array.from({ length: presentLowers.length + 1 }, (_, d) => {
+                const selected = rankDepth === d;
+                const deepest = d > 0 ? presentLowers[d - 1] : null;
+                const label =
+                  d === 0
+                    ? 'Just my Bangers & Slaps'
+                    : `Rank my ${presentLowers
+                        .slice(0, d)
+                        .map((b) => `${LOWER_PLURALS[b]} (${lowerCounts[b]})`)
+                        .join(' + ')} too`;
+                return (
+                  <button
+                    key={d}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    onClick={() => setRankDepth(d)}
+                    className={`flex w-full cursor-pointer items-center gap-2.5 rounded-xl border-[3px] border-[#0C1220] px-3.5 py-2.5 text-left text-sm font-black transition-all ${
+                      selected
+                        ? 'bg-[#0072CE] text-white shadow-[3px_3px_0_#0C1220]'
+                        : 'bg-white text-[#0C1220] hover:bg-[#F1F5F9]'
+                    }`}
+                  >
+                    <span
+                      className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-[2.5px] ${
+                        selected ? 'border-white' : 'border-[#0C1220]'
+                      }`}
+                    >
+                      {selected && (
+                        <span className="h-2.5 w-2.5 rounded-full bg-white" />
+                      )}
+                    </span>
+                    {deepest && (
+                      <span aria-hidden="true">
+                        {BUCKET_CONFIG[deepest].emoji}
+                      </span>
+                    )}
+                    <span>{label}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <button
+              type="button"
+              onClick={confirmRankDepth}
+              className="w-full cursor-pointer rounded-full border-[3px] border-[#0C1220] bg-[#FFC72C] px-6 py-3 text-base font-black text-[#0C1220] shadow-[3px_3px_0_#0C1220] transition-all hover:-translate-y-0.5 hover:shadow-[4px_4px_0_#0C1220] active:translate-y-0 active:shadow-none"
+            >
+              Start ranking →
+            </button>
+            <p className="text-center text-xs font-bold text-[#3D4A63]">
+              Then: review your list, and get your Sweater Thread.
+            </p>
+          </div>
+        </div>
+      )}
         </>
       )}
       </AppShell>

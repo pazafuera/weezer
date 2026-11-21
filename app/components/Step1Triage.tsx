@@ -118,6 +118,16 @@ export default function Step1Triage({
     setSortPath(loadSortPath());
     setPathLoaded(true);
   }, []);
+
+  // The account's path can land after this screen mounts
+  // (the context's database probe resolves async): adopt it
+  // when it does — the probe has already refreshed the
+  // device copy, so a plain re-read is the whole adoption.
+  useEffect(() => {
+    const onDbPath = () => setSortPath(loadSortPath());
+    window.addEventListener('weezer:sort-path-db', onDbPath);
+    return () => window.removeEventListener('weezer:sort-path-db', onDbPath);
+  }, []);
   const choosePath = (next: SortPath) => {
     saveSortPath(next);
     setSortPath(next);

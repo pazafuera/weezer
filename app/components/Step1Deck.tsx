@@ -2435,7 +2435,12 @@ export default function Step1Deck({
           Sorted checkbox (owner: it replaces the old milestone-
           distance suffix — the milestone cards pace the deck now,
           the line just reports progress) and the help button. */}
-      <div className="shrink-0 pt-2 space-y-1.5">
+      {/* The header carries its own stacking layer (relative
+          z-20): the W disc overflows the bar's box by design,
+          and when the card's top edge reaches up into that
+          overflow the disc must paint OVER the card, never
+          under it (owner, Nov 21, 2026). */}
+      <div className="relative z-20 shrink-0 pt-2 space-y-1.5">
         <div className="flex items-center justify-between gap-2 text-[11px] font-black text-[#0C1220]">
           <div className="flex items-center gap-2">
             {/* No dashboard exit in this row — the owner ruled

@@ -2,7 +2,12 @@
 
 import React, { useState } from 'react';
 import { useWeezer, countCategorizedSongs } from './context/WeezerContext';
-import { BUCKET_CONFIG } from './data/constants';
+import { BUCKET_CONFIG, FULL_SONG_POOL } from './data/constants';
+import {
+  loadSortPath,
+  saveSortPath,
+  sortPathSongIds,
+} from './lib/sortPath';
 import {
   LOWER_RANK_BUCKETS,
   loadRefineDecisions,
@@ -294,7 +299,34 @@ export default function WeezerRankerPage() {
           masterList={masterList}
           triageMap={triageMap}
           setStep={(s) => {
-            if (s === 'rank_buckets') {
+            if (s === 'triage') {
+              // KEEP SORTING FROM THE THREAD (owner, Nov 21,
+              // 2026): a fan whose path is finished but whose
+              // catalog isn't is answering the Thread's
+              // "sort more" invite — widen their path to the
+              // full catalog and land them on the songs they
+              // haven't sorted (triage reads the intent and
+              // turns Hide Sorted on), not on the completed
+              // list they just left. Any other trip to triage
+              // leaves the path alone.
+              const path = loadSortPath();
+              if (
+                path &&
+                path.kind !== 'all' &&
+                countCategorizedSongs(triageMap) < FULL_SONG_POOL.length &&
+                sortPathSongIds(path).every(
+                  (id) => triageMap[id] !== undefined
+                )
+              ) {
+                saveSortPath({ kind: 'all' });
+                try {
+                  window.sessionStorage.setItem('weezer-keep-sorting', '1');
+                } catch {
+                  /* the widening alone still lands them right */
+                }
+              }
+              navigateTo('triage');
+            } else if (s === 'rank_buckets') {
               setRefineStageIdx(4);
               navigateTo('rank_buckets');
               // AFTER navigateTo on purpose: navigateInternal sets the
@@ -351,12 +383,11 @@ export default function WeezerRankerPage() {
             <h3
               className={`${displayFont.className} text-[24px] leading-tight text-[#0C1220]`}
             >
-              Your {countCategorizedSongs(triageMap)} songs are sorted.
+              You&rsquo;ve ranked {countCategorizedSongs(triageMap)} songs
             </h3>
             <p className="text-sm font-medium leading-relaxed text-[#3D4A63]">
-              Next you&rsquo;ll rank your Bangers and Slaps. How much
-              further down do you want to rank? You can change your mind
-              later from your list.
+              Next, you&rsquo;ll rank order them to refine your list.
+              Which groupings do you want to rank?
             </p>
             <div className="space-y-2" role="radiogroup" aria-label="Rank depth">
               {Array.from({ length: presentLowers.length + 1 }, (_, d) => {
@@ -365,10 +396,12 @@ export default function WeezerRankerPage() {
                 const label =
                   d === 0
                     ? 'Just my Bangers & Slaps'
-                    : `Rank my ${presentLowers
-                        .slice(0, d)
-                        .map((b) => `${LOWER_PLURALS[b]} (${lowerCounts[b]})`)
-                        .join(' + ')} too`;
+                    : d === presentLowers.length
+                      ? 'Rank all'
+                      : `Rank my ${presentLowers
+                          .slice(0, d)
+                          .map((b) => `${LOWER_PLURALS[b]} (${lowerCounts[b]})`)
+                          .join(' + ')} too`;
                 return (
                   <button
                     key={d}
@@ -391,7 +424,7 @@ export default function WeezerRankerPage() {
                         <span className="h-2.5 w-2.5 rounded-full bg-white" />
                       )}
                     </span>
-                    {deepest && (
+                    {deepest && d < presentLowers.length && (
                       <span aria-hidden="true">
                         {BUCKET_CONFIG[deepest].emoji}
                       </span>

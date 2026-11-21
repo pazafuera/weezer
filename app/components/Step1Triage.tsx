@@ -128,6 +128,21 @@ export default function Step1Triage({
     window.addEventListener('weezer:sort-path-db', onDbPath);
     return () => window.removeEventListener('weezer:sort-path-db', onDbPath);
   }, []);
+
+  // Keep-sorting intent (owner, Nov 21, 2026): arriving from
+  // the Sweater Thread's "sort more" invite (page.tsx widened
+  // the path and stashed this), the list opens with Hide
+  // Sorted on — the songs they haven't sorted, from the top.
+  useEffect(() => {
+    try {
+      if (window.sessionStorage.getItem('weezer-keep-sorting')) {
+        window.sessionStorage.removeItem('weezer-keep-sorting');
+        setHideSorted(true);
+      }
+    } catch {
+      /* no intent — nothing to apply */
+    }
+  }, []);
   const choosePath = (next: SortPath) => {
     saveSortPath(next);
     setSortPath(next);
@@ -509,27 +524,6 @@ export default function Step1Triage({
         />
       ) : (
       <>
-      {scoped && sortPath && (
-        <div
-          className={`flex items-center justify-between gap-3 rounded-xl border-2 border-[#0C1220] bg-white px-3.5 py-2.5 shadow-[3px_3px_0_rgba(11,30,63,0.85)] ${
-            effectiveMode === 'deck' ? 'mx-4 mt-3 shrink-0' : ''
-          }`}
-        >
-          <p className="text-xs font-bold leading-snug text-[#3D4A63]">
-            Your path:{' '}
-            <span className="font-black text-[#0C1220]">
-              {sortPathLabel(sortPath)}
-            </span>{' '}
-            · {scopeTotal} songs
-          </p>
-          <button
-            onClick={() => setPickerForced(true)}
-            className="shrink-0 cursor-pointer text-xs font-black text-[#0072CE]"
-          >
-            Change path
-          </button>
-        </div>
-      )}
       {effectiveMode === 'list' && (
       <>
       {/* STICKY PROGRESS & ALBUM QUICK-JUMP BAR (EXPANDED FOR DESKTOP) */}
@@ -641,6 +635,31 @@ export default function Step1Triage({
           <p className="text-sm font-bold text-slate-500 max-w-sm mx-auto leading-snug">
             Sort every song into a tier. Trust your first instinct, don&apos;t overthink it.
           </p>
+        </div>
+      )}
+
+      {/* YOUR PATH strip — under the page header, not above it
+          (owner, Nov 21, 2026): it describes the sort, so it
+          sits with the sort, below its title. */}
+      {scoped && sortPath && (
+        <div
+          className={`flex items-center justify-between gap-3 rounded-xl border-2 border-[#0C1220] bg-white px-3.5 py-2.5 shadow-[3px_3px_0_rgba(11,30,63,0.85)] ${
+            effectiveMode === 'deck' ? 'mx-4 mb-2 shrink-0' : 'mb-8'
+          }`}
+        >
+          <p className="text-xs font-bold leading-snug text-[#3D4A63]">
+            Your path:{' '}
+            <span className="font-black text-[#0C1220]">
+              {sortPathLabel(sortPath)}
+            </span>{' '}
+            · {scopeTotal} songs
+          </p>
+          <button
+            onClick={() => setPickerForced(true)}
+            className="shrink-0 cursor-pointer text-xs font-black text-[#0072CE]"
+          >
+            Change path
+          </button>
         </div>
       )}
 

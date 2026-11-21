@@ -180,25 +180,11 @@ export default function Step2Refine({
     persistRefineStage(initialStageIdx);
   }, [initialStageIdx]);
 
-  useEffect(() => {
-    // Auto-start (flag read once, on mount): fire the matchup pre-sort
-    // for the FIRST stage that has matchups (Banger, then Slaps) whose
-    // bucket holds ≥2 songs, landing on that stage — a Slaps-heavy
-    // user with 0–1 Bangers still gets matchups. If neither matchup
-    // stage qualifies, no auto-start: the stage-0 list, as before.
-    if (initialStageIdx === 0 && autoStartMatchups) {
-      // Fresh entry: any resume point from earlier work is stale
-      // (goToStage below re-persists the stage it lands on).
-      clearPersistedRefineStage();
-      const firstMatchupStage = REFINEMENT_STAGES.findIndex(
-        (stage, idx) => idx <= 1 && (bucketRanks[stage.bucket] || []).length >= 2
-      );
-      if (firstMatchupStage >= 0) {
-        goToStage(firstMatchupStage);
-        setShowMatchups(true);
-      }
-    }
-  }, []);
+  // The old mount-only auto-start (fire the first matchup
+  // stage's pre-sort on a fresh entry) retired Nov 21, 2026:
+  // Head to Head is now the default on EVERY ranking stage's
+  // first showing — see the stage-entry effect below, where
+  // canOrder and the stage's songs are known.
 
   const currentStage = REFINEMENT_STAGES[stageIdx] || REFINEMENT_STAGES[0];
   // An opted-in lower stage speaks the ranking language
@@ -313,6 +299,55 @@ export default function Step2Refine({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openTools]);
+  // MATCHUP AUTO-START (owner, Nov 21, 2026): Head to Head is
+  // the default way to rank — the first time a ranking stage
+  // is shown, its matchups open on their own instead of
+  // hiding behind the collapsed tools strip. Once per bucket,
+  // ever (device record); the tools strip stays the way back
+  // in, and drag stays available the moment a session ends.
+  // A deliberate tools landing (openTools, from Final Review)
+  // keeps its landing. A return landing on a later stage
+  // keeps its stage list too — the auto-start greets fresh
+  // entries (which land at stage 0) and stage changes along
+  // the runway, not restorations of work in progress.
+  const [autoStarted, setAutoStarted] = useState<BucketType[]>(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const raw = window.localStorage.getItem('weezer-matchup-autostarted');
+      const parsed: unknown = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed)
+        ? parsed.filter(
+            (b): b is BucketType =>
+              b === 'banger' ||
+              b === 'slaps' ||
+              b === 'mid' ||
+              b === 'skip' ||
+              b === 'trash'
+          )
+        : [];
+    } catch {
+      return [];
+    }
+  });
+  const mountStageRef = useRef(stageIdx);
+  useEffect(() => {
+    if (showMatchups || showSplit || openTools) return;
+    if (!canOrder || songs.length < 2) return;
+    if (stageIdx === mountStageRef.current && initialStageIdx !== 0) return;
+    if (autoStarted.includes(bucket)) return;
+    const next = [...autoStarted, bucket];
+    setAutoStarted(next);
+    try {
+      window.localStorage.setItem(
+        'weezer-matchup-autostarted',
+        JSON.stringify(next)
+      );
+    } catch {
+      /* the in-state record still holds for the session */
+    }
+    setShowMatchups(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stageIdx]);
   // TOOL-USE MEMORY (owner, Nov 14, 2026): once a tool has
   // actually been used in a bucket — a matchup session that
   // changed the order, or an applied split pass — the module

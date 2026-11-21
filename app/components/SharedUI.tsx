@@ -4,6 +4,7 @@ import { ALBUMS_BY_ID, FULL_SONG_POOL } from '../data/constants';
 import { PREVIEW_MAP } from '../data/previewMap';
 import { countCategorizedSongs } from '../context/WeezerContext';
 import type { AppStep, TriageValue } from '../context/WeezerContext';
+import { loadSortPath, sortPathSongIds } from '../lib/sortPath';
 
 // OFFICIAL WEEZER FLYING-W LOGO
 export function FlyingWIcon({ className = "w-8 h-5" }: { className?: string }) {
@@ -71,9 +72,11 @@ export function HelpButton() {
 // banner inside its head-to-head layout — the notice brackets it
 // instead, sitting on the stage list the user came from and the
 // one they return to.
-// "Finished" = every catalog song categorized — a real bucket OR
-// a "Don't Know It" mark (countCategorizedSongs, the same signal
-// the menu and dashboard use); at a full 206 it renders nothing.
+// "Finished" = every song in the fan's current scope
+// categorized — a real bucket OR a "Don't Know It" mark
+// (countCategorizedSongs for the full catalog; the path's
+// own count on a sort path, per the owner's Nov 21, 2026
+// ruling below); at a full scope it renders nothing.
 // The Keep Sorting action is drilled from page.tsx as
 // navigateTo('triage') — the normal navigation path, guards and
 // URL sync intact.
@@ -84,12 +87,25 @@ export function SortingIncompleteNotice({
   triageMap: Record<string, TriageValue>;
   onKeepSorting: () => void;
 }) {
-  const sortedCount = countCategorizedSongs(triageMap);
-  if (sortedCount >= FULL_SONG_POOL.length) return null;
+  // "Finished" is measured against the fan's own finish
+  // line (owner, Nov 21, 2026): on a sort path, the totals
+  // are the path's — a fan who finished their 20 has
+  // finished sorting, and the notice neither nags them with
+  // the catalog's 218 nor quotes it.
+  const activePath = loadSortPath();
+  const scopeIds =
+    activePath && activePath.kind !== 'all'
+      ? sortPathSongIds(activePath)
+      : null;
+  const total = scopeIds ? scopeIds.length : FULL_SONG_POOL.length;
+  const sortedCount = scopeIds
+    ? scopeIds.filter((id) => triageMap[id] !== undefined).length
+    : countCategorizedSongs(triageMap);
+  if (sortedCount >= total) return null;
   return (
     <div className="bg-amber-400 border-[3px] border-[#0C1220] rounded-2xl px-4 py-3 shadow-[2px_2px_0_rgba(11,30,63,0.85)]">
       <p className="text-sm sm:text-base font-bold text-slate-950 leading-snug text-center">
-        You haven&apos;t finished sorting — {sortedCount} of {FULL_SONG_POOL.length} songs
+        You haven&apos;t finished sorting — {sortedCount} of {total} songs
         sorted. This page only covers the songs you&apos;ve sorted so far.{' '}
         <button
           type="button"

@@ -21,15 +21,12 @@ const PROCESS_STEPS: { title: string; desc: string }[] = [
   },
 ];
 
-// Number-disc colors (owner, Nov 26): the homepage's accent
-// palette — brand blue #0072CE and gold #FFC72C from Step0Splash's
-// CTA / ranking bars, pink #F2A0BE from its YOUR WEEZER RANKING
-// mini-card bars. Gold and pink are light, so their numerals are
-// ink; blue carries a white numeral.
+// Number-disc colors (owner, Nov 26): all three discs are the
+// brand blue #0072CE with white numerals.
 const DISC_STYLES: string[] = [
   'bg-[#0072CE] text-white',
-  'bg-[#FFC72C] text-[#0C1220]',
-  'bg-[#F2A0BE] text-[#0C1220]',
+  'bg-[#0072CE] text-white',
+  'bg-[#0072CE] text-white',
 ];
 
 export default function Step05Orientation() {

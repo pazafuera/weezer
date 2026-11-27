@@ -46,7 +46,6 @@ import {
 import { fanhoodReconcileSettled } from '../lib/fanhoodSync';
 import { FlyingWIcon } from './SharedUI';
 import { ERAS } from './shareables/EraDnaCard';
-import { displayFont } from './shareables/fonts';
 import WeezerOnboardingModal from './WeezerOnboardingModal';
 
 const TOTAL_SONGS = FULL_SONG_POOL.length;
@@ -55,11 +54,10 @@ const TOTAL_SONGS = FULL_SONG_POOL.length;
 /* Shared bits                                                         */
 /* ------------------------------------------------------------------ */
 
-const POSTER_CARD_SHADOW =
-  'shadow-[0_10px_28px_rgba(11,30,63,0.12),0_2px_0_rgba(11,30,63,0.9)]';
-const POSTER_HARD_SHADOW = 'shadow-[4px_4px_0_rgba(11,30,63,0.85)]';
+const POSTER_CARD_SHADOW = 'shadow-[0_14px_30px_rgba(12,18,32,0.08)]';
+const POSTER_HARD_SHADOW = 'shadow-[0_10px_24px_rgba(12,18,32,0.12)]';
 const POSTER_BUTTON_SMALL =
-  'inline-flex cursor-pointer items-center justify-center rounded-[11px] border-[2.5px] border-[#0C1220] bg-white px-4 py-[9px] text-sm font-black text-[#005CA8] shadow-[2px_2px_0_#0C1220] transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_#0C1220]';
+  'inline-flex cursor-pointer items-center justify-center rounded-[11px] border border-slate-200 bg-white px-4 py-[10.5px] text-sm font-black text-[#005CA8] shadow-[0_4px_12px_rgba(12,18,32,0.10)] transition-all active:scale-[0.98]';
 
 function SectionHeading({
   children,
@@ -74,7 +72,7 @@ function SectionHeading({
     <div className="mb-[14px] flex items-end justify-between gap-[14px]">
       <div>
         <h2
-          className={`${displayFont.className} text-[clamp(26px,5vw,34px)] leading-none tracking-wide text-[#0C1220]`}
+          className="text-[clamp(26px,5vw,34px)] font-black leading-none tracking-wide text-[#0C1220]"
         >
           {children}
         </h2>
@@ -187,13 +185,14 @@ function TapeStrip({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** The prototype .btn treatment for the hero's CTAs: ink border,
- *  hard offset shadow, and a press that slides the button onto
- *  its shadow. Primary stays white; secondary stays ghost. */
+/** The hero's CTA treatment in the flat lane: hairline border,
+ *  soft shadow, scale press. Primary stays white; secondary
+ *  stays ghost. Vertical padding carries +1.5px for the
+ *  2.5px → 1px border reduction, so the height is unchanged. */
 const HERO_BTN_PRIMARY =
-  'cursor-pointer rounded-[14px] border-[2.5px] border-[#0C1220] bg-white px-6 py-3.5 text-sm font-black text-slate-950 shadow-[3px_3px_0_#0C1220] transition-all hover:bg-sky-50 active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_#0C1220]';
+  'cursor-pointer rounded-[14px] border border-slate-200 bg-white px-6 py-[15.5px] text-sm font-black text-slate-950 shadow-[0_10px_24px_rgba(11,30,63,0.22)] transition-all hover:bg-sky-50 active:scale-[0.98]';
 const HERO_BTN_SECONDARY =
-  'cursor-pointer rounded-[14px] border-[2.5px] border-[#0C1220] px-6 py-3.5 text-sm font-black text-white shadow-[3px_3px_0_#0C1220] transition-all hover:bg-white/10 active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_#0C1220]';
+  'cursor-pointer rounded-[14px] border border-white/40 px-6 py-[15.5px] text-sm font-black text-white shadow-[0_10px_24px_rgba(11,30,63,0.22)] transition-all hover:bg-white/10 active:scale-[0.98]';
 
 /** The five buckets as poster chips (prototype .bucket fills),
  *  shown in the not-started hero under the sub copy. */
@@ -227,7 +226,7 @@ function GarageHero() {
   ).size;
 
   return (
-    <section className="relative overflow-hidden rounded-[2rem] border-[3px] border-[#0C1220] bg-[#039AD1] text-white shadow-[0_14px_30px_rgba(11,30,63,0.18)]">
+    <section className="relative overflow-hidden rounded-[28px] border border-black/10 bg-[#039AD1] text-white shadow-[0_14px_30px_rgba(12,18,32,0.08)]">
       {/* Halftone dots — the share-card poster texture, as a CSS
           overlay (the same trick the poster cards draw by hand).
           Recipe matched to the dashboard prototype's hero. */}
@@ -240,13 +239,13 @@ function GarageHero() {
           backgroundSize: '18px 18px',
         }}
       />
-      <div className="relative flex items-center gap-5 p-6 sm:gap-8 sm:p-9">
+      <div className="relative flex items-center gap-5 px-6 py-[26px] sm:gap-8 sm:px-9 sm:py-[38px]">
         <div className="min-w-0 flex-1 space-y-4">
           {categorized === 0 ? (
             <>
               <TapeStrip>All My Favorite Songs</TapeStrip>
               <h1
-                className={`${displayFont.className} text-4xl leading-[0.98] tracking-wide sm:text-5xl`}
+                className="text-4xl font-black leading-[0.98] tracking-wide sm:text-5xl"
                 style={{ textShadow: '3px 3px 0 rgba(11,30,63,0.35)' }}
               >
                 Every Weezer song. Ranked by you.
@@ -263,7 +262,7 @@ function GarageHero() {
                 {BUCKET_CHIPS.map((chip) => (
                   <span
                     key={chip.label}
-                    className="rounded-full border-[2.5px] border-[#0C1220] px-[13px] py-[7px] text-[13px] font-black text-[#0C1220] shadow-[2px_2px_0_#0C1220]"
+                    className="rounded-full border border-black/10 px-[13px] py-[8.5px] text-[13px] font-black text-[#0C1220] shadow-[0_2px_8px_rgba(12,18,32,0.12)]"
                     style={{ backgroundColor: chip.color }}
                   >
                     {chip.label}
@@ -293,7 +292,7 @@ function GarageHero() {
             <>
               <TapeStrip>The Garage — Your Home Base</TapeStrip>
               <h1
-                className={`${displayFont.className} text-4xl leading-[0.98] tracking-wide sm:text-5xl`}
+                className="text-4xl font-black leading-[0.98] tracking-wide sm:text-5xl"
                 style={{ textShadow: '3px 3px 0 rgba(11,30,63,0.35)' }}
               >
                 It&rsquo;s all sorted, {firstName ?? 'there'}.
@@ -344,7 +343,7 @@ function GarageHero() {
             <>
               <TapeStrip>The Garage — Your Home Base</TapeStrip>
               <h1
-                className={`${displayFont.className} text-4xl leading-[0.98] tracking-wide sm:text-5xl`}
+                className="text-4xl font-black leading-[0.98] tracking-wide sm:text-5xl"
                 style={{ textShadow: '3px 3px 0 rgba(11,30,63,0.35)' }}
               >
                 {categorized} of {TOTAL_SONGS} sorted — {remaining} to
@@ -474,7 +473,7 @@ function EraShelf() {
         The record shelf
       </SectionHeading>
       <div
-        className={`rounded-[18px] border-[3px] border-[#0C1220] bg-white p-[18px_16px_14px] ${POSTER_CARD_SHADOW}`}
+        className={`rounded-[28px] border border-slate-200 bg-white p-[20px_16px_16px] ${POSTER_CARD_SHADOW}`}
       >
         <div className="flex gap-2">
           {eraStats.map(({ era, songs, sorted, pct, label }) => {
@@ -486,7 +485,7 @@ function EraShelf() {
                 type="button"
                 onClick={() => jumpToAlbum(songs[0]?.album)}
                 aria-label={`Jump to the ${label} in Sort — ${sorted} of ${songs.length} sorted`}
-                className="relative flex h-[178px] min-w-0 flex-1 cursor-pointer flex-col items-center gap-2 overflow-hidden rounded-[8px_8px_4px_4px] border-[2.5px] border-[#0C1220] px-1 py-3 pb-2.5 text-center text-[#0C1220] transition-transform duration-150 hover:-translate-y-[5px] active:-translate-y-[1px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0072CE] focus-visible:ring-offset-2 min-[521px]:h-[196px]"
+                className="relative flex h-[178px] min-w-0 flex-1 cursor-pointer flex-col items-center gap-2 overflow-hidden rounded-[8px_8px_4px_4px] border border-black/10 px-1 py-3 pb-2.5 text-center text-[#0C1220] transition-transform duration-150 hover:-translate-y-[5px] active:-translate-y-[1px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0072CE] focus-visible:ring-offset-2 min-[521px]:h-[196px]"
                 style={{ backgroundColor: `${spineColor}24` }}
               >
                 {/* The fill IS the reading (Mark, Nov 4, 2026: the
@@ -508,7 +507,7 @@ function EraShelf() {
                   {pct}%
                 </span>
                 <span
-                  className={`${displayFont.className} relative flex-1 text-[14.5px] leading-[1.1] tracking-[0.04em] text-white [writing-mode:vertical-rl] min-[521px]:text-[16.5px]`}
+                  className="relative flex-1 text-[14.5px] font-black leading-[1.1] tracking-[0.04em] text-white [writing-mode:vertical-rl] min-[521px]:text-[16.5px]"
                   style={{
                     textShadow:
                       '1px 0 0 #0C1220, -1px 0 0 #0C1220, 0 1px 0 #0C1220, 0 -1px 0 #0C1220',
@@ -596,7 +595,7 @@ function JourneyBar({ total }: { total: number }) {
         })}
         <span
           aria-hidden
-          className="absolute top-1/2 z-[3] grid h-[34px] w-[34px] -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-[3px] border-[#0C1220] bg-[#FFC72C] shadow-[0_4px_10px_rgba(0,0,0,0.4)]"
+          className="absolute top-1/2 z-[3] grid h-[34px] w-[34px] -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-[3px] border-white bg-[#FFC72C] shadow-[0_4px_10px_rgba(0,0,0,0.4)]"
           style={{ left: `${pos}%` }}
         >
           <FlyingWIcon className="h-auto w-[24px] text-[#0072CE]" />
@@ -607,7 +606,7 @@ function JourneyBar({ total }: { total: number }) {
 }
 
 const GAME_BUTTON_GOLD =
-  'inline-flex w-full cursor-pointer items-center justify-center rounded-[14px] border-[2.5px] border-[#0C1220] bg-[#FFC72C] px-[26px] py-4 text-lg font-black text-[#0C1220] shadow-[3px_3px_0_#0C1220] transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_#0C1220]';
+  'inline-flex w-full cursor-pointer items-center justify-center rounded-[14px] bg-[#FFC72C] px-[26px] py-[18.5px] text-lg font-black text-[#0C1220] shadow-[0_10px_24px_rgba(0,0,0,0.35)] transition-all active:scale-[0.98]';
 const GAME_HALFTONE_STYLE = {
   backgroundImage:
     'radial-gradient(rgba(255,255,255,0.09) 1.4px, transparent 1.5px)',
@@ -659,7 +658,7 @@ function GameCard() {
 
   return (
     <section
-      className={`relative flex flex-col overflow-hidden rounded-[26px] border-[3px] border-[#0C1220] bg-[#0B1E3F] p-[26px_22px_24px] text-white ${POSTER_CARD_SHADOW} sm:p-[30px_28px_26px]`}
+      className={`relative flex flex-col overflow-hidden rounded-[28px] border border-white/10 bg-[#0B1E3F] p-[28px_22px_26px] text-white ${POSTER_CARD_SHADOW} sm:p-[32px_28px_28px]`}
     >
       <div
         aria-hidden
@@ -671,7 +670,7 @@ function GameCard() {
           <PosterTape tone="pink">The game</PosterTape>
         </div>
         <h2
-          className={`${displayFont.className} mt-3 text-[clamp(28px,5.6vw,38px)] leading-[1.02] tracking-wide`}
+          className="mt-3 text-[clamp(28px,5.6vw,38px)] font-black leading-[1.02] tracking-wide"
         >
           Can You Get Back to the Shack?
         </h2>
@@ -822,7 +821,7 @@ function ThreadSection() {
           Show it off
         </SectionHeading>
         <div
-          className={`relative overflow-hidden rounded-[18px] border-[3px] border-[#0C1220] bg-[#0C1220] p-6 text-white ${POSTER_CARD_SHADOW} sm:p-[22px]`}
+          className={`relative overflow-hidden rounded-[28px] border border-white/10 bg-[#0C1220] px-6 py-[26px] text-white ${POSTER_CARD_SHADOW} sm:px-[22px] sm:py-[24px]`}
         >
           <div
             aria-hidden
@@ -849,7 +848,7 @@ function ThreadSection() {
               </span>
             )}
             <h3
-              className={`${displayFont.className} mt-[10px] max-w-[22ch] text-[clamp(24px,5vw,30px)] leading-[1.1] tracking-wide`}
+              className="mt-[10px] max-w-[22ch] text-[clamp(24px,5vw,30px)] font-black leading-[1.1] tracking-wide"
             >
               Your Sweater Thread
             </h3>
@@ -881,7 +880,7 @@ function ThreadSection() {
       <button
         type="button"
         onClick={() => navigateTo('wrapped')}
-        className={`relative w-full cursor-pointer overflow-hidden rounded-[18px] border-[3px] border-[#0C1220] bg-[#0C1220] p-[30px_26px] text-left text-white ${POSTER_CARD_SHADOW} sm:p-[34px_30px]`}
+        className={`relative w-full cursor-pointer overflow-hidden rounded-[28px] border border-white/10 bg-[#0C1220] p-[32px_26px] text-left text-white ${POSTER_CARD_SHADOW} sm:p-[36px_30px]`}
       >
         <span
           aria-hidden
@@ -891,7 +890,7 @@ function ThreadSection() {
         <span className="relative block">
           <PosterTape>The main event</PosterTape>
           <span
-            className={`${displayFont.className} mt-[10px] block max-w-[26ch] text-[clamp(27px,5.4vw,36px)] leading-[1.1] tracking-wide`}
+            className="mt-[10px] block max-w-[26ch] text-[clamp(27px,5.4vw,36px)] font-black leading-[1.1] tracking-wide"
           >
             Your Sweater Thread
           </span>
@@ -909,10 +908,10 @@ function ThreadSection() {
             key={tile.title}
             type="button"
             onClick={() => openShareTile(tile.jump)}
-            className={`flex min-h-[120px] w-40 shrink-0 cursor-pointer snap-start flex-col justify-between overflow-hidden rounded-[14px] border-[3px] border-[#0C1220] p-4 text-left ${POSTER_HARD_SHADOW} transition-transform duration-150 hover:-translate-y-1 hover:-rotate-[0.5deg] active:translate-x-[2px] active:translate-y-[2px] ${tile.tileClass}`}
+            className={`flex min-h-[120px] w-40 shrink-0 cursor-pointer snap-start flex-col justify-between overflow-hidden rounded-[14px] border border-black/10 p-[18px_16px] text-left ${POSTER_HARD_SHADOW} transition-transform duration-150 hover:-translate-y-1 hover:-rotate-[0.5deg] active:scale-[0.97] ${tile.tileClass}`}
           >
             <span
-              className={`${displayFont.className} text-xl leading-tight tracking-wide ${tile.titleClass}`}
+              className={`text-xl font-black leading-tight tracking-wide ${tile.titleClass}`}
             >
               {tile.title}
             </span>
@@ -942,10 +941,10 @@ function FanStatsFeature() {
     <button
       type="button"
       onClick={() => navigateTo('fan_stats')}
-      className={`w-full cursor-pointer rounded-[18px] border-[3px] border-[#0C1220] bg-white p-[30px_26px] text-left text-[#0C1220] ${POSTER_CARD_SHADOW} transition-transform duration-150 hover:-translate-y-[3px] sm:p-[34px_30px]`}
+      className={`w-full cursor-pointer rounded-[28px] border border-slate-200 bg-white p-[32px_26px] text-left text-[#0C1220] ${POSTER_CARD_SHADOW} transition-transform duration-150 hover:-translate-y-[3px] sm:p-[36px_30px]`}
     >
       <h2
-        className={`${displayFont.className} text-[clamp(27px,5.4vw,36px)] leading-[1.1] tracking-wide`}
+        className="text-[clamp(27px,5.4vw,36px)] font-black leading-[1.1] tracking-wide"
       >
         Weezerverse
       </h2>
@@ -1118,10 +1117,10 @@ function DestinationsGrid() {
               key={tile.label}
               type="button"
               onClick={tile.action}
-              className={`flex cursor-pointer flex-col gap-[10px] rounded-[18px] border-[3px] border-[#0C1220] bg-white p-[18px_16px] text-left text-[#0C1220] ${POSTER_HARD_SHADOW} transition-all duration-[130ms] hover:-translate-x-[1px] hover:-translate-y-[3px] hover:shadow-[6px_7px_0_rgba(11,30,63,0.85)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_rgba(11,30,63,0.85)]`}
+              className={`flex cursor-pointer flex-col gap-[10px] rounded-[18px] border border-slate-200 bg-white p-[20px_16px] text-left text-[#0C1220] ${POSTER_HARD_SHADOW} transition-all duration-[130ms] hover:-translate-y-[3px] hover:shadow-[0_18px_36px_rgba(12,18,32,0.14)] active:scale-[0.98]`}
             >
               <span
-                className="grid h-11 w-11 place-items-center rounded-[12px] border-[2.5px] border-[#0C1220] text-white"
+                className="grid h-11 w-11 place-items-center rounded-[12px] text-white"
                 style={{ backgroundColor: style?.color }}
               >
                 <svg
@@ -1138,7 +1137,7 @@ function DestinationsGrid() {
                 </svg>
               </span>
               <span
-                className={`${displayFont.className} block break-words text-[19px] leading-[1.05] tracking-wide`}
+                className="block break-words text-[19px] font-black leading-[1.05] tracking-wide"
               >
                 {tile.label}
               </span>

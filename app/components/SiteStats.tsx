@@ -3,7 +3,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/utils/supabase';
 import { useWeezer } from '../context/WeezerContext';
-import { displayFont } from './shareables/fonts';
 import {
   EVENT_STATS_ROWS,
   isOwnerUser,
@@ -102,7 +101,7 @@ function formatRefreshedAt(raw: string): string {
 }
 
 const CARD_CLASS =
-  'bg-white p-4 rounded-2xl border-[2.5px] border-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)]';
+  'bg-white p-4 py-[17.5px] rounded-[28px] border border-slate-200 shadow-[0_14px_30px_rgba(12,18,32,0.08)]';
 
 function completionLine(
   label: string,
@@ -199,7 +198,7 @@ export default function SiteStats() {
     <div className="space-y-4">
       <div>
         <h1
-          className={`${displayFont.className} text-[clamp(26px,5vw,34px)] leading-none tracking-wide text-[#0C1220]`}
+          className={`font-black text-[clamp(26px,5vw,34px)] leading-none tracking-wide text-[#0C1220]`}
         >
           Site stats
         </h1>
@@ -228,7 +227,7 @@ export default function SiteStats() {
           </p>
           <button
             onClick={() => setAttempt((n) => n + 1)}
-            className="bg-[#0C1220] hover:bg-slate-700 border-[2.5px] border-[#0C1220] text-white font-black py-2.5 px-4 rounded-xl transition-colors text-xs cursor-pointer"
+            className="bg-[#0C1220] hover:bg-slate-700 text-white font-black py-[12.5px] px-4 rounded-xl transition-colors text-xs cursor-pointer"
           >
             Check again
           </button>
@@ -242,7 +241,7 @@ export default function SiteStats() {
           </p>
           <button
             onClick={() => setAttempt((n) => n + 1)}
-            className="bg-[#0C1220] hover:bg-slate-700 border-[2.5px] border-[#0C1220] text-white font-black py-2.5 px-4 rounded-xl transition-colors text-xs cursor-pointer"
+            className="bg-[#0C1220] hover:bg-slate-700 text-white font-black py-[12.5px] px-4 rounded-xl transition-colors text-xs cursor-pointer"
           >
             Try again
           </button>
@@ -414,7 +413,7 @@ export default function SiteStats() {
             </p>
             <button
               onClick={() => setPoolAttempt((n) => n + 1)}
-              className="bg-[#0C1220] hover:bg-slate-700 border-[2.5px] border-[#0C1220] text-white font-black py-2.5 px-4 rounded-xl transition-colors text-xs cursor-pointer"
+              className="bg-[#0C1220] hover:bg-slate-700 text-white font-black py-[12.5px] px-4 rounded-xl transition-colors text-xs cursor-pointer"
             >
               Try again
             </button>

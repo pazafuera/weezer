@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/utils/supabase';
 import { useWeezer } from '../context/WeezerContext';
-import { displayFont } from './shareables/fonts';
 import { FULL_SONG_POOL } from '../data/constants';
 import { refreshMasterListMetadata } from '../lib/catalogMetadata';
 
@@ -309,7 +308,7 @@ export default function WeezerFriends() {
   if (!userId) {
     return (
       <div className="pb-32 animate-in fade-in duration-500">
-        <div className="-mt-4 sm:-mt-6 lg:-mt-8 -mx-4 sm:-mx-6 lg:-mx-8 mb-6 border-b-[3px] border-[#0C1220] overflow-hidden bg-slate-900 shadow-xs">
+        <div className="-mt-4 sm:-mt-6 lg:-mt-8 -mx-4 sm:-mx-6 lg:-mx-8 mb-6 border-b border-slate-200 overflow-hidden bg-slate-900 shadow-xs">
           <img
             src="/img/rideordie.png"
             alt="Weezer Ride or Die Friends"
@@ -317,7 +316,7 @@ export default function WeezerFriends() {
           />
         </div>
         <div className="max-w-2xl mx-auto px-4 space-y-8">
-          <div className="bg-white border-[3px] border-[#0C1220] rounded-[18px] shadow-[4px_4px_0_rgba(11,30,63,0.85)] p-6 sm:p-8 space-y-3 text-center">
+          <div className="bg-white border border-slate-200 rounded-[28px] shadow-[0_14px_30px_rgba(12,18,32,0.08)] p-6 py-[26px] sm:p-8 sm:py-[34px] space-y-3 text-center">
             <h2 className="text-xl font-black text-[#0C1220] tracking-tight">
               Fan Friends needs an account
             </h2>
@@ -342,7 +341,7 @@ export default function WeezerFriends() {
     <div className="pb-32 animate-in fade-in duration-500">
 
       {/* FULL-BLEED HERO IMAGE (FLUSH TO HEADER & SIDE EDGES) */}
-      <div className="-mt-4 sm:-mt-6 lg:-mt-8 -mx-4 sm:-mx-6 lg:-mx-8 mb-6 border-b-[3px] border-[#0C1220] overflow-hidden bg-slate-900 shadow-xs">
+      <div className="-mt-4 sm:-mt-6 lg:-mt-8 -mx-4 sm:-mx-6 lg:-mx-8 mb-6 border-b border-slate-200 overflow-hidden bg-slate-900 shadow-xs">
         <img
           src="/img/rideordie.png"
           alt="Weezer Ride or Die Friends"
@@ -359,7 +358,7 @@ export default function WeezerFriends() {
 
         {/* HEADER TEXT */}
         <div className="text-center space-y-3">
-          <h2 className="${displayFont.className} text-3xl sm:text-4xl text-[#0C1220]">
+          <h2 className="font-black text-3xl sm:text-4xl text-[#0C1220]">
             Fan Friends
           </h2>
           <p className="text-sm font-bold text-[#3D4A63] mt-2 max-w-md mx-auto">
@@ -368,7 +367,7 @@ export default function WeezerFriends() {
         </div>
 
         {/* SEND FRIEND REQUEST CARD */}
-        <div className="bg-white border-[3px] border-[#0C1220] rounded-[18px] shadow-[4px_4px_0_rgba(11,30,63,0.85)] p-6 sm:p-8 space-y-3">
+        <div className="bg-white border border-slate-200 rounded-[28px] shadow-[0_14px_30px_rgba(12,18,32,0.08)] p-6 py-[26px] sm:p-8 sm:py-[34px] space-y-3">
           <div className="space-y-0.5">
             <span className="text-[10px] font-black uppercase tracking-widest text-[#0072CE] block">
               Add Fan Friends
@@ -396,14 +395,14 @@ export default function WeezerFriends() {
                 placeholder="friend's username"
                 value={searchUsername}
                 onChange={(e) => setSearchUsername(e.target.value)}
-                className="w-full pl-9 pr-4 py-3 bg-white border-2 border-[#0C1220] rounded-xl font-bold text-slate-900 placeholder:text-[#3D4A63] focus:outline-none focus:border-[#0072CE]"
+                className="w-full pl-9 pr-4 py-3 bg-white border-2 border-slate-300 rounded-xl font-bold text-slate-900 placeholder:text-[#3D4A63] focus:outline-none focus:border-[#0072CE]"
               />
             </div>
 
             <button
               type="submit"
               disabled={addLoading || !searchUsername.trim()}
-              className="bg-[#0072CE] hover:bg-blue-600 border-2 border-[#0C1220] text-white font-black px-6 py-3 rounded-xl transition-colors disabled:opacity-50 cursor-pointer shrink-0"
+              className="bg-[#0072CE] hover:bg-blue-600 text-white font-black px-6 py-[14px] rounded-xl transition-colors disabled:opacity-50 cursor-pointer shrink-0"
             >
               {addLoading ? 'Sending...' : 'Send Request'}
             </button>
@@ -415,10 +414,10 @@ export default function WeezerFriends() {
 
         {/* INCOMING REQUESTS INBOX */}
         {incomingRequests.length > 0 && (
-          <div className="bg-amber-50/80 border-[3px] border-[#0C1220] rounded-[18px] shadow-[4px_4px_0_rgba(11,30,63,0.85)] p-6 space-y-4">
+          <div className="bg-amber-50/80 border border-amber-200 rounded-[28px] shadow-[0_14px_30px_rgba(12,18,32,0.08)] p-6 py-[26px] space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-500 border-2 border-[#0C1220] animate-ping" />
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping" />
                 <h3 className="text-sm font-black uppercase tracking-wider text-amber-950">
                   Incoming Friend Requests ({incomingRequests.length})
                 </h3>
@@ -429,7 +428,7 @@ export default function WeezerFriends() {
               {incomingRequests.map((req) => (
                 <div
                   key={req.id}
-                  className="bg-white border-2 border-[#0C1220] rounded-2xl p-4 flex items-center justify-between"
+                  className="bg-white border border-slate-200 rounded-2xl p-4 py-[17px] flex items-center justify-between"
                 >
                   <div className="min-w-0 pr-2">
                     <h4 className="text-sm font-black text-[#0C1220] truncate">
@@ -443,13 +442,13 @@ export default function WeezerFriends() {
                   <div className="flex items-center gap-2 shrink-0">
                     <button
                       onClick={() => handleAcceptRequest(req.friendshipId)}
-                      className="bg-emerald-600 hover:bg-emerald-700 border-2 border-[#0C1220] text-white text-xs font-black px-3.5 py-2 rounded-xl transition-colors cursor-pointer"
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black px-3.5 py-[10px] rounded-xl transition-colors cursor-pointer"
                     >
                       Accept ✓
                     </button>
                     <button
                       onClick={() => handleDeclineRequest(req.friendshipId)}
-                      className="bg-white hover:bg-slate-50 border-2 border-[#0C1220] text-[#0C1220] text-xs font-black px-3 py-2 rounded-xl transition-colors cursor-pointer"
+                      className="bg-white hover:bg-slate-50 border border-slate-200 text-[#0C1220] text-xs font-black px-3 py-[9px] rounded-xl transition-colors cursor-pointer"
                     >
                       Decline
                     </button>
@@ -487,7 +486,7 @@ export default function WeezerFriends() {
               {friends.map((friend) => (
                 <div
                   key={friend.id}
-                  className="bg-white border-2 border-[#0C1220] rounded-2xl p-4 flex items-center justify-between shadow-[2px_2px_0_rgba(11,30,63,0.85)] transition-colors group"
+                  className="bg-white border border-slate-200 rounded-2xl p-4 py-[17px] flex items-center justify-between shadow-[0_2px_8px_rgba(12,18,32,0.08)] transition-colors group"
                 >
                   <div className="min-w-0 pr-3">
                     <h4 className="text-base font-black text-[#0C1220] truncate">
@@ -503,12 +502,12 @@ export default function WeezerFriends() {
 
                   {friend.status === 'pending_outgoing' ? (
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className="bg-white border-2 border-[#0C1220] text-[#3D4A63] text-[10px] font-black uppercase tracking-wider px-3 py-2 rounded-xl">
+                      <span className="bg-white border border-slate-200 text-[#3D4A63] text-[10px] font-black uppercase tracking-wider px-3 py-[9px] rounded-xl">
                         Pending...
                       </span>
                       <button
                         onClick={() => handleCancelRequest(friend.friendshipId)}
-                        className="bg-white hover:bg-slate-50 border-2 border-[#0C1220] text-[#0C1220] text-xs font-black px-3 py-2 rounded-xl transition-colors cursor-pointer"
+                        className="bg-white hover:bg-slate-50 border border-slate-200 text-[#0C1220] text-xs font-black px-3 py-[9px] rounded-xl transition-colors cursor-pointer"
                       >
                         Cancel
                       </button>
@@ -517,7 +516,7 @@ export default function WeezerFriends() {
                     <div className="flex flex-col items-end gap-1 shrink-0">
                       <button
                         onClick={() => router.push(`/u/${friend.username}`)}
-                        className="bg-[#0C1220] hover:bg-slate-800 border-2 border-[#0C1220] text-white text-[10px] font-black uppercase tracking-widest px-4 py-2.5 rounded-xl transition-colors cursor-pointer"
+                        className="bg-[#0C1220] hover:bg-slate-800 text-white text-[10px] font-black uppercase tracking-widest px-4 py-[12.5px] rounded-xl transition-colors cursor-pointer"
                       >
                         Compare
                       </button>

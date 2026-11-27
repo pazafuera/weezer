@@ -21,7 +21,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../utils/supabase';
 import { useWeezer } from '../context/WeezerContext';
-import { displayFont } from './shareables/fonts';
 import { fanhoodGamesPlayed, useFanhood } from '../lib/fanhood';
 import {
   cleanShellUsername,
@@ -37,7 +36,7 @@ import {
 } from '../lib/leaderboard';
 
 const CARD_CLASS =
-  'bg-white border-[3px] border-[#0C1220] rounded-[18px] p-5 shadow-[4px_4px_0_#0C1220] space-y-3';
+  'bg-white border border-slate-200 rounded-[28px] p-5 py-[22px] shadow-[0_14px_30px_rgba(12,18,32,0.08)] space-y-3';
 
 export default function ShellClaimCard() {
   const { userId, isShell, userProfile } = useWeezer();
@@ -106,13 +105,13 @@ export default function ShellClaimCard() {
         : null;
     return (
       <div className={CARD_CLASS}>
-        <h3 className={`${displayFont.className} text-[19px] leading-tight text-[#0C1220]`}>
+        <h3 className={`font-black text-[19px] leading-tight text-[#0C1220]`}>
           {ownIdx >= 0
             ? `You're #${ownIdx + 1} on the board`
             : `You're on the board as @${shown}`}
         </h3>
         {windowRows && (
-          <div className="overflow-hidden rounded-[14px] border-[2.5px] border-[#0C1220]">
+          <div className="overflow-hidden rounded-[14px] border-[2.5px] border-slate-200">
             {windowRows.map((row) => {
               const rank =
                 boardRows!.findIndex((r) => r.username === row.username) +
@@ -125,7 +124,7 @@ export default function ShellClaimCard() {
                     isYou
                       ? 'bg-[#FFE066] font-black text-[#0C1220]'
                       : 'bg-white font-bold text-[#3D4A63]'
-                  } ${rank > 1 ? 'border-t-2 border-[#0C1220]/10' : ''}`}
+                  } ${rank > 1 ? 'border-t-2 border-slate-200' : ''}`}
                 >
                   <span>
                     #{rank} @{row.username}
@@ -147,7 +146,7 @@ export default function ShellClaimCard() {
   if (plan === 'claimed-on-device') {
     return (
       <div className={CARD_CLASS}>
-        <h3 className={`${displayFont.className} text-[19px] leading-tight text-[#0C1220]`}>
+        <h3 className={`font-black text-[19px] leading-tight text-[#0C1220]`}>
           This device already claimed @{stored?.username}
         </h3>
         <p className="text-xs sm:text-sm font-medium text-[#3D4A63] leading-relaxed">
@@ -210,7 +209,7 @@ export default function ShellClaimCard() {
 
   return (
     <div className={CARD_CLASS}>
-      <h3 className={`${displayFont.className} text-[19px] leading-tight text-[#0C1220]`}>
+      <h3 className={`font-black text-[19px] leading-tight text-[#0C1220]`}>
         Get on the leaderboard
       </h3>
       <p className="text-xs sm:text-sm font-medium text-[#3D4A63] leading-relaxed">
@@ -223,12 +222,12 @@ export default function ShellClaimCard() {
           placeholder="your name on the board"
           maxLength={24}
           autoComplete="off"
-          className="flex-1 rounded-[14px] border-[2.5px] border-[#0C1220] px-4 py-3 text-sm font-bold text-[#0C1220] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0072CE]"
+          className="flex-1 rounded-[14px] border-[2.5px] border-slate-300 px-4 py-3 text-sm font-bold text-[#0C1220] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0072CE]"
         />
         <button
           onClick={submit}
           disabled={busy}
-          className="shrink-0 font-black text-xs sm:text-sm px-5 py-3 rounded-[14px] border-[3px] border-[#0C1220] bg-[#0072CE] text-white shadow-[4px_4px_0_#0C1220] transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_#0C1220] cursor-pointer disabled:opacity-60"
+          className="shrink-0 font-black text-xs sm:text-sm px-5 py-[15px] rounded-[14px] bg-[#0072CE] text-white shadow-[0_14px_30px_rgba(12,18,32,0.08)] transition-all active:scale-[0.98] cursor-pointer disabled:opacity-60"
         >
           {busy ? 'Saving…' : 'Claim username and save my score'}
         </button>

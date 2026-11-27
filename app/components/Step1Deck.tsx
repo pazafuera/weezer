@@ -2426,7 +2426,14 @@ export default function Step1Deck({
   return (
     <div
       ref={deckRootRef}
-      className="relative flex-1 min-h-0 flex flex-col w-full max-w-[560px] mx-auto px-4"
+      // pb-6 is the deck's footer clearance: the triage root bleeds
+      // over <main>'s padding (-m-4 …) and runs at least one screen
+      // tall, so without bottom padding here the ACTIONS block —
+      // the Jump-to-album select last — lands flush against the
+      // site footer (owner screenshot, Nov 26, 2026). The flex-1
+      // card area above absorbs the 24px when everything fits one
+      // screen; on short screens it becomes the trailing gap.
+      className="relative flex-1 min-h-0 flex flex-col w-full max-w-[560px] mx-auto px-4 pb-6"
     >
       {/* COMPACT PROGRESS — one line + a slim bar. Same counts as the
           list header (categorizedCount / bucketedCount), so the two

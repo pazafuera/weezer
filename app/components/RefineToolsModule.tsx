@@ -73,7 +73,7 @@ export default function RefineToolsModule({
         type="button"
         onClick={onOpen}
         aria-label="Open the ranking tools"
-        className="refine-step-in w-full rounded-xl border-[2.5px] border-[#0C1220] bg-white hover:bg-slate-50 px-4 py-2.5 flex items-center justify-between shadow-[2px_2px_0_rgba(11,30,63,0.85)] transition cursor-pointer"
+        className="refine-step-in w-full rounded-xl border border-slate-200 bg-white hover:bg-slate-50 px-4 py-2.5 flex items-center justify-between shadow-[0_4px_14px_rgba(12,18,32,0.06)] transition cursor-pointer"
       >
         <span className="text-[12px] font-black text-[#0C1220]">
           {locked
@@ -93,7 +93,7 @@ export default function RefineToolsModule({
 
   if (locked) {
     return (
-      <div className="rounded-[18px] border-[2.5px] border-[#0C1220] bg-white p-4 shadow-[3px_3px_0_rgba(11,30,63,0.85)] refine-step-in">
+      <div className="rounded-[28px] bg-white p-4 shadow-[0_14px_30px_rgba(12,18,32,0.08)] refine-step-in">
         <div className="flex items-start justify-between mb-3">
           <span className="text-[10px] font-black uppercase tracking-widest text-[#3D4A63] pt-1">
             Optional deep dive
@@ -116,7 +116,7 @@ export default function RefineToolsModule({
           <button
             type="button"
             onClick={onJumpToPrevious}
-            className="w-full rounded-xl border-2 border-[#0C1220] bg-amber-400 px-3 py-2.5 text-[13px] font-black text-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)] transition cursor-pointer"
+            className="w-full rounded-xl bg-amber-400 px-3 py-2.5 text-[13px] font-black text-[#0C1220] shadow-[0_4px_14px_rgba(12,18,32,0.08)] transition active:scale-[0.98] cursor-pointer"
           >
             Go to your {lockedPrevPlural} →
           </button>
@@ -126,7 +126,7 @@ export default function RefineToolsModule({
   }
 
   return (
-    <div className="rounded-[18px] border-[2.5px] border-[#0C1220] bg-white p-4 shadow-[3px_3px_0_rgba(11,30,63,0.85)] refine-step-in">
+    <div className="rounded-[28px] bg-white p-4 shadow-[0_14px_30px_rgba(12,18,32,0.08)] refine-step-in">
       <div className="flex items-start justify-between mb-3">
         <span className="text-[10px] font-black uppercase tracking-widest text-[#3D4A63] pt-1">
           {mode === 'rank' ? 'Ranking tools' : 'Optional deep dive'}
@@ -149,14 +149,14 @@ export default function RefineToolsModule({
             <button
               type="button"
               onClick={() => onChooseMode('rank')}
-              className="flex-1 rounded-xl border-2 border-[#0C1220] bg-amber-400 px-3 py-2.5 text-[13px] font-black text-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)] transition cursor-pointer"
+              className="flex-1 rounded-xl bg-amber-400 px-3 py-2.5 text-[13px] font-black text-[#0C1220] shadow-[0_4px_14px_rgba(12,18,32,0.08)] transition active:scale-[0.98] cursor-pointer"
             >
               Rank them
             </button>
             <button
               type="button"
               onClick={() => onChooseMode('review')}
-              className="flex-1 rounded-xl border-2 border-[#0C1220] bg-white px-3 py-2.5 text-[13px] font-black text-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)] transition cursor-pointer"
+              className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-[13px] font-black text-[#0C1220] shadow-[0_2px_8px_rgba(12,18,32,0.05)] transition active:scale-[0.98] cursor-pointer"
             >
               Just review
             </button>
@@ -172,7 +172,7 @@ export default function RefineToolsModule({
           <button
             type="button"
             onClick={() => onChooseMode('rank')}
-            className="w-full rounded-xl border-2 border-[#0C1220] bg-amber-400 px-3 py-2.5 text-[13px] font-black text-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)] transition cursor-pointer"
+            className="w-full rounded-xl bg-amber-400 px-3 py-2.5 text-[13px] font-black text-[#0C1220] shadow-[0_4px_14px_rgba(12,18,32,0.08)] transition active:scale-[0.98] cursor-pointer"
           >
             Rank them instead
           </button>
@@ -191,7 +191,7 @@ export default function RefineToolsModule({
               <button
                 type="button"
                 onClick={onClose}
-                className="w-full text-left rounded-xl border-2 border-[#0C1220] bg-white px-3.5 py-2.5 shadow-[2px_2px_0_rgba(11,30,63,0.85)] transition cursor-pointer"
+                className="w-full text-left rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 shadow-[0_2px_8px_rgba(12,18,32,0.05)] transition cursor-pointer"
               >
                 <span className="block text-[13px] font-black text-[#0C1220]">↕️ Just drag</span>
                 <span className="block text-[11px] font-bold text-[#3D4A63]">
@@ -202,7 +202,7 @@ export default function RefineToolsModule({
             <button
               type="button"
               onClick={onLaunchMatchups}
-              className="w-full text-left rounded-xl border-2 border-[#0C1220] bg-white px-3.5 py-2.5 shadow-[2px_2px_0_rgba(11,30,63,0.85)] transition cursor-pointer"
+              className="w-full text-left rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 shadow-[0_2px_8px_rgba(12,18,32,0.05)] transition cursor-pointer"
             >
               <span className="block text-[13px] font-black text-[#0C1220]">⚡️ Head to Head</span>
               <span className="block text-[11px] font-bold text-[#3D4A63]">
@@ -213,7 +213,7 @@ export default function RefineToolsModule({
               <button
                 type="button"
                 onClick={onLaunchSplit}
-                className="w-full text-left rounded-xl border-2 border-[#0C1220] bg-white px-3.5 py-2.5 shadow-[2px_2px_0_rgba(11,30,63,0.85)] transition cursor-pointer"
+                className="w-full text-left rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 shadow-[0_2px_8px_rgba(12,18,32,0.05)] transition cursor-pointer"
               >
                 <span className="block text-[13px] font-black text-[#0C1220]">✂️ Split in Chunks</span>
                 <span className="block text-[11px] font-bold text-[#3D4A63]">
@@ -225,7 +225,7 @@ export default function RefineToolsModule({
               <button
                 type="button"
                 onClick={onClose}
-                className="w-full text-left rounded-xl border-2 border-[#0C1220] bg-white px-3.5 py-2.5 shadow-[2px_2px_0_rgba(11,30,63,0.85)] transition cursor-pointer"
+                className="w-full text-left rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 shadow-[0_2px_8px_rgba(12,18,32,0.05)] transition cursor-pointer"
               >
                 <span className="block text-[13px] font-black text-[#0C1220]">↕️ Just drag</span>
                 <span className="block text-[11px] font-bold text-[#3D4A63]">

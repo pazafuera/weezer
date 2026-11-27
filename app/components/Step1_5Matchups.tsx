@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import { Song } from '../data/constants';
 import { AudioPreviewButton, SortingIncompleteNotice } from './SharedUI';
 import type { TriageValue } from '../context/WeezerContext';
-import { displayFont } from './shareables/fonts';
 
 const SWEEP_STORE_KEY = 'weezer-sweep-cursors';
 
@@ -152,7 +151,7 @@ export default function Step1_5Matchups({
         <span className="text-[10px] font-black uppercase tracking-widest text-[#3D4A63]">
           Matchup {round} of {totalRounds}
         </span>
-        <h2 className={`${displayFont.className} text-[27px] text-[#0C1220] mt-1`}>Which {bucketTitle} is Better?</h2>
+        <h2 className={`font-black text-[27px] text-[#0C1220] mt-1`}>Which {bucketTitle} is Better?</h2>
         <p className="text-sm font-bold text-[#3D4A63]">Tap your favorite — winners climb.</p>
       </div>
 
@@ -163,10 +162,10 @@ export default function Step1_5Matchups({
           onKeyDown={(e) => handleCardKeyDown(e, 0)}
           role="button"
           tabIndex={0}
-          className={`flex-1 rounded-[18px] border-[3px] px-4 pt-3 pb-6 sm:px-6 sm:pt-5 sm:pb-8 flex flex-col items-center justify-center transition-all duration-300 cursor-pointer overflow-hidden ${
-            animating === 'left' ? 'bg-[#0072CE] border-[#0072CE] text-white scale-105 shadow-2xl z-10' :
-            animating === 'right' ? 'bg-slate-100 border-slate-200 opacity-40 scale-95' :
-            'bg-white border-[#0C1220] shadow-[4px_4px_0_rgba(11,30,63,0.85)]'
+          className={`flex-1 rounded-[28px] px-4 pt-3 pb-6 sm:px-6 sm:pt-5 sm:pb-8 flex flex-col items-center justify-center transition-all duration-300 cursor-pointer overflow-hidden ${
+            animating === 'left' ? 'bg-[#0072CE] text-white scale-105 shadow-2xl z-10' :
+            animating === 'right' ? 'bg-slate-100 opacity-40 scale-95' :
+            'bg-white shadow-[0_14px_30px_rgba(12,18,32,0.08)]'
           }`}
         >
           {/* shrink-0 on the title is load-bearing: in a
@@ -180,7 +179,7 @@ export default function Step1_5Matchups({
               never scroll), restoring the fit — and the
               shrink-0 guards stay, so no future addition can
               silently eat the title again. */}
-          <h3 className={`${displayFont.className} shrink-0 text-2xl sm:text-3xl leading-tight text-center mb-2 line-clamp-3 ${animating === 'left' ? 'text-white' : 'text-[#0C1220]'}`}>
+          <h3 className={`font-black shrink-0 text-2xl sm:text-3xl leading-tight text-center mb-2 line-clamp-3 ${animating === 'left' ? 'text-white' : 'text-[#0C1220]'}`}>
             {currentPair[0].title}
           </h3>
           <p className={`shrink-0 text-xs font-bold uppercase tracking-widest mb-4 ${animating === 'left' ? 'text-blue-200' : 'text-[#3D4A63]'}`}>
@@ -205,13 +204,13 @@ export default function Step1_5Matchups({
           onKeyDown={(e) => handleCardKeyDown(e, 1)}
           role="button"
           tabIndex={0}
-          className={`flex-1 rounded-[18px] border-[3px] px-4 pt-6 pb-3 sm:px-6 sm:pt-8 sm:pb-5 flex flex-col items-center justify-center transition-all duration-300 cursor-pointer overflow-hidden ${
-            animating === 'right' ? 'bg-amber-400 border-amber-500 text-slate-900 scale-105 shadow-2xl z-10' :
-            animating === 'left' ? 'bg-slate-100 border-slate-200 opacity-40 scale-95' :
-            'bg-white border-[#0C1220] shadow-[4px_4px_0_rgba(11,30,63,0.85)]'
+          className={`flex-1 rounded-[28px] px-4 pt-6 pb-3 sm:px-6 sm:pt-8 sm:pb-5 flex flex-col items-center justify-center transition-all duration-300 cursor-pointer overflow-hidden ${
+            animating === 'right' ? 'bg-amber-400 text-slate-900 scale-105 shadow-2xl z-10' :
+            animating === 'left' ? 'bg-slate-100 opacity-40 scale-95' :
+            'bg-white shadow-[0_14px_30px_rgba(12,18,32,0.08)]'
           }`}
         >
-          <h3 className={`${displayFont.className} shrink-0 text-2xl sm:text-3xl leading-tight text-center mb-2 line-clamp-3 text-[#0C1220]`}>
+          <h3 className={`font-black shrink-0 text-2xl sm:text-3xl leading-tight text-center mb-2 line-clamp-3 text-[#0C1220]`}>
             {currentPair[1].title}
           </h3>
           <p className={`shrink-0 text-xs font-bold uppercase tracking-widest mb-4 ${animating === 'right' ? 'text-amber-700' : 'text-[#3D4A63]'}`}>

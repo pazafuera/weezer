@@ -4,7 +4,6 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../utils/supabase';
 import { useWeezer } from '../context/WeezerContext';
-import { displayFont } from './shareables/fonts';
 import ShellClaimCard from './ShellClaimCard';
 import { LORE_GAMES } from '../data/loreGame';
 import type { LoreGameId } from '../data/loreGame';
@@ -150,7 +149,7 @@ export default function FanhoodLeaderboard({
     >
       {!embedded && (
         <div className="flex items-center justify-between gap-3">
-          <h2 className="${displayFont.className} text-lg sm:text-xl text-[#0C1220]">
+          <h2 className="font-black text-lg sm:text-xl text-[#0C1220]">
             Leaderboard
           </h2>
           <button
@@ -182,10 +181,10 @@ export default function FanhoodLeaderboard({
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`rounded-full px-4 py-2 text-xs font-black transition-all cursor-pointer ${
+            className={`rounded-full px-4 text-xs font-black transition-all cursor-pointer ${
               tab === t.id
-                ? 'bg-[#0C1220] border-[2.5px] border-[#0C1220] text-white'
-                : 'bg-white border-[2.5px] border-[#0C1220] text-[#0C1220] hover:bg-slate-50'
+                ? 'bg-[#0C1220] text-white py-[10.5px]'
+                : 'bg-white border border-slate-200 text-[#0C1220] hover:bg-slate-50 py-[9.5px]'
             }`}
           >
             {t.label}
@@ -194,7 +193,7 @@ export default function FanhoodLeaderboard({
       </div>
 
       {tab === 'friends' && !userId ? (
-        <div className="bg-white border-[3px] border-[#0C1220] rounded-[18px] shadow-[4px_4px_0_rgba(11,30,63,0.85)] p-5 space-y-3">
+        <div className="bg-white border border-slate-200 rounded-[28px] shadow-[0_14px_30px_rgba(12,18,32,0.08)] p-5 py-[22px] space-y-3">
           <p className="text-sm font-medium text-[#3D4A63] leading-relaxed">
             Sign in to see your friends&apos; board — the worldwide board
             above is open to everyone.
@@ -218,10 +217,10 @@ export default function FanhoodLeaderboard({
           <div className="flex flex-wrap gap-1.5">
             <button
               onClick={() => setScope('all')}
-              className={`rounded-full px-3 py-1.5 text-[11px] font-black transition-all cursor-pointer ${
+              className={`rounded-full px-3 text-[11px] font-black transition-all cursor-pointer ${
                 scope === 'all'
-                  ? 'bg-[#0072CE] border-2 border-[#0C1220] text-white'
-                  : 'bg-white border-2 border-[#0C1220] text-[#0C1220] hover:bg-slate-50'
+                  ? 'bg-[#0072CE] text-white py-[8px]'
+                  : 'bg-white border border-slate-200 text-[#0C1220] hover:bg-slate-50 py-[7px]'
               }`}
             >
               All rounds
@@ -230,10 +229,10 @@ export default function FanhoodLeaderboard({
               <button
                 key={game.id}
                 onClick={() => setScope(game.id as LoreGameId)}
-                className={`rounded-full px-3 py-1.5 text-[11px] font-black transition-all cursor-pointer ${
+                className={`rounded-full px-3 text-[11px] font-black transition-all cursor-pointer ${
                   scope === game.id
-                    ? 'bg-[#0072CE] border-2 border-[#0C1220] text-white'
-                    : 'bg-white border-2 border-[#0C1220] text-[#0C1220] hover:bg-slate-50'
+                    ? 'bg-[#0072CE] text-white py-[8px]'
+                    : 'bg-white border border-slate-200 text-[#0C1220] hover:bg-slate-50 py-[7px]'
                 }`}
               >
                 Round {i + 1}
@@ -247,13 +246,13 @@ export default function FanhoodLeaderboard({
               Loading the board…
             </p>
           ) : visible.length === 0 ? (
-            <div className="bg-white border-[3px] border-[#0C1220] rounded-[18px] shadow-[4px_4px_0_rgba(11,30,63,0.85)] p-5">
+            <div className="bg-white border border-slate-200 rounded-[28px] shadow-[0_14px_30px_rgba(12,18,32,0.08)] p-5 py-[22px]">
               <p className="text-sm font-medium text-[#3D4A63] leading-relaxed">
                 {emptyMessage()}
               </p>
             </div>
           ) : (
-            <div className="bg-white border-[3px] border-[#0C1220] rounded-[18px] shadow-[4px_4px_0_rgba(11,30,63,0.85)] divide-y-2 divide-[#0C1220] overflow-hidden">
+            <div className="bg-white border-[3px] border-slate-200 rounded-[28px] shadow-[0_14px_30px_rgba(12,18,32,0.08)] divide-y-2 divide-slate-200 overflow-hidden">
               {visible.map((entry, i) => {
                 const isYou = ownUsername !== null && entry.username === ownUsername;
                 const gameScore =

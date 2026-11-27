@@ -85,7 +85,7 @@ export default function ConnectedTop20({
   const onlyTarget = targetTop.filter((e) => !visitorById.has(e.id));
 
   return (
-    <div className="bg-emerald-50 border-[3px] border-[#0C1220] rounded-[18px] shadow-[4px_4px_0_rgba(11,30,63,0.85)] p-6 sm:p-8">
+    <div className="bg-emerald-50 border border-slate-200 rounded-[28px] shadow-[0_14px_30px_rgba(12,18,32,0.08)] p-6 py-[26px] sm:p-8 sm:py-[34px]">
       <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 block mb-1 text-center">
         🤝 Side by Side
       </span>
@@ -127,7 +127,7 @@ export default function ConnectedTop20({
           return (
             <div
               key={entry.id}
-              className="rounded-2xl border-2 border-[#0C1220] bg-white px-3.5 pb-3 pt-2.5"
+              className="rounded-2xl border border-slate-200 bg-white px-3.5 pb-[13px] pt-[11px]"
             >
               <div className="text-center text-[13px] font-extrabold leading-tight text-[#0C1220]">
                 {entry.title}
@@ -143,7 +143,7 @@ export default function ConnectedTop20({
                 />
                 {gap === 0 ? (
                   <span
-                    className="absolute top-1/2 flex h-[30px] w-[30px] items-center justify-center rounded-full border-2 border-[#0C1220] bg-[#FFC72C] text-[11px] font-black text-[#0C1220]"
+                    className="absolute top-1/2 flex h-[30px] w-[30px] items-center justify-center rounded-full border-2 border-slate-300 bg-[#FFC72C] text-[11px] font-black text-[#0C1220]"
                     style={{
                       left: `${pos(entry.rank)}%`,
                       transform: 'translate(-50%, -50%)',
@@ -154,7 +154,7 @@ export default function ConnectedTop20({
                 ) : (
                   <>
                     <span
-                      className="absolute top-1/2 flex h-[30px] w-[30px] items-center justify-center rounded-full border-2 border-[#0C1220] bg-[#0072CE] text-[11px] font-black text-white"
+                      className="absolute top-1/2 flex h-[30px] w-[30px] items-center justify-center rounded-full border-2 border-slate-300 bg-[#0072CE] text-[11px] font-black text-white"
                       style={{
                         left: `${visitorLeft}%`,
                         transform: 'translate(-50%, -50%)',
@@ -163,7 +163,7 @@ export default function ConnectedTop20({
                       {entry.rank}
                     </span>
                     <span
-                      className="absolute top-1/2 flex h-[30px] w-[30px] items-center justify-center rounded-full border-2 border-[#0C1220] bg-[#0C1220] text-[11px] font-black text-white"
+                      className="absolute top-1/2 flex h-[30px] w-[30px] items-center justify-center rounded-full border-2 border-slate-300 bg-[#0C1220] text-[11px] font-black text-white"
                       style={{
                         left: `${targetLeft}%`,
                         transform: 'translate(-50%, -50%)',
@@ -214,7 +214,7 @@ export default function ConnectedTop20({
                     return (
                       <div
                         key={e.id}
-                        className="flex items-center gap-2 border-b border-[#0C1220]/10 py-[5px] last:border-b-0"
+                        className="flex items-center gap-2 border-b border-slate-200 py-[5px] last:border-b-0"
                       >
                         <span className="w-8 shrink-0 text-[12px] font-black text-[#0C1220]">
                           #{e.rank}

@@ -51,13 +51,13 @@ const FAN_COVERS = [
  *  cards (the Core Four, the Consistency Index, the rank
  *  clashes, the Roast) are not promised here. */
 const THREAD_CONTENTS = [
-  'Your Anthem',
-  'Fandom Archetype',
+  'Fan archetype',
   'Taste DNA',
-  'The Great Debate',
   'Weezer Era',
-  'Top 10 Tracks',
   'Fan Tribe',
+  'Blue vs Pinkerton',
+  'Top Tracks & Albums',
+  'Shareables',
 ];
 
 export default function Step0Splash() {
@@ -523,7 +523,8 @@ export default function Step0Splash() {
               Not ready to rank?
             </h3>
             <p className="mt-1 text-sm sm:text-base font-medium text-slate-700">
-              Test your Weezer knowledge — play Back to the Shack.
+              Test your Weezer knowledge —{' '}
+              <span className="whitespace-nowrap">play Back to the Shack.</span>
             </p>
           </div>
           <svg

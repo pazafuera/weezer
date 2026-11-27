@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useWeezer } from '../context/WeezerContext';
 import { displayFont } from './shareables/fonts';
 
@@ -42,78 +42,30 @@ const FAN_COVERS = [
   { title: 'White Album', cover: '/albums/white.jpg', deg: 9, z: 10, scale: 1 },
 ];
 
-/** Gold burst accent — four short rounded rays fanning out.
- *  Points left as drawn; `flip` mirrors it for the right side. */
-function Burst({
-  className = '',
-  flip = false,
-}: {
-  className?: string;
-  flip?: boolean;
-}) {
-  return (
-    <svg
-      viewBox="0 0 48 40"
-      fill="none"
-      stroke="#FFC72C"
-      strokeWidth="5"
-      strokeLinecap="round"
-      aria-hidden="true"
-      className={`${flip ? '-scale-x-100' : ''} ${className}`}
-    >
-      <path d="M41.8 10.9 37.6 1.8" />
-      <path d="M37.3 15 28.6 10" />
-      <path d="M36 21.2 26 22.4" />
-      <path d="M38.6 26.7 31.2 33.4" />
-    </svg>
-  );
-}
-
-/** Gold trophy for the payoff card — simple cup with handles,
- *  stem and dark base, the W zigzag on the cup. */
-function Trophy({ className = '' }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 48 48" fill="none" aria-hidden="true" className={className}>
-      <path
-        d="M13 6.5H8.2A4.7 4.7 0 0 0 13 13"
-        stroke="#0C1220"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-      <path
-        d="M35 6.5h4.8A4.7 4.7 0 0 1 35 13"
-        stroke="#0C1220"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-      <path
-        d="M13 4h22v7a11 11 0 0 1-22 0V4z"
-        fill="#FFC72C"
-        stroke="#0C1220"
-        strokeWidth="2"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M18.5 7.5 21 12l3-3.2L27 12l2.5-4.5"
-        stroke="#0C1220"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M22 22h4v4h-4z"
-        fill="#FFC72C"
-        stroke="#0C1220"
-        strokeWidth="2"
-        strokeLinejoin="round"
-      />
-      <rect x="16.5" y="26" width="15" height="3.5" rx="1" fill="#0C1220" />
-    </svg>
-  );
-}
+/** What's inside the Sweater Thread — the expansion list
+ *  under the payoff card's main row. Every label is a
+ *  heading the Thread itself renders (Step4Wrapped, in
+ *  render order; the Fan Tribe is the shareables gallery's
+ *  card at the foot of the Thread). Only sections the
+ *  Thread always delivers are listed — its conditional
+ *  cards (the Core Four, the Consistency Index, the rank
+ *  clashes, the Roast) are not promised here. */
+const THREAD_CONTENTS = [
+  'Your Anthem',
+  'Fandom Archetype',
+  'Taste DNA',
+  'The Great Debate',
+  'Weezer Era',
+  'Top 10 Tracks',
+  'Fan Tribe',
+];
 
 export default function Step0Splash() {
   const { navigateTo, userId, loadingUser } = useWeezer();
+
+  /** Payoff-card expansion (signed-out view only): the
+   *  Thread contents list starts collapsed. */
+  const [payoffOpen, setPayoffOpen] = useState(false);
 
   /** Guest entry — the same orientation hop the old guest
    *  button used. Any stale path-intent stash is cleared so
@@ -287,15 +239,19 @@ export default function Step0Splash() {
     );
   }
 
-  /* SIGNED-OUT SPLASH — the mockup build (Nov 26, 2026):
+  /* SIGNED-OUT SPLASH — the mockup build (Nov 26, 2026),
+   *  revised the same day per the owner's corrections:
    * pale-blue dot-grid field bled over the shell's main area
-   * (the StepGarage2 bleed recipe), huge two-line headline
-   * with gold bursts, the five-cover fan as the visual hook,
-   * one giant guest-entry pill, then the How It Works card
-   * and the payoff card. No tape strip, no path cards, no
-   * sign-in line — the shell header above carries sign-in
-   * in its menu, exactly as the mockup's header does. The
-   * button carries no price word (owner's ruling). */
+   * (the StepGarage2 bleed recipe), huge two-line headline,
+   * the five-cover fan as the visual hook, one giant
+   * guest-entry pill, then the How It Works card and the
+   * payoff card. No tape strip, no path cards, no sign-in
+   * line — the shell header above carries sign-in in its
+   * menu, exactly as the mockup's header does. The button
+   * carries no price word (owner's ruling). Type is the
+   * site UI font (Inter, from the root layout) throughout —
+   * the chunky feel comes from the 900 weight and size,
+   * not the shareables display font. */
   return (
     <div
       className="-mx-4 -my-4 bg-[#E9F4FC] px-4 pt-8 pb-14 sm:-mx-6 sm:-my-6 sm:px-6 sm:pt-10 lg:-mx-8 lg:-my-8 lg:px-8 animate-in fade-in duration-500"
@@ -307,18 +263,15 @@ export default function Step0Splash() {
     >
       <div className="max-w-2xl mx-auto text-center">
 
-        {/* HEADLINE — ink line, blue line, gold bursts at
-            both sides of the block. */}
-        <div className="relative px-10 sm:px-14">
-          <Burst className="absolute left-0 top-3 w-9 sm:w-11" />
-          <Burst flip className="absolute right-0 top-3 w-9 sm:w-11" />
-          <h1
-            className={`text-[42px] leading-[1.04] sm:text-6xl lg:text-7xl ${displayFont.className}`}
-          >
-            <span className="block text-[#0C1220]">Rank Weezer.</span>
-            <span className="block text-[#0072CE]">Settle the Debate.</span>
-          </h1>
-        </div>
+        {/* HEADLINE — exactly two lines at every width:
+            each line is nowrap and the size is clamped to
+            the viewport (10vw at phone widths, so the long
+            line, "Settle the Debate.", fits a 360px screen
+            inside the page padding; 72px cap on desktop). */}
+        <h1 className="text-[clamp(34px,10vw,72px)] font-black leading-[1.05] tracking-[-0.01em]">
+          <span className="block whitespace-nowrap text-[#0C1220]">Rank Weezer.</span>
+          <span className="block whitespace-nowrap text-[#0072CE]">Settle the Debate.</span>
+        </h1>
 
         {/* SUBHEAD */}
         <p className="mt-4 text-base sm:text-xl font-semibold text-[#0C1220] leading-snug max-w-md mx-auto">
@@ -342,20 +295,18 @@ export default function Step0Splash() {
               <img
                 src={album.cover}
                 alt={album.title}
-                className="absolute inset-0 h-full w-full rounded-[16%] border-[3px] border-[#0C1220] object-cover shadow-[0_12px_24px_rgba(12,18,32,0.28)]"
+                className="absolute inset-0 h-full w-full rounded-[16%] object-cover shadow-[0_12px_24px_rgba(12,18,32,0.28)]"
               />
             </div>
           ))}
         </div>
 
-        {/* CTA — one giant guest-entry pill, gold bursts on
-            both sides, no price word (owner's ruling). */}
-        <div className="relative max-w-lg mx-auto mt-9">
-          <Burst className="absolute left-0 top-1/2 -translate-y-1/2 w-8 sm:w-10" />
-          <Burst flip className="absolute right-0 top-1/2 -translate-y-1/2 w-8 sm:w-10" />
+        {/* CTA — one giant guest-entry pill, no price
+            word (owner's ruling). */}
+        <div className="max-w-lg mx-auto mt-9">
           <button
             onClick={startGuest}
-            className={`flex w-[76%] mx-auto cursor-pointer items-center justify-center gap-2.5 rounded-full border-[3px] border-white/70 bg-[#0072CE] px-6 py-4 text-2xl text-white shadow-[0_14px_30px_rgba(0,114,206,0.35)] transition-all hover:bg-[#0A7AD6] active:scale-[0.98] sm:py-5 sm:text-[32px] ${displayFont.className}`}
+            className="flex w-[76%] mx-auto cursor-pointer items-center justify-center gap-2.5 rounded-full border-[3px] border-white/70 bg-[#0072CE] px-6 py-4 text-2xl font-black text-white shadow-[0_14px_30px_rgba(0,114,206,0.35)] transition-all hover:bg-[#0A7AD6] active:scale-[0.98] sm:py-5 sm:text-[32px]"
           >
             Start Ranking
             <svg
@@ -385,7 +336,7 @@ export default function Step0Splash() {
         <div className="mt-9 rounded-[28px] bg-white px-4 py-6 sm:px-6 shadow-[0_18px_40px_rgba(12,18,32,0.10)]">
           <div className="flex items-center gap-4">
             <span className="h-px flex-1 bg-slate-200" />
-            <h2 className={`text-2xl sm:text-[28px] text-[#0C1220] ${displayFont.className}`}>
+            <h2 className="text-2xl sm:text-[28px] font-black text-[#0C1220]">
               How It Works
             </h2>
             <span className="h-px flex-1 bg-slate-200" />
@@ -464,43 +415,132 @@ export default function Step0Splash() {
           </div>
         </div>
 
-        {/* PAYOFF CARD — trophy, the personal-ranking payoff,
-            and a tilted mini ranking card. */}
-        <div className="mt-5 flex items-center gap-3 sm:gap-5 rounded-[28px] bg-[#CDE8FA] px-4 py-4 sm:px-6 sm:py-5 text-left shadow-[0_14px_30px_rgba(12,18,32,0.08)]">
-          <div className="relative shrink-0">
-            <Trophy className="w-14 sm:w-20" />
-            <Burst className="absolute -right-4 -top-2 w-5 sm:w-6" />
-          </div>
-
+        {/* PAYOFF CARD — the personal-ranking payoff and
+            a tilted mini ranking card. Every fan who ranks
+            gets a Sweater Thread (the site's own recap), so
+            the copy states it flatly — no trophy, no hedge.
+            The whole card taps open (owner, Nov 26): beneath
+            the main row, a hairline-divided list of what the
+            Thread actually contains (THREAD_CONTENTS). The
+            chevron at the bottom-right is the affordance;
+            it rotates while the list is open. */}
+        <button
+          type="button"
+          onClick={() => setPayoffOpen((open) => !open)}
+          aria-expanded={payoffOpen}
+          className="mt-5 flex w-full flex-wrap items-center gap-x-4 gap-y-0 sm:gap-x-6 cursor-pointer rounded-[28px] bg-[#CDE8FA] px-4 py-4 sm:px-6 sm:py-5 text-left shadow-[0_14px_30px_rgba(12,18,32,0.08)]"
+        >
           <div className="min-w-0 flex-1">
             <h3 className="text-base sm:text-xl font-black leading-tight text-[#0C1220]">
               Get Your Personal Weezer Ranking
             </h3>
             <p className="mt-1 text-sm sm:text-base font-medium text-slate-700">
-              And maybe even a Weezer Wrapped.
+              Plus your Sweater Thread — the recap of your whole ranking, ready to share.
             </p>
           </div>
 
-          <div className="w-[84px] sm:w-[104px] shrink-0 rotate-[6deg] rounded-xl bg-white p-2 shadow-[0_10px_20px_rgba(12,18,32,0.18)]">
-            <p className="text-center text-[8px] sm:text-[9px] font-black leading-tight tracking-wide text-[#0C1220]">
+          <div className="w-[104px] sm:w-[128px] shrink-0 rotate-[6deg] rounded-xl bg-white p-2.5 shadow-[0_10px_20px_rgba(12,18,32,0.18)]">
+            <p className="text-center text-[9px] sm:text-[10px] font-black leading-tight tracking-wide text-[#0C1220]">
               YOUR WEEZER RANKING
             </p>
-            <div className="mt-1.5 space-y-1.5">
-              <div className="h-2 w-full rounded-full bg-[#E7EDF3]">
+            <div className="mt-2 space-y-1.5">
+              <div className="h-2.5 w-full rounded-full bg-[#E7EDF3]">
                 <div className="h-full w-[88%] rounded-full bg-[#5EA9E6]" />
               </div>
-              <div className="h-2 w-full rounded-full bg-[#E7EDF3]">
+              <div className="h-2.5 w-full rounded-full bg-[#E7EDF3]">
                 <div className="h-full w-[70%] rounded-full bg-[#7ED491]" />
               </div>
-              <div className="h-2 w-full rounded-full bg-[#E7EDF3]">
+              <div className="h-2.5 w-full rounded-full bg-[#E7EDF3]">
                 <div className="h-full w-[54%] rounded-full bg-[#FFC72C]" />
               </div>
-              <div className="h-2 w-full rounded-full bg-[#E7EDF3]">
+              <div className="h-2.5 w-full rounded-full bg-[#E7EDF3]">
                 <div className="h-full w-[42%] rounded-full bg-[#F2A0BE]" />
               </div>
             </div>
           </div>
-        </div>
+
+          {payoffOpen && (
+            <div className="mt-4 w-full border-t border-[#0C1220]/10 pt-3.5">
+              <ul className="space-y-1.5">
+                {THREAD_CONTENTS.map((item) => (
+                  <li key={item} className="flex items-center gap-2.5">
+                    <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#FFC72C]">
+                      <svg
+                        className="h-2.5 w-2.5 text-[#0C1220]"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="3.5"
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M5 13l4 4L19 7"
+                        />
+                      </svg>
+                    </span>
+                    <span className="text-[13px] sm:text-sm font-bold text-[#0C1220]">
+                      {item}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <div className="mt-1.5 flex w-full justify-end">
+            <svg
+              className={`h-4 w-4 text-[#0C1220]/45 transition-transform duration-300 ${payoffOpen ? 'rotate-180' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M6 9l6 6 6-6"
+              />
+            </svg>
+          </div>
+        </button>
+
+        {/* GAME CARD — the trivia game's pitch to anyone
+            not ready to rank. White, so it sits beside the
+            payoff card as its own thing. The whole card is
+            the game's existing front-door entry — the same
+            navigateTo('lore') the shell menu's Back to the
+            Shack row and the dashboard's game card use. */}
+        <button
+          type="button"
+          onClick={() => navigateTo('lore')}
+          className="mt-5 flex w-full cursor-pointer items-center gap-4 sm:gap-6 rounded-[28px] bg-white px-4 py-4 sm:px-6 sm:py-5 text-left shadow-[0_14px_30px_rgba(12,18,32,0.08)] transition-colors hover:bg-sky-50"
+        >
+          <div className="min-w-0 flex-1">
+            <h3 className="text-base sm:text-xl font-black leading-tight text-[#0C1220]">
+              Not ready to rank?
+            </h3>
+            <p className="mt-1 text-sm sm:text-base font-medium text-slate-700">
+              Test your Weezer knowledge — play Back to the Shack.
+            </p>
+          </div>
+          <svg
+            className="h-5 w-5 shrink-0 text-[#0C1220]/40"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M9 6l6 6-6 6"
+            />
+          </svg>
+        </button>
 
       </div>
     </div>

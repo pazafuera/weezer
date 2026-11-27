@@ -659,10 +659,13 @@ export default function Step1Triage({
 
       {/* YOUR PATH strip — under the page header, not above it
           (owner, Nov 21, 2026): it describes the sort, so it
-          sits with the sort, below its title. */}
+          sits with the sort, below its title. (py-[11px], not
+          py-2.5: the flat pass thinned the strip's border from
+          2px to 1px, and the extra 1px of padding top and
+          bottom holds its outer height at production's.) */}
       {scoped && sortPath && (
         <div
-          className={`flex items-center justify-between gap-3 rounded-xl border border-black/5 bg-white px-3.5 py-2.5 shadow-[0_6px_18px_rgba(12,18,32,0.07)] ${
+          className={`flex items-center justify-between gap-3 rounded-xl border border-black/5 bg-white px-3.5 py-[11px] shadow-[0_6px_18px_rgba(12,18,32,0.07)] ${
             effectiveMode === 'deck' ? 'mx-4 mb-2 shrink-0' : 'mb-8'
           }`}
         >

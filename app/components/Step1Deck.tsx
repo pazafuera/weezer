@@ -933,12 +933,15 @@ function MilestoneRibbon() {
  * (Overnight 3.5): the original wording wrapped to two lines
  * at phone width, and this is the longest variant measured to
  * fit one line at 375px — see REPORT.md for the measurement.
+ * (py-[17px], not py-3.5: the flat pass removed this button's
+ * 3px ink border, and the extra 3px of padding top and bottom
+ * holds the button's outer height at production's 54px.)
  */
 function SaveProgressButton({ onClick }: { onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="w-full bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm px-4 py-3.5 rounded-full shadow-[0_8px_20px_rgba(12,18,32,0.12)] transition active:scale-[0.98] cursor-pointer"
+      className="w-full bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm px-4 py-[17px] rounded-full shadow-[0_8px_20px_rgba(12,18,32,0.12)] transition active:scale-[0.98] cursor-pointer"
     >
       Create free account, save progress
     </button>
@@ -1784,12 +1787,16 @@ export default function Step1Deck({
       {showSave && isGuest && (
         <SaveProgressButton onClick={onCreateAccount} />
       )}
+      {/* Keep button vertical padding compensates for the flat
+          pass's border thinning (white: 2.5px→1px, +1.5px/side;
+          amber: 3px→none, +3px/side) so both variants keep
+          production's outer height. */}
       <button
         onClick={dismissMilestone}
         className={
           showSave && isGuest
-            ? 'w-full text-sm font-extrabold text-[#0C1220] bg-white border border-slate-200 rounded-full px-6 py-3.5 shadow-[0_8px_20px_rgba(12,18,32,0.10)] hover:bg-slate-50 transition-all active:scale-[0.98] cursor-pointer whitespace-nowrap'
-            : 'w-full bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm px-6 py-3.5 rounded-full shadow-[0_8px_20px_rgba(12,18,32,0.12)] transition active:scale-[0.98] cursor-pointer whitespace-nowrap'
+            ? 'w-full text-sm font-extrabold text-[#0C1220] bg-white border border-slate-200 rounded-full px-6 py-[15.5px] shadow-[0_8px_20px_rgba(12,18,32,0.10)] hover:bg-slate-50 transition-all active:scale-[0.98] cursor-pointer whitespace-nowrap'
+            : 'w-full bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm px-6 py-[17px] rounded-full shadow-[0_8px_20px_rgba(12,18,32,0.12)] transition active:scale-[0.98] cursor-pointer whitespace-nowrap'
         }
       >
         {keepLabel ?? (isGuest ? 'Keep sorting as a guest' : 'Keep sorting')}

@@ -4,7 +4,6 @@ import { BucketType, Song, BUCKET_CONFIG } from '../data/constants';
 import { AudioPreviewButton, FlyingWIcon, SortingIncompleteNotice } from './SharedUI';
 import { getRankedSongs } from '@/utils/rankingUtils';
 import type { TriageValue } from '../context/WeezerContext';
-import { displayFont } from './shareables/fonts';
 
 export default function Step3Master({
   masterList,
@@ -309,7 +308,7 @@ export default function Step3Master({
           link (owner, Oct 18): Back now lives in the floating bar
           at the bottom, next to the Wrapped button. */}
       <div className="text-center space-y-2 px-4 mb-8 pt-2">
-        <h1 className={`${displayFont.className} text-[32px] text-[#0C1220]`}>
+        <h1 className={`font-black text-[32px] text-[#0C1220]`}>
           Final Review
         </h1>
         <p className="text-sm font-bold text-[#3D4A63] max-w-sm mx-auto leading-tight">
@@ -317,7 +316,7 @@ export default function Step3Master({
         </p>
       </div>
 
-      <div className="bg-white border-[3px] border-[#0C1220] rounded-[18px] p-3 sm:p-5 shadow-[4px_4px_0_rgba(11,30,63,0.85)]">
+      <div className="bg-white border border-slate-200 rounded-[28px] px-3 py-[14px] sm:px-5 sm:py-[22px] shadow-[0_14px_30px_rgba(12,18,32,0.08)]">
         {rankedSongs.length === 0 ? (
           /* Reachable in an edge state (a master list whose songs
              are all un-bucketed after a data heal): the list used
@@ -355,11 +354,11 @@ export default function Step3Master({
               {dividerBucket !== null && idx === dividerBeforeIdx && (
                 <div className="py-3 px-1">
                   <div className="flex items-center gap-3">
-                    <div className="h-[2.5px] flex-1 bg-[#0C1220]/60 rounded" />
+                    <div className="h-[2.5px] flex-1 bg-slate-300 rounded" />
                     <span className="text-[10px] font-black uppercase tracking-widest text-[#3D4A63]">
                       You stopped ranking here
                     </span>
-                    <div className="h-[2.5px] flex-1 bg-[#0C1220]/60 rounded" />
+                    <div className="h-[2.5px] flex-1 bg-slate-300 rounded" />
                   </div>
                   <p className="text-center text-[12px] font-bold text-[#3D4A63] mt-2">
                     Your {DIVIDER_PLURAL[dividerBucket]} are only sorted, not ranked.
@@ -368,7 +367,7 @@ export default function Step3Master({
                     <button
                       type="button"
                       onClick={() => { triggerHaptic(15); onRankBucket(dividerBucket); }}
-                      className="rounded-full border-[2.5px] border-[#0C1220] bg-[#FFC72C] px-5 py-2 text-[12px] font-black text-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)] transition hover:brightness-105 active:translate-y-[1px] cursor-pointer"
+                      className="rounded-full bg-[#FFC72C] px-5 py-[10.5px] text-[12px] font-black text-[#0C1220] shadow-[0_2px_8px_rgba(12,18,32,0.08)] transition hover:brightness-105 active:scale-[0.98] cursor-pointer"
                     >
                       Rank your {DIVIDER_PLURAL[dividerBucket]} →
                     </button>
@@ -383,12 +382,12 @@ export default function Step3Master({
                 onDragEnd={() => setDragState(null)}
                 onDragOver={handleDragOver}
                 onDrop={(e) => { e.stopPropagation(); handleDrop(idx); }}
-                className={`rounded-2xl px-2.5 py-1 flex items-center gap-2.5 transition-all duration-150 ${
+                className={`rounded-2xl px-2.5 py-[5px] flex items-center gap-2.5 transition-all duration-150 ${
                   isMouseDrag
                     ? 'opacity-40 border-2 border-dashed border-slate-300 bg-slate-100 scale-[0.98]'
                     : isTouchDrag
                     ? 'bg-slate-900 border-2 border-amber-400 scale-[1.02] shadow-2xl z-30 relative ring-4 ring-amber-400/20'
-                    : 'bg-white border-2 border-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)]'
+                    : 'bg-white border border-slate-200 shadow-[0_2px_8px_rgba(12,18,32,0.08)]'
                 }`}
               >
 
@@ -468,7 +467,7 @@ export default function Step3Master({
                     )}
                   </div>
                   <div className="flex items-center gap-1.5 min-w-0 mt-0.5 flex-nowrap">
-                    <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-md border ${cfg.badgeBg} !border-[1.5px] !border-[#0C1220] w-fit leading-none flex items-center gap-1 shrink-0`}>
+                    <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-md border ${cfg.badgeBg} !border-[1.5px] w-fit leading-none flex items-center gap-1 shrink-0`}>
                       <span className="text-[10px]">{cfg.emoji}</span> <span>{cfg.label}</span>
                     </span>
                     {/* The small play control, exactly as Refine's
@@ -500,13 +499,13 @@ export default function Step3Master({
       <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-auto flex items-center gap-2 max-w-[calc(100vw-1rem)]">
         <button
           onClick={() => { triggerHaptic(15); onBack(); }}
-          className="bg-white hover:bg-slate-100 text-[#0C1220] font-black text-sm px-4 py-4 rounded-full shadow-[2px_2px_0_rgba(11,30,63,0.85)] transition active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_rgba(11,30,63,0.85)] cursor-pointer border-[3px] border-[#0C1220] whitespace-nowrap shrink-0"
+          className="bg-white hover:bg-slate-100 text-[#0C1220] font-black text-sm px-4 py-[18px] rounded-full border border-slate-200 shadow-[0_14px_30px_rgba(12,18,32,0.08)] transition active:scale-[0.98] cursor-pointer whitespace-nowrap shrink-0"
         >
           ← Back
         </button>
         <button
           onClick={() => { triggerHaptic(20); setStep('wrapped'); }}
-          className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm px-5 sm:px-8 py-4 rounded-full shadow-[2px_2px_0_rgba(11,30,63,0.85)] transition active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_rgba(11,30,63,0.85)] cursor-pointer border-[3px] border-[#0C1220] flex items-center gap-2.5 whitespace-nowrap shrink-0"
+          className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm px-5 sm:px-8 py-[19px] rounded-full shadow-[0_14px_30px_rgba(12,18,32,0.08)] transition active:scale-[0.98] cursor-pointer flex items-center gap-2.5 whitespace-nowrap shrink-0"
         >
           <FlyingWIcon className="w-6 h-4 text-slate-950" />
           <span>Generate Sweater Thread →</span>

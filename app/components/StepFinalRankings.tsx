@@ -43,7 +43,7 @@ import {
 } from '../context/WeezerContext';
 import { AlbumArtwork } from './SharedUI';
 import SpotifyExport from './SpotifyExport';
-import { displayFont, handFont } from './shareables/fonts';
+import { handFont } from './shareables/fonts';
 import {
   PROFILE_BUCKET_COLORS,
   PROFILE_BUCKET_ORDER,
@@ -68,9 +68,8 @@ interface StepFinalRankingsProps {
 }
 
 const POSTER_BLUE = '#039AD1';
-const INK = '#0C1220';
 const PANEL =
-  'rounded-[18px] border-[3px] border-[#0C1220] bg-white shadow-[4px_4px_0_rgba(11,30,63,0.85)]';
+  'rounded-[28px] border border-slate-200 bg-white shadow-[0_14px_30px_rgba(12,18,32,0.08)]';
 const EYEBROW =
   'block text-[10px] font-black uppercase tracking-[2.2px] text-[#0072CE]';
 
@@ -215,8 +214,8 @@ export default function StepFinalRankings({
     <div className="mx-auto w-full max-w-3xl space-y-5 pb-24">
       {/* Header — the owner's headline, centered in the card. */}
       <section
-        className="relative overflow-hidden rounded-[18px] border-[3px] p-6 text-white shadow-[5px_5px_0_rgba(11,30,63,0.9)] sm:p-8"
-        style={{ backgroundColor: POSTER_BLUE, borderColor: INK }}
+        className="relative overflow-hidden rounded-[28px] border border-black/10 px-6 py-[26px] text-white shadow-[0_14px_30px_rgba(12,18,32,0.08)] sm:px-8 sm:py-[34px]"
+        style={{ backgroundColor: POSTER_BLUE }}
       >
         <div
           className="pointer-events-none absolute inset-0 opacity-[0.13]"
@@ -229,14 +228,14 @@ export default function StepFinalRankings({
         <div className="relative text-center">
           {username ? (
             <div
-              className={`${displayFont.className} mb-2 text-[26px] tracking-[0.5px] text-[#FFC72C]`}
+              className={`font-black mb-2 text-[26px] tracking-[0.5px] text-[#FFC72C]`}
               style={{ textShadow: headlineShadow }}
             >
               @{username}
             </div>
           ) : null}
           <h1
-            className={`${displayFont.className} text-[34px] leading-[1.05] text-white [text-wrap:balance] sm:text-[42px]`}
+            className={`font-black text-[34px] leading-[1.05] text-white [text-wrap:balance] sm:text-[42px]`}
             style={{ textShadow: headlineShadow }}
           >
             {complete ? 'All Your Favorite Songs' : 'Not done yet.'}
@@ -247,7 +246,7 @@ export default function StepFinalRankings({
             </p>
           ) : (
             <div className="mx-auto mt-4 max-w-md">
-              <div className="h-[10px] overflow-hidden rounded-full border-2 border-[#0C1220] bg-white/30">
+              <div className="h-[10px] overflow-hidden rounded-full border-2 border-white/40 bg-white/30">
                 <div
                   className="h-full bg-[#FFC72C]"
                   style={{ width: `${pct}%` }}
@@ -265,14 +264,14 @@ export default function StepFinalRankings({
                 <button
                   type="button"
                   onClick={() => setStep('shareables')}
-                  className="rounded-full border-[3px] border-[#0C1220] bg-[#FFC72C] px-6 py-3 text-sm font-black text-[#0C1220] shadow-[3px_3px_0_#0C1220] transition hover:brightness-105 active:translate-y-[1px]"
+                  className="rounded-full bg-[#FFC72C] px-6 py-[15px] text-sm font-black text-[#0C1220] shadow-[0_14px_30px_rgba(12,18,32,0.08)] transition hover:brightness-105 active:scale-[0.98]"
                 >
                   Show off your list
                 </button>
                 <button
                   type="button"
                   onClick={() => setStep('wrapped')}
-                  className="rounded-full border-[3px] border-[#0C1220] bg-white px-6 py-3 text-sm font-black text-[#0C1220] shadow-[3px_3px_0_#0C1220] transition hover:bg-sky-50 active:translate-y-[1px]"
+                  className="rounded-full bg-white px-6 py-[15px] text-sm font-black text-[#0C1220] shadow-[0_14px_30px_rgba(12,18,32,0.08)] transition hover:bg-sky-50 active:scale-[0.98]"
                 >
                   Unravel Your Sweater Thread
                 </button>
@@ -282,7 +281,7 @@ export default function StepFinalRankings({
                 <button
                   type="button"
                   onClick={() => setStep('triage')}
-                  className="rounded-full border-[3px] border-[#0C1220] bg-[#FFC72C] px-6 py-3 text-sm font-black text-[#0C1220] shadow-[3px_3px_0_#0C1220] transition hover:brightness-105 active:translate-y-[1px]"
+                  className="rounded-full bg-[#FFC72C] px-6 py-[15px] text-sm font-black text-[#0C1220] shadow-[0_14px_30px_rgba(12,18,32,0.08)] transition hover:brightness-105 active:scale-[0.98]"
                 >
                   Keep sorting
                 </button>
@@ -290,7 +289,7 @@ export default function StepFinalRankings({
                   <button
                     type="button"
                     onClick={() => setStep('wrapped')}
-                    className="rounded-full border-[3px] border-[#0C1220] bg-white px-6 py-3 text-sm font-black text-[#0C1220] shadow-[3px_3px_0_#0C1220] transition hover:bg-sky-50 active:translate-y-[1px]"
+                    className="rounded-full bg-white px-6 py-[15px] text-sm font-black text-[#0C1220] shadow-[0_14px_30px_rgba(12,18,32,0.08)] transition hover:bg-sky-50 active:scale-[0.98]"
                   >
                     Unravel Your Sweater Thread
                   </button>
@@ -319,9 +318,9 @@ export default function StepFinalRankings({
       </section>
 
       {bucketed === 0 ? (
-        <section className={`${PANEL} p-8 text-center`}>
+        <section className={`${PANEL} px-8 py-[34px] text-center`}>
           <h2
-            className={`${displayFont.className} text-2xl text-[#0C1220]`}
+            className={`font-black text-2xl text-[#0C1220]`}
           >
             Nothing ranked yet
           </h2>
@@ -331,7 +330,7 @@ export default function StepFinalRankings({
           <button
             type="button"
             onClick={() => setStep('triage')}
-            className="mt-5 rounded-full border-[3px] border-[#0C1220] bg-[#FFC72C] px-6 py-3 text-sm font-black text-[#0C1220] shadow-[3px_3px_0_#0C1220] transition hover:brightness-105 active:translate-y-[1px]"
+            className="mt-5 rounded-full bg-[#FFC72C] px-6 py-[15px] text-sm font-black text-[#0C1220] shadow-[0_14px_30px_rgba(12,18,32,0.08)] transition hover:brightness-105 active:scale-[0.98]"
           >
             Start sorting
           </button>
@@ -339,16 +338,16 @@ export default function StepFinalRankings({
       ) : (
         <>
           {/* Bucket breakdown — the profile page's panel. */}
-          <section className={`${PANEL} p-5 sm:p-6`}>
+          <section className={`${PANEL} px-5 py-[22px] sm:px-6 sm:py-[26px]`}>
             <div className="mb-[14px]">
               <span className={EYEBROW}>The Breakdown</span>
               <h3
-                className={`${displayFont.className} mt-[2px] text-2xl tracking-[0.4px] text-[#0C1220]`}
+                className={`font-black mt-[2px] text-2xl tracking-[0.4px] text-[#0C1220]`}
               >
                 How They Shake Out
               </h3>
             </div>
-            <div className="flex h-[26px] overflow-hidden rounded-lg border-[3px] border-[#0C1220]">
+            <div className="flex h-[26px] overflow-hidden rounded-lg border border-slate-200">
               {PROFILE_BUCKET_ORDER.map((b) =>
                 counts[b] > 0 ? (
                   <div
@@ -370,12 +369,12 @@ export default function StepFinalRankings({
                     className="flex items-center gap-2 text-[13px] font-extrabold text-[#0C1220]"
                   >
                     <span
-                      className="h-3 w-3 shrink-0 rounded-[4px] border-2 border-[#0C1220]"
+                      className="h-3 w-3 shrink-0 rounded-[4px] border-2 border-black/20"
                       style={{ backgroundColor: PROFILE_BUCKET_COLORS[b] }}
                     />
                     {BUCKET_CONFIG[b].label}
                     <span
-                      className={`${displayFont.className} ml-auto text-[15px]`}
+                      className={`font-black ml-auto text-[15px]`}
                     >
                       {counts[b]}
                     </span>
@@ -398,8 +397,8 @@ export default function StepFinalRankings({
               the Refine stages make — quietly, once, and
               only for buckets not yet opted into. */}
           {complete && unrankedLowers.length > 0 && (
-            <section className={`${PANEL} p-5 sm:p-6`}>
-              <h3 className={`${displayFont.className} text-xl text-[#0C1220]`}>
+            <section className={`${PANEL} px-5 py-[22px] sm:px-6 sm:py-[26px]`}>
+              <h3 className={`font-black text-xl text-[#0C1220]`}>
                 You&rsquo;re ranking like a legit fan!
               </h3>
               <p className="mt-1.5 text-sm font-semibold leading-snug text-[#3D4A63]">
@@ -428,7 +427,7 @@ export default function StepFinalRankings({
                   // step 1 would be asking twice.
                   setRefineOpenTools(true);
                 }}
-                className="mt-3.5 rounded-full border-[3px] border-[#0C1220] bg-[#FFC72C] px-6 py-3 text-sm font-black text-[#0C1220] shadow-[3px_3px_0_#0C1220] transition hover:brightness-105 active:translate-y-[1px]"
+                className="mt-3.5 rounded-full bg-[#FFC72C] px-6 py-[15px] text-sm font-black text-[#0C1220] shadow-[0_14px_30px_rgba(12,18,32,0.08)] transition hover:brightness-105 active:scale-[0.98]"
               >
                 Rank my {LOWER_PLURAL[unrankedLowers[0]]}
               </button>
@@ -449,10 +448,10 @@ export default function StepFinalRankings({
                     <div className="relative">
                       <AlbumArtwork
                         albumId={album.id}
-                        className="h-[104px] w-[104px] rounded-[12px] border-[2.5px] border-[#0C1220] object-cover"
+                        className="h-[104px] w-[104px] rounded-[12px] border border-slate-200 object-cover"
                       />
                       <span
-                        className={`${displayFont.className} absolute -left-1.5 -top-1.5 flex h-7 min-w-7 items-center justify-center rounded-full border-2 border-[#0C1220] bg-[#FFC72C] px-1 text-[13px] text-[#0C1220]`}
+                        className={`font-black absolute -left-1.5 -top-1.5 flex h-7 min-w-7 items-center justify-center rounded-full border-2 border-white bg-[#FFC72C] px-1 text-[13px] text-[#0C1220] shadow-sm`}
                       >
                         {i + 1}
                       </span>
@@ -471,7 +470,7 @@ export default function StepFinalRankings({
               actually ranked (Bangers, Slaps, and any lower
               bucket the fan opted into ranking). */}
           {groups.length > 0 && (
-            <section className={`${PANEL} p-5 sm:p-6`}>
+            <section className={`${PANEL} px-5 py-[22px] sm:px-6 sm:py-[26px]`}>
               {groups.map((group, gi) => {
                 const isOpen = groupOverrides[group.key] ?? gi < 2;
                 const ranked = rankedGroups.has(group.key);
@@ -487,11 +486,11 @@ export default function StepFinalRankings({
                           [group.key]: !isOpen,
                         }))
                       }
-                      className={`${gi === 0 ? '' : 'mt-[14px] '}flex w-full cursor-pointer items-baseline gap-2 rounded-[10px] border-[2.5px] border-[#0C1220] px-3 py-[9px] text-left`}
+                      className={`${gi === 0 ? '' : 'mt-[14px] '}flex w-full cursor-pointer items-baseline gap-2 rounded-[10px] border border-slate-200 px-3 py-[10.5px] text-left`}
                       aria-expanded={isOpen}
                     >
                       <span
-                        className={`${displayFont.className} text-[16.5px] tracking-[0.4px] text-[#0C1220]`}
+                        className={`font-black text-[16.5px] tracking-[0.4px] text-[#0C1220]`}
                       >
                         {group.key === 'banger' ? 'BANGERS' : group.label}
                       </span>
@@ -532,9 +531,9 @@ export default function StepFinalRankings({
 
               {unknowns.length > 0 && (
                 <div>
-                  <div className="mt-[14px] flex w-full items-baseline gap-2 rounded-[10px] border-[2.5px] border-dashed border-[#0C1220]/50 px-3 py-[9px]">
+                  <div className="mt-[14px] flex w-full items-baseline gap-2 rounded-[10px] border border-dashed border-slate-300 px-3 py-[10.5px]">
                     <span
-                      className={`${displayFont.className} text-[16.5px] tracking-[0.4px] text-[#3D4A63]`}
+                      className={`font-black text-[16.5px] tracking-[0.4px] text-[#3D4A63]`}
                     >
                       DON&rsquo;T KNOW IT
                     </span>

@@ -20,7 +20,7 @@ import {
 import { FlyingWIcon, AlbumArtwork, SHARE_BUTTON_CLASS } from './SharedUI';
 import { encodeShareData } from '@/utils/shareHelper';
 import { ShareablesGallery } from './shareables';
-import { displayFont, handFont } from './shareables/fonts';
+import { handFont } from './shareables/fonts';
 import { POSTER_BLUE } from './shareables/ShareCardShell';
 import { FlyingWHands } from './ShareCardShell';
 import { ERAS } from './shareables/EraDnaCard';
@@ -212,11 +212,11 @@ function FanhoodStop({
   }
 
   return (
-    <div className="bg-white border-[3px] border-[#0C1220] rounded-[18px] p-6 sm:p-8 shadow-[4px_4px_0_rgba(11,30,63,0.85)] text-center">
+    <div className="bg-white border border-slate-200 rounded-[28px] px-6 py-[26px] sm:px-8 sm:py-[34px] shadow-[0_14px_30px_rgba(12,18,32,0.08)] text-center">
       <p className="text-[10px] font-black uppercase tracking-widest text-[#0072CE] block mb-3">
         Can You Get Back to the Shack?
       </p>
-      <h3 className={`${displayFont.className} text-2xl sm:text-3xl leading-tight tracking-wide text-[#0C1220]`}>
+      <h3 className={`font-black text-2xl sm:text-3xl leading-tight tracking-wide text-[#0C1220]`}>
         You haven&apos;t started back yet
       </h3>
       <p className="mt-3 text-sm font-semibold text-slate-500 leading-relaxed max-w-lg mx-auto">
@@ -1094,13 +1094,13 @@ export default function Step4Wrapped({
             title in outlined white display type, and the tagline on a
             gold plaque. No halftone dots in the header (owner's call). */}
         <div
-          className="relative overflow-hidden rounded-[22px] border-[3px] border-[#0C1220] px-4 pb-7 pt-8 text-center shadow-[6px_6px_0_rgba(12,18,32,0.9)]"
+          className="relative overflow-hidden rounded-[28px] border border-black/10 px-4 pb-[30px] pt-[34px] text-center shadow-[0_14px_30px_rgba(12,18,32,0.08)]"
           style={{ backgroundColor: POSTER_BLUE }}
         >
           <FlyingWHands className="pointer-events-none absolute left-1/2 top-[-14px] h-auto w-[118%] max-w-none -translate-x-1/2 opacity-[0.34]" />
           <div className="relative">
             <h1
-              className={`${displayFont.className} text-[52px] leading-[0.98] tracking-wide text-white sm:text-6xl lg:text-7xl`}
+              className={`font-black text-[52px] leading-[0.98] tracking-wide text-white sm:text-6xl lg:text-7xl`}
               style={{
                 textShadow:
                   '2.5px 0 0 #0C1220, -2.5px 0 0 #0C1220, 0 2.5px 0 #0C1220, 0 -2.5px 0 #0C1220, 2px 2px 0 #0C1220, 2px -2px 0 #0C1220, -2px 2px 0 #0C1220, -2px -2px 0 #0C1220, 0 6px 0 rgba(12,18,32,0.28)',
@@ -1125,7 +1125,7 @@ export default function Step4Wrapped({
             it sharpens as more songs get sorted. Plain, not
             apologetic. At 25+ rated the note does not render. */}
         {ratedCount < 25 && (
-          <div className="max-w-2xl mx-auto w-full bg-white border-[3px] border-[#0C1220] rounded-[18px] px-5 py-4 text-center shadow-[4px_4px_0_rgba(11,30,63,0.85)]">
+          <div className="max-w-2xl mx-auto w-full bg-white border border-slate-200 rounded-[28px] px-5 py-[18px] text-center shadow-[0_14px_30px_rgba(12,18,32,0.08)]">
             <p className="text-sm font-semibold text-[#3D4A63] leading-relaxed">
               This Thread is built on the {ratedCount} song
               {ratedCount === 1 ? '' : 's'} you&apos;ve rated so far. It
@@ -1145,21 +1145,21 @@ export default function Step4Wrapped({
           {/* ANTHEM CARD — poster treatment (owner-approved mock,
               Nov 9): white card, ink frame, gold strip eyebrow, the
               album line carrying the album's color chip. */}
-          <div className="lg:col-span-7 bg-white rounded-[20px] border-[3px] border-[#0C1220] shadow-[5px_5px_0_rgba(12,18,32,0.9)] p-8 sm:p-10 text-center flex flex-col items-center justify-center">
+          <div className="lg:col-span-7 bg-white rounded-[28px] border border-slate-200 shadow-[0_14px_30px_rgba(12,18,32,0.08)] px-8 py-[34px] sm:px-10 sm:py-[42px] text-center flex flex-col items-center justify-center">
             <span className="inline-block -rotate-1 rounded-[11px] border-[3px] border-[#0C1220] bg-[#FFC72C] px-4 py-1 shadow-[3px_3px_0_rgba(12,18,32,0.85)] mb-5">
-              <span className={`${displayFont.className} text-[15px] uppercase tracking-wide text-[#0C1220]`}>
+              <span className={`font-black text-[15px] uppercase tracking-wide text-[#0C1220]`}>
                 Your Anthem
               </span>
             </span>
 
-            <h2 className={`${displayFont.className} text-4xl sm:text-6xl lg:text-7xl text-[#0C1220] leading-[1.04] mb-3`}>
+            <h2 className={`font-black text-4xl sm:text-6xl lg:text-7xl text-[#0C1220] leading-[1.04] mb-3`}>
               "{top10[0]?.title || 'Undecided'}"
             </h2>
 
             {top10[0] && (
               <p className="flex items-center justify-center gap-2 text-[12.5px] font-black uppercase tracking-[0.18em] text-[#5B6B82]">
                 <span
-                  className="inline-block h-3.5 w-3.5 shrink-0 rounded-[4px] border-2 border-[#0C1220]"
+                  className="inline-block h-3.5 w-3.5 shrink-0 rounded-[4px] border-2 border-black/20"
                   style={{
                     backgroundColor: getAlbumThemeByName(
                       ALBUMS_BY_ID[
@@ -1178,12 +1178,12 @@ export default function Step4Wrapped({
 
           {/* VIBE ENCAPSULATED CARD — poster treatment: white card,
               ink frame, the GIF inside an ink-bordered frame. */}
-          <div className="lg:col-span-5 bg-white rounded-[20px] border-[3px] border-[#0C1220] shadow-[5px_5px_0_rgba(12,18,32,0.9)] p-5 sm:p-6 text-center flex flex-col justify-center overflow-hidden">
-            <h3 className={`${displayFont.className} text-[29px] text-[#0C1220] leading-tight mb-4`}>
+          <div className="lg:col-span-5 bg-white rounded-[28px] border border-slate-200 shadow-[0_14px_30px_rgba(12,18,32,0.08)] px-5 py-[22px] sm:px-6 sm:py-[26px] text-center flex flex-col justify-center overflow-hidden">
+            <h3 className={`font-black text-[29px] text-[#0C1220] leading-tight mb-4`}>
               Your Vibe, Encapsulated
             </h3>
 
-            <div className="w-full aspect-video rounded-[14px] overflow-hidden border-[3px] border-[#0C1220] flex-1">
+            <div className="w-full aspect-video rounded-[14px] overflow-hidden border border-slate-200 flex-1">
               <img
                 src={stats.finalGif}
                 alt="Weezer Vibe"
@@ -1197,7 +1197,7 @@ export default function Step4Wrapped({
         <div>
           <div className="flex items-center justify-between mb-4 px-2">
             <div>
-              <h3 className={`${displayFont.className} text-2xl sm:text-3xl leading-tight tracking-wide text-[#0C1220] truncate`}>
+              <h3 className={`font-black text-2xl sm:text-3xl leading-tight tracking-wide text-[#0C1220] truncate`}>
                 Fandom Archetype
               </h3>
             </div>
@@ -1207,7 +1207,7 @@ export default function Step4Wrapped({
               <button
                 onClick={() => scrollToArch(Math.max(0, activeArchIndex - 1))}
                 disabled={activeArchIndex === 0}
-                className="w-10 h-10 rounded-full bg-white hover:bg-slate-100 text-[#0C1220] flex items-center justify-center font-black transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer border-[2.5px] border-[#0C1220] shadow-[2px_2px_0_#0C1220]"
+                className="w-10 h-10 rounded-full bg-white hover:bg-slate-100 text-[#0C1220] flex items-center justify-center font-black transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer border border-slate-200 shadow-[0_2px_8px_rgba(12,18,32,0.08)]"
               >
                 ←
               </button>
@@ -1218,7 +1218,7 @@ export default function Step4Wrapped({
                   )
                 }
                 disabled={activeArchIndex === stats.scoredArchetypes.length - 1}
-                className="w-10 h-10 rounded-full bg-white hover:bg-slate-100 text-[#0C1220] flex items-center justify-center font-black transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer border-[2.5px] border-[#0C1220] shadow-[2px_2px_0_#0C1220]"
+                className="w-10 h-10 rounded-full bg-white hover:bg-slate-100 text-[#0C1220] flex items-center justify-center font-black transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer border border-slate-200 shadow-[0_2px_8px_rgba(12,18,32,0.08)]"
               >
                 →
               </button>
@@ -1293,8 +1293,8 @@ export default function Step4Wrapped({
 
         {/* THE CORE FOUR */}
         {stats.coreFour.length === 4 && (
-          <div className="bg-white text-slate-950 border-[3px] border-[#0C1220] rounded-[18px] p-6 sm:p-8 shadow-[4px_4px_0_rgba(11,30,63,0.85)]">
-            <h3 className={`${displayFont.className} text-2xl sm:text-3xl leading-tight text-center tracking-wide text-[#0C1220] mb-3 truncate`}>
+          <div className="bg-white text-slate-950 border border-slate-200 rounded-[28px] px-6 py-[26px] sm:px-8 sm:py-[34px] shadow-[0_14px_30px_rgba(12,18,32,0.08)]">
+            <h3 className={`font-black text-2xl sm:text-3xl leading-tight text-center tracking-wide text-[#0C1220] mb-3 truncate`}>
               The Core Four
             </h3>
 
@@ -1344,10 +1344,10 @@ export default function Step4Wrapped({
         {/* 3. TASTE DNA & 4. THE GREAT DEBATE */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
           {/* TASTE DNA */}
-          <div className="bg-white text-slate-950 border-[3px] border-[#0C1220] rounded-[18px] p-6 sm:p-8 shadow-[4px_4px_0_rgba(11,30,63,0.85)] flex flex-col justify-between">
+          <div className="bg-white text-slate-950 border border-slate-200 rounded-[28px] px-6 py-[26px] sm:px-8 sm:py-[34px] shadow-[0_14px_30px_rgba(12,18,32,0.08)] flex flex-col justify-between">
             <div>
               <div className="text-center mb-8">
-                <h3 className={`${displayFont.className} text-2xl sm:text-3xl leading-tight tracking-wide text-[#0C1220] mb-2 truncate`}>
+                <h3 className={`font-black text-2xl sm:text-3xl leading-tight tracking-wide text-[#0C1220] mb-2 truncate`}>
                   Taste DNA
                 </h3>
 
@@ -1421,9 +1421,9 @@ export default function Step4Wrapped({
           </div>
 
           {/* THE GREAT DEBATE */}
-          <div className="bg-white text-slate-950 border-[3px] border-[#0C1220] rounded-[18px] p-6 sm:p-8 shadow-[4px_4px_0_rgba(11,30,63,0.85)] relative overflow-hidden flex flex-col justify-between">
+          <div className="bg-white text-slate-950 border border-slate-200 rounded-[28px] px-6 py-[26px] sm:px-8 sm:py-[34px] shadow-[0_14px_30px_rgba(12,18,32,0.08)] relative overflow-hidden flex flex-col justify-between">
             <div>
-              <h3 className={`${displayFont.className} text-2xl sm:text-3xl leading-tight text-center tracking-wide text-[#0C1220] mb-3 truncate`}>
+              <h3 className={`font-black text-2xl sm:text-3xl leading-tight text-center tracking-wide text-[#0C1220] mb-3 truncate`}>
                 The Great Debate
               </h3>
 
@@ -1493,7 +1493,7 @@ export default function Step4Wrapped({
         <div>
           <div className="relative">
             <div className="flex items-center justify-between mb-3 px-2">
-              <h3 className={`${displayFont.className} text-2xl sm:text-3xl leading-tight tracking-wide text-[#0C1220] truncate`}>
+              <h3 className={`font-black text-2xl sm:text-3xl leading-tight tracking-wide text-[#0C1220] truncate`}>
                 Weezer Era
               </h3>
 
@@ -1502,7 +1502,7 @@ export default function Step4Wrapped({
                 <button
                   onClick={() => scrollToEra(Math.max(0, activeEraIndex - 1))}
                   disabled={activeEraIndex === 0}
-                  className="w-10 h-10 rounded-full bg-white hover:bg-slate-100 text-[#0C1220] flex items-center justify-center font-black transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer border-[2.5px] border-[#0C1220] shadow-[2px_2px_0_#0C1220]"
+                  className="w-10 h-10 rounded-full bg-white hover:bg-slate-100 text-[#0C1220] flex items-center justify-center font-black transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer border border-slate-200 shadow-[0_2px_8px_rgba(12,18,32,0.08)]"
                 >
                   ←
                 </button>
@@ -1513,7 +1513,7 @@ export default function Step4Wrapped({
                     )
                   }
                   disabled={activeEraIndex === stats.sortedEras.length - 1}
-                  className="w-10 h-10 rounded-full bg-white hover:bg-slate-100 text-[#0C1220] flex items-center justify-center font-black transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer border-[2.5px] border-[#0C1220] shadow-[2px_2px_0_#0C1220]"
+                  className="w-10 h-10 rounded-full bg-white hover:bg-slate-100 text-[#0C1220] flex items-center justify-center font-black transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer border border-slate-200 shadow-[0_2px_8px_rgba(12,18,32,0.08)]"
                 >
                   →
                 </button>
@@ -1598,14 +1598,14 @@ export default function Step4Wrapped({
         {/* TEMPORAL LOYALTY, INDEPENDENCE INDEX, LISTENING AGE */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
           {/* TEMPORAL LOYALTY CURVE */}
-          <div className="bg-white text-slate-950 border-[3px] border-[#0C1220] rounded-[18px] p-6 sm:p-8 shadow-[4px_4px_0_rgba(11,30,63,0.85)] flex flex-col justify-between">
+          <div className="bg-white text-slate-950 border border-slate-200 rounded-[28px] px-6 py-[26px] sm:px-8 sm:py-[34px] shadow-[0_14px_30px_rgba(12,18,32,0.08)] flex flex-col justify-between">
             <div>
               <div className="text-center mb-6">
                 <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 block mb-1">
                   Temporal Loyalty
                 </span>
 
-                <h3 className={`${displayFont.className} text-2xl sm:text-3xl leading-tight tracking-wide text-[#0C1220] mb-2`}>
+                <h3 className={`font-black text-2xl sm:text-3xl leading-tight tracking-wide text-[#0C1220] mb-2`}>
                   Nostalgia vs. Discovery
                 </h3>
 
@@ -1644,9 +1644,9 @@ export default function Step4Wrapped({
           </div>
 
           {/* INDEPENDENCE INDEX */}
-          <div className="bg-white text-slate-950 border-[3px] border-[#0C1220] rounded-[18px] p-6 sm:p-8 shadow-[4px_4px_0_rgba(11,30,63,0.85)] flex flex-col justify-between">
+          <div className="bg-white text-slate-950 border border-slate-200 rounded-[28px] px-6 py-[26px] sm:px-8 sm:py-[34px] shadow-[0_14px_30px_rgba(12,18,32,0.08)] flex flex-col justify-between">
             <div>
-              <h3 className={`${displayFont.className} text-2xl sm:text-3xl leading-tight text-center tracking-wide text-[#0C1220] mb-2 truncate`}>
+              <h3 className={`font-black text-2xl sm:text-3xl leading-tight text-center tracking-wide text-[#0C1220] mb-2 truncate`}>
                 Independence Index
               </h3>
 
@@ -1868,9 +1868,9 @@ export default function Step4Wrapped({
         {/* 9. TOP 10 SETLIST & 11. ALBUM POWER RANKINGS */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
           {/* TOP 10 SETLIST */}
-          <div className="bg-white text-slate-950 border-[3px] border-[#0C1220] rounded-[18px] p-6 sm:p-8 shadow-[4px_4px_0_rgba(11,30,63,0.85)]">
+          <div className="bg-white text-slate-950 border border-slate-200 rounded-[28px] px-6 py-[26px] sm:px-8 sm:py-[34px] shadow-[0_14px_30px_rgba(12,18,32,0.08)]">
             <div className="mb-6 border-b border-slate-100 pb-4 text-center">
-              <h3 className={`${displayFont.className} text-2xl sm:text-3xl leading-tight tracking-wide text-[#0C1220] truncate`}>
+              <h3 className={`font-black text-2xl sm:text-3xl leading-tight tracking-wide text-[#0C1220] truncate`}>
                 Top 10 Tracks
               </h3>
             </div>
@@ -2068,7 +2068,7 @@ function AlbumTrackCards({
     <div>
       <div className="mb-4 px-2">
         <h3
-          className={`${displayFont.className} text-2xl sm:text-3xl leading-tight tracking-wide text-[#0C1220]`}
+          className={`font-black text-2xl sm:text-3xl leading-tight tracking-wide text-[#0C1220]`}
         >
           Album by Album
         </h3>

@@ -2,7 +2,6 @@
 
 import React, { useEffect } from 'react';
 import { useWeezer } from '../context/WeezerContext';
-import { displayFont } from './shareables/fonts';
 
 // The overall process (owner direction, Oct 17): orient on the
 // journey — sort, refine, Thread. The buckets themselves are
@@ -22,10 +21,20 @@ const PROCESS_STEPS: { title: string; desc: string }[] = [
   },
 ];
 
+// Number-disc colors (owner, Nov 26): the homepage's accent
+// palette — brand blue #0072CE and gold #FFC72C from Step0Splash's
+// CTA / ranking bars, pink #F2A0BE from its YOUR WEEZER RANKING
+// mini-card bars. Gold and pink are light, so their numerals are
+// ink; blue carries a white numeral.
+const DISC_STYLES: string[] = [
+  'bg-[#0072CE] text-white',
+  'bg-[#FFC72C] text-[#0C1220]',
+  'bg-[#F2A0BE] text-[#0C1220]',
+];
+
 export default function Step05Orientation() {
   const {
     navigateTo,
-    closeOrientation,
     accountCreated,
     setAccountCreated,
     userProfile,
@@ -38,8 +47,8 @@ export default function Step05Orientation() {
 
   // The "account created" flag belongs to THIS arrival only: clear
   // it when the page unmounts, whichever way the user leaves —
-  // "Start Sorting", Back, the menu. (The Start button also clears
-  // it explicitly, below.)
+  // "Start Sorting", the menu, browser back. (The Start button
+  // also clears it explicitly, below.)
   useEffect(() => {
     return () => setAccountCreated(false);
   }, [setAccountCreated]);
@@ -79,51 +88,41 @@ export default function Step05Orientation() {
         </div>
       )}
 
-      {/* BACK BUTTON — returns to the step the user came from
-          (closeOrientation), not a hardcoded home: a user who opened
-          How It Works from the dashboard goes back to the dashboard.
-          Falls back to splash on a cold arrival (first run, deep
-          link), which is where first-run users came from anyway. */}
-      <div className="pt-2 flex items-center justify-start">
-        <button
-          onClick={closeOrientation}
-          className="text-xs font-black text-[#3D4A63] hover:text-[#0C1220] transition-colors flex items-center gap-1 cursor-pointer"
-        >
-          ← Back
-        </button>
-      </div>
+      {/* No in-page Back button (owner, Nov 26): navigation is
+          browser back / swipe-back plus the shell header. */}
 
       {/* HEADER — the title now carries the whole explanation
           (owner: "How the Project Works", one line, no subtitle;
           the old "How this works" sub-heading went with it — it
-          only repeated the title). */}
-      <div className="text-center">
-        <h1
-          className={`text-2xl sm:text-5xl text-[#0C1220] tracking-wide whitespace-nowrap ${displayFont.className}`}
-        >
+          only repeated the title). Headings on this page are the
+          site UI font (Inter, black weight), not the display
+          font (owner, Nov 26). */}
+      <div className="text-center pt-2">
+        <h1 className="text-2xl sm:text-5xl font-black text-[#0C1220] tracking-wide whitespace-nowrap">
           How the Project Works
         </h1>
       </div>
 
       {/* THE PROCESS — sort, refine, Thread. The buckets
           themselves are taught in the deck tutorial, not here.
-          Nov 5: the three steps render as three poster step cards
-          (the audit's pattern: ink number circles, paper cards,
-          ink frames) instead of one slate list card. */}
+          Nov 26: restyled into the homepage's design language —
+          white cards, large rounded corners, soft shadows (the
+          old ink frames and hard offset shadows are gone), and
+          numbered discs in the homepage's accent colors. */}
       <div>
         <div className="space-y-3">
           {PROCESS_STEPS.map((step, idx) => (
             <div
               key={step.title}
-              className="flex items-start gap-3.5 bg-white border-[3px] border-[#0C1220] rounded-[18px] shadow-[4px_4px_0_rgba(11,30,63,0.85)] p-4 sm:p-5"
+              className="flex items-start gap-3.5 bg-white rounded-[28px] shadow-[0_14px_30px_rgba(12,18,32,0.08)] p-5 sm:p-6"
             >
-              <div className="w-11 h-11 rounded-full bg-[#0C1220] text-white flex items-center justify-center text-lg font-black shrink-0 shadow-[2px_2px_0_rgba(11,30,63,0.35)]">
+              <div
+                className={`w-11 h-11 rounded-full ${DISC_STYLES[idx]} flex items-center justify-center text-lg font-black shrink-0 shadow-[0_8px_16px_rgba(12,18,32,0.15)]`}
+              >
                 {idx + 1}
               </div>
               <div className="min-w-0">
-                <h3
-                  className={`text-lg sm:text-xl text-[#0C1220] tracking-wide leading-tight ${displayFont.className}`}
-                >
+                <h3 className="text-lg sm:text-xl font-black text-[#0C1220] tracking-wide leading-tight">
                   {step.title}
                 </h3>
                 <p className="text-xs sm:text-sm font-medium text-[#3D4A63] leading-relaxed mt-0.5">
@@ -142,8 +141,12 @@ export default function Step05Orientation() {
       </div>
 
       {/* CTA BAR — pinned under the scroll region (see the root
-          comment): always visible, never scrolled to. */}
-      <div className="shrink-0 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] bg-white/90 backdrop-blur-md border-t-[3px] border-t-[#0C1220] space-y-2.5">
+          comment): always visible, never scrolled to. Nov 26:
+          the bar's old white/90 backdrop and ink top border
+          painted a white slab across the page's pale-blue
+          dot-grid — the bar is now transparent so it blends
+          with the page background; only the gold button shows. */}
+      <div className="shrink-0 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] space-y-2.5">
         <button
           onClick={() => {
             setAccountCreated(false);

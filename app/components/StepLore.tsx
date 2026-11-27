@@ -2029,12 +2029,12 @@ export default function StepLore() {
       )
     : 100;
   const pickerJourneyCard = (
-    <div className="overflow-hidden rounded-[18px] border-[3px] border-[#0C1220] bg-[#0C1220] text-white shadow-[6px_6px_0_#039AD1]">
-      <div className="p-5">
+    <div className="overflow-hidden rounded-[28px] border border-black/5 bg-[#0C1220] text-white shadow-[0_14px_30px_rgba(12,18,32,0.08)]">
+      <div className="px-5 py-[22px]">
         <div className="flex items-end justify-between gap-3">
           <div>
             <p
-              className={`${displayFont.className} text-[40px] leading-none text-white`}
+              className="text-[40px] font-black leading-none text-white"
             >
               {journeyTotal.toLocaleString('en-US')}
             </p>
@@ -2146,7 +2146,7 @@ export default function StepLore() {
       <div className="flex items-baseline justify-between gap-3 px-1">
         <h2 className="leading-none">
           <span
-            className={`${displayFont.className} inline-block -rotate-1 bg-[#FFE066] px-[13px] pb-[3px] pt-[5px] text-[19px] leading-none tracking-[0.03em] text-[#0C1220] shadow-[2px_2px_0_rgba(12,18,32,0.35)]`}
+            className="inline-block -rotate-1 bg-[#FFE066] px-[13px] pb-[3px] pt-[5px] text-[19px] font-black leading-none tracking-[0.03em] text-[#0C1220] shadow-[2px_2px_0_rgba(12,18,32,0.35)]"
           >
             The Rounds
           </span>
@@ -2172,11 +2172,11 @@ export default function StepLore() {
               ref={(el) => {
                 deckCardRefs.current[gameIndex] = el;
               }}
-              className="flex min-h-[196px] flex-[0_0_84%] snap-center flex-col rounded-[18px] border-[3px] border-[#0C1220] bg-white p-[18px] shadow-[4px_4px_0_#0C1220] sm:flex-[0_0_380px] lg:flex-[0_0_420px]"
+              className="flex min-h-[196px] flex-[0_0_84%] snap-center flex-col rounded-[28px] border border-slate-200 bg-white px-[18px] py-[20px] shadow-[0_14px_30px_rgba(12,18,32,0.08)] sm:flex-[0_0_380px] lg:flex-[0_0_420px]"
             >
               <div className="flex items-center justify-end gap-2">
                 <span
-                  className={`shrink-0 rounded-full border-2 border-[#0C1220] px-2.5 py-1 text-[11px] font-extrabold tracking-[0.05em] ${
+                  className={`shrink-0 rounded-full border-2 border-slate-300 px-2.5 py-1 text-[11px] font-extrabold tracking-[0.05em] ${
                     state === 'played'
                       ? 'bg-green-600 text-white'
                       : state === 'up-next'
@@ -2194,7 +2194,7 @@ export default function StepLore() {
                 </span>
               </div>
               <h3
-                className={`${displayFont.className} mt-2.5 text-[30px] leading-[1.12] ${
+                className={`mt-2.5 text-[30px] font-black leading-[1.12] ${
                   state === 'locked' ? 'text-[#5b6b84]' : 'text-[#0C1220]'
                 }`}
               >
@@ -2253,7 +2253,7 @@ export default function StepLore() {
                   </div>
                 <button
                   onClick={() => openGate(game.id)}
-                  className="mt-3 w-full cursor-pointer rounded-[14px] border-[3px] border-[#0C1220] bg-[#0072CE] px-5 py-3 text-[15px] font-black text-white shadow-[3px_3px_0_#0C1220] transition-all hover:bg-blue-700 active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_#0C1220]"
+                  className="mt-3 w-full cursor-pointer rounded-[14px] bg-[#0072CE] px-5 py-[15px] text-[15px] font-black text-white shadow-[0_8px_20px_rgba(12,18,32,0.14)] transition-all hover:bg-blue-700 active:scale-[0.98]"
                 >
                   Play Round {gameIndex + 1}
                 </button>
@@ -2297,7 +2297,7 @@ export default function StepLore() {
       <div className="flex items-baseline justify-between gap-3 px-1">
         <h2 className="leading-none">
           <span
-            className={`${displayFont.className} inline-block -rotate-1 bg-[#FFE066] px-[13px] pb-[3px] pt-[5px] text-[19px] leading-none tracking-[0.03em] text-[#0C1220] shadow-[2px_2px_0_rgba(12,18,32,0.35)]`}
+            className="inline-block -rotate-1 bg-[#FFE066] px-[13px] pb-[3px] pt-[5px] text-[19px] font-black leading-none tracking-[0.03em] text-[#0C1220] shadow-[2px_2px_0_rgba(12,18,32,0.35)]"
           >
             Leaderboard
           </span>
@@ -2389,7 +2389,7 @@ export default function StepLore() {
                   </span>
                 )}
                 <h1
-                  className={`${displayFont.className} min-w-0 flex-1 truncate text-center leading-none tracking-[0.01em] text-slate-950 ${
+                  className={`min-w-0 flex-1 truncate text-center font-black leading-none tracking-[0.01em] text-slate-950 ${
                     chipText
                       ? 'text-[23px] min-[420px]:text-[26px] sm:text-[31px]'
                       : 'text-[31px] sm:text-[34px]'
@@ -2428,7 +2428,7 @@ export default function StepLore() {
 
         {!showBoard && phase === 'intro' && (
           <div className="mx-auto w-full max-w-2xl space-y-4 px-4 pb-10 sm:px-6">
-            <div className="relative mt-5 overflow-hidden rounded-[18px] border-[3px] border-[#0C1220] bg-[#039AD1] px-[18px] pb-5 pt-4 text-center shadow-[6px_6px_0_#0C1220] sm:mt-7">
+            <div className="relative mt-5 overflow-hidden rounded-[28px] border border-black/5 bg-[#039AD1] px-[18px] pb-[22px] pt-[18px] text-center shadow-[0_14px_30px_rgba(12,18,32,0.08)] sm:mt-7">
               {/* Halftone dots — the share page's card texture
                   (white dots, 20px grid), as a CSS overlay. */}
               <div
@@ -2443,7 +2443,7 @@ export default function StepLore() {
               <div className="relative">
                 <h1 aria-label="Can You Get Back to the Shack?">
                   <span
-                    className={`${displayFont.className} inline-block -rotate-2 bg-[#FFE066] px-4 pb-[5px] pt-[7px] text-[15px] uppercase leading-none tracking-[0.18em] text-[#0C1220] shadow-[2px_2px_0_rgba(12,18,32,0.35)]`}
+                    className="inline-block -rotate-2 bg-[#FFE066] px-4 pb-[5px] pt-[7px] text-[15px] font-black uppercase leading-none tracking-[0.18em] text-[#0C1220] shadow-[2px_2px_0_rgba(12,18,32,0.35)]"
                   >
                     Can you get
                   </span>
@@ -2487,8 +2487,8 @@ export default function StepLore() {
               const gameNumber =
                 LORE_GAMES.findIndex((g) => g.id === game.id) + 1;
               return (
-                <div className="overflow-hidden rounded-[18px] border-[3px] border-[#0C1220] bg-white shadow-[6px_6px_0_#0C1220]">
-                  <div className="relative overflow-hidden bg-[#039AD1] p-5 text-center text-white">
+                <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_14px_30px_rgba(12,18,32,0.08)]">
+                  <div className="relative overflow-hidden bg-[#039AD1] px-5 pb-5 pt-[22px] text-center text-white">
                     {/* Halftone dots — the share page's card
                         texture, as on the picker panel. */}
                     <div
@@ -2502,7 +2502,7 @@ export default function StepLore() {
                     />
                     <div className="relative">
                       <span
-                        className={`${displayFont.className} inline-block rounded-full bg-[#0C1220] px-[13px] pb-[4px] pt-[6px] text-[12.5px] uppercase leading-none tracking-[0.2em] text-white`}
+                        className="inline-block rounded-full bg-[#0C1220] px-[13px] pb-[4px] pt-[6px] text-[12.5px] font-black uppercase leading-none tracking-[0.2em] text-white"
                       >
                         Round {gameNumber} of 5
                       </span>
@@ -2527,7 +2527,7 @@ export default function StepLore() {
                         const display = fanhoodDisplay(fanhood);
                         if (!display) return null;
                         return (
-                          <span className="mt-3 inline-block rounded-full border-[2.5px] border-[#0C1220] bg-white px-3 py-[5px] text-[11px] font-black whitespace-nowrap text-[#0C1220] shadow-[2px_2px_0_#0C1220]">
+                          <span className="mt-3 inline-block rounded-full border-[2.5px] border-slate-300 bg-white px-3 py-[5px] text-[11px] font-black whitespace-nowrap text-[#0C1220] shadow-[0_2px_8px_rgba(12,18,32,0.15)]">
                             {display.stop} ·{' '}
                             {display.depth.toLocaleString()}
                           </span>
@@ -2535,7 +2535,7 @@ export default function StepLore() {
                       })()}
                     </div>
                   </div>
-                  <div className="p-5">
+                  <div className="px-5 pb-[22px] pt-5">
                     <div className="divide-y divide-[#0C1220]/10">
                       {GATE_RULES.map((rule) => (
                         <div
@@ -2570,7 +2570,7 @@ export default function StepLore() {
                     </div>
                     <button
                       onClick={startGatedGame}
-                      className="mt-4 w-full cursor-pointer rounded-[14px] border-[3px] border-[#0C1220] bg-[#0072CE] px-5 py-3.5 text-sm font-black text-white shadow-[4px_4px_0_#0C1220] transition-all hover:bg-blue-700 active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_#0C1220]"
+                      className="mt-4 w-full cursor-pointer rounded-[14px] bg-[#0072CE] px-5 py-[17px] text-sm font-black text-white shadow-[0_8px_20px_rgba(12,18,32,0.14)] transition-all hover:bg-blue-700 active:scale-[0.98]"
                     >
                       Start Round {gameNumber}
                     </button>
@@ -2643,7 +2643,7 @@ export default function StepLore() {
                 gone — it didn't fit the site; the journey map
                 below keeps the true band colors. The standing
                 lives in the ink panel inside this card. */}
-            <div className="relative overflow-hidden rounded-[18px] border-[3px] border-[#0C1220] bg-[#039AD1] p-6 text-white shadow-[6px_6px_0_#0C1220] space-y-3">
+            <div className="relative overflow-hidden rounded-[28px] border border-black/5 bg-[#039AD1] px-6 py-[26px] text-white shadow-[0_14px_30px_rgba(12,18,32,0.08)] space-y-3">
               {/* Poster halftone dots — the picker panel's
                   overlay, carried here so the two game cards
                   speak the same language. */}
@@ -2657,7 +2657,7 @@ export default function StepLore() {
                 }}
               />
               <span
-                className={`${displayFont.className} relative inline-block rounded-full bg-[#0C1220] px-3 py-[5px] text-[12px] uppercase leading-none tracking-[0.16em] text-white`}
+                className="relative inline-block rounded-full bg-[#0C1220] px-3 py-[5px] text-[12px] font-black uppercase leading-none tracking-[0.16em] text-white"
               >
                 {activeGameId
                   ? `ROUND ${LORE_GAMES.findIndex((g) => g.id === activeGameId) + 1} OF 5 — FINISHED`
@@ -2699,7 +2699,7 @@ export default function StepLore() {
                 Your standing
               </p>
               <p
-                className={`${displayFont.className} text-xl leading-snug`}
+                className="text-xl font-black leading-snug"
               >
                 {resultStandingLine}
               </p>
@@ -2749,9 +2749,9 @@ export default function StepLore() {
               journeyMap
             />
 
-            <div className="bg-white border-[3px] border-[#0C1220] rounded-[18px] p-5 shadow-[4px_4px_0_#0C1220] space-y-3">
+            <div className="bg-white border border-slate-200 rounded-[28px] px-5 py-[22px] shadow-[0_14px_30px_rgba(12,18,32,0.08)] space-y-3">
               <h3
-                className={`${displayFont.className} text-[19px] leading-tight text-[#0C1220]`}
+                className="text-[19px] font-black leading-tight text-[#0C1220]"
               >
                 Your best answers this round
               </h3>
@@ -2791,23 +2791,23 @@ export default function StepLore() {
                     + white secondary, like the rest of the site. */}
                 <button
                   onClick={backToGames}
-                  className="w-full sm:w-auto font-black text-xs sm:text-sm px-5 py-3 rounded-[14px] border-[3px] border-[#0C1220] bg-[#0072CE] text-white shadow-[4px_4px_0_#0C1220] transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_#0C1220] cursor-pointer"
+                  className="w-full sm:w-auto font-black text-xs sm:text-sm px-5 py-[15px] rounded-[14px] bg-[#0072CE] text-white shadow-[0_8px_20px_rgba(12,18,32,0.14)] transition-all active:scale-[0.98] cursor-pointer"
                 >
                   Back to the rounds
                 </button>
                 <button
                   onClick={() => navigateTo('dashboard')}
-                  className="w-full sm:w-auto bg-white border-[3px] border-[#0C1220] active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_#0C1220] shadow-[4px_4px_0_#0C1220] text-[#0C1220] font-black text-xs sm:text-sm px-5 py-3 rounded-[14px] transition-all cursor-pointer"
+                  className="w-full sm:w-auto bg-white border border-slate-200 text-[#0C1220] font-black text-xs sm:text-sm px-5 py-[14px] rounded-[14px] shadow-[0_8px_20px_rgba(12,18,32,0.10)] transition-all active:scale-[0.98] cursor-pointer"
                 >
                   Back to Dashboard
                 </button>
               </div>
             </div>
 
-            <div className="bg-white border-[3px] border-[#0C1220] rounded-[18px] p-5 shadow-[4px_4px_0_#0C1220] space-y-3">
+            <div className="bg-white border border-slate-200 rounded-[28px] px-5 py-[22px] shadow-[0_14px_30px_rgba(12,18,32,0.08)] space-y-3">
               <div>
                 <h3
-                  className={`${displayFont.className} text-[19px] leading-tight text-[#0C1220]`}
+                  className="text-[19px] font-black leading-tight text-[#0C1220]"
                 >
                   Every answer
                 </h3>

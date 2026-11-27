@@ -11,7 +11,6 @@ import {
 import { trackAnalytics } from '../lib/analytics';
 import { albumCoverSrc, resolveAlbumId } from './shareables/ShareCardShell';
 import { FlyingWIcon, AudioPreviewButton, HelpButton } from './SharedUI';
-import { displayFont } from './shareables/fonts';
 import type { CommunityScopeStats, TriageSection } from './Step1Triage';
 
 /**
@@ -781,11 +780,11 @@ function DeckCardShell({
     >
       <div
         aria-hidden="true"
-        className="absolute inset-0 rounded-[28px] bg-white border-[3px] border-[#0C1220] -rotate-2 translate-y-1"
+        className="absolute inset-0 rounded-[28px] bg-white border border-slate-200 -rotate-2 translate-y-1"
       />
       <div
         aria-hidden="true"
-        className="absolute inset-0 rounded-[28px] bg-white border-[3px] border-[#0C1220] rotate-[1.5deg] translate-y-0.5"
+        className="absolute inset-0 rounded-[28px] bg-white border border-slate-200 rotate-[1.5deg] translate-y-0.5"
       />
       {swipe ? (
         <div
@@ -802,7 +801,7 @@ function DeckCardShell({
           }}
           className={`relative ${
             adaptive ? 'min-h-[332px]' : 'h-full'
-          } rounded-[28px] bg-white border-[3px] border-[#0C1220] shadow-[4px_4px_0_rgba(11,30,63,0.85)] select-none`}
+          } rounded-[28px] bg-white shadow-[0_14px_30px_rgba(12,18,32,0.08)] select-none`}
         >
           {/* Directional stamps: all three are CENTERED OVER THE
               ALBUM ART (owner: the old corner stamps rotated
@@ -847,7 +846,7 @@ function DeckCardShell({
         <div
           className={`relative ${
             adaptive ? 'min-h-[332px]' : 'h-full'
-          } rounded-[28px] bg-white border-[3px] border-[#0C1220] shadow-[4px_4px_0_rgba(11,30,63,0.85)]`}
+          } rounded-[28px] bg-white shadow-[0_14px_30px_rgba(12,18,32,0.08)]`}
         >
           {children}
         </div>
@@ -939,7 +938,7 @@ function SaveProgressButton({ onClick }: { onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="w-full bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm px-4 py-3.5 rounded-full shadow-[2px_2px_0_rgba(11,30,63,0.85)] transition active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_rgba(11,30,63,0.85)] cursor-pointer border-[3px] border-[#0C1220]"
+      className="w-full bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm px-4 py-3.5 rounded-full shadow-[0_8px_20px_rgba(12,18,32,0.12)] transition active:scale-[0.98] cursor-pointer"
     >
       Create free account, save progress
     </button>
@@ -1789,8 +1788,8 @@ export default function Step1Deck({
         onClick={dismissMilestone}
         className={
           showSave && isGuest
-            ? 'w-full text-sm font-extrabold text-[#0C1220] bg-white border-[2.5px] border-[#0C1220] rounded-full px-6 py-3.5 shadow-[2px_2px_0_rgba(11,30,63,0.85)] hover:bg-slate-50 transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_rgba(11,30,63,0.85)] cursor-pointer whitespace-nowrap'
-            : 'w-full bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm px-6 py-3.5 rounded-full shadow-[2px_2px_0_rgba(11,30,63,0.85)] transition active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_rgba(11,30,63,0.85)] cursor-pointer border-[3px] border-[#0C1220] whitespace-nowrap'
+            ? 'w-full text-sm font-extrabold text-[#0C1220] bg-white border border-slate-200 rounded-full px-6 py-3.5 shadow-[0_8px_20px_rgba(12,18,32,0.10)] hover:bg-slate-50 transition-all active:scale-[0.98] cursor-pointer whitespace-nowrap'
+            : 'w-full bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm px-6 py-3.5 rounded-full shadow-[0_8px_20px_rgba(12,18,32,0.12)] transition active:scale-[0.98] cursor-pointer whitespace-nowrap'
         }
       >
         {keepLabel ?? (isGuest ? 'Keep sorting as a guest' : 'Keep sorting')}
@@ -1871,12 +1870,12 @@ export default function Step1Deck({
         key={bucket}
         data-tutorial={`bucket-${bucket}`}
         onClick={() => flipAct(bucket)}
-        className={`flex-1 flex flex-col items-center justify-center gap-0.5 rounded-2xl border-[2.5px] py-3 [@media(max-height:740px)]:py-2 transition-all cursor-pointer ${
+        className={`flex-1 flex flex-col items-center justify-center gap-0.5 rounded-2xl border-[2.5px] py-3 [@media(max-height:740px)]:py-2 transition-all cursor-pointer active:scale-[0.97] ${
           isCommitted
             ? 'bg-slate-900 border-slate-900 shadow-md'
             : isSelected
             ? 'bg-sky-50 border-sky-400 ring-1 ring-sky-400 shadow-sm'
-            : 'bg-white border-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)] hover:bg-slate-50'
+            : 'bg-white border-slate-300 shadow-[0_2px_8px_rgba(12,18,32,0.06)] hover:bg-slate-50'
         }`}
         title={displayLabel}
       >
@@ -2426,14 +2425,7 @@ export default function Step1Deck({
   return (
     <div
       ref={deckRootRef}
-      // pb-6 is the deck's footer clearance: the triage root bleeds
-      // over <main>'s padding (-m-4 …) and runs at least one screen
-      // tall, so without bottom padding here the ACTIONS block —
-      // the Jump-to-album select last — lands flush against the
-      // site footer (owner screenshot, Nov 26, 2026). The flex-1
-      // card area above absorbs the 24px when everything fits one
-      // screen; on short screens it becomes the trailing gap.
-      className="relative flex-1 min-h-0 flex flex-col w-full max-w-[560px] mx-auto px-4 pb-6"
+      className="relative flex-1 min-h-0 flex flex-col w-full max-w-[560px] mx-auto px-4"
     >
       {/* COMPACT PROGRESS — one line + a slim bar. Same counts as the
           list header (categorizedCount / bucketedCount), so the two
@@ -2469,7 +2461,7 @@ export default function Step1Deck({
                 type="checkbox"
                 checked={hideSorted}
                 onChange={(e) => toggleHideSorted(e.target.checked)}
-                className="rounded border-2 border-[#0C1220] text-[#0072CE] focus:ring-[#0072CE] w-3.5 h-3.5 cursor-pointer"
+                className="rounded border border-slate-300 text-[#0072CE] focus:ring-[#0072CE] w-3.5 h-3.5 cursor-pointer"
               />
               <span>Hide sorted</span>
             </label>
@@ -2487,13 +2479,13 @@ export default function Step1Deck({
             −17px margin is half the disc), its left % clamped to
             2–98 so it never hangs off either end. */}
         <div className="relative w-full h-3.5 my-2 z-0">
-          <div className="absolute inset-0 bg-white rounded-full border-[2.5px] border-[#0C1220] z-10" />
+          <div className="absolute inset-0 bg-white rounded-full border border-slate-200 z-10" />
           <div
             className="absolute top-0 left-0 h-full bg-[#7DD3FC] rounded-full transition-all duration-300 z-20"
             style={{ width: `${progressPercent}%` }}
           />
           <div
-            className="absolute top-1/2 -translate-y-1/2 transition-all duration-300 z-30 ml-[-17px] pointer-events-none grid h-[34px] w-[34px] place-items-center rounded-full border-2 border-[#0C1220] bg-[#FFC72C]"
+            className="absolute top-1/2 -translate-y-1/2 transition-all duration-300 z-30 ml-[-17px] pointer-events-none grid h-[34px] w-[34px] place-items-center rounded-full bg-[#FFC72C] shadow-[0_4px_10px_rgba(12,18,32,0.20)]"
             style={{
               left: `${Math.min(98, Math.max(2, progressPercent))}%`,
             }}
@@ -2549,13 +2541,13 @@ export default function Step1Deck({
                   <img
                     src={milestoneCover.src}
                     alt={`${milestoneCover.album} cover art`}
-                    className="h-28 w-28 object-cover rounded-2xl border-[3px] border-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)]"
+                    className="h-28 w-28 object-cover rounded-2xl shadow-[0_8px_20px_rgba(12,18,32,0.12)]"
                   />
                 </>
               ) : (
                 <MilestoneRibbon />
               )}
-              <h2 className={`${displayFont.className} text-[25px] sm:text-3xl text-[#0C1220]`}>
+              <h2 className="font-black text-[25px] sm:text-3xl text-[#0C1220]">
                 {milestonePending.headline}
               </h2>
               {milestonePending.body && (
@@ -2795,7 +2787,7 @@ export default function Step1Deck({
                 <img
                   src={albumCoverSrc(resolveAlbumId(currentSong))}
                   alt={`${currentSong.album} cover art`}
-                  className="h-24 w-24 object-cover rounded-xl border-[3px] border-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)]"
+                  className="h-24 w-24 object-cover rounded-xl shadow-[0_8px_20px_rgba(12,18,32,0.12)]"
                 />
               </div>
               {/* TITLE — a fixed two-line slot. line-clamp-2 caps the
@@ -2804,7 +2796,7 @@ export default function Step1Deck({
                   second line's space empty. */}
               <div className="h-[104px] w-full flex items-center justify-center">
                 <h2
-                  className={`${titleSizeClass} ${displayFont.className} text-[#0C1220] leading-[1.05] break-words line-clamp-2`}
+                  className={`${titleSizeClass} font-black text-[#0C1220] leading-[1.05] break-words line-clamp-2`}
                 >
                   {currentSong.title}
                 </h2>
@@ -2825,7 +2817,7 @@ export default function Step1Deck({
                   AudioPreviewButton itself is deliberately
                   untouched — restyling it everywhere is a
                   separate call. */}
-              <div data-tutorial="preview" className="rounded-full ring-2 ring-[#0C1220]">
+              <div data-tutorial="preview" className="rounded-full ring-2 ring-slate-300">
                 <AudioPreviewButton id={currentSong.id} title={currentSong.title} album={currentSong.album} large />
               </div>
             </div>
@@ -2847,7 +2839,7 @@ export default function Step1Deck({
         <div className="shrink-0">
           <div
             data-tutorial="tray"
-            className="bg-white border-[3px] border-[#0C1220] rounded-3xl shadow-[4px_4px_0_rgba(11,30,63,0.85)] p-3 [@media(max-height:740px)]:p-2.5"
+            className="bg-white rounded-3xl shadow-[0_14px_30px_rgba(12,18,32,0.08)] p-[15px] [@media(max-height:740px)]:p-[13px]"
           >
             <div className="flex gap-1.5 sm:gap-2">
               {BUCKET_ORDER.map(renderBucketButton)}
@@ -2880,7 +2872,7 @@ export default function Step1Deck({
                 onChange={(e) => {
                   if (e.target.value) jumpToSection(e.target.value);
                 }}
-                className="w-full appearance-none text-xs font-extrabold text-[#0C1220] bg-white border-[2.5px] border-[#0C1220] rounded-full shadow-[2px_2px_0_rgba(11,30,63,0.85)] pl-4 pr-9 py-2 cursor-pointer hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#0072CE]"
+                className="w-full appearance-none text-xs font-extrabold text-[#0C1220] bg-white border-[2.5px] border-slate-300 rounded-full shadow-[0_2px_8px_rgba(12,18,32,0.06)] pl-4 pr-9 py-2 cursor-pointer hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#0072CE]"
                 aria-label="Jump to album"
               >
                 <option value="" disabled>

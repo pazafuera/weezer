@@ -4,7 +4,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Song, BucketType } from '../data/constants';
 import { AudioPreviewButton, SortingIncompleteNotice } from './SharedUI';
 import type { TriageValue } from '../context/WeezerContext';
-import { displayFont } from './shareables/fonts';
 
 // THE SPLIT PASS (owner, Nov 13, 2026) — a coarse-sort game for
 // big buckets. Ranking 75 Mids by dragging fails on distance:
@@ -295,7 +294,7 @@ export default function Step1_5SplitPass({
                 {plural} › {pass.path.join(' › ')} · spots {pass.start + 1}–{pass.end}
               </div>
             )}
-            <h2 className={`${displayFont.className} text-[27px] text-[#0C1220] mt-1`}>
+            <h2 className={`font-black text-[27px] text-[#0C1220] mt-1`}>
               {pass.title}
             </h2>
             <p className="text-sm font-bold text-[#3D4A63]">
@@ -315,7 +314,7 @@ export default function Step1_5SplitPass({
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerUp}
               onPointerCancel={handlePointerUp}
-              className="w-full max-w-sm bg-white border-[3px] border-[#0C1220] rounded-[18px] shadow-[4px_4px_0_rgba(11,30,63,0.85)] px-5 pt-4 pb-5 text-center cursor-grab active:cursor-grabbing touch-none select-none"
+              className="w-full max-w-sm bg-white rounded-[28px] shadow-[0_14px_30px_rgba(12,18,32,0.08)] px-5 pt-4 pb-5 text-center cursor-grab active:cursor-grabbing touch-none select-none"
               style={{
                 transform: drag
                   ? `translate(${drag.dx}px, ${drag.dy}px) rotate(${Math.max(-6, Math.min(6, drag.dx * 0.04))}deg) scale(1.03)`
@@ -325,7 +324,7 @@ export default function Step1_5SplitPass({
                 position: 'relative'
               }}
             >
-              <h3 className={`${displayFont.className} text-2xl sm:text-3xl leading-tight text-[#0C1220] line-clamp-3 mb-2`}>
+              <h3 className={`font-black text-2xl sm:text-3xl leading-tight text-[#0C1220] line-clamp-3 mb-2`}>
                 {current.title}
               </h3>
               <p className="text-xs font-bold uppercase tracking-widest text-[#3D4A63] mb-4">
@@ -347,13 +346,13 @@ export default function Step1_5SplitPass({
                 ref={(el) => { zoneRefs.current[b] = el; }}
                 type="button"
                 onClick={() => place(b)}
-                className={`flex-1 rounded-[14px] border-[2.5px] border-[#0C1220] px-4 flex items-center justify-between transition-all cursor-pointer ${
+                className={`flex-1 rounded-[14px] border-[2.5px] border-slate-300 px-4 flex items-center justify-between transition-all cursor-pointer ${
                   hoverZone === b
-                    ? 'bg-amber-400 shadow-[3px_3px_0_rgba(11,30,63,0.85)] scale-[1.01]'
-                    : 'bg-white shadow-[2px_2px_0_rgba(11,30,63,0.85)]'
+                    ? 'bg-amber-400 shadow-[0_6px_18px_rgba(12,18,32,0.10)] scale-[1.01]'
+                    : 'bg-white shadow-[0_2px_8px_rgba(12,18,32,0.06)]'
                 }`}
               >
-                <span className={`${displayFont.className} text-xl text-[#0C1220]`}>
+                <span className={`font-black text-xl text-[#0C1220]`}>
                   {pass.path.length === 0
                     ? `${BAND_NAMES[b]} ${plural}`
                     : `${BAND_NAMES[b]} of the ${pass.path[pass.path.length - 1].toLowerCase()}`}
@@ -394,7 +393,7 @@ export default function Step1_5SplitPass({
             <span className="text-[10px] font-black uppercase tracking-widest text-[#3D4A63]">
               Split complete
             </span>
-            <h2 className={`${displayFont.className} text-[27px] text-[#0C1220] mt-1`}>
+            <h2 className={`font-black text-[27px] text-[#0C1220] mt-1`}>
               The {plural} are in rough order
             </h2>
             <p className="text-sm font-bold text-[#3D4A63]">
@@ -414,9 +413,9 @@ export default function Step1_5SplitPass({
                 onClick={() =>
                   startPass(t.key, `Split the ${t.label.toLowerCase()}`, [t.label], t.start, t.end, songsRef.current)
                 }
-                className="flex-1 rounded-[14px] border-[2.5px] border-[#0C1220] bg-white shadow-[2px_2px_0_rgba(11,30,63,0.85)] px-4 flex items-center justify-between cursor-pointer"
+                className="flex-1 rounded-[14px] border-[2.5px] border-slate-300 bg-white shadow-[0_2px_8px_rgba(12,18,32,0.06)] px-4 flex items-center justify-between cursor-pointer"
               >
-                <span className={`${displayFont.className} text-xl text-[#0C1220]`}>
+                <span className={`font-black text-xl text-[#0C1220]`}>
                   {t.label}
                 </span>
                 <span className="text-[11px] font-black uppercase tracking-wider text-[#3D4A63]">

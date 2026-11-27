@@ -519,7 +519,17 @@ export default function Step1Triage({
             // tray just below the fold on short screens — the
             // owner accepted a little scroll there over a card too
             // short for two-line titles.
-            'flex flex-col -m-4 sm:-m-6 lg:-m-8 min-h-[calc(100dvh-56px)] lg:min-h-[calc(100dvh-64px)]'
+            // FOOTER CLEARANCE (Nov 26, 2026): pb-7 adds 28px of
+            // trailing page length below the deck so its last row
+            // (the Jump-to-album select) clears the site footer.
+            // It lives HERE, outside the deck, and the min-height
+            // grows by the same 28px (100dvh-28px / lg -36px), so
+            // the deck's content box keeps exactly its old height
+            // (100dvh-56px / lg -64px) and no internal deck spacing
+            // changes. Padding inside the deck itself squeezed its
+            // flex column and crowded the card into the progress
+            // header (the preview-89 bug) — never put it there.
+            'flex flex-col -m-4 sm:-m-6 lg:-m-8 min-h-[calc(100dvh-28px)] lg:min-h-[calc(100dvh-36px)] pb-7'
       }
     >
       {showPicker ? (
@@ -575,7 +585,7 @@ export default function Step1Triage({
               style={{ width: `${progressPercentScoped}%` }}
             />
             <div
-              className="absolute top-1/2 -translate-y-1/2 transition-all duration-300 z-30 ml-[-17px] grid h-[34px] w-[34px] place-items-center rounded-full border-2 border-[#0C1220] bg-[#FFC72C]"
+              className="absolute top-1/2 -translate-y-1/2 transition-all duration-300 z-30 ml-[-17px] grid h-[34px] w-[34px] place-items-center rounded-full bg-[#FFC72C] shadow-[0_4px_10px_rgba(12,18,32,0.20)]"
               style={{ left: `${Math.min(98, Math.max(2, progressPercentScoped))}%` }}
             >
               <FlyingWIcon className="h-auto w-[24px] text-[#0072CE]" />
@@ -652,7 +662,7 @@ export default function Step1Triage({
           sits with the sort, below its title. */}
       {scoped && sortPath && (
         <div
-          className={`flex items-center justify-between gap-3 rounded-xl border-2 border-[#0C1220] bg-white px-3.5 py-2.5 shadow-[3px_3px_0_rgba(11,30,63,0.85)] ${
+          className={`flex items-center justify-between gap-3 rounded-xl border border-black/5 bg-white px-3.5 py-2.5 shadow-[0_6px_18px_rgba(12,18,32,0.07)] ${
             effectiveMode === 'deck' ? 'mx-4 mb-2 shrink-0' : 'mb-8'
           }`}
         >
@@ -728,11 +738,11 @@ export default function Step1Triage({
             <div
               key={section.key}
               id={section.key}
-              className="bg-white border border-slate-300 rounded-3xl overflow-hidden shadow-xs scroll-mt-36"
+              className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-xs scroll-mt-36"
             >
               {/* SECTION BANNER */}
               <div
-                className={`${section.bannerClass ?? ''} p-4 text-center border-b border-slate-300 ${section.bannerClass ? 'text-white' : ''}`}
+                className={`${section.bannerClass ?? ''} p-4 text-center border-b border-slate-200 ${section.bannerClass ? 'text-white' : ''}`}
                 style={
                   bannerTheme
                     ? { backgroundColor: bannerTheme.bg, color: bannerTheme.text }
@@ -747,7 +757,7 @@ export default function Step1Triage({
               </div>
 
               {/* SONG ROWS WITH HORIZONTAL BUCKET ROW ON DESKTOP */}
-              <div className="divide-y divide-slate-300">
+              <div className="divide-y divide-slate-200">
                 {visibleSongs.map((song, index) => {
                   const activeBucket = triageMap[song.id];
                   const isUnknown = activeBucket === 'unknown';
@@ -800,7 +810,7 @@ export default function Step1Triage({
                               className={`py-2 px-1.5 sm:py-2.5 sm:px-3 lg:px-4 rounded-xl text-xs sm:text-sm font-black border transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 cursor-pointer ${
                                 isSelected
                                   ? 'bg-sky-400 text-slate-950 font-black border-sky-500 shadow-md scale-[1.02] z-10'
-                                  : 'bg-white text-slate-500 border-slate-300 hover:bg-slate-100 hover:text-slate-800'
+                                  : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-100 hover:text-slate-800'
                               }`}
                               title={displayLabel}
                             >

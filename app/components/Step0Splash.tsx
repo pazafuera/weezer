@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { useWeezer } from '../context/WeezerContext';
-import { displayFont } from './shareables/fonts';
 
 /** The dashboard hero's tape strip (StepGarage2's TapeStrip recipe):
  *  yellow label, slight tilt, hard little shadow. Still used by
@@ -17,11 +16,13 @@ function TapeStrip({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** The dashboard hero's button recipe (ink border, hard offset
- *  shadow, press that slides the button onto its shadow), sized for
- *  this page's stacked full-width CTAs. Signed-in branch only. */
+/** The dashboard hero's button recipe in the flat lane (hairline
+ *  border, soft shadow, scale press), sized for this page's
+ *  stacked full-width CTAs. Signed-in branch only. Vertical
+ *  padding carries +1.5px for the 2.5px → 1px border reduction,
+ *  so the height is unchanged. */
 const SPLASH_BTN_PRIMARY =
-  'w-full cursor-pointer rounded-[14px] border-[2.5px] border-[#0C1220] bg-white px-6 py-3.5 text-sm font-black text-slate-950 shadow-[3px_3px_0_#0C1220] transition-all hover:bg-sky-50 active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_#0C1220]';
+  'w-full cursor-pointer rounded-[14px] border border-slate-200 bg-white px-6 py-[15.5px] text-sm font-black text-slate-950 shadow-[0_10px_24px_rgba(12,18,32,0.10)] transition-all hover:bg-sky-50 active:scale-[0.98]';
 
 const ALBUM_PREVIEWS = [
   { title: 'Pinkerton', cover: '/albums/pinkerton.jpg', rot: '-rotate-12 -mr-3 sm:-mr-4', z: 'z-0' },
@@ -93,10 +94,7 @@ export default function Step0Splash() {
         <div className="space-y-2">
           <div>
             <TapeStrip>All My Favorite Songs</TapeStrip>
-            <h1
-              className={`mt-3 text-3xl sm:text-4xl text-[#0C1220] tracking-wide leading-tight ${displayFont.className}`}
-              style={{ textShadow: '3px 3px 0 rgba(11,30,63,0.35)' }}
-            >
+            <h1 className="mt-3 text-3xl sm:text-4xl font-black leading-tight tracking-wide text-[#0C1220]">
               Rank Weezer.
               <span className="block text-[#0072CE]">Settle the Debate.</span>
             </h1>
@@ -141,7 +139,7 @@ export default function Step0Splash() {
             {ALBUM_PREVIEWS.map((album, idx) => (
               <div
                 key={idx}
-                className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl overflow-hidden border-[3px] border-[#0C1220] ${album.rot} ${album.z} shadow-[3px_3px_0_#0C1220] transition-transform duration-300 shrink-0 bg-slate-900`}
+                className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl overflow-hidden ${album.rot} ${album.z} shadow-[0_10px_20px_rgba(12,18,32,0.25)] transition-transform duration-300 shrink-0 bg-slate-900`}
               >
                 <img
                   src={album.cover}
@@ -154,11 +152,11 @@ export default function Step0Splash() {
         </div>
 
         {/* STACKED REASONS TO PARTICIPATE */}
-        <div className="bg-white border-[3px] border-[#0C1220] rounded-[18px] shadow-[4px_4px_0_rgba(11,30,63,0.85)] px-4 py-3 space-y-3 max-w-md mx-auto text-left">
+        <div className="bg-white border border-slate-200 rounded-[28px] shadow-[0_14px_30px_rgba(12,18,32,0.08)] px-4 py-[14px] space-y-3 max-w-md mx-auto text-left">
 
           {/* REASON 1: BUILD YOUR CANON */}
           <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 bg-[#BDE9FF] text-[#0072CE] rounded-xl border-2 border-[#0C1220] shadow-[2px_2px_0_#0C1220] flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 bg-[#BDE9FF] text-[#0072CE] rounded-xl shadow-[0_4px_10px_rgba(12,18,32,0.12)] flex items-center justify-center shrink-0">
               <svg
                 className="w-5 h-5"
                 fill="none"
@@ -183,7 +181,7 @@ export default function Step0Splash() {
 
           {/* REASON 2: CLASH WITH FRIENDS */}
           <div className="flex items-center gap-3.5 border-t border-[#0C1220]/10 pt-3">
-            <div className="w-10 h-10 bg-[#F6A8C1] text-purple-700 rounded-xl border-2 border-[#0C1220] shadow-[2px_2px_0_#0C1220] flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 bg-[#F6A8C1] text-purple-700 rounded-xl shadow-[0_4px_10px_rgba(12,18,32,0.12)] flex items-center justify-center shrink-0">
               <svg
                 className="w-5 h-5"
                 fill="none"
@@ -208,7 +206,7 @@ export default function Step0Splash() {
 
           {/* REASON 3: GLOBAL CONSENSUS */}
           <div className="flex items-center gap-3.5 border-t border-[#0C1220]/10 pt-3">
-            <div className="w-10 h-10 bg-[#8FE3B0] text-emerald-700 rounded-xl border-2 border-[#0C1220] shadow-[2px_2px_0_#0C1220] flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 bg-[#8FE3B0] text-emerald-700 rounded-xl shadow-[0_4px_10px_rgba(12,18,32,0.12)] flex items-center justify-center shrink-0">
               <svg
                 className="w-5 h-5"
                 fill="currentColor"

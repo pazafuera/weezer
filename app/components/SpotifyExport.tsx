@@ -251,9 +251,9 @@ function SpotifyFlow({
   return (
     <>
       {variant === 'card' && (
-        <div className="mt-4 w-full max-w-md rounded-[18px] border-[3px] border-[#0C1220] bg-white p-4 shadow-[4px_4px_0_rgba(11,30,63,0.85)]">
+        <div className="mt-4 w-full max-w-md rounded-[28px] border border-slate-200 bg-white px-4 py-[18px] shadow-[0_14px_30px_rgba(12,18,32,0.08)]">
           <div className="flex items-center gap-3.5">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border-2 border-[#0C1220] bg-[#1DB954]/15">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-[#1DB954]/15">
               <SpotifyGlyph className="h-[26px] w-[26px] text-[#1DB954]" />
             </div>
             <div className="min-w-0 flex-1 text-left">
@@ -268,7 +268,7 @@ function SpotifyFlow({
           <button
             type="button"
             onClick={() => setModalOpen(true)}
-            className="mt-3.5 w-full cursor-pointer rounded-full border-[3px] border-[#0C1220] bg-[#1DB954] px-6 py-3 text-sm font-black text-[#0C1220] shadow-[3px_3px_0_#0C1220] transition hover:brightness-105 active:translate-y-[1px]"
+            className="mt-3.5 w-full cursor-pointer rounded-full bg-[#1DB954] px-6 py-[15px] text-sm font-black text-[#0C1220] shadow-[0_14px_30px_rgba(12,18,32,0.08)] transition hover:brightness-105 active:scale-[0.98]"
           >
             <span className="inline-flex items-center justify-center gap-2">
               <SpotifyGlyph />
@@ -280,7 +280,7 @@ function SpotifyFlow({
 
       {modalOpen && (
         <div className="fixed inset-0 z-[90] flex items-end justify-center bg-[#0C1220]/60 sm:items-center sm:p-6">
-          <div className="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-[22px] border-[3px] border-[#0C1220] bg-white p-6 shadow-[6px_6px_0_rgba(11,30,63,0.85)] sm:rounded-[22px]">
+          <div className="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-[28px] border border-slate-200 bg-white px-6 py-[26px] shadow-[0_14px_30px_rgba(12,18,32,0.08)] sm:rounded-[28px]">
             <div className="mb-4 flex items-start justify-between gap-3">
               <h3 className="text-xl font-black tracking-tight text-[#0C1220]">{title}</h3>
               {phase !== 'working' && (
@@ -288,7 +288,7 @@ function SpotifyFlow({
                   type="button"
                   onClick={closeModal}
                   aria-label="Close"
-                  className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full border-2 border-[#0C1220] text-sm font-black text-[#0C1220]"
+                  className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full border border-slate-300 text-sm font-black text-[#0C1220]"
                 >
                   ✕
                 </button>
@@ -304,7 +304,7 @@ function SpotifyFlow({
                   {scopes.map((option) => (
                     <div
                       key={option.label}
-                      className="flex items-center justify-between rounded-xl border-2 border-[#0C1220]/15 bg-slate-50 px-4 py-2 text-[13px] font-black text-[#0C1220]"
+                      className="flex items-center justify-between rounded-xl border-2 border-slate-200 bg-slate-50 px-4 py-2 text-[13px] font-black text-[#0C1220]"
                     >
                       <span>{option.label}</span>
                       <span className="text-[#3D4A63]">{option.songs.length} songs</span>
@@ -317,7 +317,7 @@ function SpotifyFlow({
                 <button
                   type="button"
                   onClick={handleConnect}
-                  className="mt-5 w-full cursor-pointer rounded-full border-[3px] border-[#0C1220] bg-[#1DB954] px-6 py-3 text-sm font-black text-[#0C1220] shadow-[3px_3px_0_#0C1220] transition hover:brightness-105 active:translate-y-[1px]"
+                  className="mt-5 w-full cursor-pointer rounded-full bg-[#1DB954] px-6 py-[15px] text-sm font-black text-[#0C1220] shadow-[0_14px_30px_rgba(12,18,32,0.08)] transition hover:brightness-105 active:scale-[0.98]"
                 >
                   <span className="inline-flex items-center justify-center gap-2">
                     <SpotifyGlyph />
@@ -333,7 +333,7 @@ function SpotifyFlow({
             {phase === 'scope' && (
               <div>
                 {justConnected && (
-                  <div className="mb-3 rounded-xl border-2 border-[#0C1220] bg-emerald-50 px-4 py-2.5 text-center text-[13px] font-black text-emerald-900">
+                  <div className="mb-3 rounded-xl border border-slate-200 bg-emerald-50 px-4 py-[11px] text-center text-[13px] font-black text-emerald-900">
                     You&apos;re connected ✓
                   </div>
                 )}
@@ -345,7 +345,7 @@ function SpotifyFlow({
                         key={option.label}
                         type="button"
                         onClick={() => setSelected(option.label)}
-                        className={`flex cursor-pointer items-center justify-between rounded-xl border-2 border-[#0C1220] px-4 py-2.5 text-[13px] font-black text-[#0C1220] transition ${
+                        className={`flex cursor-pointer items-center justify-between rounded-xl border border-slate-200 px-4 py-[11px] text-[13px] font-black text-[#0C1220] transition ${
                           isSelected ? 'bg-[#FFC72C]' : 'bg-white hover:bg-sky-50'
                         }`}
                       >
@@ -361,7 +361,7 @@ function SpotifyFlow({
                 <button
                   type="button"
                   onClick={() => void runExport()}
-                  className="mt-3 w-full cursor-pointer rounded-full border-[3px] border-[#0C1220] bg-[#1DB954] px-6 py-3 text-sm font-black text-[#0C1220] shadow-[3px_3px_0_#0C1220] transition hover:brightness-105 active:translate-y-[1px]"
+                  className="mt-3 w-full cursor-pointer rounded-full bg-[#1DB954] px-6 py-[15px] text-sm font-black text-[#0C1220] shadow-[0_14px_30px_rgba(12,18,32,0.08)] transition hover:brightness-105 active:scale-[0.98]"
                 >
                   <span className="inline-flex items-center justify-center gap-2">
                     <SpotifyGlyph />
@@ -386,7 +386,7 @@ function SpotifyFlow({
                 <p className="text-center text-sm font-bold text-[#3D4A63]">
                   Finding your songs on Spotify… {progress.done}/{progress.total}
                 </p>
-                <div className="mt-4 h-3 overflow-hidden rounded-full border-2 border-[#0C1220] bg-slate-100">
+                <div className="mt-4 h-3 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
                   <div
                     className="h-full bg-[#1DB954] transition-all duration-300"
                     style={{
@@ -402,7 +402,7 @@ function SpotifyFlow({
 
             {phase === 'done' && doneInfo && (
               <div className="text-center">
-                <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full border-[3px] border-[#0C1220] bg-[#1DB954] text-2xl font-black text-[#0C1220]">
+                <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-[#1DB954] text-2xl font-black text-[#0C1220]">
                   ✓
                 </div>
                 <p className="text-sm font-semibold leading-snug text-[#3D4A63]">
@@ -418,7 +418,7 @@ function SpotifyFlow({
                   href={doneInfo.url}
                   target="_blank"
                   rel="noreferrer"
-                  className="mt-4 block w-full rounded-full border-[3px] border-[#0C1220] bg-[#1DB954] px-6 py-3 text-sm font-black text-[#0C1220] shadow-[3px_3px_0_#0C1220] transition hover:brightness-105"
+                  className="mt-4 block w-full rounded-full bg-[#1DB954] px-6 py-[15px] text-sm font-black text-[#0C1220] shadow-[0_14px_30px_rgba(12,18,32,0.08)] transition hover:brightness-105"
                 >
                   <span className="inline-flex items-center justify-center gap-2">
                     <SpotifyGlyph />
@@ -444,7 +444,7 @@ function SpotifyFlow({
                 <button
                   type="button"
                   onClick={() => setPhase(conn ? 'scope' : 'intro')}
-                  className="mt-4 w-full cursor-pointer rounded-full border-[3px] border-[#0C1220] bg-white px-6 py-3 text-sm font-black text-[#0C1220] shadow-[3px_3px_0_#0C1220] transition hover:bg-sky-50 active:translate-y-[1px]"
+                  className="mt-4 w-full cursor-pointer rounded-full border border-slate-200 bg-white px-6 py-[14px] text-sm font-black text-[#0C1220] shadow-[0_14px_30px_rgba(12,18,32,0.08)] transition hover:bg-sky-50 active:scale-[0.98]"
                 >
                   Try again
                 </button>

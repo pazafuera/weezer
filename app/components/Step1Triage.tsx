@@ -392,14 +392,18 @@ export default function Step1Triage({
   const isCompleteScoped = categorizedScoped === scopeTotal;
   const hasPartialScoped = bucketedScoped >= 1;
 
-  // Campaign landing intent (owner, Nov 20, 2026): the
+  // Landing intent (owner, Nov 20, 2026): the
   // ?path=bluepinkerton link's promise is "rank the 20 Blue +
   // Pinkerton songs" — a fresh sorter arriving with that
-  // intent starts inside the scope, no picker. Applied only
-  // once the boot has settled (a returning fan's progress must
-  // be visible before freshness is judged), only when no path
-  // is stored and nothing is categorized, and consumed either
-  // way so it can never ambush a later visit in the same tab.
+  // intent starts inside the scope, no picker. The homepage
+  // path cards (Nov 26, 2026) stash the same way: 'all' and
+  // 'casual' preset their path, while no intent at all leaves
+  // the choice to this picker's in-flow album selection.
+  // Applied only once the boot has settled (a returning fan's
+  // progress must be visible before freshness is judged),
+  // only when no path is stored and nothing is categorized,
+  // and consumed either way so it can never ambush a later
+  // visit in the same tab.
   const pathIntentAppliedRef = useRef(false);
   useEffect(() => {
     if (loadingUser || pathIntentAppliedRef.current) return;
@@ -411,12 +415,17 @@ export default function Step1Triage({
     } catch {
       intent = null;
     }
-    if (intent !== 'bluepinkerton') return;
-    if (sortPath !== null || categorizedCount !== 0) return;
-    const path: SortPath = {
-      kind: 'albums',
-      albums: ['The Blue Album', 'Pinkerton'],
+    const PATH_BY_INTENT: Record<string, SortPath> = {
+      bluepinkerton: {
+        kind: 'albums',
+        albums: ['The Blue Album', 'Pinkerton'],
+      },
+      all: { kind: 'all' },
+      casual: { kind: 'casual' },
     };
+    const path = intent ? PATH_BY_INTENT[intent] : undefined;
+    if (!path) return;
+    if (sortPath !== null || categorizedCount !== 0) return;
     saveSortPath(path);
     setSortPath(path);
   }, [loadingUser, sortPath, categorizedCount]);

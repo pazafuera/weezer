@@ -9,7 +9,6 @@ import { FlyingWIcon, AlbumArtwork } from './SharedUI';
 import { useWeezer, isRealBucket } from '../context/WeezerContext';
 import type { TriageValue } from '../context/WeezerContext';
 import TierListChart from './TierListChart';
-import { displayFont } from './shareables/fonts';
 import {
   ALBUM_SHRINKAGE_K,
   CONTROVERSY_POLARIZATION_WEIGHT,
@@ -57,7 +56,7 @@ const SuppressedBody = ({
   reason?: string;
   place?: string;
 }) => (
-  <div className="rounded-2xl border-2 border-dashed border-[#0C1220]/25 bg-white/70 px-4 py-6 text-center">
+  <div className="rounded-2xl border-2 border-dashed border-slate-300 bg-white/70 px-4 py-6 text-center">
     <p className="text-sm font-semibold leading-relaxed text-[#3D4A63]">
       {reason === 'none_qualified'
         ? `Fans from ${place || 'here'} have started ranking, but nobody there has rated enough songs to count yet.`
@@ -70,7 +69,7 @@ const SuppressedBody = ({
 // instead of the global numbers — a filtered view never flashes
 // unfiltered data under a filter.
 const SliceLoadingBody = () => (
-  <div className="rounded-2xl border-2 border-dashed border-[#0C1220]/25 bg-white/70 px-4 py-6 text-center">
+  <div className="rounded-2xl border-2 border-dashed border-slate-300 bg-white/70 px-4 py-6 text-center">
     <p className="text-sm font-semibold leading-relaxed text-[#3D4A63]">
       Counting the fans in this slice…
     </p>
@@ -583,7 +582,7 @@ export default function FanStats({
                used to be indistinguishable from a genuinely
                empty community — and offer the retry. */
             <div className="py-20 text-center space-y-3">
-              <p className={`${displayFont.className} text-[24px] leading-tight tracking-wide text-[#0C1220]`}>Couldn&rsquo;t load fan data</p>
+              <p className={`font-black text-[24px] leading-tight tracking-wide text-[#0C1220]`}>Couldn&rsquo;t load fan data</p>
               <p className="text-sm font-semibold text-[#3D4A63] max-w-sm mx-auto leading-snug">
                 Something went wrong fetching the community
                 rankings. Your own rankings are fine — this is
@@ -601,7 +600,7 @@ export default function FanStats({
                say so, instead of spinning "Aggregating…" forever
                (the pre-launch / RPC-failure reality until now). */
             <div className="py-20 text-center space-y-3">
-              <p className={`${displayFont.className} text-[24px] leading-tight tracking-wide text-[#0C1220]`}>No fan data yet</p>
+              <p className={`font-black text-[24px] leading-tight tracking-wide text-[#0C1220]`}>No fan data yet</p>
               <p className="text-sm font-semibold text-[#3D4A63] max-w-sm mx-auto leading-snug">
                 Weezerverse fills in as fans finish and share
                 their rankings. Check back once some rankings are in.
@@ -696,7 +695,7 @@ export default function FanStats({
             views. The seeded-test-fan fact itself now lives only
             in the methodology section below, where the fine print
             belongs. */}
-        <div className="bg-white border-[3px] border-[#0C1220] rounded-[18px] shadow-[4px_4px_0_rgba(11,30,63,0.85)] px-5 py-4 text-center">
+        <div className="bg-white border border-slate-200 rounded-[28px] shadow-[0_14px_30px_rgba(12,18,32,0.08)] px-5 py-[18px] text-center">
           <p className="text-base sm:text-lg font-black text-[#0C1220] leading-snug">
             This project just started, and the numbers are still growing.
           </p>
@@ -713,7 +712,7 @@ export default function FanStats({
             </button>
             <button
               onClick={() => navigateTo('shareables')}
-              className="bg-white hover:bg-slate-100 text-[#0C1220] border-2 border-[#0C1220] font-black text-xs px-4 py-2 rounded-full cursor-pointer transition-colors"
+              className="bg-white hover:bg-slate-100 text-[#0C1220] border-2 border-slate-300 font-black text-xs px-4 py-2 rounded-full cursor-pointer transition-colors"
             >
               Share your cards
             </button>
@@ -722,7 +721,7 @@ export default function FanStats({
 
         {/* HERO */}
         <div className="text-center mb-6">
-          <h1 className={`${displayFont.className} whitespace-nowrap text-5xl sm:text-6xl md:text-7xl tracking-wide text-[#0C1220] leading-[1.02] mb-3`}>
+          <h1 className={`font-black whitespace-nowrap text-5xl sm:text-6xl md:text-7xl tracking-wide text-[#0C1220] leading-[1.02] mb-3`}>
             Weezerverse
           </h1>
           <p className="text-base font-semibold text-[#3D4A63] max-w-sm mx-auto leading-relaxed">
@@ -739,7 +738,7 @@ export default function FanStats({
             unrun (or the RPC fails) this whole section is absent
             and the page is exactly the pre-Phase-1 page. */}
         {presence && (
-          <div className="bg-white rounded-[18px] border-[3px] border-[#0C1220] shadow-[4px_4px_0_rgba(11,30,63,0.85)] p-4 sm:p-6">
+          <div className="bg-white border border-slate-200 rounded-[28px] shadow-[0_14px_30px_rgba(12,18,32,0.08)] px-4 py-[18px] sm:px-6 sm:py-[26px]">
             <WeezerverseMap presence={presence} />
             <p className="text-center text-xs font-bold text-[#3D4A63] mt-3">
               Fans have ranked from all over.
@@ -748,7 +747,7 @@ export default function FanStats({
         )}
 
         {presence && (
-          <div className="bg-[#0C1220] rounded-[18px] shadow-[4px_4px_0_rgba(12,18,32,0.35)] p-4 sm:p-6">
+          <div className="bg-[#0C1220] rounded-[28px] shadow-[0_14px_30px_rgba(12,18,32,0.08)] p-4 sm:p-6">
             <p className="mb-4 text-center text-sm font-semibold leading-relaxed text-[#b9c6dc]">
               <span className="font-black text-white">Filter the stats</span>
               {' by place or age.'}
@@ -775,13 +774,13 @@ export default function FanStats({
           
           {/* THE DIVIDE (1/3 Width on Desktop) */}
           <div className="flex flex-col h-full">
-          <div className="bg-white rounded-[18px] p-6 shadow-[4px_4px_0_rgba(11,30,63,0.85)] border-[3px] border-[#0C1220] text-center relative overflow-hidden flex-1 flex flex-col justify-center">
+          <div className="bg-white rounded-[28px] px-6 py-[26px] shadow-[0_14px_30px_rgba(12,18,32,0.08)] border border-slate-200 text-center relative overflow-hidden flex-1 flex flex-col justify-center">
             <div className="absolute top-0 left-0 w-1/2 h-full bg-[#0072CE]/5" />
             <div className="absolute top-0 right-0 w-1/2 h-full bg-slate-800/5" />
             
             <div className="relative z-10 mb-6">
               <span className="text-[10px] font-black uppercase tracking-widest text-[#0072CE] block mb-1">The Divide</span>
-              <h2 className={`${displayFont.className} text-3xl tracking-wide text-[#0C1220] leading-tight`}>Blue vs. Pinkerton</h2>
+              <h2 className={`font-black text-3xl tracking-wide text-[#0C1220] leading-tight`}>Blue vs. Pinkerton</h2>
               <p className="text-xs font-semibold text-[#3D4A63] mt-2 max-w-xs mx-auto text-balance">From the fans who've ranked so far.</p>
             </div>
 
@@ -901,10 +900,10 @@ export default function FanStats({
           
           {/* GLOBAL TOP 10 CANON */}
           <div className="flex flex-col h-full">
-          <div className="bg-white border-[3px] border-[#0C1220] rounded-[18px] p-6 sm:p-8 shadow-[4px_4px_0_rgba(11,30,63,0.85)] flex-1 flex flex-col">
+          <div className="bg-white border border-slate-200 rounded-[28px] px-6 py-[26px] sm:px-8 sm:py-[34px] shadow-[0_14px_30px_rgba(12,18,32,0.08)] flex-1 flex flex-col">
             <div className="text-center sm:text-left mb-6 border-b border-slate-100 pb-4">
               <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 block mb-1">Consensus</span>
-              <h2 className={`${displayFont.className} text-3xl sm:text-4xl tracking-wide text-[#0C1220] leading-tight`}>Community Top 10</h2>
+              <h2 className={`font-black text-3xl sm:text-4xl tracking-wide text-[#0C1220] leading-tight`}>Community Top 10</h2>
               <p className="text-[11px] font-bold text-[#3D4A63] mt-1.5">{slicePending ? 'Filtered rankings of 10 or more songs' : `Based on ${activeStats.totalFans} fan rankings of 10 or more songs`}</p>
             </div>
             
@@ -1006,10 +1005,10 @@ export default function FanStats({
         {/* TIER LIST VISUALIZATION SECTION */}
         <div className="pt-8 sm:pt-10">
           {slicePending ? (
-            <div className="bg-white rounded-[18px] border-[3px] border-[#0C1220] shadow-[4px_4px_0_rgba(11,30,63,0.85)] p-6 sm:p-8">
+            <div className="bg-white border border-slate-200 rounded-[28px] shadow-[0_14px_30px_rgba(12,18,32,0.08)] px-6 py-[26px] sm:px-8 sm:py-[34px]">
               <div className="text-center sm:text-left mb-6">
                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1">Community Consensus</span>
-                <h2 className={`${displayFont.className} text-3xl sm:text-4xl tracking-wide text-[#0C1220] leading-tight`}>Weezerverse Tiers</h2>
+                <h2 className={`font-black text-3xl sm:text-4xl tracking-wide text-[#0C1220] leading-tight`}>Weezerverse Tiers</h2>
               </div>
               {suppressedNote}
             </div>
@@ -1033,9 +1032,9 @@ export default function FanStats({
       </div>
 
       {/* SECTION 2: ANATOMY OF A JAM (categories in one framed paper card) */}
-      <div className="pt-10 pb-8 mt-10 border-t-[3px] border-[#0C1220]">
+      <div className="pt-[42px] pb-8 mt-10 border-t border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center mb-8">
-          <h2 className={`${displayFont.className} text-4xl sm:text-5xl tracking-wide text-[#0C1220] leading-tight`}>Anatomy of a Jam</h2>
+          <h2 className={`font-black text-4xl sm:text-5xl tracking-wide text-[#0C1220] leading-tight`}>Anatomy of a Jam</h2>
           <p className="text-base font-medium text-[#3D4A63] mt-2 max-w-xl mx-auto text-balance">
             Every song gets its own reaction from fans. Here's the catalog, grouped by the patterns fans fall into.
           </p>
@@ -1065,9 +1064,9 @@ export default function FanStats({
               its title. */}
           {!slicePending && activeStats.anatomyCategories.length > 0 && (
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="bg-white rounded-[18px] border-[3px] border-[#0C1220] shadow-[4px_4px_0_rgba(11,30,63,0.85)]">
+              <div className="bg-white border border-slate-200 rounded-[28px] shadow-[0_14px_30px_rgba(12,18,32,0.08)]">
                 {activeStats.anatomyCategories.map((category, categoryIdx) => (
-                  <div key={category.id} className={`px-4 py-6 sm:px-6 lg:px-8 ${categoryIdx > 0 ? 'border-t-[3px] border-[#0C1220]' : ''}`}>
+                  <div key={category.id} className={`px-4 sm:px-6 lg:px-8 ${categoryIdx > 0 ? 'border-t border-slate-200 pt-[26px] pb-6' : 'py-6'}`}>
 
                     {/* CATEGORY HEADER — the title pops on a tape
                         strip in the category's OWN accent color
@@ -1079,7 +1078,7 @@ export default function FanStats({
                         indigo/slate at ~4.1–4.3:1, fine at this
                         display size. */}
                     <div className="text-center sm:text-left mb-4">
-                      <h3 className={`${displayFont.className} flex items-center justify-center sm:justify-start text-3xl sm:text-4xl tracking-wide text-[#0C1220] leading-tight`}>
+                      <h3 className={`font-black flex items-center justify-center sm:justify-start text-3xl sm:text-4xl tracking-wide text-[#0C1220] leading-tight`}>
                         <span className="-rotate-1 px-3 py-1 shadow-[2px_2px_0_rgba(12,18,32,0.35)]" style={{ backgroundColor: category.accent }}>
                           {category.title}
                         </span>
@@ -1095,7 +1094,7 @@ export default function FanStats({
                   {category.songs.map((m, songIdx) => {
                     const resolvedId = m.song.albumId || ALBUM_NAME_TO_ID[m.song.album] || "unknown";
                     return (
-                      <div key={`m.id-{songIdx}`} className="w-[260px] sm:w-[320px] shrink-0 snap-center bg-white border-2 border-[#0C1220] p-5 rounded-[18px] shadow-[2px_2px_0_rgba(11,30,63,0.85)] flex flex-col justify-between m-1">
+                      <div key={`m.id-{songIdx}`} className="w-[260px] sm:w-[320px] shrink-0 snap-center bg-white border border-slate-200 px-5 py-[21px] rounded-2xl shadow-[0_10px_24px_rgba(12,18,32,0.12)] flex flex-col justify-between m-1">
                         <div>
                           <div className="flex items-start gap-3 min-w-0 mb-3">
                             <AlbumArtwork albumId={resolvedId} className="w-12 h-12 rounded-lg shadow-sm border border-slate-100 shrink-0 object-cover" />
@@ -1133,10 +1132,10 @@ export default function FanStats({
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 pt-4">
           
           {/* FAN TRIBES */}
-          <div className="bg-white rounded-[18px] p-6 sm:p-8 shadow-[4px_4px_0_rgba(11,30,63,0.85)] border-[3px] border-[#0C1220] h-full">
+          <div className="bg-white rounded-[28px] px-6 py-[26px] sm:px-8 sm:py-[34px] shadow-[0_14px_30px_rgba(12,18,32,0.08)] border border-slate-200 h-full">
             <div className="text-center sm:text-left mb-6">
               <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1">How Fans Rank</span>
-              <h2 className={`${displayFont.className} text-3xl tracking-wide text-[#0C1220] leading-tight`}>Fan Tribes</h2>
+              <h2 className={`font-black text-3xl tracking-wide text-[#0C1220] leading-tight`}>Fan Tribes</h2>
               <p className="text-xs font-semibold text-[#3D4A63] mt-2">Where fans land, based on how they rank songs.</p>
               {!slicePending && !activeStats.enoughForPercentages && (
                 <p className="text-[11px] font-bold text-[#3D4A63] mt-1">
@@ -1192,9 +1191,9 @@ export default function FanStats({
             
             {/* BETTER THAN THE ALBUM */}
             {slicePending && (
-              <div className="bg-slate-50 rounded-[18px] p-6 sm:p-8 shadow-[4px_4px_0_rgba(11,30,63,0.85)] border-[3px] border-[#0C1220]">
+              <div className="bg-slate-50 rounded-[28px] px-6 py-[26px] sm:px-8 sm:py-[34px] shadow-[0_14px_30px_rgba(12,18,32,0.08)] border border-slate-200">
                 <div className="text-center sm:text-left mb-5">
-                  <h2 className={`${displayFont.className} text-2xl tracking-wide text-[#0C1220] leading-tight mb-2`}>
+                  <h2 className={`font-black text-2xl tracking-wide text-[#0C1220] leading-tight mb-2`}>
                     Better Than The Album
                   </h2>
                   <p className="text-xs font-semibold text-[#3D4A63] text-balance">The highest-rated songs carrying the lowest-rated albums.</p>
@@ -1203,9 +1202,9 @@ export default function FanStats({
               </div>
             )}
             {!slicePending && activeStats.loneBangers.length > 0 && (
-              <div className="bg-slate-50 rounded-[18px] p-6 sm:p-8 shadow-[4px_4px_0_rgba(11,30,63,0.85)] border-[3px] border-[#0C1220]">
+              <div className="bg-slate-50 rounded-[28px] px-6 py-[26px] sm:px-8 sm:py-[34px] shadow-[0_14px_30px_rgba(12,18,32,0.08)] border border-slate-200">
                 <div className="text-center sm:text-left mb-5">
-                  <h2 className={`${displayFont.className} text-2xl tracking-wide text-[#0C1220] leading-tight mb-2`}>
+                  <h2 className={`font-black text-2xl tracking-wide text-[#0C1220] leading-tight mb-2`}>
                     Better Than The Album
                   </h2>
                   <p className="text-xs font-semibold text-[#3D4A63] text-balance">The highest-rated songs carrying the lowest-rated albums.</p>
@@ -1239,9 +1238,9 @@ export default function FanStats({
               </div>
             )}
             {!slicePending && activeStats.loneBangers.length === 0 && (
-              <div className="bg-slate-50 rounded-[18px] p-6 sm:p-8 shadow-[4px_4px_0_rgba(11,30,63,0.85)] border-[3px] border-[#0C1220]">
+              <div className="bg-slate-50 rounded-[28px] px-6 py-[26px] sm:px-8 sm:py-[34px] shadow-[0_14px_30px_rgba(12,18,32,0.08)] border border-slate-200">
                 <div className="text-center sm:text-left mb-5">
-                  <h2 className={`${displayFont.className} text-2xl tracking-wide text-[#0C1220] leading-tight mb-2`}>
+                  <h2 className={`font-black text-2xl tracking-wide text-[#0C1220] leading-tight mb-2`}>
                     Better Than The Album
                   </h2>
                   <p className="text-xs font-semibold text-[#3D4A63] text-balance">The highest-rated songs carrying the lowest-rated albums.</p>
@@ -1341,9 +1340,9 @@ export default function FanStats({
 
             {/* OLD SCHOOL VS NEW SCHOOL (Generational Divide) */}
             {baseStats.genClassicistSong && baseStats.genModernistSong && (
-              <div className="bg-slate-50 border-[3px] border-[#0C1220] rounded-[18px] p-6 sm:p-8 shadow-[4px_4px_0_rgba(11,30,63,0.85)] flex-1">
+              <div className="bg-slate-50 border border-slate-200 rounded-[28px] px-6 py-[26px] sm:px-8 sm:py-[34px] shadow-[0_14px_30px_rgba(12,18,32,0.08)] flex-1">
                 <div className="text-center sm:text-left mb-5">
-                  <h2 className={`${displayFont.className} text-2xl tracking-wide text-[#0C1220] leading-tight`}>Old vs. New</h2>
+                  <h2 className={`font-black text-2xl tracking-wide text-[#0C1220] leading-tight`}>Old vs. New</h2>
                   <p className="text-xs font-semibold text-[#3D4A63] mt-2 text-balance">The tracks pre-2000 purists and modern defenders disagree on most.</p>
                   {filterActive && (<p className="text-[11px] font-bold text-[#3D4A63] mt-1">All fans — this section stays global while a filter is on.</p>)}
                 </div>
@@ -1382,9 +1381,9 @@ export default function FanStats({
               </div>
             )}
             {!(baseStats.genClassicistSong && baseStats.genModernistSong) && (
-              <div className="bg-slate-50 border-[3px] border-[#0C1220] rounded-[18px] p-6 sm:p-8 shadow-[4px_4px_0_rgba(11,30,63,0.85)] flex-1">
+              <div className="bg-slate-50 border border-slate-200 rounded-[28px] px-6 py-[26px] sm:px-8 sm:py-[34px] shadow-[0_14px_30px_rgba(12,18,32,0.08)] flex-1">
                 <div className="text-center sm:text-left mb-5">
-                  <h2 className={`${displayFont.className} text-2xl tracking-wide text-[#0C1220] leading-tight`}>Old vs. New</h2>
+                  <h2 className={`font-black text-2xl tracking-wide text-[#0C1220] leading-tight`}>Old vs. New</h2>
                   <p className="text-xs font-semibold text-[#3D4A63] mt-2 text-balance">The tracks pre-2000 purists and modern defenders disagree on most.</p>
                   {filterActive && (<p className="text-[11px] font-bold text-[#3D4A63] mt-1">All fans — this section stays global while a filter is on.</p>)}
                 </div>
@@ -1430,7 +1429,7 @@ export default function FanStats({
 
           </div>
         </div>
-        <details className="mt-10 rounded-[18px] border-[3px] border-[#0C1220] bg-white p-5 shadow-[4px_4px_0_rgba(11,30,63,0.85)]">
+        <details className="mt-10 border border-slate-200 rounded-[28px] shadow-[0_14px_30px_rgba(12,18,32,0.08)] bg-white px-5 py-[22px]">
           <summary className="cursor-pointer text-sm font-black uppercase tracking-wider text-[#0C1220]">
             How this is calculated
           </summary>

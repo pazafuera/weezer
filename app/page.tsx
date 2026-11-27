@@ -379,9 +379,9 @@ export default function WeezerRankerPage() {
           aria-modal="true"
           aria-label="How far down do you want to rank?"
         >
-          <div className="w-full max-w-md space-y-4 rounded-[18px] border-[3px] border-[#0C1220] bg-white p-5 shadow-[4px_4px_0_#0C1220]">
+          <div className="w-full max-w-md space-y-4 rounded-[28px] bg-white p-5 shadow-[0_14px_30px_rgba(12,18,32,0.08)]">
             <h3
-              className={`${displayFont.className} text-[24px] leading-tight text-[#0C1220]`}
+              className="text-[24px] font-black leading-tight text-[#0C1220]"
             >
               You&rsquo;ve ranked {countCategorizedSongs(triageMap)} songs
             </h3>
@@ -409,15 +409,15 @@ export default function WeezerRankerPage() {
                     role="radio"
                     aria-checked={selected}
                     onClick={() => setRankDepth(d)}
-                    className={`flex w-full cursor-pointer items-center gap-2.5 rounded-xl border-[3px] border-[#0C1220] px-3.5 py-2.5 text-left text-sm font-black transition-all ${
+                    className={`flex w-full cursor-pointer items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-left text-sm font-black transition-all ${
                       selected
-                        ? 'bg-[#0072CE] text-white shadow-[3px_3px_0_#0C1220]'
-                        : 'bg-white text-[#0C1220] hover:bg-[#F1F5F9]'
+                        ? 'bg-[#0072CE] text-white shadow-[0_14px_30px_rgba(12,18,32,0.08)]'
+                        : 'bg-[#F1F5F9] text-[#0C1220] hover:bg-[#E2E8F0]'
                     }`}
                   >
                     <span
                       className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-[2.5px] ${
-                        selected ? 'border-white' : 'border-[#0C1220]'
+                        selected ? 'border-white' : 'border-[#94A3B8]'
                       }`}
                     >
                       {selected && (
@@ -437,7 +437,7 @@ export default function WeezerRankerPage() {
             <button
               type="button"
               onClick={confirmRankDepth}
-              className="w-full cursor-pointer rounded-full border-[3px] border-[#0C1220] bg-[#FFC72C] px-6 py-3 text-base font-black text-[#0C1220] shadow-[3px_3px_0_#0C1220] transition-all hover:-translate-y-0.5 hover:shadow-[4px_4px_0_#0C1220] active:translate-y-0 active:shadow-none"
+              className="w-full cursor-pointer rounded-full bg-[#FFC72C] px-6 py-3 text-base font-black text-[#0C1220] shadow-[0_14px_30px_rgba(12,18,32,0.08)] transition-all hover:-translate-y-0.5 active:translate-y-0"
             >
               Start ranking →
             </button>

@@ -7,7 +7,6 @@ import { saveIndicatorCopy, formatTimeOfDay } from '../lib/saveStatus';
 import { isOwnerUser } from '../lib/owner';
 import { COUNTRY_OPTIONS, US_STATES } from './WeezerOnboardingModal';
 import Link from 'next/link';
-import { displayFont } from './shareables/fonts';
 
 interface WeezerAccountDrawerProps {
   isOpen: boolean;
@@ -257,13 +256,13 @@ export default function WeezerAccountDrawer({
           role="dialog"
           aria-modal="true"
           aria-labelledby="account-drawer-title"
-          className="w-full max-w-sm bg-white h-full shadow-[-6px_0_0_rgba(11,30,63,0.85)] border-l-[3px] border-[#0C1220] p-6 flex flex-col justify-between overflow-y-auto animate-in slide-in-from-right duration-300"
+          className="w-full max-w-sm bg-white h-full shadow-[-14px_0_30px_rgba(12,18,32,0.08)] border-l border-slate-200 p-6 flex flex-col justify-between overflow-y-auto animate-in slide-in-from-right duration-300"
         >
           <div>
-            <div className="flex items-center justify-between pb-6 border-b-2 border-[#0C1220]">
+            <div className="flex items-center justify-between pb-[25px] border-b border-slate-200">
               <h2
                 id="account-drawer-title"
-                className="${displayFont.className} text-xl text-[#0C1220]"
+                className="font-black text-xl text-[#0C1220]"
               >
                 Account & Profile
               </h2>
@@ -271,15 +270,15 @@ export default function WeezerAccountDrawer({
                 ref={closeButtonRef}
                 onClick={onClose}
                 aria-label="Close account drawer"
-                className="text-[#0C1220] bg-white hover:bg-sky-50 border-[2.5px] border-[#0C1220] rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm transition-colors cursor-pointer"
+                className="text-[#0C1220] bg-white hover:bg-sky-50 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm transition-colors cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
             <div className="py-6 space-y-6">
-              <div className="flex items-center gap-4 bg-white p-4 rounded-2xl border-[2.5px] border-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)]">
-                <div className="w-12 h-12 bg-[#0072CE] text-white rounded-xl flex items-center justify-center font-black text-xl border-[2.5px] border-[#0C1220] shrink-0">
+              <div className="flex items-center gap-4 bg-white p-[17.5px] rounded-[28px] border border-slate-200 shadow-[0_14px_30px_rgba(12,18,32,0.08)]">
+                <div className="w-12 h-12 bg-[#0072CE] text-white rounded-xl flex items-center justify-center font-black text-xl shrink-0">
                   {userProfile?.displayName
                     ? userProfile.displayName.charAt(0).toUpperCase()
                     : 'W'}
@@ -304,7 +303,7 @@ export default function WeezerAccountDrawer({
               </p>
 
               {upgradeSent ? (
-                <div className="bg-emerald-50 border-[2.5px] border-emerald-600 rounded-2xl p-4 space-y-1">
+                <div className="bg-emerald-50 border border-emerald-600 rounded-[28px] p-[17.5px] space-y-1">
                   <h3 className="text-sm font-black text-emerald-900">
                     Check your email to finish
                   </h3>
@@ -329,7 +328,7 @@ export default function WeezerAccountDrawer({
                     onChange={(e) => setUpgradeEmail(e.target.value)}
                     placeholder="you@email.com"
                     autoComplete="email"
-                    className="w-full px-3 py-2.5 bg-white border-2 border-[#0C1220] rounded-xl text-sm font-bold text-[#0C1220] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0072CE]"
+                    className="w-full px-3 py-2.5 bg-white border-2 border-slate-300 rounded-xl text-sm font-bold text-[#0C1220] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0072CE]"
                   />
                   <input
                     type="password"
@@ -337,7 +336,7 @@ export default function WeezerAccountDrawer({
                     onChange={(e) => setUpgradePassword(e.target.value)}
                     placeholder="New password (6+ characters)"
                     autoComplete="new-password"
-                    className="w-full px-3 py-2.5 bg-white border-2 border-[#0C1220] rounded-xl text-sm font-bold text-[#0C1220] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0072CE]"
+                    className="w-full px-3 py-2.5 bg-white border-2 border-slate-300 rounded-xl text-sm font-bold text-[#0C1220] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0072CE]"
                   />
                   {upgradeError && (
                     <p className="text-xs font-bold text-rose-600">
@@ -347,7 +346,7 @@ export default function WeezerAccountDrawer({
                   <button
                     type="submit"
                     disabled={upgradeBusy}
-                    className="w-full bg-[#0072CE] hover:bg-blue-600 border-2 border-[#0C1220] text-white text-sm font-black px-3 py-2.5 rounded-xl transition-colors cursor-pointer disabled:opacity-60"
+                    className="w-full bg-[#0072CE] hover:bg-blue-600 text-white text-sm font-black px-3 py-[12px] rounded-xl transition-colors cursor-pointer disabled:opacity-60"
                   >
                     {upgradeBusy ? 'Adding…' : 'Add email & password'}
                   </button>
@@ -620,14 +619,14 @@ export default function WeezerAccountDrawer({
         role="dialog"
         aria-modal="true"
         aria-labelledby="account-drawer-title"
-        className="w-full max-w-sm bg-white h-full shadow-[-6px_0_0_rgba(11,30,63,0.85)] border-l-[3px] border-[#0C1220] p-6 flex flex-col justify-between overflow-y-auto animate-in slide-in-from-right duration-300"
+        className="w-full max-w-sm bg-white h-full shadow-[-14px_0_30px_rgba(12,18,32,0.08)] border-l border-slate-200 p-6 flex flex-col justify-between overflow-y-auto animate-in slide-in-from-right duration-300"
       >
         <div>
           {/* HEADER */}
-          <div className="flex items-center justify-between pb-6 border-b-2 border-[#0C1220]">
+          <div className="flex items-center justify-between pb-[25px] border-b border-slate-200">
             <h2
               id="account-drawer-title"
-              className="${displayFont.className} text-xl text-[#0C1220]"
+              className="font-black text-xl text-[#0C1220]"
             >
               Account & Profile
             </h2>
@@ -635,7 +634,7 @@ export default function WeezerAccountDrawer({
               ref={closeButtonRef}
               onClick={onClose}
               aria-label="Close account drawer"
-              className="text-[#0C1220] bg-white hover:bg-sky-50 border-[2.5px] border-[#0C1220] rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm transition-colors cursor-pointer"
+              className="text-[#0C1220] bg-white hover:bg-sky-50 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm transition-colors cursor-pointer"
             >
               ✕
             </button>
@@ -650,8 +649,8 @@ export default function WeezerAccountDrawer({
           {userId ? (
             <div className="py-6 space-y-6">
               {/* PROFILE BADGE */}
-              <div className="flex items-center gap-4 bg-white p-4 rounded-2xl border-[2.5px] border-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)]">
-                <div className="w-12 h-12 bg-[#0072CE] text-white rounded-xl flex items-center justify-center font-black text-xl border-[2.5px] border-[#0C1220] shrink-0">
+              <div className="flex items-center gap-4 bg-white p-[17.5px] rounded-[28px] border border-slate-200 shadow-[0_14px_30px_rgba(12,18,32,0.08)]">
+                <div className="w-12 h-12 bg-[#0072CE] text-white rounded-xl flex items-center justify-center font-black text-xl shrink-0">
                   {userProfile?.displayName
                     ? userProfile.displayName.charAt(0).toUpperCase()
                     : 'W'}
@@ -682,11 +681,11 @@ export default function WeezerAccountDrawer({
                       type="text"
                       readOnly
                       value={publicUrl || ''}
-                      className="flex-1 px-3 py-2 bg-white border-2 border-[#0C1220] rounded-xl text-xs font-mono text-[#3D4A63] truncate focus:outline-none"
+                      className="flex-1 px-3 py-2 bg-white border-2 border-slate-300 rounded-xl text-xs font-mono text-[#3D4A63] truncate focus:outline-none"
                     />
                     <button
                       onClick={handleCopyLink}
-                      className="bg-[#0072CE] hover:bg-blue-600 border-2 border-[#0C1220] text-white text-xs font-black px-3 py-2 rounded-xl transition-colors cursor-pointer shrink-0"
+                      className="bg-[#0072CE] hover:bg-blue-600 text-white text-xs font-black px-3 py-[10px] rounded-xl transition-colors cursor-pointer shrink-0"
                     >
                       {copiedLink ? 'Copied! ✓' : 'Copy'}
                     </button>
@@ -700,7 +699,7 @@ export default function WeezerAccountDrawer({
               )}
 
               {/* PROFILE DETAILS + EDIT */}
-              <div className="bg-white p-4 rounded-2xl border-[2.5px] border-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)] space-y-3">
+              <div className="bg-white p-[17.5px] rounded-[28px] border border-slate-200 shadow-[0_14px_30px_rgba(12,18,32,0.08)] space-y-3">
                 <span className="text-[10px] font-black uppercase tracking-widest text-[#3D4A63] block">
                   Profile Details
                 </span>
@@ -781,7 +780,7 @@ export default function WeezerAccountDrawer({
                           required
                           value={editUsername}
                           onChange={(e) => setEditUsername(e.target.value)}
-                          className="w-full pl-8 pr-4 py-2.5 bg-white border-2 border-[#0C1220] rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-[#0072CE]"
+                          className="w-full pl-8 pr-4 py-2.5 bg-white border-2 border-slate-300 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-[#0072CE]"
                         />
                       </div>
                       <p className="text-[10px] font-medium text-[#3D4A63] mt-1">
@@ -803,7 +802,7 @@ export default function WeezerAccountDrawer({
                         placeholder="Rivers C."
                         value={editDisplayName}
                         onChange={(e) => setEditDisplayName(e.target.value)}
-                        className="w-full px-4 py-2.5 bg-white border-2 border-[#0C1220] rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-[#0072CE]"
+                        className="w-full px-4 py-2.5 bg-white border-2 border-slate-300 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-[#0072CE]"
                       />
                     </div>
 
@@ -823,7 +822,7 @@ export default function WeezerAccountDrawer({
                           max={new Date().getFullYear()}
                           value={editBirthYear}
                           onChange={(e) => setEditBirthYear(e.target.value)}
-                          className="w-full px-4 py-2.5 bg-white border-2 border-[#0C1220] rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-[#0072CE]"
+                          className="w-full px-4 py-2.5 bg-white border-2 border-slate-300 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-[#0072CE]"
                         />
                       </div>
                       <div>
@@ -840,7 +839,7 @@ export default function WeezerAccountDrawer({
                             setEditCountry(e.target.value);
                             setEditStateCode('');
                           }}
-                          className="w-full px-3 py-2.5 bg-white border-2 border-[#0C1220] rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-[#0072CE]"
+                          className="w-full px-3 py-2.5 bg-white border-2 border-slate-300 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-[#0072CE]"
                         >
                           <option value="">Not set</option>
                           {COUNTRY_OPTIONS.map((c) =>
@@ -875,7 +874,7 @@ export default function WeezerAccountDrawer({
                           id="account-edit-state"
                           value={editStateCode}
                           onChange={(e) => setEditStateCode(e.target.value)}
-                          className="w-full px-3 py-2.5 bg-white border-2 border-[#0C1220] rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-[#0072CE]"
+                          className="w-full px-3 py-2.5 bg-white border-2 border-slate-300 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-[#0072CE]"
                         >
                           <option value="">Select State...</option>
                           {US_STATES.map((st) => (
@@ -927,7 +926,7 @@ export default function WeezerAccountDrawer({
                   telemetry has no place in a user's drawer. The ring
                   itself (app/lib/saveDiagnostics.ts) still records
                   in the background; it just isn't displayed here. */}
-              <div className="bg-white p-4 rounded-2xl border-[2.5px] border-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)] space-y-3">
+              <div className="bg-white p-[17.5px] rounded-[28px] border border-slate-200 shadow-[0_14px_30px_rgba(12,18,32,0.08)] space-y-3">
                 <span className="text-[10px] font-black uppercase tracking-widest text-[#3D4A63] block">
                   Saving
                 </span>
@@ -950,7 +949,7 @@ export default function WeezerAccountDrawer({
                     onClose();
                     navigateTo('owner_stats');
                   }}
-                  className="w-full bg-white p-4 rounded-2xl border-[2.5px] border-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)] flex items-center justify-between cursor-pointer text-left"
+                  className="w-full bg-white p-[17.5px] rounded-[28px] border border-slate-200 shadow-[0_14px_30px_rgba(12,18,32,0.08)] flex items-center justify-between cursor-pointer text-left"
                 >
                   <span className="text-[10px] font-black uppercase tracking-widest text-[#3D4A63]">
                     Site stats
@@ -962,7 +961,7 @@ export default function WeezerAccountDrawer({
               )}
 
               {/* PASSWORD RESET */}
-              <div className="bg-white p-4 rounded-2xl border-[2.5px] border-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)] space-y-3">
+              <div className="bg-white p-[17.5px] rounded-[28px] border border-slate-200 shadow-[0_14px_30px_rgba(12,18,32,0.08)] space-y-3">
                 <span className="text-[10px] font-black uppercase tracking-widest text-[#3D4A63] block">
                   Security
                 </span>
@@ -973,7 +972,7 @@ export default function WeezerAccountDrawer({
                 <button
                   onClick={handlePasswordReset}
                   disabled={resetSending}
-                  className="w-full bg-[#0C1220] hover:bg-slate-700 border-[2.5px] border-[#0C1220] disabled:opacity-50 text-white font-black py-2.5 rounded-xl transition-colors text-xs cursor-pointer"
+                  className="w-full bg-[#0C1220] hover:bg-slate-700 disabled:opacity-50 text-white font-black py-[12.5px] rounded-xl transition-colors text-xs cursor-pointer"
                 >
                   {resetSending ? 'Sending…' : 'Send password reset email'}
                 </button>
@@ -1078,7 +1077,7 @@ export default function WeezerAccountDrawer({
           ) : (
             /* USER LOGGED OUT / GUEST */
             <div className="py-8 text-center space-y-4">
-              <div className="w-16 h-16 bg-blue-50 text-[#0072CE] rounded-2xl flex items-center justify-center font-black text-2xl mx-auto border-[2.5px] border-[#0C1220]">
+              <div className="w-16 h-16 bg-blue-50 text-[#0072CE] rounded-2xl flex items-center justify-center font-black text-2xl mx-auto">
                 👤
               </div>
               <div>
@@ -1108,7 +1107,7 @@ export default function WeezerAccountDrawer({
         {/* FOOTER / LOGOUT — every signed-in user gets a Sign
             Out, username or not. */}
         {userId && (
-          <div className="pt-4 border-t-2 border-[#0C1220]">
+          <div className="pt-[17px] border-t border-slate-200">
             <button
               onClick={() => {
                 onLogout();

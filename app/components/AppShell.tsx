@@ -658,7 +658,7 @@ export default function AppShell({
             className="absolute inset-0 bg-slate-950/40 backdrop-blur-xs transition-opacity"
           />
 
-          <div className="relative w-full max-w-xs bg-white h-full shadow-2xl border-l-[3px] border-l-[#0C1220] flex flex-col overflow-y-auto z-10 animate-in slide-in-from-right duration-300">
+          <div className="relative w-full max-w-xs bg-white h-full shadow-2xl border-l border-slate-200 flex flex-col overflow-y-auto z-10 animate-in slide-in-from-right duration-300">
             <div>
               <div className="p-4 border-b border-slate-100 flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -727,7 +727,7 @@ export default function AppShell({
                     <span>Account & Profile</span>
                   </button>
 
-                  <div className="mx-4 my-3 p-3.5 bg-white border-2 border-[#0C1220] rounded-2xl space-y-2">
+                  <div className="mx-4 my-3 p-[15px] bg-white border border-slate-200 rounded-[28px] space-y-2">
                     <div className="flex items-center justify-between">
                       <button
                         onClick={() => {
@@ -778,7 +778,7 @@ export default function AppShell({
                   until the boot lands; the nav under them is
                   auth-free and stays. */}
               {!userId && !loadingUser && stranded && (
-                <div className="mx-4 my-3 p-4 bg-white border-2 border-[#0C1220] rounded-2xl space-y-3">
+                <div className="mx-4 my-3 p-[17px] bg-white border border-slate-200 rounded-[28px] space-y-3">
                   <div className="space-y-1">
                     <h4 className="text-xs font-black text-[#0C1220]">
                       You're signed out.
@@ -803,7 +803,7 @@ export default function AppShell({
               )}
 
               {!userId && !loadingUser && !stranded && (
-                <div className="mx-4 my-3 p-4 bg-white border-2 border-[#0C1220] rounded-2xl space-y-3">
+                <div className="mx-4 my-3 p-[17px] bg-white border border-slate-200 rounded-[28px] space-y-3">
                   <div className="space-y-1">
                     <h4 className="text-xs font-black text-[#0C1220]">
                       Why Bother creating an account?
@@ -889,7 +889,7 @@ export default function AppShell({
             className="absolute inset-0 bg-slate-950/40 backdrop-blur-xs transition-opacity"
           />
 
-          <div className="relative w-full max-w-sm bg-white rounded-[18px] shadow-[4px_4px_0_rgba(11,30,63,0.85)] border-[3px] border-[#0C1220] p-5 z-10">
+          <div className="relative w-full max-w-sm bg-white rounded-[28px] shadow-[0_14px_30px_rgba(12,18,32,0.08)] border border-slate-200 p-[22px] z-10">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-7 h-7 bg-[#0072CE] text-white rounded-lg flex items-center justify-center">
@@ -912,7 +912,7 @@ export default function AppShell({
             <div className="space-y-2 mt-4">
               <button
                 onClick={replayTutorial}
-                className="w-full flex items-center justify-between gap-3 px-4 py-3.5 rounded-2xl bg-white hover:bg-slate-100 border-2 border-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)] text-left transition-colors cursor-pointer"
+                className="w-full flex items-center justify-between gap-3 px-4 py-[15px] rounded-2xl bg-white hover:bg-slate-100 border border-slate-200 shadow-[0_6px_14px_rgba(12,18,32,0.08)] text-left transition-colors cursor-pointer"
               >
                 <span>
                   <span className="block text-sm font-black text-[#0C1220]">
@@ -930,7 +930,7 @@ export default function AppShell({
                   setHelpOpen(false);
                   setBucketsOpen(true);
                 }}
-                className="w-full flex items-center justify-between gap-3 px-4 py-3.5 rounded-2xl bg-white hover:bg-slate-100 border-2 border-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)] text-left transition-colors cursor-pointer"
+                className="w-full flex items-center justify-between gap-3 px-4 py-[15px] rounded-2xl bg-white hover:bg-slate-100 border border-slate-200 shadow-[0_6px_14px_rgba(12,18,32,0.08)] text-left transition-colors cursor-pointer"
               >
                 <span>
                   <span className="block text-sm font-black text-[#0C1220]">
@@ -957,8 +957,8 @@ export default function AppShell({
             className="absolute inset-0 bg-slate-950/40 backdrop-blur-xs transition-opacity"
           />
 
-          <div className="relative w-full max-w-md max-h-[85dvh] overflow-y-auto bg-white rounded-[18px] shadow-[4px_4px_0_rgba(11,30,63,0.85)] border-[3px] border-[#0C1220] z-10">
-            <div className="sticky top-0 bg-white border-b-2 border-[#0C1220] px-5 sm:px-6 py-4 flex items-center justify-between rounded-t-[15px]">
+          <div className="relative w-full max-w-md max-h-[85dvh] overflow-y-auto bg-white rounded-[28px] shadow-[0_14px_30px_rgba(12,18,32,0.08)] border border-slate-200 z-10">
+            <div className="sticky top-0 bg-white border-b border-slate-200 px-5 sm:px-6 pt-4 pb-[17px] flex items-center justify-between rounded-t-[27px]">
               <span className="text-xs font-black text-[#0C1220] uppercase tracking-wider">
                 The buckets
               </span>

@@ -13,7 +13,6 @@ import {
   loadRefineDecisions,
   saveRefineDecisions,
 } from './lib/lowerRank';
-import { displayFont } from './components/shareables/fonts';
 import AppShell from './components/AppShell';
 import WelcomeInterstitial from './components/WelcomeInterstitial';
 import { GuardNotice, SyncNotice } from './components/SharedUI';
@@ -182,7 +181,7 @@ export default function WeezerRankerPage() {
            in the account; Try again runs the boot for real
            (the failed boot set no marker to no-op against). */
         <div className="mx-auto max-w-md pt-6">
-          <div className="space-y-4 rounded-[2rem] border-[3px] border-[#0C1220] bg-white p-6 text-center shadow-[4px_4px_0_#0C1220]">
+          <div className="space-y-4 rounded-[28px] border border-slate-200 bg-white p-[26px] text-center shadow-[0_14px_30px_rgba(12,18,32,0.08)]">
             <div className="space-y-2">
               <h2 className="text-lg font-black text-[#0C1220]">
                 Couldn&rsquo;t load your rankings

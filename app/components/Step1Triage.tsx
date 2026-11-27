@@ -943,7 +943,7 @@ function SortPathPicker({
     );
 
   const cardClass =
-    'w-full text-left bg-white border-[3px] border-[#0C1220] rounded-[18px] shadow-[4px_4px_0_rgba(11,30,63,0.85)] p-4 sm:p-5';
+    'w-full text-left bg-white rounded-[28px] shadow-[0_14px_30px_rgba(12,18,32,0.08)] p-4 sm:p-5';
 
   return (
     <div className="space-y-4 pt-2">

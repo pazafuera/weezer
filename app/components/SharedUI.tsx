@@ -20,9 +20,11 @@ export function FlyingWIcon({ className = "w-8 h-5" }: { className?: string }) {
 // RESULTS hero (Step4Wrapped's SmartShareModule) and the
 // shareable cards' Share button (ShareablesGallery's LibraryItem
 // and ThumbnailItem modal). Brand-blue fill, white font-black
-// text, 3px ink border, hard offset shadow, and the Round 1
-// press recipe (active translate + shadow shrink) are defined
-// HERE, once; call sites add only their size/layout and the
+// text, soft shadow, and the press recipe (active scale) are
+// defined HERE, once. The 3px border survives as a transparent
+// spacer: call sites own the padding, so the border width is
+// what keeps every one of these buttons at its tuned height
+// now that the ink ring is gone. call sites add only their size/layout and the
 // state background. The resting fill is deliberately NOT in
 // this string — the gallery buttons flip to emerald/rose on
 // saved/failed, and their conditional background composition
@@ -31,7 +33,7 @@ export function FlyingWIcon({ className = "w-8 h-5" }: { className?: string }) {
 // emoji rides on either button (the 📸 is gone — also owner,
 // Nov 5).
 export const SHARE_BUTTON_CLASS =
-  'text-white font-black border-[3px] border-[#0C1220] shadow-[3px_3px_0_#0C1220] transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_#0C1220] cursor-pointer';
+  'text-white font-black border-[3px] border-transparent shadow-[0_6px_14px_rgba(12,18,32,0.08)] transition-all active:scale-[0.98] cursor-pointer';
 
 // HELP BUTTON — the "?" affordance for the triage step's chrome
 // (deck progress row + list progress bar; both modes carry one,
@@ -48,7 +50,7 @@ export function HelpButton() {
       onClick={() => window.dispatchEvent(new CustomEvent('weezer:open-help'))}
       aria-label="Help"
       title="Help"
-      className="w-7 h-7 shrink-0 flex items-center justify-center rounded-full bg-[#0072CE] hover:bg-blue-600 text-white font-black text-sm leading-none shadow-xs transition-colors cursor-pointer border-2 border-[#0C1220]"
+      className="w-7 h-7 shrink-0 flex items-center justify-center rounded-full bg-[#0072CE] hover:bg-blue-600 text-white font-black text-sm leading-none shadow-xs transition-colors cursor-pointer"
     >
       ?
     </button>
@@ -103,7 +105,7 @@ export function SortingIncompleteNotice({
     : countCategorizedSongs(triageMap);
   if (sortedCount >= total) return null;
   return (
-    <div className="bg-amber-400 border-[3px] border-[#0C1220] rounded-2xl px-4 py-3 shadow-[2px_2px_0_rgba(11,30,63,0.85)]">
+    <div className="bg-amber-400 border border-amber-500 rounded-[28px] px-4 py-[14px] shadow-[0_14px_30px_rgba(12,18,32,0.08)]">
       <p className="text-sm sm:text-base font-bold text-slate-950 leading-snug text-center">
         You haven&apos;t finished sorting — {sortedCount} of {total} songs
         sorted. This page only covers the songs you&apos;ve sorted so far.{' '}

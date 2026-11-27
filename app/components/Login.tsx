@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/utils/supabase';
 import { FlyingWIcon } from '@/app/components/SharedUI';
-import { displayFont } from './shareables/fonts';
 import { useWeezer } from '../context/WeezerContext';
 
 const US_STATES = [
@@ -401,14 +400,14 @@ export default function Login() {
         backgroundSize: '22px 22px',
       }}
     >
-      <div className="max-w-md w-full bg-white rounded-[18px] shadow-[4px_4px_0_rgba(11,30,63,0.85)] border-[3px] border-[#0C1220] overflow-hidden relative">
+      <div className="max-w-md w-full bg-white rounded-[28px] shadow-[0_14px_30px_rgba(12,18,32,0.08)] border border-slate-200 overflow-hidden relative">
         
         {/* CLOSE (X) BUTTON — abandons sign-in: back to the step the
             user came from (closeLogin), NOT hardcoded to splash. */}
         <button
           type="button"
           onClick={() => closeLogin()}
-          className="absolute top-4 right-4 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-white hover:bg-sky-50 text-[#0C1220] border-[2.5px] border-[#0C1220] transition-all cursor-pointer"
+          className="absolute top-4 right-4 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-white hover:bg-sky-50 text-[#0C1220] transition-all cursor-pointer"
           aria-label="Close"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
@@ -417,11 +416,11 @@ export default function Login() {
         </button>
 
         {/* BRANDED HEADER BANNER */}
-        <div className="bg-[#0072CE] p-8 text-center text-white space-y-2 relative border-b-[3px] border-[#0C1220]">
-          <div className="w-12 h-12 bg-white border-[2.5px] border-[#0C1220] rounded-[14px] flex items-center justify-center mx-auto">
+        <div className="bg-[#0072CE] px-8 pt-8 pb-[34px] text-center text-white space-y-2 relative border-b border-slate-200">
+          <div className="w-12 h-12 bg-white rounded-[14px] flex items-center justify-center mx-auto">
             <FlyingWIcon className="w-8 h-8 text-[#0072CE]" />
           </div>
-          <h1 className={`${displayFont.className} text-2xl sm:text-3xl leading-tight`}>
+          <h1 className="text-2xl sm:text-3xl leading-tight font-black">
             All My Favorite Songs
           </h1>
           <p className="text-[10px] font-bold text-blue-200 uppercase tracking-widest">
@@ -458,7 +457,7 @@ export default function Login() {
                       history: 'replace',
                     })
                   }
-                  className="w-full bg-white hover:bg-sky-50 text-[#0C1220] font-black py-3.5 rounded-xl border-[3px] border-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)] transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_rgba(11,30,63,0.85)] cursor-pointer text-sm"
+                  className="w-full bg-white hover:bg-sky-50 text-[#0C1220] font-black py-[16px] rounded-xl border border-slate-200 shadow-[0_6px_14px_rgba(12,18,32,0.08)] transition-all active:scale-[0.98] cursor-pointer text-sm"
                 >
                   Continue to Dashboard
                 </button>
@@ -474,7 +473,7 @@ export default function Login() {
           ) : (
             <>
           {/* AUTH MODE TOGGLE BUTTONS */}
-          <div className="flex bg-white border-2 border-[#0C1220] rounded-xl p-1">
+          <div className="flex bg-white border border-slate-200 rounded-xl p-[5px]">
             <button
               type="button"
               onClick={() => {
@@ -483,7 +482,7 @@ export default function Login() {
               }}
               className={`flex-1 text-xs font-black py-2.5 rounded-lg transition-all cursor-pointer ${
                 authMode === 'signup'
-                  ? 'bg-white text-[#0C1220] border-2 border-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)]'
+                  ? 'bg-white text-[#0C1220] border-2 border-slate-300 shadow-[0_6px_14px_rgba(12,18,32,0.08)]'
                   : 'text-slate-500 hover:text-slate-700'
               }`}
             >
@@ -497,7 +496,7 @@ export default function Login() {
               }}
               className={`flex-1 text-xs font-black py-2.5 rounded-lg transition-all cursor-pointer ${
                 authMode === 'login'
-                  ? 'bg-white text-[#0C1220] border-2 border-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)]'
+                  ? 'bg-white text-[#0C1220] border-2 border-slate-300 shadow-[0_6px_14px_rgba(12,18,32,0.08)]'
                   : 'text-slate-500 hover:text-slate-700'
               }`}
             >
@@ -511,7 +510,7 @@ export default function Login() {
               }}
               className={`flex-1 text-xs font-black py-2.5 rounded-lg transition-all cursor-pointer ${
                 authMode === 'magic'
-                  ? 'bg-white text-[#0072CE] border-2 border-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)]'
+                  ? 'bg-white text-[#0072CE] border-2 border-slate-300 shadow-[0_6px_14px_rgba(12,18,32,0.08)]'
                   : 'text-slate-500 hover:text-[#0072CE]'
               }`}
             >
@@ -538,7 +537,7 @@ export default function Login() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
                 required
-                className="w-full px-4 py-3 rounded-xl border-2 border-[#0C1220] bg-white focus:border-[#0072CE] focus:ring-2 focus:ring-blue-100 outline-none transition-all font-bold text-slate-900 text-base"
+                className="w-full px-4 py-3 rounded-xl border-2 border-slate-300 bg-white focus:border-[#0072CE] focus:ring-2 focus:ring-blue-100 outline-none transition-all font-bold text-slate-900 text-base"
               />
             </div>
 
@@ -561,7 +560,7 @@ export default function Login() {
                   placeholder="••••••••"
                   required
                   minLength={6}
-                  className="w-full px-4 py-3 rounded-xl border-2 border-[#0C1220] bg-white focus:border-[#0072CE] focus:ring-2 focus:ring-blue-100 outline-none transition-all font-bold text-slate-900 text-base"
+                  className="w-full px-4 py-3 rounded-xl border-2 border-slate-300 bg-white focus:border-[#0072CE] focus:ring-2 focus:ring-blue-100 outline-none transition-all font-bold text-slate-900 text-base"
                 />
                 {authMode === 'login' && (
                   <div className="text-right mt-1.5">
@@ -580,7 +579,7 @@ export default function Login() {
 
             {/* EXPANDED PROFILE FIELDS ON SIGN UP */}
             {authMode === 'signup' && (
-              <div className="space-y-3 pt-2 border-t-2 border-[#0C1220] animate-in fade-in duration-300">
+              <div className="space-y-3 pt-[9px] border-t border-slate-200 animate-in fade-in duration-300">
                 <span className="text-[10px] font-black uppercase tracking-widest text-[#0072CE] block">
                   Profile Details
                 </span>
@@ -602,7 +601,7 @@ export default function Login() {
                       autoComplete="username"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
-                      className="w-full pl-8 pr-4 py-2.5 rounded-xl border-2 border-[#0C1220] bg-white focus:border-[#0072CE] outline-none font-bold text-slate-900 text-base"
+                      className="w-full pl-8 pr-4 py-2.5 rounded-xl border-2 border-slate-300 bg-white focus:border-[#0072CE] outline-none font-bold text-slate-900 text-base"
                     />
                   </div>
                 </div>
@@ -624,7 +623,7 @@ export default function Login() {
                     autoComplete="nickname"
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border-2 border-[#0C1220] bg-white focus:border-[#0072CE] outline-none font-bold text-slate-900 text-base"
+                    className="w-full px-4 py-2.5 rounded-xl border-2 border-slate-300 bg-white focus:border-[#0072CE] outline-none font-bold text-slate-900 text-base"
                   />
                 </div>
 
@@ -640,7 +639,7 @@ export default function Login() {
                       max={new Date().getFullYear()}
                       value={birthYear}
                       onChange={(e) => setBirthYear(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl border-2 border-[#0C1220] bg-white focus:border-[#0072CE] outline-none font-bold text-slate-900 text-base"
+                      className="w-full px-3 py-2 rounded-xl border-2 border-slate-300 bg-white focus:border-[#0072CE] outline-none font-bold text-slate-900 text-base"
                     />
                   </div>
 
@@ -651,7 +650,7 @@ export default function Login() {
                     <select
                       value={country}
                       onChange={(e) => setCountry(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl border-2 border-[#0C1220] bg-white focus:border-[#0072CE] outline-none font-bold text-slate-900 text-base"
+                      className="w-full px-3 py-2 rounded-xl border-2 border-slate-300 bg-white focus:border-[#0072CE] outline-none font-bold text-slate-900 text-base"
                     >
                       {COUNTRY_OPTIONS.map((c) =>
                         c.code === 'DIVIDER' ? (
@@ -676,7 +675,7 @@ export default function Login() {
                     <select
                       value={stateCode}
                       onChange={(e) => setStateCode(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl border-2 border-[#0C1220] bg-white focus:border-[#0072CE] outline-none font-bold text-slate-900 text-base"
+                      className="w-full px-3 py-2 rounded-xl border-2 border-slate-300 bg-white focus:border-[#0072CE] outline-none font-bold text-slate-900 text-base"
                     >
                       <option value="">Select State...</option>
                       {US_STATES.map((st) => (
@@ -712,7 +711,7 @@ export default function Login() {
                 (authMode !== 'magic' && !password) ||
                 (authMode === 'signup' && !username.trim())
               }
-              className="w-full bg-white hover:bg-sky-50 disabled:opacity-50 text-[#0C1220] font-black py-3.5 rounded-xl border-[3px] border-[#0C1220] shadow-[2px_2px_0_rgba(11,30,63,0.85)] transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_rgba(11,30,63,0.85)] cursor-pointer text-sm mt-2"
+              className="w-full bg-white hover:bg-sky-50 disabled:opacity-50 text-[#0C1220] font-black py-[16px] rounded-xl border border-slate-200 shadow-[0_6px_14px_rgba(12,18,32,0.08)] transition-all active:scale-[0.98] cursor-pointer text-sm mt-2"
             >
               {loading
                 ? 'Processing...'

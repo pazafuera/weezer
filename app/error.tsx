@@ -1,6 +1,5 @@
 'use client';
 
-import { displayFont } from './components/shareables/fonts';
 
 /**
  * Route-level error boundary. Without this, a render error white-screens
@@ -29,10 +28,10 @@ export default function Error({
         backgroundSize: '22px 22px',
       }}
     >
-      <div className="max-w-md w-full bg-white border-[3px] border-[#0C1220] rounded-[18px] p-8 text-center shadow-[4px_4px_0_rgba(11,30,63,0.85)]">
+      <div className="max-w-md w-full bg-white border border-slate-200 rounded-[28px] p-[34px] text-center shadow-[0_14px_30px_rgba(12,18,32,0.08)]">
         <p className="text-4xl mb-4">🎸</p>
         <h1
-          className={`text-[28px] leading-tight tracking-wide text-[#0C1220] mb-2 ${displayFont.className}`}
+          className="text-[28px] leading-tight tracking-wide text-[#0C1220] mb-2 font-black"
         >
           The amp just buzzed out
         </h1>
@@ -41,7 +40,7 @@ export default function Error({
           go, so try again — if it keeps happening, note the code below.
         </p>
         {error?.digest && (
-          <div className="text-left bg-white border-2 border-[#0C1220] rounded-xl px-4 py-3 mb-6 overflow-x-auto">
+          <div className="text-left bg-white border border-slate-200 rounded-xl px-4 py-[13px] mb-6 overflow-x-auto">
             <p className="text-[11px] font-bold text-slate-500">
               Error details aren&apos;t shown here.
             </p>
@@ -52,7 +51,7 @@ export default function Error({
         )}
         <button
           onClick={reset}
-          className="bg-[#0072CE] hover:bg-blue-600 text-white font-black rounded-2xl px-6 py-3 text-sm transition-all border-[2.5px] border-[#0C1220] shadow-[3px_3px_0_#0C1220] active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_#0C1220] cursor-pointer"
+          className="bg-[#0072CE] hover:bg-blue-600 text-white font-black rounded-2xl px-6 py-[14.5px] text-sm transition-all shadow-[0_6px_14px_rgba(12,18,32,0.08)] active:scale-[0.98] cursor-pointer"
         >
           Try again
         </button>
